@@ -1,0 +1,1575 @@
+/* =========================================================
+   Clientes / Proveedores — modal fiscal y datos legales
+   ========================================================= */
+.mi-modal__container.cc-entity-modal{
+  width: min(1180px, calc(100vw - 32px));
+  max-width: 1180px;
+  max-height: min(92vh, 820px);
+}
+
+.cc-entity-modal .mi-modal__content{
+  overflow: hidden;
+}
+
+.cc-entity-admin-grid{
+  grid-template-columns: minmax(360px, 420px) minmax(0, 1fr) !important;
+  gap: 14px;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.cc-entity-form-panel{
+  min-width: 0;
+  box-shadow: 0 16px 34px -26px rgba(10, 37, 64, .34);
+}
+
+.cc-entity-form-panel .mi-cr-filters__top{
+  padding: 13px 14px 10px;
+  border-bottom: 1px solid rgba(10, 37, 64, .08);
+}
+
+.cc-entity-form-panel .mi-cr-filters__title{
+  margin-bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  letter-spacing: -.01em;
+}
+
+.cc-entity-form-body{
+  padding: 12px 14px 14px !important;
+  gap: 12px !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  scrollbar-gutter: stable;
+}
+
+.cc-fiscal-intro-card,
+.cc-fiscal-summary-card,
+.cc-legal-edit-card,
+.cc-fiscal-alert{
+  grid-column: 1 / -1;
+}
+
+.cc-fiscal-intro-card{
+  position: relative;
+  overflow: hidden;
+  min-height: min-content;
+  border: 1px solid rgba(0, 85, 187, .18);
+  background:
+    radial-gradient(circle at top left, rgba(0, 85, 187, .12), transparent 34%),
+    rgba(0, 85, 187, .055);
+  border-radius: 14px;
+  padding: 12px 13px;
+  font-size: 12px;
+  color: var(--nv-muted, #64748b);
+  line-height: 1.48;
+}
+
+.cc-fiscal-intro-card::before{
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: linear-gradient(180deg, var(--b-midnight), var(--b-action));
+  opacity: .9;
+}
+
+.cc-fiscal-intro-card__title{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 5px;
+  color: var(--nv-text, #0f172a);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.cc-fiscal-action-row{
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 9px !important;
+  margin-top: 0 !important;
+}
+
+.cc-fiscal-action-row .mit-btn,
+.cc-form-action-row .mit-btn{
+  width: 100%;
+  justify-content: center;
+  min-height: 38px;
+}
+
+.cc-form-action-row{
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 9px !important;
+  margin-top: auto !important;
+  padding-top: 4px;
+}
+
+.cc-form-action-row:has(.mit-btn + .mit-btn){
+  grid-template-columns: minmax(0, 1fr) minmax(112px, .55fr);
+}
+
+.cc-fiscal-alert{
+  border-radius: 14px;
+  padding: 11px 12px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--nv-text, #0f172a);
+}
+
+.cc-fiscal-alert--error{
+  border: 1px solid rgba(239, 68, 68, .25);
+  background: rgba(239, 68, 68, .08);
+  color: #b91c1c;
+}
+
+.cc-fiscal-alert--warning{
+  border: 1px solid rgba(245, 158, 11, .28);
+  background: rgba(245, 158, 11, .10);
+}
+
+.cc-fiscal-summary-card{
+  border: 1px solid rgba(34, 197, 94, .22);
+  background:
+    linear-gradient(135deg, rgba(34, 197, 94, .09), rgba(34, 197, 94, .045));
+  border-radius: 15px;
+  padding: 12px;
+  color: var(--nv-text, #0f172a);
+  box-shadow: 0 12px 28px -24px rgba(5, 122, 85, .55);
+}
+
+.cc-fiscal-summary-card__title{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 9px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #057a55;
+}
+
+.cc-fiscal-summary-grid{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.cc-fiscal-summary-item{
+  min-width: 0;
+  border: 1px solid rgba(34, 197, 94, .16);
+  background: rgba(255, 255, 255, .64);
+  border-radius: 12px;
+  padding: 9px 10px;
+}
+
+.cc-fiscal-summary-item--full{
+  grid-column: 1 / -1;
+}
+
+.cc-fiscal-summary-item span,
+.cc-legal-data-card span{
+  display: block;
+  margin-bottom: 4px;
+  color: var(--nv-muted, #64748b);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .065em;
+  text-transform: uppercase;
+}
+
+.cc-fiscal-summary-item b,
+.cc-legal-data-card b{
+  display: block;
+  min-width: 0;
+  color: var(--nv-text, #0f172a);
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.cc-legal-edit-card{
+  border: 1px solid rgba(10, 37, 64, .12);
+  background:
+    linear-gradient(180deg, rgba(248, 250, 252, .96), rgba(255, 255, 255, .88));
+  border-radius: 16px;
+  padding: 13px;
+  display: grid;
+  gap: 11px;
+  box-shadow: 0 14px 30px -26px rgba(10, 37, 64, .42);
+}
+
+.cc-legal-edit-card__head{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.cc-legal-edit-card__icon{
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  border-radius: 11px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: var(--b-action);
+  background: rgba(0, 85, 187, .10);
+  border: 1px solid rgba(0, 85, 187, .16);
+}
+
+
+.cc-legal-edit-card__head b{
+  display: block;
+  color: var(--nv-text, #0f172a);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.cc-legal-edit-card__head span{
+
+  color: var(--nv-muted, #64748b);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.cc-legal-edit-card__hint{
+  margin: 0;
+  color: var(--nv-muted, #64748b);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.cc-legal-edit-card__grid{
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.cc-legal-edit-card__textarea{
+  min-height: 88px !important;
+  padding-top: 15px !important;
+  resize: vertical;
+}
+
+.cc-grid-submeta{
+  display: block;
+  margin-top: 3px;
+  color: var(--nv-muted, #64748b);
+  font-size: 11px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cc-entity-modal .cc-grid-header,
+.cc-entity-modal .cc-grid-row{
+  grid-template-columns: minmax(0, 1fr) 112px 184px !important;
+}
+
+.cc-entity-modal .cc-grid-header{
+  overflow: hidden;
+}
+
+.cc-entity-modal .cc-grid-cell:nth-child(3){
+  padding-left: 8px;
+  padding-right: 12px;
+}
+
+.cc-entity-modal .cc-actions-group{
+  flex-wrap: nowrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.cc-entity-modal .cc-action-btn{
+  width: 31px;
+  height: 31px;
+  min-width: 31px;
+  border-radius: 10px;
+}
+
+.cc-action-btn--legal{
+  color: var(--b-action);
+  background: rgba(0, 85, 187, .075);
+  border-color: rgba(0, 85, 187, .20);
+}
+
+.cc-action-btn--legal:hover:not(:disabled){
+  background: rgba(0, 85, 187, .12);
+  border-color: rgba(0, 85, 187, .34);
+}
+
+.cc-entity-list-panel{
+  min-width: 0;
+}
+
+.cc-entity-list-table{
+  height: min(60vh, 560px);
+  min-height: 365px;
+}
+
+/* Modal específico de Datos legales */
+.cc-legal-modal__overlay{
+  z-index: 10000000001;
+}
+
+.mi-modal__container.cc-legal-modal{
+  width: min(760px, calc(100vw - 32px));
+  max-width: 760px;
+  max-height: min(88vh, 740px);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.cc-legal-modal__head{
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 15px 17px;
+  border-bottom: 1px solid rgba(10, 37, 64, .10);
+  background:
+    linear-gradient(135deg, rgba(0, 85, 187, .075), transparent 48%),
+    var(--nv-bg, #fff);
+}
+
+.cc-legal-modal__headIcon{
+  width: 42px;
+  height: 42px;
+  flex: 0 0 auto;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  color: var(--b-action);
+  background: rgba(0, 85, 187, .10);
+  border: 1px solid rgba(0, 85, 187, .18);
+  box-shadow: 0 12px 28px -20px rgba(0, 85, 187, .55);
+}
+
+.cc-legal-modal__headText{
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.cc-legal-modal__headText span{
+  display: block;
+  color: var(--nv-muted, #64748b);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  margin-bottom: 3px;
+}
+
+.cc-legal-modal__headText h4{
+  margin: 0;
+  color: var(--nv-text, #0f172a);
+  font-size: 18px;
+  font-weight: 650;
+  letter-spacing: -.025em;
+}
+
+.cc-legal-modal__body{
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 16px;
+  display: grid;
+  gap: 14px;
+  background: var(--nv-surface, #f8fafc);
+}
+
+.cc-legal-entity-card{
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid rgba(10, 37, 64, .10);
+  background: rgba(255, 255, 255, .82);
+  border-radius: 18px;
+  padding: 13px;
+  box-shadow: 0 14px 30px -26px rgba(10, 37, 64, .45);
+}
+
+.cc-legal-entity-card__avatar{
+  width: 46px;
+  height: 46px;
+  border-radius: 15px;
+  display: grid;
+  place-items: center;
+  color: var(--b-midnight);
+  background: rgba(10, 37, 64, .06);
+  border: 1px solid rgba(10, 37, 64, .10);
+}
+
+.cc-legal-entity-card__content{
+  min-width: 0;
+}
+
+.cc-legal-entity-card__content span{
+  display: block;
+  color: var(--nv-muted, #64748b);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+}
+
+.cc-legal-entity-card__content b{
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--nv-text, #0f172a);
+  font-size: 15px;
+  font-weight: 700;
+  margin-top: 2px;
+}
+
+.cc-legal-entity-card__content small{
+  display: block;
+  color: var(--nv-muted, #64748b);
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.cc-legal-status{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 86px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.cc-legal-status--ok{
+  color: #057a55;
+  background: rgba(34, 197, 94, .10);
+  border: 1px solid rgba(34, 197, 94, .24);
+}
+
+.cc-legal-status--warn{
+  color: #b45309;
+  background: rgba(245, 158, 11, .11);
+  border: 1px solid rgba(245, 158, 11, .26);
+}
+
+.cc-legal-data-grid{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.cc-legal-data-card{
+  min-width: 0;
+  border: 1px solid rgba(10, 37, 64, .10);
+  background: rgba(255, 255, 255, .86);
+  border-radius: 15px;
+  padding: 12px 13px;
+  box-shadow: 0 10px 24px -24px rgba(10, 37, 64, .42);
+}
+
+.cc-legal-data-card--full{
+  grid-column: 1 / -1;
+}
+
+.cc-legal-data-card--strong{
+  border-color: rgba(0, 85, 187, .20);
+  background: rgba(0, 85, 187, .055);
+}
+
+.cc-legal-data-card--strong b{
+  font-variant-numeric: tabular-nums;
+  color: var(--b-action);
+}
+
+.cc-legal-modal__loading{
+  min-height: 160px;
+  border: 1px dashed rgba(10, 37, 64, .16);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, .65);
+}
+
+.cc-legal-modal__actions{
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 16px;
+  border-top: 1px solid rgba(10, 37, 64, .10);
+  background: var(--nv-bg, #fff);
+}
+
+html[data-theme="oscuro"] .cc-fiscal-intro-card,
+body.dark .cc-fiscal-intro-card{
+  background:
+    radial-gradient(circle at top left, rgba(0, 85, 187, .20), transparent 38%),
+    rgba(255, 255, 255, .045);
+  border-color: rgba(120, 170, 240, .20);
+}
+
+html[data-theme="oscuro"] .cc-fiscal-summary-item,
+html[data-theme="oscuro"] .cc-legal-edit-card,
+html[data-theme="oscuro"] .cc-legal-entity-card,
+html[data-theme="oscuro"] .cc-legal-data-card,
+html[data-theme="oscuro"] .cc-legal-modal__loading,
+body.dark .cc-fiscal-summary-item,
+body.dark .cc-legal-edit-card,
+body.dark .cc-legal-entity-card,
+body.dark .cc-legal-data-card,
+body.dark .cc-legal-modal__loading{
+  background: rgba(255, 255, 255, .055);
+  border-color: rgba(255, 255, 255, .12);
+}
+
+html[data-theme="oscuro"] .cc-fiscal-summary-card,
+body.dark .cc-fiscal-summary-card{
+  background: rgba(34, 197, 94, .10);
+  border-color: rgba(34, 197, 94, .24);
+}
+
+html[data-theme="oscuro"] .cc-fiscal-alert--error,
+body.dark .cc-fiscal-alert--error{
+  color: #fecaca;
+}
+
+html[data-theme="oscuro"] .cc-legal-modal__head,
+html[data-theme="oscuro"] .cc-legal-modal__actions,
+body.dark .cc-legal-modal__head,
+body.dark .cc-legal-modal__actions{
+  border-color: rgba(255, 255, 255, .10);
+}
+
+@media (max-width: 980px){
+  .mi-modal__container.cc-entity-modal{
+    width: min(96vw, 920px);
+    max-width: 96vw;
+  }
+
+  .cc-entity-admin-grid{
+    grid-template-columns: 1fr !important;
+    overflow: auto;
+  }
+
+  .cc-entity-modal .mi-modal__content{
+    overflow: auto;
+  }
+
+  .cc-entity-form-body{
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .cc-entity-form-body > .fl-field{
+    min-width: 0;
+  }
+
+  .cc-fiscal-action-row,
+  .cc-form-action-row{
+    grid-column: 1 / -1;
+  }
+
+  .cc-entity-list-table{
+    height: min(48vh, 430px);
+    min-height: 320px;
+  }
+}
+
+@media (max-width: 700px){
+  .cc-entity-form-body,
+  .cc-fiscal-summary-grid,
+  .cc-legal-data-grid{
+    grid-template-columns: 1fr !important;
+  }
+
+  .cc-fiscal-action-row,
+  .cc-form-action-row,
+  .cc-form-action-row:has(.mit-btn + .mit-btn){
+    grid-template-columns: 1fr !important;
+  }
+
+  .cc-entity-modal .cc-grid-header,
+  .cc-entity-modal .cc-grid-row{
+    grid-template-columns: minmax(0, 1fr) 88px 142px !important;
+  }
+
+  .cc-entity-modal .cc-actions-group{
+    gap: 4px;
+  }
+
+  .cc-entity-modal .cc-action-btn{
+    width: 30px;
+    height: 30px;
+    min-width: 30px;
+  }
+
+  .cc-legal-entity-card{
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .cc-legal-status{
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+    width: fit-content;
+  }
+
+  .cc-legal-modal__actions{
+    flex-direction: column-reverse;
+  }
+
+  .cc-legal-modal__actions .mit-btn{
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 460px){
+  .mi-modal__container.cc-entity-modal,
+  .mi-modal__container.cc-legal-modal{
+    width: min(100%, calc(100vw - 20px));
+  }
+
+  .cc-entity-modal .cc-grid-header,
+  .cc-entity-modal .cc-grid-row{
+    grid-template-columns: minmax(0, 1fr) 76px 126px !important;
+  }
+
+  .cc-entity-modal .cc-action-btn{
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
+    border-radius: 8px;
+  }
+
+  .cc-legal-modal__head,
+  .cc-legal-modal__body,
+  .cc-legal-modal__actions{
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+}
+
+/* =========================================================
+   Datos legales: misma estética que "Agregar cliente por CUIT"
+   ========================================================= */
+.mi-modal__container.cc-legal-modal{
+  width: min(920px, calc(100vw - 32px));
+  max-width: 920px;
+  max-height: min(88vh, 720px);
+  min-height: auto;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.cc-legal-modal__head{
+  padding: 14px 18px;
+  border-bottom: 1px solid rgba(10, 37, 64, .10);
+  background:
+    linear-gradient(135deg, rgba(0, 85, 187, .075), transparent 48%),
+    var(--nv-bg, #fff);
+}
+
+.cc-legal-modal__headIcon{
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  color: var(--nv-action, var(--b-action));
+  background: rgba(0, 85, 187, .10);
+  border: 1px solid rgba(0, 85, 187, .18);
+  box-shadow: 0 12px 28px -20px rgba(0, 85, 187, .55);
+}
+
+.cc-legal-modal__headText{
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.cc-legal-modal__headText span{
+  display: block;
+  color: var(--nv-muted, #64748b);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  margin-bottom: 3px;
+}
+
+.cc-legal-modal__headText h2{
+  margin: 0;
+  color: var(--nv-text, #0f172a);
+  font-size: 18px;
+  font-weight: 650;
+  letter-spacing: -.025em;
+}
+
+.cc-legal-modal__content{
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 14px;
+  overflow: hidden;
+  background: var(--nv-surface, #f8fafc);
+}
+
+.cc-legal-modal__layout{
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 12px;
+  overflow: hidden;
+}
+
+.cc-legal-client-card{
+  min-width: 0;
+  min-height: 360px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  border: 1px solid var(--nv-border-md, rgba(10, 37, 64, .12));
+  border-radius: var(--nv-r-md, 18px);
+  background:
+    radial-gradient(circle at top left, rgba(0, 85, 187, .10), transparent 34%),
+    var(--nv-bg, #fff);
+  box-shadow: var(--nv-shadow-sm, 0 14px 30px -26px rgba(10, 37, 64, .42));
+  overflow: hidden;
+  position: relative;
+}
+
+.cc-legal-client-card::before{
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--nv-midnight, var(--b-midnight)), var(--nv-action, var(--b-action)));
+  opacity: .92;
+}
+
+.cc-legal-client-card__top{
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 22px 22px 6px;
+  position: relative;
+  z-index: 1;
+}
+
+.cc-legal-client-card__avatar{
+  width: 54px;
+  height: 54px;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  color: var(--nv-action, var(--b-action));
+  background: rgba(0, 85, 187, .10);
+  border: 1px solid rgba(0, 85, 187, .20);
+  box-shadow: 0 12px 28px rgba(0, 85, 187, .10);
+  font-size: 20px;
+}
+
+.cc-legal-client-card__heading{
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.cc-legal-client-card__eyebrow{
+  width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: var(--nv-head-bg, rgba(10, 37, 64, .035));
+  border: 1px solid var(--nv-border, rgba(10, 37, 64, .10));
+  color: var(--nv-muted, #64748b);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .075em;
+}
+
+.cc-legal-client-card__heading h3{
+  margin: 0;
+  color: var(--nv-text, #0f172a);
+  font-size: clamp(1.15rem, 2vw, 1.55rem);
+  line-height: 1.12;
+  font-weight: 650;
+  letter-spacing: -.035em;
+  overflow-wrap: anywhere;
+}
+
+.cc-legal-client-card__description{
+  color: var(--nv-muted, #64748b);
+  font-size: 13px;
+  line-height: 1.5;
+  max-width: 58ch;
+}
+
+.cc-legal-client-card__status{
+  margin: 0 22px;
+  display: inline-flex;
+  width: fit-content;
+  max-width: calc(100% - 44px);
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+.cc-legal-client-card__status--success{
+  color: #057a55;
+  background: rgba(16, 185, 129, .10);
+  border: 1px solid rgba(16, 185, 129, .24);
+}
+
+.cc-legal-client-data{
+  padding: 0 22px 22px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: auto;
+}
+
+.cc-legal-data-chip,
+.cc-legal-data-row{
+  min-width: 0;
+  border: 1px solid var(--nv-border-md, rgba(10, 37, 64, .12));
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .72);
+  box-shadow: var(--nv-shadow-sm, 0 10px 24px -24px rgba(10, 37, 64, .42));
+}
+
+.cc-legal-data-chip{
+  padding: 10px 12px;
+}
+
+.cc-legal-data-row{
+  padding: 12px 14px;
+}
+
+.cc-legal-data-row--full{
+  grid-column: 1 / -1;
+}
+
+.cc-legal-data-chip span,
+.cc-legal-data-row span{
+  display: block;
+  margin-bottom: 4px;
+  color: var(--nv-muted, #64748b);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+}
+
+.cc-legal-data-chip b,
+.cc-legal-data-row b{
+  display: block;
+  color: var(--nv-text, #0f172a);
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.cc-legal-data-chip--strong{
+  border-color: rgba(0, 85, 187, .20);
+  background: rgba(0, 85, 187, .055);
+}
+
+.cc-legal-data-chip--strong b{
+  font-variant-numeric: tabular-nums;
+  color: var(--nv-action, var(--b-action));
+}
+
+.cc-legal-client-empty{
+  margin: auto 22px 22px;
+  padding: 18px;
+  border-radius: 16px;
+  border: 1px dashed rgba(0, 85, 187, .26);
+  background: rgba(0, 85, 187, .055);
+  color: var(--nv-muted, #64748b);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cc-legal-client-empty__icon{
+  width: 42px;
+  height: 42px;
+  border-radius: 13px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  background: var(--nv-bg, #fff);
+  border: 1px solid var(--nv-border-md, rgba(10, 37, 64, .12));
+  color: var(--nv-action, var(--b-action));
+  box-shadow: var(--nv-shadow-sm, 0 10px 24px -24px rgba(10, 37, 64, .42));
+}
+
+.cc-legal-client-empty b{
+  display: block;
+  margin-bottom: 3px;
+  color: var(--nv-text, #0f172a);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.cc-legal-client-empty span{
+  display: block;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.cc-legal-client-card__loading{
+  margin: auto 22px 22px;
+  min-height: 160px;
+  border: 1px dashed rgba(10, 37, 64, .16);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, .65);
+}
+
+.cc-legal-side-panel{
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 10px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.cc-legal-panel-section{
+  overflow: hidden;
+  border: 1px solid var(--nv-border-md, rgba(10, 37, 64, .12));
+  border-radius: var(--nv-r-md, 16px);
+  background: var(--nv-bg, #fff);
+  box-shadow: var(--nv-shadow-sm, 0 14px 30px -26px rgba(10, 37, 64, .42));
+}
+
+.cc-legal-panel-section__head{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--nv-head-bg, rgba(10, 37, 64, .035));
+  border-bottom: 1px solid var(--nv-border, rgba(10, 37, 64, .10));
+}
+
+.cc-legal-panel-section__dot{
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--nv-action, var(--b-action));
+  box-shadow: 0 0 0 4px rgba(0, 85, 187, .10);
+}
+
+.cc-legal-panel-section__head span:last-child{
+  color: var(--nv-muted, #64748b);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+}
+
+.cc-legal-panel-section__body{
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cc-legal-panel-intro{
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  color: var(--nv-muted, #64748b);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.cc-legal-panel-intro b{
+  color: var(--nv-text, #0f172a);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.cc-legal-side-list{
+  display: grid;
+  gap: 8px;
+}
+
+.cc-legal-side-item{
+  min-width: 0;
+  border: 1px solid rgba(10, 37, 64, .10);
+  border-radius: 12px;
+  background: rgba(248, 250, 252, .72);
+  padding: 9px 10px;
+}
+
+.cc-legal-side-item span{
+  display: block;
+  margin-bottom: 3px;
+  color: var(--nv-muted, #64748b);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+}
+
+.cc-legal-side-item b{
+  display: block;
+  min-width: 0;
+  color: var(--nv-text, #0f172a);
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+
+
+.cc-legal-modal__actions{
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: auto;
+  padding: 2px 0 0;
+  border-top: 0;
+  background: transparent;
+}
+
+.cc-legal-modal__actions .mit-btn{
+  min-height: 38px;
+  border-radius: 10px;
+}
+
+html[data-theme="oscuro"] .cc-legal-modal__head,
+body.dark .cc-legal-modal__head{
+  border-color: rgba(255, 255, 255, .10);
+  background:
+    linear-gradient(135deg, rgba(0, 85, 187, .16), transparent 52%),
+    var(--nv-bg, #101827);
+}
+
+html[data-theme="oscuro"] .cc-legal-client-card,
+body.dark .cc-legal-client-card{
+  background:
+    radial-gradient(circle at top left, rgba(0, 85, 187, .18), transparent 38%),
+    var(--nv-bg, #101827);
+  border-color: rgba(255, 255, 255, .12);
+}
+
+html[data-theme="oscuro"] .cc-legal-client-card__avatar,
+html[data-theme="oscuro"] .cc-legal-client-empty__icon,
+body.dark .cc-legal-client-card__avatar,
+body.dark .cc-legal-client-empty__icon{
+  background: rgba(255, 255, 255, .06);
+  border-color: rgba(255, 255, 255, .12);
+}
+
+html[data-theme="oscuro"] .cc-legal-client-card__eyebrow,
+html[data-theme="oscuro"] .cc-legal-data-chip,
+html[data-theme="oscuro"] .cc-legal-data-row,
+html[data-theme="oscuro"] .cc-legal-panel-section,
+html[data-theme="oscuro"] .cc-legal-side-item,
+html[data-theme="oscuro"] .cc-legal-client-card__loading,
+body.dark .cc-legal-client-card__eyebrow,
+body.dark .cc-legal-data-chip,
+body.dark .cc-legal-data-row,
+body.dark .cc-legal-panel-section,
+body.dark .cc-legal-side-item,
+body.dark .cc-legal-client-card__loading{
+  background: rgba(255, 255, 255, .045);
+  border-color: rgba(255, 255, 255, .12);
+}
+
+html[data-theme="oscuro"] .cc-legal-panel-section__head,
+body.dark .cc-legal-panel-section__head{
+  background: rgba(255, 255, 255, .06);
+  border-bottom-color: rgba(255, 255, 255, .10);
+}
+
+html[data-theme="oscuro"] .cc-legal-client-card__status--success,
+body.dark .cc-legal-client-card__status--success{
+  color: #86efac;
+  background: rgba(34, 197, 94, .12);
+  border-color: rgba(34, 197, 94, .24);
+}
+
+html[data-theme="oscuro"] .cc-legal-client-empty,
+body.dark .cc-legal-client-empty{
+  background: rgba(0, 85, 187, .10);
+  border-color: rgba(120, 170, 240, .24);
+}
+
+@media (max-width: 820px){
+  .mi-modal__container.cc-legal-modal{
+    max-height: 92vh;
+  }
+
+  .cc-legal-modal__content{
+    overflow: auto;
+  }
+
+  .cc-legal-modal__layout{
+    grid-template-columns: 1fr;
+    overflow: visible;
+  }
+
+  .cc-legal-client-card{
+    min-height: 280px;
+  }
+
+  .cc-legal-side-panel{
+    overflow: visible;
+    padding-right: 0;
+  }
+}
+
+@media (max-width: 520px){
+  .mi-modal__container.cc-legal-modal{
+    width: min(100%, calc(100vw - 20px));
+  }
+
+  .cc-legal-modal__content{
+    padding: 10px;
+  }
+
+  .cc-legal-client-card__top{
+    padding: 18px 16px 4px;
+    flex-direction: column;
+  }
+
+  .cc-legal-client-data{
+    grid-template-columns: 1fr;
+    padding: 0 16px 16px;
+  }
+
+  .cc-legal-client-card__status{
+    margin-inline: 16px;
+    max-width: calc(100% - 32px);
+  }
+
+  .cc-legal-client-empty,
+  .cc-legal-client-card__loading{
+    margin: auto 16px 16px;
+    align-items: flex-start;
+  }
+
+  .cc-legal-modal__actions{
+    flex-direction: column-reverse;
+  }
+
+  .cc-legal-modal__actions .mit-btn{
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* =========================================================
+   Fix ARCA: campos legales editables
+   Evita que los labels queden como bloques claros dentro del input
+   cuando se cargan datos fiscales desde ARCA, especialmente en modo oscuro.
+   ========================================================= */
+.cc-legal-edit-card__field{
+  position: relative;
+  min-width: 0;
+}
+
+.cc-legal-edit-card__field .fl-input{
+  width: 100%;
+  min-height: 44px;
+  border-radius: 13px !important;
+  border: 1px solid rgba(10, 37, 64, .16) !important;
+  background: rgba(255, 255, 255, .92) !important;
+  color: var(--nv-text, #0f172a) !important;
+  -webkit-text-fill-color: var(--nv-text, #0f172a) !important;
+  box-shadow: none !important;
+  opacity: 1 !important;
+}
+
+.cc-legal-edit-card__field .fl-label{
+  color: var(--nv-muted, #64748b) !important;
+  background: linear-gradient(180deg, rgba(248, 250, 252, .98), rgba(255, 255, 255, .96)) !important;
+  padding: 0 7px !important;
+  opacity: 1 !important;
+  pointer-events: none;
+}
+
+.cc-legal-edit-card__field.is-active .fl-label,
+.cc-legal-edit-card__field:focus-within .fl-label,
+.cc-legal-edit-card__field:has(.fl-input:not(:placeholder-shown)) .fl-label{
+  color: var(--b-action, #0055bb) !important;
+}
+
+.cc-legal-edit-card__field .fl-input:focus{
+  border-color: rgba(0, 85, 187, .42) !important;
+  box-shadow: 0 0 0 3px rgba(0, 85, 187, .12) !important;
+}
+
+.cc-legal-edit-card__field .fl-input:disabled{
+  cursor: not-allowed;
+  background: rgba(248, 250, 252, .86) !important;
+  color: rgba(15, 23, 42, .82) !important;
+  -webkit-text-fill-color: rgba(15, 23, 42, .82) !important;
+}
+
+html[data-theme="oscuro"] .cc-legal-edit-card__field .fl-input,
+body.dark .cc-legal-edit-card__field .fl-input{
+  background: rgba(15, 23, 42, .32) !important;
+  border-color: rgba(226, 232, 240, .18) !important;
+  color: rgba(241, 245, 249, .94) !important;
+  -webkit-text-fill-color: rgba(241, 245, 249, .94) !important;
+}
+
+
+
+html[data-theme="oscuro"] .cc-legal-edit-card__field:focus-within .fl-label,
+html[data-theme="oscuro"] .cc-legal-edit-card__field:has(.fl-input:not(:placeholder-shown)) .fl-label,
+body.dark .cc-legal-edit-card__field:focus-within .fl-label,
+body.dark .cc-legal-edit-card__field:has(.fl-input:not(:placeholder-shown)) .fl-label{
+  color: #93c5fd !important;
+}
+
+html[data-theme="oscuro"] .cc-legal-edit-card__field .fl-input:focus,
+body.dark .cc-legal-edit-card__field .fl-input:focus{
+  border-color: rgba(147, 197, 253, .45) !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, .16) !important;
+}
+
+html[data-theme="oscuro"] .cc-legal-edit-card__field .fl-input:disabled,
+body.dark .cc-legal-edit-card__field .fl-input:disabled{
+  background: rgba(15, 23, 42, .24) !important;
+  color: rgba(226, 232, 240, .78) !important;
+  -webkit-text-fill-color: rgba(226, 232, 240, .78) !important;
+}
+html[data-theme="oscuro"] .cc-legal-edit-card__field .fl-label,
+body.dark .cc-legal-edit-card__field .fl-label{
+  background:transparent !important;
+  color: rgba(226, 232, 240, .72) !important;
+}
+
+
+/* =========================================================
+   FORMULARIO SEPARADO COMPARTIDO
+   Clientes y proveedores usan Global_Modals.css para overlay,
+   fondo, header, container, icono y cierre. Acá quedan solo
+   medidas, layout interno y detalles propios de Cuentas Corrientes.
+   ========================================================= */
+.cc-entity-admin-grid--list-only {
+  grid-template-columns: 1fr !important;
+}
+
+.cc-entity-admin-grid--list-only .cc-entity-list-panel {
+  min-width: 0;
+  width: 100%;
+}
+
+.cc-entity-toolbar-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.cc-entity-toolbar-actions .mit-btn {
+  white-space: nowrap;
+}
+
+.cc-entity-form-modal__overlay,
+.cc-legal-modal__overlay {
+  z-index: 10000000001;
+}
+
+.mi-modal__container.cc-entity-form-modal {
+  width: min(860px, calc(100vw - 32px));
+  max-width: 860px;
+  max-height: min(90vh, 760px);
+}
+
+.cc-entity-form-modal__content {
+  padding: 14px;
+  overflow: auto;
+}
+
+.cc-entity-form-modal__layout {
+  grid-template-columns: minmax(0, 1.35fr) minmax(260px, .8fr);
+}
+
+.cc-entity-form-card {
+  min-height: 0;
+  overflow: hidden;
+}
+
+/*
+   El resultado de la consulta de CUIT puede agregar varias tarjetas/campos.
+   El scroll vive en el cuerpo del formulario para que esa información no se
+   recorte y el encabezado del modal permanezca siempre visible.
+*/
+.cc-entity-form-card__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 18px 18px 18px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
+}
+
+.cc-entity-form-card__body .cc-entity-form-body {
+  padding: 0 !important;
+  min-height: min-content;
+  overflow: visible !important;
+}
+
+.cc-entity-form-side-panel {
+  min-height: 0;
+}
+
+.cc-entity-form-side-panel .cc-legal-modal__actions {
+  display: none;
+}
+
+.cc-entity-form-side-panel .cc-entity-form-status-field {
+  margin: 12px 0 0;
+}
+
+.cc-entity-form-side-actions {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.cc-entity-form-side-actions .mit-btn {
+  width: 100%;
+  justify-content: center;
+}
+
+.cc-entity-form-arca-side {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--nv-border, rgba(148, 163, 184, .24));
+}
+
+.cc-entity-form-arca-side__title {
+  margin: 0 0 10px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .02em;
+  color: var(--nv-text, #0f172a);
+}
+
+.cc-entity-form-arca-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: stretch;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.cc-entity-form-arca-field {
+  margin: 0;
+  min-width: 0;
+}
+
+.cc-entity-form-arca-no-cuit {
+  min-width: 94px;
+  padding-inline: 14px;
+  white-space: nowrap;
+  justify-content: center;
+}
+
+.cc-entity-form-arca-actions {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.cc-entity-form-arca-actions .mit-btn {
+  width: 100%;
+  justify-content: center;
+}
+
+.cc-entity-form-arca-alert {
+  margin-top: 10px;
+}
+
+@media (max-width: 900px) {
+  .cc-entity-modal .mi-cr-table__foot--top {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .cc-entity-toolbar-actions {
+    justify-content: stretch;
+  }
+
+  .cc-entity-toolbar-actions .mit-btn {
+    flex: 1 1 140px;
+  }
+}
+
+@media (max-width: 820px) {
+  .mi-modal__container.cc-entity-form-modal {
+    max-height: 92vh;
+  }
+
+  .cc-entity-form-modal__layout {
+    grid-template-columns: 1fr;
+  }
+
+  .cc-entity-form-side-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .cc-entity-form-arca-side {
+    margin-top: 12px;
+  }
+}
+
+@media (max-width: 560px) {
+  .cc-entity-modal .cc-fiscal-action-row {
+    grid-template-columns: 1fr;
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 520px) {
+  .mi-modal__container.cc-entity-form-modal {
+    width: min(100%, calc(100vw - 20px));
+  }
+
+  .cc-entity-form-modal__content {
+    padding: 10px;
+  }
+
+  .cc-entity-form-card__body {
+    padding: 18px 16px 16px;
+  }
+
+  .cc-entity-form-side-actions {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 420px) {
+  .cc-entity-form-arca-row {
+    grid-template-columns: 1fr;
+  }
+
+  .cc-entity-form-arca-no-cuit {
+    width: 100%;
+  }
+}
+
+
+/* =========================================================
+   GLOBAL MODALS COMO BASE VISUAL
+   Evita repetir fondo/header/colores propios: los modales de
+   Cuentas Corrientes heredan estos elementos desde Global_Modals.css.
+   ========================================================= */
+.cc-legal-modal__head {
+  background: inherit;
+  border-bottom: inherit;
+}
+
+.mi-modal__header.cc-legal-modal__head {
+  background: var(--blue-midnight);
+  border-bottom: 1px solid rgba(255, 255, 255, .06);
+  color: #fff;
+}
+
+html[data-theme="oscuro"] .mi-modal__header.cc-legal-modal__head,
+body.dark .mi-modal__header.cc-legal-modal__head {
+  background: linear-gradient(180deg, #0a2540, #071a2c);
+  border-bottom-color: rgba(255, 255, 255, .08);
+}
+
+.mi-modal__header .cc-legal-modal__headIcon {
+  color: #fff;
+  background: rgba(255, 255, 255, .10);
+  border-color: rgba(255, 255, 255, .12);
+  box-shadow: none;
+}
+
+.mi-modal__header .cc-legal-modal__headText span {
+  color: rgba(255, 255, 255, .62);
+}
+
+.mi-modal__header .cc-legal-modal__headText h2,
+.mi-modal__header .cc-legal-modal__headText h4 {
+  color: #fff;
+}
+
+.cc-legal-modal__content,
+.cc-entity-form-modal__content {
+  background: var(--mi-bg-soft);
+}
+
+/* Mejor contraste de rótulos en modo claro */
+html:not([data-theme="oscuro"]) .cc-entity-form-card .cc-legal-client-card__eyebrow,
+body:not(.dark) .cc-entity-form-card .cc-legal-client-card__eyebrow{
+  color: rgba(255, 255, 255, .92);
+  background: var(--nv-midnight, var(--b-midnight, #0a2540));
+  border-color: rgba(10, 37, 64, .16);
+}
+
+html:not([data-theme="oscuro"]) .cc-entity-form-side-panel .cc-legal-panel-section__head,
+body:not(.dark) .cc-entity-form-side-panel .cc-legal-panel-section__head{
+  background: var(--nv-midnight, var(--b-midnight, #0a2540));
+  border-bottom-color: rgba(10, 37, 64, .20);
+}
+
+html:not([data-theme="oscuro"]) .cc-entity-form-side-panel .cc-legal-panel-section__head span:last-child,
+body:not(.dark) .cc-entity-form-side-panel .cc-legal-panel-section__head span:last-child{
+  color: rgba(255, 255, 255, .92);
+}
+
+html:not([data-theme="oscuro"]) .cc-entity-form-side-panel .cc-legal-panel-section__dot,
+body:not(.dark) .cc-entity-form-side-panel .cc-legal-panel-section__dot{
+  background: #1683ff;
+  box-shadow: 0 0 0 4px rgba(22, 131, 255, .16);
+}
+
+/* =========================================================
+   Formulario cliente/proveedor — floating label deshabilitado
+   Durante la consulta ARCA los inputs quedan disabled. La regla global
+   de disabled usa un fondo claro y en tema oscuro genera un bloque blanco.
+   Si el campo todavía está vacío, el label permanece centrado y debe ser
+   transparente; si ya tiene valor y flota, conserva el fondo del modal.
+   ========================================================= */
+.cc-entity-form-modal .fl-input:disabled:placeholder-shown + .fl-label {
+  background: transparent !important;
+}
+
+.cc-entity-form-modal .fl-input:disabled:not(:placeholder-shown) + .fl-label {
+  background: var(--mi-bg, #fff) !important;
+  opacity: 1 !important;
+}
+
+html[data-theme="oscuro"] .cc-entity-form-modal .fl-input:disabled:not(:placeholder-shown) + .fl-label,
+body.dark .cc-entity-form-modal .fl-input:disabled:not(:placeholder-shown) + .fl-label {
+  background: rgba(6, 18, 28, .96) !important;
+  color: rgba(180, 210, 255, .92) !important;
+}

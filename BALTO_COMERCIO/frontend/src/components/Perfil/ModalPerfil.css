@@ -1,0 +1,557 @@
+/* src/components/Perfil/ModalPerfil.css */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap");
+
+/* =========================
+   Tokens SOLO para ModalPerfil
+========================= */
+.mi-modal__container--perfil{
+  --balto-midnight:#0A2540;
+  --balto-action:#0055BB;
+  --balto-bg:#F6F9FC;
+  --balto-text:#425466;
+  --balto-white:#FFFFFF;
+  --balto-success:#22AD5C;
+  --balto-danger:#E13D45;
+
+  --balto-action-hover:#004AA3;
+  --balto-border:#D6DEEA;
+  --balto-muted: rgba(66, 84, 102, 0.72);
+  --balto-focus: rgba(0, 85, 187, 0.18);
+
+  --r-md: 14px;
+  --r-lg: 18px;
+
+  --shadow-sm: 0 1px 3px rgba(10, 37, 64, .08);
+  --shadow-md: 0 10px 25px rgba(10, 37, 64, .12);
+  --shadow-lg: 0 18px 45px rgba(10, 37, 64, .18);
+
+  --t: 180ms ease;
+}
+
+/* =========================
+   Overlay
+========================= */
+.mi-modal__overlay{
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 37, 64, 0.55);
+  backdrop-filter: blur(7px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 18px;
+  animation: mpFade .16s ease-out;
+}
+
+@keyframes mpFade{
+  from{ opacity:0; }
+  to{ opacity:1; }
+}
+
+/* =========================
+   Contenedor
+========================= */
+.mi-modal__container--perfil{
+  width: min(760px, 94vw);
+  max-width: 860px;
+  max-height: 90vh;
+}
+.mi-modal__container{
+
+
+  background: var(--balto-white);
+  border-radius: 22px;
+  border: 1px solid rgba(214, 222, 234, 0.9);
+  box-shadow: 0 30px 70px rgba(10, 37, 64, 0.30);
+
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+
+  animation: mpPop .18s ease-out;
+}
+
+@keyframes mpPop{
+  from{ opacity:0; transform: translateY(14px) scale(.99); }
+  to{ opacity:1; transform: translateY(0) scale(1); }
+}
+
+/* =========================
+   Header premium
+========================= */
+.mi-modal__header{
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 20px;
+
+  background:
+    radial-gradient(850px 220px at 15% 0%, rgba(255,255,255,.18), transparent 55%),
+    radial-gradient(720px 220px at 85% 100%, rgba(255,255,255,.10), transparent 55%),
+    linear-gradient(90deg, var(--balto-midnight) 0%, #0D2E52 55%, #09324A 120%);
+
+  border-bottom: 1px solid rgba(255,255,255,.14);
+  color: #fff;
+}
+
+.mi-modal__head-left{
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mi-modal__title{
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mi-modal__subtitle{
+  margin: 0;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: rgba(255,255,255,.82);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Botón cerrar */
+.mi-modal__close{
+  appearance: none;
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(255,255,255,.08);
+  color: rgba(255,255,255,.92);
+  width: 42px;
+  height: 42px;
+  padding: 0 !important;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: background var(--t), transform var(--t);
+  font-size: 18px;
+}
+
+.mi-modal__close:hover{
+  background: rgba(255,255,255,.14);
+  transform: translateY(-1px);
+}
+
+.mi-modal__close:focus-visible{
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(255,255,255,.22);
+}
+
+/* =========================
+   Body
+========================= */
+.perfil-body{
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  background:
+    radial-gradient(900px 300px at 50% 0%, rgba(0, 85, 187, 0.08), transparent 60%),
+    var(--balto-bg);
+}
+
+.perfil-inner{
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 18px;
+}
+
+.perfil-inner::-webkit-scrollbar{ width: 10px; }
+.perfil-inner::-webkit-scrollbar-thumb{
+  background: rgba(10, 37, 64, 0.20);
+  border-radius: 10px;
+}
+.perfil-inner{ scrollbar-width: thin; }
+
+/* =========================
+   Card principal (avatar)
+========================= */
+.perfil-card{
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr);
+  align-items: center;
+  gap: 18px;
+
+  padding: 18px;
+  border-radius: var(--r-lg);
+  background: rgba(255,255,255,.92);
+  border: 1px solid rgba(214, 222, 234, 0.95);
+  box-shadow: var(--shadow-md);
+
+  margin-bottom: 14px;
+  min-width: 0;
+}
+.perfil-logoWrap{
+  width: 96px;
+  height: 96px;
+  border-radius: 18px;
+  background: rgba(255,255,255,0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: 1px solid rgba(214, 222, 234, 0.95);
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.perfil-logoWrap img{
+  max-width: 88%;
+  max-height: 88%;
+  object-fit: contain;
+  display: block;
+}
+
+.perfil-card__icon{
+  width: 56px;
+  height: 56px;
+  border-radius: 18px;
+  display: grid;
+  place-items: center;
+
+  background: rgba(0, 85, 187, 0.08);
+  border: 1px solid rgba(0, 85, 187, 0.16);
+  color: var(--balto-action);
+
+  font-size: 26px;
+}
+
+.perfil-avatar{
+  width: 64px;
+  height: 64px;
+  border-radius: 20px;
+  display: grid;
+  place-items: center;
+
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: .02em;
+  color: #fff;
+
+  background: linear-gradient(135deg, var(--balto-midnight), var(--balto-action));
+  box-shadow: 0 16px 28px rgba(0, 85, 187, 0.16);
+  border: 1px solid rgba(0,0,0,.06);
+}
+
+.perfil-who{ min-width: 0; }
+
+.perfil-name{
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--balto-midnight);
+  line-height: 1.15;
+  word-break: break-word;
+}
+
+.perfil-meta{
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--balto-muted);
+  font-weight: 450;
+}
+.perfil-meta b{
+  color: rgba(10, 37, 64, 0.92);
+  font-weight: 600;
+}
+
+/* =========================
+   Grid datos
+========================= */
+.perfil-grid{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.perfil-field{
+  padding: 12px 12px;
+  border-radius: var(--r-md);
+  background: rgba(255,255,255,.92);
+  border: 1px solid rgba(214, 222, 234, 0.95);
+  box-shadow: var(--shadow-sm);
+  min-width: 0;
+}
+
+.perfil-field--full{ grid-column: 1 / -1; }
+
+.perfil-field__label{
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--balto-muted);
+  margin-bottom: 4px;
+  letter-spacing: 0;
+}
+
+.perfil-field__value{
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(10, 37, 64, 0.92);
+  word-break: break-word;
+}
+
+/* =========================
+   Footer acciones
+========================= */
+.mit-actions{
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 16px;
+
+  border-top: 1px solid rgba(214, 222, 234, 0.95);
+  background: rgba(255,255,255,.96);
+  flex-wrap: wrap;
+}
+
+.mit-help{
+  flex: 1;           /* empuja los botones siguientes a la derecha */
+  min-width: 0;
+}
+
+/* Botones */
+.mit-btn{
+  appearance: none;
+  border: 1px solid transparent;
+  border-radius: 14px;
+  height: 44px;
+  padding: 0 14px;
+  font-weight: 600;
+  letter-spacing: 0;
+  cursor: pointer;
+  transition: transform var(--t), box-shadow var(--t), filter var(--t), background var(--t);
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.mit-btn--ghost{
+  background: #fff;
+  color: var(--balto-midnight);
+  border-color: rgba(214, 222, 234, 0.98);
+}
+
+.mit-btn--ghost:hover{
+  background: rgba(0, 85, 187, 0.06);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.mit-btn--danger{
+  background: var(--balto-danger);
+  color: #fff;
+  border-color: var(--balto-danger);
+}
+
+.mit-btn--danger:hover{
+  filter: brightness(.95);
+  transform: translateY(-1px);
+  box-shadow: 0 14px 26px -18px rgba(225, 61, 69, .55);
+}
+
+/* ── Botón Configuración ── */
+.mit-btn--config{
+  background: rgba(0, 85, 187, 0.08);
+  color: var(--balto-action);
+  border-color: rgba(0, 85, 187, 0.20);
+}
+
+.mit-btn--config:hover{
+  background: rgba(0, 85, 187, 0.14);
+  border-color: rgba(0, 85, 187, 0.32);
+  transform: translateY(-1px);
+  box-shadow: 0 10px 22px -14px rgba(0, 85, 187, .28);
+}
+
+.mit-btn:focus-visible{
+  outline: none;
+  box-shadow: 0 0 0 4px var(--balto-focus);
+}
+
+/* =========================
+   Responsive
+========================= */
+@media (max-width: 640px){
+  .perfil-grid{
+    grid-template-columns: 1fr;
+  }
+
+  .perfil-card{
+    grid-template-columns: 84px minmax(0, 1fr);
+    gap: 14px;
+    padding: 14px;
+  }
+
+  .perfil-logoWrap{
+    width: 84px;
+    height: 84px;
+    border-radius: 16px;
+  }
+
+  .mi-modal__container{
+    border-radius: 18px;
+  }
+
+  .perfil-inner{
+    padding: 14px;
+  }
+
+  .mit-actions{
+    flex-wrap: nowrap;
+    gap: 8px;
+  }
+
+  .mit-help{ display: none; }
+
+  .mit-btn--config{
+    width: 100%;
+    justify-content: center;
+    order: 3;
+  }
+}
+
+/* =========================
+   MODO OSCURO — body.dark
+========================= */
+body.dark .mi-modal__overlay{
+  background: rgba(0,0,0,.55);
+  backdrop-filter: blur(6px);
+}
+
+body.dark .mi-modal__container{
+  background: #0B1E33;
+  border-color: rgba(255,255,255,.10);
+  box-shadow: 0 30px 70px rgba(0,0,0,.55);
+}
+
+body.dark .perfil-body{
+  background:
+    radial-gradient(900px 300px at 50% 0%, rgba(0, 85, 187, 0.14), transparent 60%),
+    #071624;
+}
+
+body.dark .perfil-card,
+body.dark .perfil-field{
+  background: rgba(255,255,255,.04);
+  border-color: rgba(255,255,255,.10);
+  box-shadow: 0 10px 25px rgba(0,0,0,.35);
+}
+
+body.dark .perfil-name{ color: rgba(255,255,255,.92); }
+body.dark .perfil-meta{ color: rgba(255,255,255,.60); }
+body.dark .perfil-meta b{ color: rgba(255,255,255,.86); }
+body.dark .perfil-field__label{ color: rgba(255,255,255,.65); }
+body.dark .perfil-field__value{ color: rgba(255,255,255,.88); }
+
+body.dark .mit-actions{
+  background: rgba(255,255,255,.03);
+  border-top-color: rgba(255,255,255,.10);
+}
+
+body.dark .mit-btn--ghost{
+  background: rgba(255,255,255,.04);
+  color: rgba(255,255,255,.88);
+  border-color: rgba(255,255,255,.12);
+}
+body.dark .mit-btn--ghost:hover{
+  background: rgba(0, 85, 187, 0.18);
+}
+
+body.dark .mit-btn--config{
+  background: rgba(59, 130, 246, 0.12);
+  color: rgba(147, 197, 253, 0.95);
+  border-color: rgba(59, 130, 246, 0.22);
+}
+body.dark .mit-btn--config:hover{
+  background: rgba(59, 130, 246, 0.20);
+  border-color: rgba(59, 130, 246, 0.36);
+}
+
+body.dark .mi-modal__close{
+  border-color: rgba(255,255,255,.14);
+  background: rgba(255,255,255,.08);
+}
+
+body.dark .perfil-inner::-webkit-scrollbar-thumb{
+  background: rgba(255,255,255,.16);
+}
+
+/* =========================
+   MODO OSCURO — html[data-theme="oscuro"]
+========================= */
+html[data-theme="oscuro"] .mi-modal__overlay{
+  background: rgba(0,0,0,.60);
+  backdrop-filter: blur(6px);
+}
+
+html[data-theme="oscuro"] .mi-modal__container--perfil{
+  background: #0B1E33;
+  border-color: rgba(255,255,255,.10);
+  box-shadow: 0 30px 70px rgba(0,0,0,.60);
+}
+
+html[data-theme="oscuro"] .perfil-body{
+  background:
+    radial-gradient(900px 300px at 50% 0%, rgba(0, 85, 187, 0.16), transparent 60%),
+    #071624;
+}
+
+html[data-theme="oscuro"] .perfil-card,
+html[data-theme="oscuro"] .perfil-field{
+  background: rgba(255,255,255,.04);
+  border-color: rgba(255,255,255,.10);
+  box-shadow: 0 10px 25px rgba(0,0,0,.35);
+}
+
+html[data-theme="oscuro"] .perfil-name{ color: rgba(255,255,255,.92); }
+html[data-theme="oscuro"] .perfil-meta{ color: rgba(255,255,255,.60); }
+html[data-theme="oscuro"] .perfil-meta b{ color: rgba(255,255,255,.86); }
+html[data-theme="oscuro"] .perfil-field__label{ color: rgba(255,255,255,.65); }
+html[data-theme="oscuro"] .perfil-field__value{ color: rgba(255,255,255,.88); }
+
+html[data-theme="oscuro"] .mit-actions{
+  background: rgba(255,255,255,.03);
+  border-top-color: rgba(255,255,255,.10);
+}
+
+html[data-theme="oscuro"] .mit-btn--ghost{
+  background: rgba(255,255,255,.04);
+  color: rgba(255,255,255,.88);
+  border-color: rgba(255,255,255,.12);
+}
+html[data-theme="oscuro"] .mit-btn--ghost:hover{
+  background: rgba(0, 85, 187, 0.20);
+}
+
+html[data-theme="oscuro"] .mit-btn--config{
+  background: rgba(59, 130, 246, 0.12);
+  color: rgba(147, 197, 253, 0.95);
+  border-color: rgba(59, 130, 246, 0.22);
+}
+html[data-theme="oscuro"] .mit-btn--config:hover{
+  background: rgba(59, 130, 246, 0.20);
+  border-color: rgba(59, 130, 246, 0.36);
+}
+
+html[data-theme="oscuro"] .mi-modal__close{
+  border-color: rgba(255,255,255,.14);
+  background: rgba(255,255,255,.08);
+}
+
+html[data-theme="oscuro"] .perfil-inner::-webkit-scrollbar-thumb{
+  background: rgba(255,255,255,.18);
+}

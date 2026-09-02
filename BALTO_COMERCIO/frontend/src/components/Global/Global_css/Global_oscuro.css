@@ -1,0 +1,2491 @@
+/* src/components/Compras/compras.css */
+/* =========================================================
+   BALTO — Compras
+   Paleta (Excel):
+   - Azul Medianoche: #0A2540
+   - Azul Acción:     #0055BB
+   ========================================================= */
+
+
+*{ box-sizing: border-box; }
+
+.cmp-page{
+  width: 100%;
+  min-height: 100%;
+  color: var(--color-text);
+  background: var(--color-bg-soft);
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+}
+
+.cmp-alert{
+  margin: 0 18px 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--color-danger) 10%, #fff);
+  border: 1px solid color-mix(in srgb, var(--color-danger) 24%, #fff);
+  color: color-mix(in srgb, var(--color-danger) 60%, var(--color-primary-strong));
+  font-weight: 560;
+}
+
+.cmp-card{
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+}
+
+.cmp-card--table{
+  display:flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.cmp-card__head{
+  padding: 14px 16px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 70%, #fff);
+  background:
+    radial-gradient(900px 180px at 0% 0%, rgba(0,85,187,.06), transparent 55%),
+    linear-gradient(180deg, #fff, #fff);
+}
+
+.cmp-card__headLeft{
+  display:flex;
+  justify-content: space-between;
+  gap: 14px;
+  width: 100%;
+  min-width: 0;
+}
+
+.cmp-card__title{
+  font-size: 15px;
+  letter-spacing: -0.01em;
+  font-weight: 620;
+  color: var(--color-primary-strong);
+}
+
+.cmp-card__hint{
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+  font-weight: 460;
+}
+.cmp-card__hint b{ font-weight: 620; color: var(--color-primary-strong); }
+
+.cmp-card__actions{
+  display:flex;
+  gap: 10px;
+  flex: 0 0 auto;
+}
+
+.cmp-headFilters{
+  display:flex;
+  align-items: flex-end;
+  gap: 12px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.cmp-filter,
+.cmp-search{
+  display:flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cmp-filter label,
+.cmp-search label{
+  display:block;
+  font-size: 11px;
+  font-weight: 600;
+  color: color-mix(in srgb, var(--color-text-muted) 86%, #000);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.cmp-filter select,
+.cmp-search input{
+  width: 100%;
+  height: 40px;
+  border-radius: 12px;
+  border: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-bg-soft) 62%, #fff);
+  padding: 0 12px;
+  outline: none;
+  color: var(--color-primary-strong);
+  font-weight: 520;
+  transition: border-color var(--transition-base), box-shadow var(--transition-base), background var(--transition-base);
+}
+
+.cmp-search input::placeholder{
+  color: color-mix(in srgb, var(--color-text-muted) 62%, #fff);
+  font-weight: 460;
+}
+
+.cmp-filter select:focus,
+.cmp-search input:focus{
+  background: #fff;
+  border-color: color-mix(in srgb, var(--color-primary) 60%, #fff);
+  box-shadow: var(--focus-ring);
+}
+
+.cmp-filter{ width: 170px; }
+
+
+.cmp-searchInput{ position: relative; width: 100%; }
+
+
+.cmp-clearSearch{
+  position:absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 30px;
+  height: 26px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--color-border) 70%, #fff);
+  background: #fff;
+  color: color-mix(in srgb, var(--color-text-muted) 70%, #000);
+  cursor: pointer;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  font-size: 18px;
+  font-weight: 600;
+  transition: transform var(--transition-base), box-shadow var(--transition-base), background var(--transition-base);
+}
+
+.cmp-clearSearch:hover{
+  background: color-mix(in srgb, var(--color-bg-soft) 70%, #fff);
+  transform: translateY(-50%) translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+.cmp-clearSearch:active{ transform: translateY(-50%); box-shadow: none; }
+
+/* Buttons */
+.cmp-btn{
+  height: 40px;
+  border-radius: 12px;
+  border: 1px solid var(--color-border);
+  background: #fff;
+  font-weight: 580;
+  padding: 0 14px;
+  cursor: pointer;
+  color: var(--color-primary-strong);
+  transition: transform var(--transition-base), box-shadow var(--transition-base), background var(--transition-base), border-color var(--transition-base);
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap: 10px;
+}
+
+.cmp-btn:hover{
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+  background: color-mix(in srgb, var(--color-bg-soft) 70%, #fff);
+}
+
+.cmp-btn:disabled{
+  opacity: .6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.cmp-btn--ghost{
+  background: color-mix(in srgb, var(--color-bg-soft) 65%, #fff);
+}
+
+.cmp-btn--primary{
+  background: var(--color-primary);
+  border-color: color-mix(in srgb, var(--color-primary) 60%, #fff);
+  color: #fff;
+  box-shadow: 0 10px 22px rgba(0,85,187,.18);
+}
+.cmp-btn--primary:hover{
+  background: color-mix(in srgb, var(--color-primary) 88%, #000);
+  box-shadow: 0 14px 26px rgba(0,85,187,.22);
+}
+
+.cmp-btn--excel{
+  border: 1px solid color-mix(in srgb, var(--color-success) 55%, #fff);
+  background: var(--color-success);
+  color: #fff;
+}
+.cmp-btn--excel:hover{
+  background: #fff;
+  color: var(--color-success);
+  border-color: var(--color-success);
+}
+
+.cmp-btn--danger{
+  border-color: color-mix(in srgb, var(--color-danger) 40%, #fff);
+  background: var(--color-danger);
+  color: #fff;
+}
+.cmp-btn--danger:hover{
+  background: color-mix(in srgb, var(--color-danger) 86%, #000);
+}
+
+/* bar */
+.cmp-tabsBar{
+  display:flex;
+  align-items:center;
+  justify-content: flex-end;
+  gap: 14px;
+  padding: 10px 12px;
+  background: linear-gradient(180deg, #fff, color-mix(in srgb, var(--color-bg-soft) 60%, #fff));
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 70%, #fff);
+}
+.cmp-tabsCta{ white-space: nowrap; padding: 0 16px; }
+
+/* table */
+.cmp-tableWrap{
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  max-height: calc(100vh - 320px);
+    min-height: calc(100vh - 320px);
+}
+
+.cmp-gridTable{
+  display:grid;
+  width: 100%;
+}
+
+.cmp-gridTable--head{
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--color-primary-strong);
+  color: rgba(255,255,255,.92);
+  border-bottom: 1px solid rgba(255,255,255,.10);
+  overflow: auto;
+}
+
+.cmp-gridCell,
+.cmp-gridCell--head{
+  display:flex;
+  align-items:center;
+  min-height: 44px;
+  min-width: 0;
+}
+
+.cmp-gridCell{
+  padding: 10px 12px;
+  color: color-mix(in srgb, var(--color-primary-strong) 78%, #000);
+  font-size: 13px;
+  font-weight: 440;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  justify-content: flex-start;
+}
+
+.cmp-gridCell--head{
+  padding: 11px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,.92);
+  justify-content: flex-start;
+}
+
+.cmp-gridTable--row{
+  background: #fff;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 60%, #fff);
+  transition: background var(--transition-base);
+}
+.cmp-gridTable--row:hover{ background: rgba(0,85,187,.05); }
+
+.is-right{ justify-content:flex-end; text-align:right; }
+.is-center{ justify-content:center; text-align:center; }
+
+.is-strong{
+  font-weight: 560;
+  color: var(--color-primary-strong);
+}
+
+.cmp-gridCell--actions{
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+  justify-content: center;
+}
+
+.cmp-actionsInline{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap: 10px;
+}
+
+.cmp-iconBtn{
+  width: 36px;
+  height: 34px;
+  border-radius: 12px;
+  border: 1px solid var(--color-border);
+  background: #fff;
+  color: color-mix(in srgb, var(--color-text-muted) 80%, #000);
+  cursor:pointer;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  transition: transform var(--transition-base), box-shadow var(--transition-base), background var(--transition-base), border-color var(--transition-base), color var(--transition-base);
+}
+.cmp-iconBtn:hover{
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+  background: rgba(0,85,187,.08);
+  border-color: rgba(0,85,187,.25);
+  color: var(--color-primary);
+}
+
+.cmp-iconBtn--danger{
+  border-color: color-mix(in srgb, var(--color-danger) 28%, #fff);
+  color: color-mix(in srgb, var(--color-danger) 72%, #000);
+}
+.cmp-iconBtn--danger:hover{
+  background: color-mix(in srgb, var(--color-danger) 10%, #fff);
+  border-color: color-mix(in srgb, var(--color-danger) 40%, #fff);
+  color: var(--color-danger);
+}
+
+.cmp-emptyRow{
+  padding: 22px 12px;
+  text-align:center;
+  color: var(--color-text-muted);
+  font-weight: 520;
+}
+
+.cmp-ellipsis{
+  display:block;
+  min-width:0;
+  overflow:hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: 100%;
+  font-weight: 420 !important;
+}
+
+/* placeholders simple */
+.cmp-placeholder{
+  position: fixed;
+  inset: 0;
+  background: rgba(10,37,64,.32);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding: 16px;
+  z-index: 9999;
+}
+.cmp-placeholder__box{
+  width: min(680px, 100%);
+  background: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  box-shadow: var(--shadow-md);
+  padding: 16px;
+}
+.cmp-placeholder__title{
+  font-weight: 620;
+  color: var(--color-primary-strong);
+  margin-bottom: 8px;
+}
+.cmp-placeholder__text{
+  color: color-mix(in srgb, var(--color-text-muted) 88%, #000);
+  font-weight: 460;
+  line-height: 1.45;
+  margin-bottom: 14px;
+}
+.cmp-placeholder__actions{
+  display:flex;
+  gap: 10px;
+  justify-content:flex-end;
+}
+
+@media (max-width: 1000px){
+  .cmp-filter, .cmp-search{ width: 100%; }
+  .cmp-card__head{ flex-direction: column; align-items: stretch; }
+  .cmp-card__actions{ justify-content: flex-end; }
+}
+/* =========================================================
+   ✅ COMPRAS — Responsive SOLO mobile (no toca desktop)
+   Scope: .mov-page--compras
+========================================================= */
+
+@media (max-width: 720px) {
+  /* ocultar header de tabla solo en Compras */
+  .mov-page--compras .mov-gridTable--head {
+    display: none !important;
+  }
+
+  /* wrapper: evitamos scroll raro y damos altura usable */
+
+
+  /* cada fila pasa a "card" */
+  .mov-page--compras .mov-gridTable--row {
+    display: block !important;     /* pisa el display:grid */
+    padding: 12px;
+    margin: 10px 0;
+    border: 1px solid color-mix(in srgb, var(--color-border) 70%, #fff);
+    border-radius: 16px;
+    background: #fff;
+  }
+
+  /* celdas en formato label + valor */
+  .mov-page--compras .mov-gridTable--row .mov-gridCell {
+    display: grid;
+    grid-template-columns: 120px 1fr;
+    gap: 10px;
+    align-items: start;
+    padding: 4px 0;
+    min-height: auto;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: initial;
+  }
+
+  /* etiqueta (sale de data-label) */
+  .mov-page--compras .mov-gridTable--row .mov-gridCell::before {
+    content: attr(data-label);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+    line-height: 1.2;
+    padding-top: 2px;
+  }
+
+  /* el valor ya no recorta */
+  .mov-page--compras .mov-ellipsissss {
+    overflow: visible;
+    text-overflow: initial;
+    white-space: normal;
+    line-height: 1.25;
+    text-align: end;
+  }
+
+  /* centrar ya no sirve en mobile */
+  .mov-page--compras .mov-gridTable--row .mov-gridCell.is-center {
+    justify-items: start;
+    text-align: left;
+  }
+
+  /* acciones abajo, alineadas a la izquierda */
+  .mov-page--compras .mov-gridCell--actions {
+    grid-template-columns: 120px 1fr;
+  }
+
+  .mov-page--compras .mov-actionsInline {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 0 0 0 auto;
+  }
+}
+
+/* Mobile muy chico */
+@media (max-width: 420px) {
+  .mov-page--compras .mov-gridTable--row .mov-gridCell {
+    grid-template-columns: 1fr 3fr;
+  }
+}
+
+/* =========================================================
+   🌙 Dark mode: Compras cards (usa tu selector actual)
+========================================================= */
+
+html[data-theme="oscuro"] .mov-page--compras .mov-gridTable--row {
+  background: rgba(15,23,42,.40) !important;
+  border-color: rgba(148,163,184,.14) !important;
+}
+
+html[data-theme="oscuro"] .mov-page--compras .mov-gridTable--row .mov-gridCell::before {
+  color: rgba(226,232,240,.60) !important;
+}
+/* =============================================
+   Modo oscuro
+   Se activa con: html[data-theme="oscuro"]
+============================================= */
+html[data-theme="oscuro"] .cal-wrap {
+  --mi-bg: #0f1724;
+  --mi-bg-soft: #162132;
+  --mi-border: #243246;
+  --mi-text: #e8eef7;
+  --mi-muted: #9fb0c6;
+  --mi-primary: #8eb8ff;
+  --mi-primary-600: #5d9bff;
+  --mi-shadow: 0 28px 64px -24px rgba(0, 0, 0, 0.55);
+
+  background: var(--color-bg);
+  box-shadow:
+    0 0 0 1px var(--color-border),
+    var(--shadow-lg);
+}
+
+/* Header */
+html[data-theme="oscuro"] .cal-header {
+  background: #0a1422;
+}
+
+html[data-theme="oscuro"] .cal-header__slot + .cal-header__slot {
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+html[data-theme="oscuro"] .cal-header__label {
+  color: rgba(255, 255, 255, 0.42);
+}
+
+html[data-theme="oscuro"] .cal-header__date {
+  color: #f4f8ff;
+}
+
+html[data-theme="oscuro"] .cal-header__date.is-empty {
+  color: rgba(255, 255, 255, 0.24);
+}
+
+html[data-theme="oscuro"] .cal-header__arrow {
+  color: rgba(255, 255, 255, 0.2);
+}
+
+html[data-theme="oscuro"] .cal-clear {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.62);
+}
+
+html[data-theme="oscuro"] .cal-clear:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.22);
+  color: #ffffff;
+}
+
+/* Panels */
+html[data-theme="oscuro"] .cal-panels {
+  background: var(--color-bg);
+}
+
+/* Nav */
+html[data-theme="oscuro"] .cal-nav {
+  background: #111b2a;
+  border-color: var(--color-border);
+  color: #c3d1e4;
+}
+
+html[data-theme="oscuro"] .cal-nav:hover {
+  background: #182436;
+  color: #ffffff;
+  border-color: #355077;
+}
+
+/* Month */
+html[data-theme="oscuro"] .cal-month + .cal-month {
+  border-left: 1px solid var(--color-border);
+}
+
+html[data-theme="oscuro"] .cal-month__label {
+  color: #d9e5f5;
+}
+
+/* Grid / DOW */
+html[data-theme="oscuro"] .cal-dow {
+  color: var(--color-text-muted);
+}
+
+/* Días */
+html[data-theme="oscuro"] .cal-day {
+  color: var(--color-text);
+}
+
+html[data-theme="oscuro"] .cal-day:hover:not(.cal-day--disabled):not(.cal-day--from):not(.cal-day--to) {
+  background: #192536;
+  color: #ffffff;
+}
+
+/* Today */
+html[data-theme="oscuro"] .cal-day--today:not(.cal-day--from):not(.cal-day--to) {
+  color: #6ea8ff;
+}
+
+html[data-theme="oscuro"] .cal-day--today:not(.cal-day--from):not(.cal-day--to)::after {
+  background: #6ea8ff;
+}
+
+/* In range */
+html[data-theme="oscuro"] .cal-day--inrange {
+  background: rgba(93, 155, 255, 0.16);
+  color: #eaf2ff;
+}
+
+/* Range start */
+html[data-theme="oscuro"] .cal-day--from.cal-day--range-start {
+  background: rgba(93, 155, 255, 0.16);
+  color: #ffffff;
+}
+
+html[data-theme="oscuro"] .cal-day--from.cal-day--range-start::before {
+  background: #1f5fbf;
+}
+
+/* Range end */
+html[data-theme="oscuro"] .cal-day--to.cal-day--range-end {
+  background: rgba(93, 155, 255, 0.16);
+  color: #ffffff;
+}
+
+html[data-theme="oscuro"] .cal-day--to.cal-day--range-end::before {
+  background: #1f5fbf;
+}
+
+/* Single */
+html[data-theme="oscuro"] .cal-day--from.cal-day--single,
+html[data-theme="oscuro"] .cal-day--to.cal-day--single {
+  color: #ffffff;
+}
+
+html[data-theme="oscuro"] .cal-day--from.cal-day--single::before,
+html[data-theme="oscuro"] .cal-day--to.cal-day--single::before {
+  background: #1f5fbf;
+}
+
+/* Generic from / to */
+html[data-theme="oscuro"] .cal-day--from:not(.cal-day--range-start):not(.cal-day--single),
+html[data-theme="oscuro"] .cal-day--to:not(.cal-day--range-end):not(.cal-day--single) {
+  color: #ffffff;
+}
+
+html[data-theme="oscuro"] .cal-day--from:not(.cal-day--range-start):not(.cal-day--single)::before,
+html[data-theme="oscuro"] .cal-day--to:not(.cal-day--range-end):not(.cal-day--single)::before {
+  background: #1f5fbf;
+}
+
+/* Disabled */
+html[data-theme="oscuro"] .cal-day--disabled {
+  color: #58677b !important;
+  background: transparent !important;
+}
+
+/* Footer */
+html[data-theme="oscuro"] .cal-footer {
+  background: #121c2b;
+  border-top: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+}
+
+html[data-theme="oscuro"] .cal-footer b {
+  color: #eaf2ff;
+}
+
+/* Responsive dark */
+@media (max-width: 560px) {
+  html[data-theme="oscuro"] .cal-month + .cal-month {
+    border-top: 1px solid var(--color-border);
+    border-left: none;
+  }
+}
+html[data-theme="oscuro"] .cc-calTrigger {
+  background: rgba(15, 23, 42, 0.88) !important;
+  color: rgba(226, 232, 240, 0.92) !important;
+  border-color: rgba(148, 163, 184, 0.18) !important;
+}
+
+html[data-theme="oscuro"] .cc-calTrigger:hover {
+  border-color: rgba(96, 165, 250, 0.34) !important;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.28) !important;
+  background: rgba(15, 23, 42, 0.96) !important;
+}
+
+html[data-theme="oscuro"] .cc-calTrigger.is-open {
+  background: rgba(15, 23, 42, 0.96) !important;
+  color: rgba(226, 232, 240, 0.96) !important;
+  border-color: rgba(96, 165, 250, 0.38) !important;
+  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.14) !important;
+}
+
+html[data-theme="oscuro"] .cc-calTrigger__arrow {
+  color: rgba(226, 232, 240, 0.6) !important;
+}/* =========================================================
+   DARK MODE
+========================================================= */
+html[data-theme="oscuro"] .contenedor-cards{
+  background: transparent !important;
+  color: rgba(226,232,240,.92) !important;
+}
+
+html[data-theme="oscuro"] .contenedor-cards .cc-alert{
+  background: rgba(225,61,69,.12) !important;
+  border-color: rgba(225,61,69,.24) !important;
+  color: rgba(255,255,255,.92) !important;
+}
+
+html[data-theme="oscuro"] .contenedor-cards .cc-card{
+  background: rgba(15,23,42,.62) !important;
+  border-color: rgba(148,163,184,.14) !important;
+  box-shadow: 0 16px 40px -26px rgba(0,0,0,.62) !important;
+}
+
+html[data-theme="oscuro"] .contenedor-cards .cc-card__head{
+  background:
+    radial-gradient(900px 180px at 0% 0%, rgba(78,161,255,.12), transparent 55%),
+    linear-gradient(180deg, rgba(15,23,42,.85), rgba(15,23,42,.62)) !important;
+  border-bottom-color: rgba(148,163,184,.12) !important;
+}
+
+html[data-theme="oscuro"] .contenedor-cards .cc-card__title{
+  color: rgba(226,232,240,.92) !important;
+}
+
+html[data-theme="oscuro"] .contenedor-cards .cc-card__hint{
+  color: rgba(226,232,240,.62) !important;
+}
+
+html[data-theme="oscuro"] .contenedor-cards .cc-card__hint b{
+  color: rgba(226,232,240,.92) !important;
+}
+
+html[data-theme="oscuro"] .contenedor-cards .cc-filter label{
+  color: rgba(226,232,240,.65) !important;
+}
+
+html[data-theme="oscuro"] .contenedor-cards .cc-filter select{
+  background: rgba(15,23,42,.88) !important;
+  color: rgba(226,232,240,.92) !important;
+  border-color: rgba(148,163,184,.18) !important;
+}
+
+html[data-theme="oscuro"] .contenedor-cards .cc-filter select:hover{
+  border-color: rgba(148,163,184,.30) !important;
+}
+
+html[data-theme="oscuro"] .contenedor-cards .cc-filter select:focus{
+  background: rgba(15,23,42,.96) !important;
+  border-color: rgba(78,161,255,.45) !important;
+  box-shadow: 0 0 0 3px rgba(78,161,255,.18) !important;
+}
+
+html[data-theme="oscuro"] .contenedor-cards .cc-input{
+  background: rgba(15,23,42,.88) !important;
+  color: rgba(226,232,240,.92) !important;
+  border-color: rgba(148,163,184,.18) !important;
+}
+
+html[data-theme="oscuro"] .contenedor-cards .cc-input::placeholder{
+  color: rgba(226,232,240,.40) !important;
+}
+
+html[data-theme="oscuro"] .contenedor-cards .cc-input:hover{
+  border-color: rgba(148,163,184,.30) !important;
+}
+
+html[data-theme="oscuro"] .contenedor-cards .cc-input:focus{
+  background: rgba(15,23,42,.96) !important;
+  border-color: rgba(78,161,255,.45) !important;
+  box-shadow: 0 0 0 3px rgba(78,161,255,.18) !important;
+}
+
+html[data-theme="oscuro"] .contenedor-cards .cc-clearSearch{
+  background: rgba(15,23,42,.90) !important;
+  color: rgba(226,232,240,.72) !important;
+  border-color: rgba(148,163,184,.18) !important;
+}
+
+html[data-theme="oscuro"] .contenedor-cards .cc-clearSearch:hover{
+  background: rgba(225,61,69,.14) !important;
+  border-color: rgba(225,61,69,.30) !important;
+  color: rgba(240,120,120,.95) !important;
+}
+
+html[data-theme="oscuro"] .contenedor-cards .cc-subhead{
+  background: linear-gradient(180deg, rgba(15,23,42,.85), rgba(15,23,42,.62)) !important;
+  border-bottom-color: rgba(148,163,184,.12) !important;
+}
+
+html[data-theme="oscuro"] .contenedor-cards .cc-subhead__name{
+  color: rgba(226,232,240,.92) !important;
+}
+
+html[data-theme="oscuro"] .contenedor-cards .cc-subhead__meta{
+  color: rgba(226,232,240,.58) !important;
+}
+
+html[data-theme="oscuro"] .contenedor-cards .cc-btn--excel{
+  background: rgba(34,173,92,.90) !important;
+  border-color: rgba(34,173,92,.45) !important;
+  color: #fff !important;
+  box-shadow: 0 8px 24px rgba(34,173,92,.18) !important;
+}
+
+html[data-theme="oscuro"] .contenedor-cards .cc-btn--excel:hover:not(:disabled){
+  background: rgba(34,173,92,1) !important;
+  box-shadow: 0 10px 28px rgba(34,173,92,.28) !important;
+}
+
+html[data-theme="oscuro"] .contenedor-cards .cc-btnex{
+  background: rgba(15,23,42,.80) !important;
+  border-color: rgba(78,161,255,.28) !important;
+  color: rgba(226,232,240,.88) !important;
+}
+
+html[data-theme="oscuro"] .contenedor-cards .cc-btnex:hover:not(:disabled){
+  background: rgba(78,161,255,.18) !important;
+  border-color: rgba(78,161,255,.50) !important;
+  color: rgba(226,232,240,.96) !important;
+  box-shadow: 0 6px 20px rgba(78,161,255,.20) !important;
+}
+
+html[data-theme="oscuro"] .contenedor-cards .cc-calTrigger{
+  background: rgba(15,23,42,.88) !important;
+  border-color: rgba(148,163,184,.18) !important;
+  color: rgba(226,232,240,.85) !important;
+}
+
+html[data-theme="oscuro"] .contenedor-cards .cc-calTrigger:hover{
+  border-color: rgba(148,163,184,.30) !important;
+  background: rgba(15,23,42,.95) !important;
+}
+
+html[data-theme="oscuro"] .contenedor-cards .cc-calTrigger.is-open{
+  border-color: rgba(78,161,255,.50) !important;
+  box-shadow: 0 0 0 3px rgba(78,161,255,.16) !important;
+  background: rgba(15,23,42,.96) !important;
+}
+
+html[data-theme="oscuro"] .contenedor-cards .cc-calTrigger__arrow{
+  color: rgba(226,232,240,.52) !important;
+}
+
+html[data-theme="oscuro"] .contenedor-cards .cc-calDropdown{
+  filter: drop-shadow(0 16px 34px rgba(0,0,0,.45)) !important;
+}
+
+/* tabla principal que armaste inline en React */
+html[data-theme="oscuro"] .contenedor-cards > div[style*="background: #fff"]{
+  background: rgba(15,23,42,.72) !important;
+  border-color: rgba(148,163,184,.14) !important;
+  box-shadow: 0 16px 40px -26px rgba(0,0,0,.62) !important;
+}
+
+/* header de tabla */
+html[data-theme="oscuro"] .contenedor-cards > div[style*="background: #fff"] > div:first-child{
+  background: rgba(30,41,59,.92) !important;
+  border-bottom-color: rgba(148,163,184,.14) !important;
+  color: rgba(226,232,240,.84) !important;
+}
+
+/* filas */
+html[data-theme="oscuro"] .contenedor-cards > div[style*="background: #fff"] > div:not(:first-child):not(:last-child){
+  border-bottom-color: rgba(148,163,184,.10) !important;
+}
+
+/* texto general tabla */
+html[data-theme="oscuro"] .contenedor-cards > div[style*="background: #fff"] div{
+  color: rgba(226,232,240,.88);
+}
+
+/* zebra rows */
+html[data-theme="oscuro"] .contenedor-cards > div[style*="background: #fff"] > div[style*="background: #fcfcfd"]{
+  background: rgba(15,23,42,.86) !important;
+}
+
+html[data-theme="oscuro"] .contenedor-cards > div[style*="background: #fff"] > div[style*="background: #fff"]{
+  background: rgba(15,23,42,.72) !important;
+}
+
+/* bloque vacío / loading */
+html[data-theme="oscuro"] .contenedor-cards > div[style*="background: #fff"] > div[style*="text-align: center"]{
+  background: rgba(15,23,42,.72) !important;
+  color: rgba(226,232,240,.58) !important;
+}
+
+/* footer de totales */
+html[data-theme="oscuro"] .contenedor-cards > div[style*="background: #fff"] > div:last-child{
+  background: rgba(30,41,59,.82) !important;
+  border-top-color: rgba(148,163,184,.14) !important;
+}
+
+html[data-theme="oscuro"] .contenedor-cards .cc-emptyRow{
+  color: rgba(226,232,240,.55) !important;
+}
+
+html[data-theme="oscuro"] .contenedor-cards .cc-footnote{
+  background: rgba(15,23,42,.62) !important;
+  border-top-color: rgba(148,163,184,.10) !important;
+  color: rgba(226,232,240,.58) !important;
+}
+
+html[data-theme="oscuro"] .contenedor-cards{
+  --cc-skel-a: rgba(226,232,240,.07);
+  --cc-skel-b: rgba(226,232,240,.14);
+}/* =========================================================
+   🌙 MODO OSCURO - CUENTAS CORRIENTES TABLA
+========================================================= */
+
+html[data-theme="oscuro"] .cc-cliente-table{
+  background:#0f172a;
+  border:1px solid rgba(255,255,255,0.06);
+  box-shadow:0 10px 28px rgba(0,0,0,0.55);
+}
+
+/* HEADER */
+
+html[data-theme="oscuro"] .cc-cliente-table__headWrap{
+  background:#111827;
+  border-bottom:1px solid rgba(255,255,255,0.06);
+}
+
+html[data-theme="oscuro"] .cc-cliente-table__head{
+  background:#111827;
+  color:#e5e7eb;
+}
+
+/* FILAS */
+
+html[data-theme="oscuro"] .cc-cliente-table__row{
+  background:#0f172a;
+}
+
+html[data-theme="oscuro"] .cc-cliente-table__row.is-alt{
+  background:#111827;
+}
+
+html[data-theme="oscuro"] .cc-cliente-table__row:hover{
+  background:#172554;
+}
+
+/* BORDES */
+
+html[data-theme="oscuro"] .cc-cliente-table__row:not(:last-child){
+  border-bottom:1px solid rgba(255,255,255,0.05);
+}
+
+/* CELDAS */
+
+html[data-theme="oscuro"] .cc-cliente-table__cell{
+  color:#e5e7eb;
+}
+
+/* DETALLE */
+
+html[data-theme="oscuro"] .cc-cliente-table__detail{
+  color:#9ca3af;
+}
+
+/* SALDO */
+
+html[data-theme="oscuro"] .cc-cliente-table__saldo{
+  color:#93c5fd;
+}
+
+/* TOTALES */
+
+html[data-theme="oscuro"] .cc-cliente-table__footWrap{
+  background:#111827;
+  border-top:1px solid rgba(255,255,255,0.06);
+}
+
+html[data-theme="oscuro"] .cc-cliente-table__totals{
+  background:#111827;
+  color:#f9fafb;
+}
+
+/* EMPTY STATE */
+
+html[data-theme="oscuro"] .cc-emptyIcon{
+  color:#6b7280;
+}
+
+html[data-theme="oscuro"] .cc-emptyText{
+  color:#9ca3af;
+}
+
+/* BOTON VER */
+
+html[data-theme="oscuro"] .cc-verBtn{
+  background:rgba(0,85,187,0.15);
+  border:1px solid rgba(0,85,187,0.25);
+  color:#93c5fd;
+}
+
+html[data-theme="oscuro"] .cc-verBtn:hover{
+  background:#0055BB;
+  border-color:#0055BB;
+  color:#fff;
+}
+
+/* SCROLL */
+
+html[data-theme="oscuro"] .cc-cliente-table__body::-webkit-scrollbar-thumb{
+  background:rgba(255,255,255,0.18);
+}
+
+html[data-theme="oscuro"] .cc-cliente-table__body::-webkit-scrollbar-track{
+  background:transparent;
+}/* =========================
+   Dark mode checklist
+========================= */
+
+html[data-theme="oscuro"] .mfb-check{
+  background: rgba(255,255,255,.04);
+  border-color: rgba(255,255,255,.10);
+}
+
+html[data-theme="oscuro"] .mfb-check:hover{
+  background: rgba(255,255,255,.07);
+  border-color: rgba(0,85,187,.35);
+}
+
+html[data-theme="oscuro"] .mfb-check__box{
+  background: rgba(255,255,255,.05);
+  border-color: rgba(255,255,255,.20);
+}
+
+html[data-theme="oscuro"] .mfb-check__text{
+  color: rgba(255,255,255,.90);
+}
+
+html[data-theme="oscuro"] .mfb-check__input:checked + .mfb-check__box{
+  background: #0055BB;
+  border-color: #0055BB;
+}
+
+html[data-theme="oscuro"] .mfb-check__input:focus-visible + .mfb-check__box{
+  box-shadow: 0 0 0 3px rgba(0,85,187,.35);
+}
+/* =========================
+   Modo oscuro
+========================= */
+html[data-theme="oscuro"] .boton-exportar-trigger,
+body.dark .boton-exportar-trigger {
+  background: linear-gradient(180deg, #11243c 0%, #0c1c31 100%);
+  color: #e5eef9;
+  border-color: rgba(148, 163, 184, 0.16);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.24);
+}
+
+html[data-theme="oscuro"] .boton-exportar-trigger:hover:not(:disabled),
+body.dark .boton-exportar-trigger:hover:not(:disabled) {
+  border-color: rgba(96, 165, 250, 0.30);
+  box-shadow:
+    0 14px 28px rgba(0, 0, 0, 0.28),
+    0 0 0 4px rgba(59, 130, 246, 0.12);
+}
+
+html[data-theme="oscuro"] .boton-exportar-trigger__iconWrap,
+body.dark .boton-exportar-trigger__iconWrap {
+  background: linear-gradient(180deg, rgba(59, 130, 246, 0.22) 0%, rgba(37, 99, 235, 0.18) 100%);
+  color: #93c5fd;
+}
+
+html[data-theme="oscuro"] .boton-exportar-menu,
+body.dark .boton-exportar-menu {
+  background: rgba(12, 28, 49, 0.98);
+  border-color: rgba(148, 163, 184, 0.12);
+  box-shadow:
+    0 24px 48px rgba(0, 0, 0, 0.34),
+    0 8px 18px rgba(0, 0, 0, 0.22);
+}
+
+html[data-theme="oscuro"] .boton-exportar-menu__header,
+body.dark .boton-exportar-menu__header {
+  color: #8da3bd;
+}
+
+html[data-theme="oscuro"] .boton-exportar-menu__item,
+body.dark .boton-exportar-menu__item {
+  color: #e5eef9;
+}
+
+html[data-theme="oscuro"] .boton-exportar-menu__item:hover:not(:disabled),
+body.dark .boton-exportar-menu__item:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+html[data-theme="oscuro"] .boton-exportar-menu__label,
+body.dark .boton-exportar-menu__label {
+  color: #f8fafc;
+}
+
+html[data-theme="oscuro"] .boton-exportar-menu__desc,
+body.dark .boton-exportar-menu__desc {
+  color: #94a3b8;
+}
+
+html[data-theme="oscuro"] .boton-exportar-menu__empty,
+body.dark .boton-exportar-menu__empty {
+  color: #94a3b8;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* =========================
+   Dark mode — Floating label
+========================= */
+html[data-theme="oscuro"] .cc-floatingLabel{
+  background: #0f172a;
+  color: rgba(226, 232, 240, 0.68);
+}
+
+html[data-theme="oscuro"] .cc-field--floating.is-filled .cc-floatingLabel,
+html[data-theme="oscuro"] .cc-field--floating.is-focused .cc-floatingLabel{
+  color: #60a5fa;
+}
+
+html[data-theme="oscuro"] .cc-searchInput__fieldWrap.cc-field .cc-input{
+  background: #0f172a;
+  border-color: rgba(148, 163, 184, 0.22);
+  color: rgba(241, 245, 249, 0.94);
+}
+
+html[data-theme="oscuro"] .cc-searchInput__fieldWrap.cc-field .cc-input:hover{
+  border-color: rgba(148, 163, 184, 0.34);
+}
+
+html[data-theme="oscuro"] .cc-searchInput__fieldWrap.cc-field .cc-input:focus{
+  background: #111827;
+  border-color: rgba(96, 165, 250, 0.72);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.18);
+  color: rgba(248, 250, 252, 0.98);
+}
+
+html[data-theme="oscuro"] .cc-calTrigger{
+  background: #0f172a;
+  border-color: rgba(148, 163, 184, 0.22);
+  color: rgba(241, 245, 249, 0.92);
+}
+
+html[data-theme="oscuro"] .cc-calTrigger:hover{
+  border-color: rgba(148, 163, 184, 0.34);
+  background: #111827;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.24);
+}
+
+html[data-theme="oscuro"] .cc-calTrigger.is-open{
+  background: #111827;
+  border-color: rgba(96, 165, 250, 0.72);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.18);
+  color: rgba(248, 250, 252, 0.98);
+}
+
+html[data-theme="oscuro"] .cc-calTrigger__iconLeft{
+  color: rgba(203, 213, 225, 0.72);
+}
+
+html[data-theme="oscuro"] .cc-field--period.is-filled .cc-calTrigger__iconLeft,
+html[data-theme="oscuro"] .cc-field--period.is-focused .cc-calTrigger__iconLeft{
+  color: #60a5fa;
+}
+
+html[data-theme="oscuro"] .cc-calTrigger__arrow{
+  color: rgba(203, 213, 225, 0.58);
+}
+
+html[data-theme="oscuro"] .cc-calTrigger.is-open .cc-calTrigger__arrow{
+  color: #60a5fa;
+}
+
+html[data-theme="oscuro"] .cc-clearSearch{
+  background: rgba(148, 163, 184, 0.10);
+  border-color: rgba(148, 163, 184, 0.18);
+  color: rgba(226, 232, 240, 0.72);
+}
+
+html[data-theme="oscuro"] .cc-clearSearch:hover{
+  background: rgba(239, 68, 68, 0.14);
+  border-color: rgba(239, 68, 68, 0.28);
+  color: #f87171;
+}
+
+html[data-theme="oscuro"] .cc-suggestions{
+  background: #0f172a;
+  border-color: rgba(148, 163, 184, 0.18);
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.38);
+}
+
+html[data-theme="oscuro"] .cc-suggestions__item{
+  color: rgba(241, 245, 249, 0.92);
+}
+
+html[data-theme="oscuro"] .cc-suggestions__item:hover{
+  background: rgba(59, 130, 246, 0.16);
+}
+/* =========================
+   Dark mode — Floating label
+========================= */
+html[data-theme="oscuro"] .floatingLabel{
+  background: #0f172a;
+}
+
+html[data-theme="oscuro"] .field--floating.is-filled floatingLabel,
+html[data-theme="oscuro"] .field--floating.is-focused .floatingLabel{
+  color: #60a5fa;
+}
+
+html[data-theme="oscuro"] .searchInput__fieldWrap.field .input{
+  background: #0f172a;
+  border-color: rgba(148, 163, 184, 0.22);
+  color: rgba(241, 245, 249, 0.94);
+}
+
+html[data-theme="oscuro"] .searchInput__fieldWrap.field .input:hover{
+  border-color: rgba(148, 163, 184, 0.34);
+}
+
+html[data-theme="oscuro"] .searchInput__fieldWrap.field .-input:focus{
+  background: #111827;
+  border-color: rgba(96, 165, 250, 0.72);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.18);
+  color: rgba(248, 250, 252, 0.98);
+}
+
+html[data-theme="oscuro"] .calTrigger{
+  background: #0f172a;
+  border-color: rgba(148, 163, 184, 0.22);
+  color: rgba(241, 245, 249, 0.92);
+}
+
+html[data-theme="oscuro"] .calTrigger:hover{
+  border-color: rgba(148, 163, 184, 0.34);
+  background: #111827;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.24);
+}
+
+html[data-theme="oscuro"] .calTrigger.is-open{
+  background: #111827;
+  border-color: rgba(96, 165, 250, 0.72);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.18);
+  color: rgba(248, 250, 252, 0.98);
+}
+
+html[data-theme="oscuro"] .calTrigger__iconLeft{
+  color: rgba(203, 213, 225, 0.72);
+}
+
+html[data-theme="oscuro"] .field--period.is-filled .calTrigger__iconLeft,
+html[data-theme="oscuro"] .field--period.is-focused .calTrigger__iconLeft{
+  color: #60a5fa;
+}
+
+html[data-theme="oscuro"] .calTrigger__arrow{
+  color: rgba(203, 213, 225, 0.58);
+}
+
+html[data-theme="oscuro"] .calTrigger.is-open .calTrigger__arrow{
+  color: #60a5fa;
+}
+
+html[data-theme="oscuro"] .clearSearch{
+  background: rgba(148, 163, 184, 0.10);
+  border-color: rgba(148, 163, 184, 0.18);
+  color: rgba(226, 232, 240, 0.72);
+}
+
+html[data-theme="oscuro"] .clearSearch:hover{
+  background: rgba(239, 68, 68, 0.14);
+  border-color: rgba(239, 68, 68, 0.28);
+  color: #f87171;
+}
+
+html[data-theme="oscuro"] .suggestions{
+  background: #0f172a;
+  border-color: rgba(148, 163, 184, 0.18);
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.38);
+}
+
+html[data-theme="oscuro"] .suggestions__item{
+  color: rgba(241, 245, 249, 0.92);
+}
+
+html[data-theme="oscuro"] .suggestions__item:hover{
+  background: rgba(59, 130, 246, 0.16);
+}/* Dark mode — inputs floating en mov-page (Ventas, etc.) */
+html[data-theme="oscuro"] .mov-page .cc-floatingLabel {
+  background: #0f172a;
+  color: rgba(226, 232, 240, 0.68);
+}
+
+html[data-theme="oscuro"] .mov-page .cc-floatingField.is-active .cc-floatingLabel,
+html[data-theme="oscuro"] .mov-page .cc-floatingField:focus-within .cc-floatingLabel {
+  color: #60a5fa;
+}
+
+html[data-theme="oscuro"] .mov-page .cc-input--floating {
+  background: rgba(15, 23, 42, 0.88) !important;
+  color: rgba(226, 232, 240, 0.92) !important;
+  border-color: rgba(148, 163, 184, 0.18) !important;
+}
+
+html[data-theme="oscuro"] .mov-page .cc-input--floating:focus {
+  background: rgba(15, 23, 42, 0.96) !important;
+  border-color: rgba(96, 165, 250, 0.72) !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.18) !important;
+}
+
+html[data-theme="oscuro"] .mov-page .cc-input--floating::placeholder {
+  color: rgba(226, 232, 240, 0.40) !important;
+}
+/* ─── Dark mode ─────────────────────────────── */
+html[data-theme="oscuro"] .mov-page--flujoCaja .fc-subhead {
+  background: rgba(15,23,42,.75) !important;
+  border-color: rgba(148,163,184,.12) !important;
+}
+html[data-theme="oscuro"] .mov-page--flujoCaja .fc-subhead__name {
+  color: rgba(226,232,240,.92) !important;
+}
+html[data-theme="oscuro"] .mov-page--flujoCaja .fc-subhead__meta {
+  color: rgba(226,232,240,.60) !important;
+}
+html[data-theme="oscuro"] .mov-page--flujoCaja .fc-footnote {
+  background: rgba(15,23,42,.65) !important;
+  border-color: rgba(148,163,184,.10) !important;
+  color: rgba(226,232,240,.48) !important;
+}
+html[data-theme="oscuro"] .fc-in  { color: #4ade80 !important; }
+html[data-theme="oscuro"] .fc-eg  { color: #f87171 !important; }
+html[data-theme="oscuro"] .fc-saldo--pos { color: #4ade80 !important; }
+html[data-theme="oscuro"] .fc-saldo--neg { color: #f87171 !important; }
+/* ─── Dark mode ─────────────────────────────────────────── */
+html[data-theme="oscuro"] .mov-page--analisisFinanciero .af-row--resultado {
+  background: rgba(148,163,184,.10) !important;
+  border-color: rgba(148,163,184,.18) !important;
+}
+html[data-theme="oscuro"] .mov-page--analisisFinanciero .af-concept--resultado {
+  color: rgba(226,232,240,.96) !important;
+}
+html[data-theme="oscuro"] .af-importe--ingreso,
+html[data-theme="oscuro"] .af-importe--pos  { color: #4ade80 !important; }
+html[data-theme="oscuro"] .af-importe--egreso,
+html[data-theme="oscuro"] .af-importe--neg  { color: #f87171 !important; }
+
+html[data-theme="oscuro"] .mov-page--analisisFinanciero .af-footTotals {
+  background: rgba(15,23,42,.70) !important;
+  border-color: rgba(148,163,184,.12) !important;
+}
+html[data-theme="oscuro"] .mov-page--analisisFinanciero .af-totalCard {
+  background: rgba(15,23,42,.55) !important;
+  border-color: rgba(148,163,184,.16) !important;
+}
+html[data-theme="oscuro"] .mov-page--analisisFinanciero .af-totalCard--pos { border-color: rgba(74,222,128,.20) !important; }
+html[data-theme="oscuro"] .mov-page--analisisFinanciero .af-totalCard--neg { border-color: rgba(248,113,113,.20) !important; }
+html[data-theme="oscuro"] .mov-page--analisisFinanciero .af-totalCard--ctrl{ border-color: rgba(251,191,36,.18) !important; }
+html[data-theme="oscuro"] .mov-page--analisisFinanciero .af-totalLabel {
+  color: rgba(226,232,240,.65) !important;
+}
+html[data-theme="oscuro"] .mov-page--analisisFinanciero .af-totalValue {
+  color: rgba(226,232,240,.92) !important;
+}
+html[data-theme="oscuro"] .mov-page--analisisFinanciero .af-totalSub {
+  color: rgba(226,232,240,.45) !important;
+}
+
+/* modo oscuro */
+html[data-theme="oscuro"] .extraContent-ventas{
+    background: #3a2a0069;
+    border: 1px solid #8a6a1f;
+    color: #ffd666;
+}
+/* =========================
+   DARK MODE
+========================= */
+
+html[data-theme="oscuro"] .cfg-page {
+  color: #c7d2de;
+}
+
+/* HEADER */
+html[data-theme="oscuro"] .cfg-title {
+  color: #e6edf5;
+}
+
+html[data-theme="oscuro"] .cfg-subtitle {
+  color: #9fb0c2;
+}
+
+/* ALERT */
+html[data-theme="oscuro"] .cfg-alert--error {
+  background: #2a1f1f;
+  color: #ffb4b4;
+  border-color: #5a2c2c;
+}
+
+/* CARD */
+html[data-theme="oscuro"] .cfg-card {
+  background: #0f1722;
+  border-color: #1f2a37;
+}
+
+html[data-theme="oscuro"] .cfg-card:hover {
+  background: #131c28;
+  border-color: #2b3a4c;
+}
+
+/* ICON / LOGO */
+html[data-theme="oscuro"] .cfg-cardLogoBox {
+  background: #131c28;
+  border-color: #1f2a37;
+}
+
+/* TITULO */
+html[data-theme="oscuro"] .cfg-cardHeader h2 {
+  color: #e6edf5;
+}
+
+/* DESCRIPCION */
+html[data-theme="oscuro"] .cfg-cardDescription {
+  color: #9fb0c2;
+}
+
+/* ARROW */
+html[data-theme="oscuro"] .cfg-cardArrow {
+  color: #7f91a6;
+}
+
+/* FOOTER */
+html[data-theme="oscuro"] .cfg-cardFooter {
+  border-top: 1px solid #1f2a37;
+}
+
+/* META */
+html[data-theme="oscuro"] .cfg-cardMetaLabel {
+  color: #6f8196;
+}
+
+html[data-theme="oscuro"] .cfg-cardMetaValue {
+  color: #c7d2de;
+}
+
+/* STATUS */
+html[data-theme="oscuro"] .cfg-status--success {
+  background: rgba(35, 117, 69, 0.15);
+  color: #6ee7a5;
+  border-color: rgba(35, 117, 69, 0.3);
+}
+
+html[data-theme="oscuro"] .cfg-status--warning {
+  background: rgba(157, 106, 8, 0.15);
+  color: #facc15;
+  border-color: rgba(157, 106, 8, 0.3);
+}
+
+html[data-theme="oscuro"] .cfg-status--pending {
+  background: #1a2330;
+  color: #9fb0c2;
+  border-color: #2a3747;
+}
+/* ── DARK MODE ── */
+html[data-theme="oscuro"] .tn-page { color: #c7d2de; }
+
+html[data-theme="oscuro"] .tn-hero,
+html[data-theme="oscuro"] .tn-metaCard {
+  background: #0f1a24;
+  border-color: #223243;
+}
+
+html[data-theme="oscuro"] .tn-hero__icon,
+html[data-theme="oscuro"] .tn-hero__progress,
+html[data-theme="oscuro"] .tn-metaCard__icon,
+html[data-theme="oscuro"] .tn-actionRow,
+html[data-theme="oscuro"] .tn-statusRow {
+  background: #13212d;
+  border-color: #223243;
+}
+
+html[data-theme="oscuro"] .tn-title,
+html[data-theme="oscuro"] .tn-metaCard__head h2,
+html[data-theme="oscuro"] .tn-metaItem__value,
+html[data-theme="oscuro"] .tn-actionRow__title,
+html[data-theme="oscuro"] .tn-statusRow__title,
+html[data-theme="oscuro"] .tn-backBtn { color: #eef4fb; }
+
+html[data-theme="oscuro"] .tn-subtitle,
+html[data-theme="oscuro"] .tn-metaCard__head p,
+html[data-theme="oscuro"] .tn-metaItem__label,
+html[data-theme="oscuro"] .tn-actionRow__desc,
+html[data-theme="oscuro"] .tn-statusRow__desc,
+html[data-theme="oscuro"] .tn-hero__progressLabel,
+html[data-theme="oscuro"] .tn-hero__eyebrow { color: #95a8bb; }
+
+html[data-theme="oscuro"] .tn-backBtn {
+  background: #13212d;
+  border-color: #223243;
+}
+
+html[data-theme="oscuro"] .tn-backBtn:hover {
+  background: #172634;
+  border-color: #2b3f53;
+}
+
+html[data-theme="oscuro"] .tn-metaItem { border-top-color: #223243; }
+
+html[data-theme="oscuro"] .tn-statusRow.ok   { background: rgba(35,117,69,.10); border-color: rgba(35,117,69,.35); }
+html[data-theme="oscuro"] .tn-statusRow.warn { background: rgba(157,106,8,.10); border-color: rgba(157,106,8,.35); }
+html[data-theme="oscuro"] .tn-badge--ok {
+  background: rgba(35, 117, 69, 0.15);
+  color: #7be0a6;
+  border-color: rgba(35, 117, 69, 0.35);
+}
+
+html[data-theme="oscuro"] .tn-badge--off {
+  background: rgba(120, 140, 160, 0.12);
+  color: #aab8c6;
+  border-color: rgba(120, 140, 160, 0.25);
+}
+
+html[data-theme="oscuro"] .tn-badge--warn {
+  background: rgba(157, 106, 8, 0.15);
+  color: #ffcc66;
+  border-color: rgba(157, 106, 8, 0.35);
+}
+html[data-theme="oscuro"] .tn-statusRow.ok .tn-statusRow__icon {
+  background: rgba(35, 117, 69, 0.15);
+  color: #7be0a6;
+  border-color: rgba(35, 117, 69, 0.35);
+}
+
+html[data-theme="oscuro"] .tn-statusRow.warn .tn-statusRow__icon {
+  background: rgba(157, 106, 8, 0.15);
+  color: #ffcc66;
+  border-color: rgba(157, 106, 8, 0.35);
+}
+html[data-theme="oscuro"] .tn-actionRow:hover:not(:disabled) {
+  background: #172634;
+  border-color: #2b3f53;
+}
+
+/* Dark mode */
+html[data-theme="oscuro"] .cmi-input {
+  background: rgba(15, 23, 42, 0.88) !important;
+  color: rgba(226, 232, 240, 0.92) !important;
+  border-color: rgba(148, 163, 184, 0.18) !important;
+}
+
+html[data-theme="oscuro"] .cmi-input:focus {
+  background: rgba(15, 23, 42, 0.96) !important;
+  border-color: rgba(78, 161, 255, 0.45) !important;
+  box-shadow: 0 0 0 3px rgba(78, 161, 255, 0.16) !important;
+}
+
+html[data-theme="oscuro"] .cmi-input::placeholder {
+  color: rgba(226, 232, 240, 0.30) !important;
+}
+
+html[data-theme="oscuro"] .cmi-floatingLabel {
+  background: #0B1220 !important;
+  color: rgba(78, 161, 255, 0.92) !important;
+}
+/* =========================================================
+   🌙 DARK MODE — mi-mini__modal (html[data-theme="oscuro"])
+========================================================= */
+
+html[data-theme="oscuro"] .mi-mini__overlay {
+  background: rgba(0, 0, 0, 0.68);
+  backdrop-filter: blur(3px);
+}
+
+html[data-theme="oscuro"] .mi-mini__modal {
+  background: rgba(6, 18, 28, 0.96) !important;
+  border: 1px solid rgba(255, 255, 255, 0.10) !important;
+  box-shadow: 0 28px 64px -24px rgba(0, 0, 0, 0.55) !important;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+html[data-theme="oscuro"] .mi-mini__head {
+  background: linear-gradient(180deg, #0a2540, #071a2c) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.10) !important;
+}
+
+html[data-theme="oscuro"] .mi-mini__title {
+  color: rgba(255, 255, 255, 0.92) !important;
+}
+
+html[data-theme="oscuro"] .mi-mini__close {
+  color: rgba(255, 255, 255, 0.92) !important;
+}
+
+html[data-theme="oscuro"] .mi-mini__close:hover {
+  background: rgba(255, 255, 255, 0.10) !important;
+}
+
+html[data-theme="oscuro"] .mi-mini__body {
+  background: rgba(6, 18, 28, 0.96) !important;
+}
+
+html[data-theme="oscuro"] .mi-mini__actions {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 12px;
+}
+
+/* Floating inputs */
+html[data-theme="oscuro"] .mi-mini__modal .fl-input,
+html[data-theme="oscuro"] .mi-mini__modal .fl-select {
+  background: rgba(255, 255, 255, 0.06) !important;
+  border-color: rgba(255, 255, 255, 0.14) !important;
+  color: rgba(255, 255, 255, 0.92) !important;
+  box-shadow: none !important;
+}
+
+html[data-theme="oscuro"] .mi-mini__modal .fl-input:focus,
+html[data-theme="oscuro"] .mi-mini__modal .fl-select:focus {
+  border-color: rgba(0, 85, 187, 0.65) !important;
+  box-shadow: 0 0 0 3px rgba(0, 85, 187, 0.18) !important;
+}
+
+html[data-theme="oscuro"] .mi-mini__modal .fl-input::placeholder {
+  color: rgba(255, 255, 255, 0.45) !important;
+}
+
+html[data-theme="oscuro"] .mi-mini__modal .fl-input[readonly] {
+  background: rgba(255, 255, 255, 0.04) !important;
+  cursor: default;
+}
+
+html[data-theme="oscuro"] .mi-mini__modal .fl-label {
+  color: rgba(226, 232, 240, 0.72) !important;
+}
+
+html[data-theme="oscuro"] .mi-mini__modal .fl-input:focus + .fl-label,
+html[data-theme="oscuro"] .mi-mini__modal .fl-input:not(:placeholder-shown) + .fl-label {
+  background: rgba(6, 18, 28, 0.96) !important;
+  color: rgba(180, 210, 255, 0.92) !important;
+}
+
+/* Buttons */
+html[data-theme="oscuro"] .mi-mini__modal .mit-btn--ghost {
+  background: rgba(255, 255, 255, 0.06) !important;
+  border-color: rgba(255, 255, 255, 0.14) !important;
+  color: rgba(255, 255, 255, 0.86) !important;
+}
+
+html[data-theme="oscuro"] .mi-mini__modal .mit-btn--ghost:hover {
+  background: rgba(255, 255, 255, 0.10) !important;
+}
+
+html[data-theme="oscuro"] .mi-mini__modal .mit-btn--solid {
+  background: #0055BB !important;
+  border-color: rgba(0, 85, 187, 0.85) !important;
+  color: rgba(255, 255, 255, 0.96) !important;
+}
+
+html[data-theme="oscuro"] .mi-mini__modal .mit-btn--solid:hover {
+  filter: brightness(1.06);
+}
+
+
+
+
+
+
+
+
+html[data-theme="oscuro"] .mit-btn {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.14);
+  color: rgba(255,255,255,0.88);
+}
+
+html[data-theme="oscuro"] .mit-btn:hover:not(:disabled) {
+  background: rgba(255,255,255,0.10);
+  border-color: rgba(255,255,255,0.22);
+}
+
+html[data-theme="oscuro"] .mit-btn--ghost {
+  background: rgba(255,255,255,0.04);
+  color: rgba(255,255,255,0.88);
+  border-color: rgba(255,255,255,0.14);
+}
+
+html[data-theme="oscuro"] .mit-btn--solid {
+  background: #0055BB;
+  color: #fff;
+  border-color: #0055BB;
+}
+
+html[data-theme="oscuro"] .mit-btn--solid:hover:not(:disabled) {
+  background: #0b63cf;
+  border-color: #0b63cf;
+}
+
+html[data-theme="oscuro"] .mit-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+/* =========================
+   🌙 DARK MODE — Tabs Facturación
+========================= */
+
+html[data-theme="oscuro"] .mfb-tabs {
+  background: transparent;
+}
+
+/* Tab base */
+html[data-theme="oscuro"] .mfb-tab {
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(226, 232, 240, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-weight: 500;
+  transition: all 0.18s ease;
+}
+
+/* Hover */
+html[data-theme="oscuro"] .mfb-tab:hover {
+  background: rgba(255, 255, 255, 0.10);
+  border-color: rgba(96, 165, 250, 0.35);
+  color: #ffffff;
+}
+
+/* Activo */
+html[data-theme="oscuro"] .mfb-tab.is-active {
+  background: #0055BB;
+  color: #ffffff;
+  border-color: #0055BB;
+  box-shadow: 0 10px 24px rgba(0, 85, 187, 0.30);
+}
+
+/* Hover activo */
+html[data-theme="oscuro"] .mfb-tab.is-active:hover {
+  background: #0b63cf;
+  border-color: #0b63cf;
+}
+
+/* Texto interno (por si usás span) */
+html[data-theme="oscuro"] .mfb-tab__text {
+  color: inherit;
+}
+/* =========================================================
+   DARK MODE REAL PARA MODAL DETALLE MEDIOS DE PAGO
+========================================================= */
+
+html[data-theme="oscuro"] .mi-modal__container{
+  --mi-bg: #071a2c;
+  --mi-bg-soft: #0a2540;
+  --mi-border: rgba(255,255,255,.10);
+
+  --mi-text: rgba(255,255,255,.92);
+  --mi-muted: rgba(255,255,255,.68);
+
+  --nv-bg: rgba(6,18,28,.96);
+  --nv-surface: rgba(10,25,40,.82);
+  --nv-surface2: rgba(255,255,255,.04);
+
+  --nv-border: rgba(255,255,255,.09);
+  --nv-border-md: rgba(255,255,255,.14);
+
+  --nv-text: rgba(255,255,255,.92);
+  --nv-muted: rgba(220,230,240,.68);
+  --nv-placeholder: rgba(255,255,255,.38);
+
+  --nv-head-bg: rgba(255,255,255,.05);
+  --nv-row-odd: rgba(255,255,255,.025);
+  --nv-row-hover: rgba(255,255,255,.06);
+
+  --nv-shadow-sm: 0 1px 4px rgba(0,0,0,.22);
+  --nv-shadow-md: 0 6px 22px rgba(0,0,0,.32);
+  --nv-shadow-lg: 0 28px 64px rgba(0,0,0,.55);
+
+  background: var(--color-bg);
+  border: 1px solid rgba(255,255,255,.08);
+}
+
+html[data-theme="oscuro"] .mi-modal__content{
+  background: var(--color-surface);
+}
+
+html[data-theme="oscuro"] .mi-card{
+  background: rgba(255,255,255,.03);
+  border: 1px solid rgba(255,255,255,.08);
+  box-shadow: 0 8px 24px rgba(0,0,0,.22);
+}
+
+html[data-theme="oscuro"] .mi-card__title{
+  color: var(--color-text);
+}
+
+html[data-theme="oscuro"] .mi-card__hint{
+  color: var(--color-text-muted);
+}
+
+html[data-theme="oscuro"] .mi-detalle-title{
+  color: var(--color-text);
+}
+
+html[data-theme="oscuro"] .mi-detalle-label{
+  color: var(--color-text-muted);
+}
+
+html[data-theme="oscuro"] .mi-detalle-value{
+  color: var(--color-text);
+}
+
+html[data-theme="oscuro"] .mi-detalle-monto{
+  color: #60a5fa;
+}
+
+html[data-theme="oscuro"] .mi-detalle-block{
+  border-top: 1px dashed rgba(255,255,255,.10);
+}/* =========================================================
+   TEXTOS MINIMAL (LIVIANOS)
+========================================================= */
+
+.mi-detalle-row{
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+/* labels (izquierda) */
+.mi-detalle-label{
+  font-size: 12.5px;
+  font-weight: 400; /* 👈 liviano */
+  color: var(--color-text-muted);
+  letter-spacing: 0.2px;
+}
+
+/* valores (derecha) */
+.mi-detalle-value{
+  font-size: 13px;
+  font-weight: 400; /* 👈 liviano */
+  color: var(--color-text);
+}
+
+/* título del medio de pago */
+.mi-detalle-title{
+  display: flex;
+  justify-content: space-between;
+  font-size: 13.5px;
+  font-weight: 500; /* 👈 apenas destacado */
+  color: var(--color-text);
+}
+
+/* monto grande */
+.mi-detalle-monto{
+  font-size: 17px;
+  font-weight: 500; /* 👈 no bold */
+  color: var(--color-primary);
+}
+
+/* bloque cheque */
+.mi-detalle-block{
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--color-border);
+}/* =========================================
+   MODO OSCURO - TABLA CLIENTES
+   Uso: html[data-theme="oscuro"]
+========================================= */
+
+/* Variables del modo oscuro */
+html[data-theme="oscuro"] {
+  --dark-bg-primary: #0F172A;
+  --dark-bg-secondary: #1E293B;
+  --dark-bg-tertiary: #334155;
+  --dark-text-primary: #F1F5F9;
+  --dark-text-secondary: #94A3B8;
+  --dark-border: #334155;
+  --dark-hover: rgba(255, 255, 255, 0.05);
+  --dark-card: #1E293B;
+  --dark-action: #3B82F6;
+  --dark-success: #10B981;
+  --dark-danger: #EF4444;
+  --dark-warning: #F59E0B;
+}
+
+/* Contenedor principal de la tabla - Modo oscuro */
+html[data-theme="oscuro"] .cc-cliente-table {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+  box-shadow: 0 14px 34px -22px rgba(0, 0, 0, 0.5);
+}
+
+/* Header de la tabla - Modo oscuro */
+html[data-theme="oscuro"] .cc-cliente-table__desktopHead {
+  background: #0F172A;
+  border-bottom-color: rgba(59, 130, 246, 0.2);
+}
+
+/* Celdas del header - Modo oscuro */
+html[data-theme="oscuro"] .cc-grid-header__cell {
+  color: var(--color-text-muted);
+}
+
+/* Body de la tabla - Modo oscuro */
+html[data-theme="oscuro"] .cc-cliente-table__body {
+  background: var(--color-surface);
+}
+
+/* Filas - Modo oscuro */
+html[data-theme="oscuro"] .cc-grid-row {
+  background: var(--color-surface);
+  border-bottom-color: rgba(51, 65, 85, 0.5);
+}
+
+html[data-theme="oscuro"] .cc-grid-row:hover {
+  background: var(--color-primary-soft);
+}
+
+/* Celdas - Modo oscuro */
+html[data-theme="oscuro"] .cc-grid-cell {
+  color: var(--color-text);
+}
+
+/* Primera columna - Nombre (modo oscuro) */
+html[data-theme="oscuro"] .cc-grid-cell:first-child {
+  color: var(--color-text);
+}
+
+/* Badge de estado - Modo oscuro */
+html[data-theme="oscuro"] .cc-status-badge--active {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34D399;
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+html[data-theme="oscuro"] .cc-status-badge--inactive {
+  background: rgba(100, 116, 139, 0.15);
+  color: #94A3B8;
+  border-color: rgba(100, 116, 139, 0.3);
+}
+
+/* Botones de acción - Modo oscuro */
+html[data-theme="oscuro"] .cc-action-btn {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+  color: var(--color-text-muted);
+}
+
+html[data-theme="oscuro"] .cc-action-btn:hover:not(:disabled) {
+  background: rgba(59, 130, 246, 0.15);
+  border-color: rgba(59, 130, 246, 0.4);
+  color: #60A5FA;
+}
+
+html[data-theme="oscuro"] .cc-action-btn--danger:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #F87171;
+}
+
+/* Footer de la tabla - Modo oscuro */
+html[data-theme="oscuro"] .cc-cliente-table__footWrap {
+  background: rgba(15, 23, 42, 0.8);
+  border-top-color: var(--color-border);
+}
+
+html[data-theme="oscuro"] .cc-cliente-table__footWrap span {
+  color: var(--color-text-muted);
+}
+
+/* Estados vacío y loading - Modo oscuro */
+html[data-theme="oscuro"] .cc-empty-state,
+html[data-theme="oscuro"] .cc-loading-state {
+  color: var(--color-text-muted);
+}
+
+html[data-theme="oscuro"] .cc-empty-state svg,
+html[data-theme="oscuro"] .cc-loading-state svg {
+  color: var(--color-text-muted);
+  opacity: 0.6;
+}
+
+/* Scrollbar - Modo oscuro */
+html[data-theme="oscuro"] .cc-cliente-table__body::-webkit-scrollbar-track {
+  background: var(--color-bg);
+}
+
+html[data-theme="oscuro"] .cc-cliente-table__body::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+}
+
+html[data-theme="oscuro"] .cc-cliente-table__body::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+/* =========================================
+   MODO OSCURO - PANEL DE FILTROS Y FORMULARIO
+========================================= */
+
+/* Panel de filtros lateral - Modo oscuro */
+html[data-theme="oscuro"] .mi-cr-filters {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+}
+
+html[data-theme="oscuro"] .mi-cr-filters__top {
+  background: var(--color-surface);
+  border-bottom-color: var(--color-border);
+  color: var(--color-text);
+}
+
+html[data-theme="oscuro"] .mi-cr-filters__title {
+  color: var(--color-text);
+}
+
+/* Campos de formulario - Modo oscuro */
+html[data-theme="oscuro"] .fl-input {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+  color: var(--color-text);
+}
+
+html[data-theme="oscuro"] .fl-input:focus {
+  border-color: var(--color-primary);
+  background: var(--color-bg);
+}
+
+html[data-theme="oscuro"] .fl-label {
+  color: var(--color-text-muted);
+}
+
+html[data-theme="oscuro"] .fl-input:focus + .fl-label,
+html[data-theme="oscuro"] .fl-input:not(:placeholder-shown) + .fl-label {
+  color: var(--color-primary);
+}
+
+/* Select - Modo oscuro */
+html[data-theme="oscuro"] select.fl-input {
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+html[data-theme="oscuro"] select.fl-input option {
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+/* Botones - Modo oscuro */
+html[data-theme="oscuro"] .mit-btn--solid {
+  background: var(--color-primary);
+  color: white;
+}
+
+html[data-theme="oscuro"] .mit-btn--ghost {
+  background: transparent;
+  border-color: var(--color-border);
+  color: var(--color-text-muted);
+}
+
+html[data-theme="oscuro"] .mit-btn--ghost:hover:not(:disabled) {
+  background: var(--color-primary-soft);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+html[data-theme="oscuro"] .mit-btn:disabled {
+  opacity: 0.5;
+}
+
+/* =========================================
+   MODO OSCURO - MODAL PRINCIPAL
+========================================= */
+
+/* Modal container - Modo oscuro */
+html[data-theme="oscuro"] .mi-modal__container {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+}
+
+/* Modal header - Modo oscuro */
+html[data-theme="oscuro"] .mi-modal__header {
+  background: var(--color-surface);
+  border-bottom-color: var(--color-border);
+}
+
+html[data-theme="oscuro"] .mi-modal__title {
+  color: var(--color-text);
+}
+
+html[data-theme="oscuro"] .mi-modal__subtitle {
+  color: var(--color-text-muted);
+}
+
+/* Modal close button - Modo oscuro */
+html[data-theme="oscuro"] .mi-modal__close {
+  color: var(--color-text-muted);
+}
+
+html[data-theme="oscuro"] .mi-modal__close:hover:not(:disabled) {
+  background: var(--color-primary-soft);
+  color: var(--color-text);
+}
+
+/* Modal content - Modo oscuro */
+html[data-theme="oscuro"] .mi-modal__content {
+  background: var(--color-bg);
+}
+
+/* Modal footer actions - Modo oscuro */
+html[data-theme="oscuro"] .mit-actions {
+  border-top-color: var(--color-border);
+  background: var(--color-surface);
+}
+
+html[data-theme="oscuro"] .mit-help {
+  color: var(--color-text-muted);
+}
+
+/* =========================================
+   MODO OSCURO - BOTONES DE PESTAÑAS
+========================================= */
+
+html[data-theme="oscuro"] .mi-cr-table__foot--top .mit-btn--solid {
+  background: var(--color-primary);
+  color: white;
+}
+
+html[data-theme="oscuro"] .mi-cr-table__foot--top .mit-btn--ghost {
+  background: transparent;
+  border-color: var(--color-border);
+  color: var(--color-text-muted);
+}
+
+html[data-theme="oscuro"] .mi-cr-table__foot--top .mit-btn--ghost:hover {
+  background: var(--color-primary-soft);
+  color: var(--color-text);
+}
+
+/* =========================================
+   MODO OSCURO - TEXTOS Y MISCELÁNEOS
+========================================= */
+
+html[data-theme="oscuro"] .mi-cr-table__summary div {
+  color: var(--color-text);
+}
+
+html[data-theme="oscuro"] .mi-cr-table__summary div:last-child {
+  color: var(--color-text-muted);
+}
+
+html[data-theme="oscuro"] .mi-cr-table__summary b {
+  color: var(--color-text);
+}
+
+/* Overlay del modal - Modo oscuro */
+html[data-theme="oscuro"] .mi-modal__overlay {
+  background: rgba(0, 0, 0, 0.85);
+}
+
+/* =========================================
+   MODO OSCURO - MODAL DE CONFIRMACIÓN
+   (ModalAccionEntidadStock)
+========================================= */
+
+html[data-theme="oscuro"] .modal-accion-stock {
+  background: var(--color-bg);
+  border-color: var(--color-border);
+}
+
+html[data-theme="oscuro"] .modal-accion-stock__header {
+  background: var(--color-surface);
+  border-bottom-color: var(--color-border);
+}
+
+html[data-theme="oscuro"] .modal-accion-stock__title {
+  color: var(--color-text);
+}
+
+html[data-theme="oscuro"] .modal-accion-stock__body {
+  color: var(--color-text);
+}
+
+html[data-theme="oscuro"] .modal-accion-stock__warning {
+  background: rgba(245, 158, 11, 0.1);
+  border-color: rgba(245, 158, 11, 0.3);
+  color: #FBBF24;
+}
+
+html[data-theme="oscuro"] .modal-accion-stock__details {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+}
+
+html[data-theme="oscuro"] .modal-accion-stock__details-label {
+  color: var(--color-text-muted);
+}
+
+html[data-theme="oscuro"] .modal-accion-stock__details-value {
+  color: var(--color-text);
+}
+
+/* Botones del modal de confirmación - Modo oscuro */
+html[data-theme="oscuro"] .modal-accion-stock__btn--confirm {
+  background: var(--color-danger);
+  color: white;
+}
+
+html[data-theme="oscuro"] .modal-accion-stock__btn--confirm-success {
+  background: var(--color-success);
+  color: white;
+}
+
+html[data-theme="oscuro"] .modal-accion-stock__btn--cancel {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+  color: var(--color-text-muted);
+}
+
+html[data-theme="oscuro"] .modal-accion-stock__btn--cancel:hover {
+  background: var(--color-primary-soft);
+  color: var(--color-text);
+}
+
+/* =========================================
+   TRANSICIONES SUAVES PARA EL MODO OSCURO
+========================================= */
+
+.cc-cliente-table,
+.cc-grid-row,
+.cc-action-btn,
+.mit-btn,
+.fl-input,
+.mi-modal__container,
+.modal-accion-stock {
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+html[data-theme="oscuro"]  .arca-alert--info{
+color: #f4f8ff;
+}
+
+
+
+html[data-theme="oscuro"] .fc-subhead__meta b {  color:rgba(226,232,240,.60) !important ;}
+html[data-theme="oscuro"] .pp-drawerBrand__t{ color:rgba(226,232,240,.60) !important  ;}
+html[data-theme="oscuro"] .modal-nc-summary__title{color:rgba(226,232,240,.60) !important  ; }
+html[data-theme="oscuro"] .cmi-warnBox div{color:rgba(226,232,240,.60) !important  ;}
+/* =========================================================
+   MOVIMIENTOS — DARK MODE (override)
+   Pegalo AL FINAL del archivo movimientos.css
+========================================================= */
+html[data-theme="oscuro"] .mov-page{
+  background: #0B1220 !important;
+  color: rgba(226,232,240,.92) !important;
+}
+
+/* Alert en oscuro */
+html[data-theme="oscuro"] .mov-page .mov-alert{
+  background: rgba(225,61,69,.12) !important;
+  border-color: rgba(225,61,69,.24) !important;
+  color: rgba(255,255,255,.92) !important;
+}
+
+/* Card general */
+html[data-theme="oscuro"] .mov-page .mov-card{
+  background: rgba(15,23,42,.62) !important;
+  border-color: rgba(148,163,184,.14) !important;
+  box-shadow: 0 16px 40px -26px rgba(0,0,0,.62) !important;
+}
+
+/* Head (titulo+filtros) */
+html[data-theme="oscuro"] .mov-page .mov-card__head{
+  background:
+    radial-gradient(900px 180px at 0% 0%, rgba(78,161,255,.12), transparent 55%),
+    linear-gradient(180deg, rgba(15,23,42,.85), rgba(15,23,42,.62)) !important;
+  border-bottom-color: rgba(148,163,184,.12) !important;
+}
+
+html[data-theme="oscuro"] .mov-page .mov-card__title{
+  color: rgba(226,232,240,.92) !important;
+}
+
+html[data-theme="oscuro"] .mov-page .mov-card__hint{
+  color: rgba(226,232,240,.62) !important;
+}
+
+html[data-theme="oscuro"] .mov-page .mov-card__hint b{
+  color: rgba(226,232,240,.92) !important;
+}
+
+/* Labels + iconos dentro de labels */
+html[data-theme="oscuro"] .mov-page .mov-filter label,
+html[data-theme="oscuro"] .mov-page .mov-search label{
+  color: rgba(226,232,240,.72) !important;
+}
+
+html[data-theme="oscuro"] .mov-page .mov-filter label svg,
+html[data-theme="oscuro"] .mov-page .mov-search label svg{
+  color: rgba(226,232,240,.85) !important;
+}
+
+/* Inputs / Select */
+html[data-theme="oscuro"] .mov-page .mov-search input,
+html[data-theme="oscuro"] .mov-page .mov-filter select{
+  background: rgba(15,23,42,.88) !important;
+  color: rgba(226,232,240,.92) !important;
+  border-color: rgba(148,163,184,.18) !important;
+}
+
+html[data-theme="oscuro"] .mov-page .mov-search input::placeholder{
+  color: rgba(226,232,240,.45) !important;
+}
+
+html[data-theme="oscuro"] .mov-page .mov-filter select:focus,
+html[data-theme="oscuro"] .mov-page .mov-search input:focus{
+  background: rgba(15,23,42,.96) !important;
+  border-color: rgba(78,161,255,.45) !important;
+  box-shadow: 0 0 0 4px rgba(78,161,255,.18) !important;
+}
+
+/* Botón X limpiar búsqueda */
+html[data-theme="oscuro"] .mov-page .mov-clearSearch{
+  background: rgba(15,23,42,.95) !important;
+  color: rgba(226,232,240,.85) !important;
+  border-color: rgba(148,163,184,.18) !important;
+}
+
+html[data-theme="oscuro"] .mov-page .mov-clearSearch:hover{
+  background: rgba(78,161,255,.12) !important;
+  border-color: rgba(78,161,255,.25) !important;
+  color: rgba(226,232,240,.95) !important;
+}
+
+/* Botones */
+html[data-theme="oscuro"] .mov-page .mov-btn{
+  background: rgba(15,23,42,.78) !important;
+  color: rgba(226,232,240,.92) !important;
+  border-color: rgba(148,163,184,.18) !important;
+}
+
+html[data-theme="oscuro"] .mov-page .mov-btn:hover{
+  background: rgba(78,161,255,.10) !important;
+  border-color: rgba(78,161,255,.22) !important;
+}
+
+html[data-theme="oscuro"] .mov-page .mov-btn--ghost{
+  background: rgba(15,23,42,.68) !important;
+}
+
+/* Botón primary (azul) */
+html[data-theme="oscuro"] .mov-page .mov-btn--primary{
+  background: rgba(78,161,255,.92) !important;
+  border-color: rgba(78,161,255,.52) !important;
+  color: #071018 !important;
+  box-shadow: 0 14px 28px rgba(78,161,255,.18) !important;
+}
+
+html[data-theme="oscuro"] .mov-page .mov-btn--primary:hover{
+  background: rgba(78,161,255,1) !important;
+}
+
+/* Botón excel */
+html[data-theme="oscuro"] .mov-page .mov-btn--excel{
+  background: rgba(34,173,92,.92) !important;
+  border-color: rgba(34,173,92,.50) !important;
+  color: #071018 !important;
+}
+
+html[data-theme="oscuro"] .mov-page .mov-btn--excel:hover{
+  background: rgba(34,173,92,1) !important;
+}
+
+/* Header tabla */
+html[data-theme="oscuro"] .mov-page .mov-gridTable--head{
+  background: rgba(15,23,42,.95) !important;
+  border-bottom-color: rgba(148,163,184,.14) !important;
+  color: rgba(226,232,240,.92) !important;
+}
+
+/* Filas tabla */
+html[data-theme="oscuro"] .mov-page .mov-gridTable--row{
+  background: rgba(15,23,42,.40) !important;
+  border-bottom-color: rgba(148,163,184,.12) !important;
+}
+
+html[data-theme="oscuro"] .mov-page .mov-gridTable--row:hover{
+  background: rgba(78,161,255,.10) !important;
+}
+
+/* Celdas */
+html[data-theme="oscuro"] .mov-page .mov-gridCell{
+  color: rgba(226,232,240,.86) !important;
+}
+
+html[data-theme="oscuro"] .mov-page .mov-ellipsissss{
+  color: rgba(226,232,240,.86) !important;
+}
+
+/* Icon buttons (acciones) */
+html[data-theme="oscuro"] .mov-page .mov-iconBtn{
+  background: rgba(15,23,42,.80) !important;
+  color: rgba(226,232,240,.92) !important;
+  border-color: rgba(148,163,184,.18) !important;
+}
+
+html[data-theme="oscuro"] .mov-page .mov-iconBtn:hover{
+  background: rgba(78,161,255,.12) !important;
+  border-color: rgba(78,161,255,.25) !important;
+  color: rgba(226,232,240,.98) !important;
+}
+
+html[data-theme="oscuro"] .mov-page .mov-iconBtn--danger{
+  border-color: rgba(225,61,69,.28) !important;
+  color: rgba(255,255,255,.92) !important;
+}
+
+html[data-theme="oscuro"] .mov-page .mov-iconBtn--danger:hover{
+  background: rgba(225,61,69,.14) !important;
+  border-color: rgba(225,61,69,.35) !important;
+  color: rgba(255,255,255,.98) !important;
+}
+
+/* Empty row */
+html[data-theme="oscuro"] .mov-page .mov-emptyRow{
+  color: rgba(226,232,240,.65) !important;
+}/* =========================================================
+   DARK MODE: skeleton adaptado
+========================================================= */
+html[data-theme="oscuro"] .mov-skeletonBar,
+html[data-theme="oscuro"] .mov-skelIcon{
+  background: rgba(148,163,184,.14) !important;
+  border-color: rgba(148,163,184,.16) !important;
+}
+
+html[data-theme="oscuro"] .mov-skeletonBar::after,
+html[data-theme="oscuro"] .mov-skelIcon::after{
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255,255,255,.12),
+  );
+}
+
+/* Configuración · Saldos iniciales
+   Las superficies/colores de la sección consumen las variables globales de roots.css.
+   Este hook sólo sincroniza los controles nativos (date/select) con el tema oscuro. */
+html[data-theme="oscuro"] .cfg-si-page,
+body.dark .cfg-si-page {
+  color-scheme: dark;
+}

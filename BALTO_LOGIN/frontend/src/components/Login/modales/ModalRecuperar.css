@@ -1,0 +1,9 @@
+.rec-overlay { position: fixed; inset: 0; z-index: 900; display: grid; place-items: center; padding: 20px; background: rgba(8, 20, 38, .58); backdrop-filter: blur(3px); }
+.rec-card { position: relative; width: min(440px, 100%); padding: 32px; border-radius: 22px; background: white; box-shadow: 0 24px 80px rgba(10, 31, 59, .25); }
+.rec-card h2 { margin: 0 0 12px; font-size: 20px; color: #143f75; }
+.rec-card p { margin: 0 0 24px; color: #66758a; line-height: 1.55; font-size: 14px; }
+.rec-card form { display: grid; gap: 14px; }
+.rec-card input { width: 100%; padding: 13px 14px; border: 1px solid #ccd6e2; border-radius: 12px; outline: none; }
+.rec-card input:focus { border-color: #2f66a2; box-shadow: 0 0 0 3px rgba(47, 102, 162, .12); }
+.rec-card form button { border: 0; border-radius: 12px; padding: 13px 16px; color: white; background: #174b83; font-weight: 750; cursor: pointer; }
+.rec-close { position: absolute; top: 12px; right: 14px; border: 0; background: transparent; font-size: 25px; color: #77879b; cursor: pointer; }

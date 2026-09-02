@@ -1,0 +1,92 @@
+/* =========================================================
+   GLOBAL RESPONSIVE V2 · VENTAS
+   Solo complementa la cabecera en celulares.
+   La tabla y los modales conservan su responsive existente.
+========================================================= */
+
+@media (max-width: 720px) {
+  .mov-page {
+    padding-inline: 10px;
+  }
+
+  .mov-card__head {
+    display: block;
+    padding: 12px;
+  }
+
+  .mov-card__headLeft {
+    display: block;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .mov-headFilters {
+    width: 100%;
+    margin-top: 12px;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .mov-headFilters .cc-filter,
+  .mov-headFilters .cc-filter--cal,
+  .mov-headFilters .cc-floatingField,
+  .mov-headFilters .cc-searchInput,
+  .mov-headFilters .cc-searchInput__fieldWrap {
+    width: 100%;
+    min-width: 0;
+  }
+
+  #vents-comppr-wit,
+  .mov-headFilters .cc-calTrigger {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+  }
+
+  .mov-card__actions {
+    width: 100%;
+    margin-top: 10px;
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px !important;
+    align-items: stretch !important;
+    flex-wrap: nowrap;
+  }
+
+  .mov-card__actions .boton-exportar-wrap,
+  .mov-card__actions .mov-btn {
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+  }
+
+  .mov-card__actions .boton-exportar-trigger,
+  .mov-card__actions .mov-btn {
+    width: 100%;
+    min-width: 0;
+    justify-content: center;
+  }
+
+  .mov-card__actions .boton-exportar-menu {
+    width: min(280px, calc(100vw - 32px));
+    min-width: 0;
+    max-width: calc(100vw - 32px);
+  }
+
+  .cc-calDropdown {
+    max-width: calc(100vw - 32px);
+  }
+}
+
+@media (max-width: 420px) {
+  .mov-card__actions .boton-exportar-trigger,
+  .mov-card__actions .mov-btn {
+    padding-inline: 8px;
+    font-size: 12px;
+  }
+
+  .mov-card__actions .boton-exportar-trigger__left {
+    gap: 4px;
+  }
+}

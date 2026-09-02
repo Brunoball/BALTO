@@ -1,0 +1,2947 @@
+/* =========================================================
+   ✅ RESPONSIVE – ModalEditarMovimiento (solo mobile/tablet)
+   Objetivo:
+   - Desktop/monitor: NO CAMBIA NADA
+   - < 980px: apila panel (form) + aside (relaciones)
+   - < 720px: compacta paddings + acciones full width
+========================================================= */
+
+/* 1) Tablet / Mobile: apilar columnas */
+@media (max-width: 980px){
+
+
+  /* overlay más cómodo */
+  .mi-modal__overlay{
+    padding: 10px;
+  }
+
+  /* el modal ocupa casi toda la pantalla */
+  .mi-modal__container{
+    width: min(1180px, 98vw);
+    max-height: 96vh;
+  }
+
+  /* el form debe permitir scroll interno sin romper */
+  .mi-em-form{
+    padding: 10px;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  /* ✅ grid principal: de 2 columnas a 1 columna */
+  .mi-em-grid{
+    grid-template-columns: 1fr !important;
+    gap: 12px;
+  }
+
+  /* orden: primero datos, después relaciones */
+  .mi-em-panel{ order: 1; }
+  .mi-em-aside{ order: 2; }
+
+  /* paneles un toque más compactos */
+  .mi-em-panelBody{
+    padding: 10px;
+  }
+  .mi-em-aside{
+    padding: 10px;
+  }
+
+  /* fechas/período apiladas (evita que apriete) */
+  .mi-em-dates{
+    grid-template-columns: 1fr 1fr !important;
+    gap: 10px;
+  }
+
+  /* si algún contenedor se desborda, no rompas layout */
+  .mi-em-panel,
+  .mi-em-aside,
+  .mi-em-panelBody,
+  .mi-em-asideBody{
+    min-width: 0;
+  }
+}
+
+/* 2) Mobile: más compacto + botones cómodos */
+@media (max-width: 720px){
+
+  /* header más compacto */
+  .mi-modal__header{
+    padding: 12px 14px;
+  }
+
+  .mi-modal__title{
+    font-size: 1.1rem;
+  }
+  .mi-modal__subtitle{
+    font-size: .85rem;
+  }
+
+  /* inputs un toque más compactos */
+  .fl-input{
+    padding: 14px 12px 10px;
+  }
+
+  /* ✅ acciones del aside: full width y sticky abajo */
+  .mi-em-actions{
+    grid-template-columns: 1fr 1fr !important;
+    gap: 10px;
+    position: sticky;
+    bottom: 0;
+    padding: 10px 0 0;
+    background: inherit; /* respeta light/dark */
+  }
+
+  /* el body del aside con scroll si queda alto */
+  .mi-em-asideBody{
+    max-height: 42vh;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 6px;
+  }
+
+  /* dropdown de sugerencias no se va fuera de pantalla */
+  .mi-cr-suggest{
+    max-height: 200px;
+  }
+
+  /* totales del item en 1 col (ya tenés responsive en varias cosas,
+     pero esto asegura que no se apachurre) */
+  .mi-em-itemTotalsGrid3,
+  .mi-em-itemGrid3{
+    grid-template-columns: 1fr !important;
+    gap: 10px;
+  }
+}
+
+/* 3) Dark mode: asegurar que el sticky del aside no quede raro */
+@media (max-width: 720px){
+  .mi-modal--dark .mi-em-actions{
+    background: rgba(6,18,28,.92);
+  }
+}/* =========================================================
+   ✅ FIX SCROLL – ModalEditarMovimiento (solo mobile/tablet)
+   Problema: contenido cortado sin scroll por overflow:hidden
+   Solución: scroll en el body del modal (form)
+========================================================= */
+
+@media (max-width: 980px){
+
+  /* Importante: el modal tiene alto fijo */
+  .mi-modal__container{
+    max-height: 96vh;
+  }
+
+  /* ✅ El form debe ocupar el espacio y scrollear */
+  .mi-em-form{
+    flex: 1;
+    min-height: 0;
+    overflow: auto !important;   /* ✅ habilita scroll */
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* El grid no debe forzar alturas raras */
+  .mi-em-grid{
+    height: auto !important;
+    min-height: 0;
+  }
+
+  /* Por si algún panel estaba “encerrado” */
+  .mi-em-panel,
+  .mi-em-aside{
+    min-height: 0;
+    overflow: visible !important;
+  }
+}
+
+/* =========================================================
+   ✅ Mobile extra: botones siempre visibles
+========================================================= */
+@media (max-width: 720px){
+
+  /* Si usás sticky actions, asegurá que el form tenga padding abajo
+     para que el final no quede tapado por los botones */
+  .mi-em-form{
+    padding-bottom: 16px;
+  }
+
+  .mi-em-actions{
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+    background: inherit;
+    padding-top: 10px;
+  }
+}
+
+/* Dark: fondo correcto del sticky */
+@media (max-width: 720px){
+  .mi-modal--dark .mi-em-actions{
+    background: rgba(6,18,28,.92);
+  }
+}
+@media (max-width: 980px){
+  .mi-em-grid{
+    grid-template-columns: 1fr;
+  }
+  .mi-em-dates{
+    grid-template-columns: 1fr;
+  }
+  .mi-row3{ grid-template-columns: 1fr; }
+  .mi-row2{ grid-template-columns: 1fr; }
+  .mi-em-itemGrid3{ grid-template-columns: 1fr; }
+  .mi-em-itemTotalsGrid3{ grid-template-columns: 1fr; }
+  .mi-em-actions{ grid-template-columns: 1fr; }
+}
+
+/* =========================================================
+    RESPONSIVE – ModalCargas
+========================================================= *//* =========================================================
+   ✅ RESPONSIVE NUEVO (CARD ROWS) – Carga Rápida
+   - Desktop/monitor intacto
+   - < 980px: 1 columna + filas en formato "card"
+========================================================= */
+
+@media (max-width: 980px){
+
+  /* Modal: un toque más cómodo en pantallas chicas */
+  .mi-modal__container--mov{
+    width: min(980px, 96vw) !important;
+    max-height: 92vh !important;
+    min-height: 92vh !important;
+  }
+
+  /* Grid: 1 columna */
+  .mi-cr-grid{
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  /* Ocultamos el header de tabla (ya no hace falta en modo cards) */
+  .mi-cr-table__head{
+    display: none !important;
+  }
+
+  /* Panel tabla: más “card container” */
+  .mi-cr-table{
+    border-radius: 16px !important;
+    overflow: hidden !important;
+  }
+
+  /* Área de filas: con aire */
+  .mi-cr-table__rows{
+    padding: 10px !important;
+    overflow: auto !important;
+  }
+
+  /* =========================
+     ✅ FILA => CARD
+  ========================= */
+  .mi-cr-row.mi-cr-row--car{
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    grid-template-areas:
+      "desc desc"
+      "qty  price"
+      "iva  ivaMonto"
+      "total action";
+    gap: 10px !important;
+
+    padding: 12px !important;
+    border: 1px solid rgba(148,163,184,.35) !important;
+    border-radius: 16px !important;
+    background: #fff !important;
+    box-shadow: 0 10px 22px rgba(15,23,42,.06) !important;
+    margin-bottom: 12px !important;
+  }
+
+
+
+  /* Asignar áreas por clase */
+  .mi-cr-col--desc{ grid-area: desc !important; padding: 0 !important; }
+  .mi-cr-col--qty{ grid-area: qty !important; padding: 0 !important; }
+  .mi-cr-col--price{ grid-area: price !important; padding: 0 !important; }
+  .mi-cr-col--iva{ grid-area: iva !important; padding: 0 !important; }
+  .mi-cr-col--ivaMonto{ grid-area: ivaMonto !important; padding: 0 !important; }
+  .mi-cr-col--total{ grid-area: total !important; padding: 0 !important; }
+  .mi-cr-col--action{ grid-area: action !important; padding: 0 !important; display: flex; justify-content: flex-end; align-items: flex-end; }
+
+  /* Inputs en cards: full width */
+  .mi-cr-row .fl-input,
+  .mi-cr-row .fl-select{
+    width: 100% !important;
+  }
+
+  /* Labels arriba (mini título) en cada campo numérico */
+  .mi-cr-col--qty::before,
+  .mi-cr-col--price::before,
+  .mi-cr-col--iva::before,
+  .mi-cr-col--ivaMonto::before,
+  .mi-cr-col--total::before{
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: rgba(81,97,115,.95);
+    margin: 0 0 6px 2px;
+    letter-spacing: .2px;
+  }
+
+  .mi-cr-col--qty::before{ content: "Cantidad"; }
+  .mi-cr-col--price::before{ content: "Precio"; }
+  .mi-cr-col--iva::before{ content: "% IVA"; }
+  .mi-cr-col--ivaMonto::before{ content: "IVA"; }
+  .mi-cr-col--total::before{ content: "Total"; }
+
+  /* Total: más destacado */
+  .mi-cr-col--total .mi-cr-money{
+    display: inline-flex;
+    width: 100%;
+    justify-content: flex-start;
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(16,185,129,.25);
+    background: rgba(16,185,129,.08);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Botón borrar: más claro, abajo a la derecha */
+  .mi-cr-del{
+    height: 34px !important;
+    width: 34px !important;
+    border-radius: 12px !important;
+  }
+
+  /* Link “Agregar detalle” que no se vea pegado */
+  .mi-cr-col--desc .mi-cr-link{
+    margin-top: 10px !important;
+  }
+
+  /* =========================
+     ✅ FOOTER TABLA (agregar + totales)
+  ========================= */
+  .mi-cr-table__foot{
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+
+  .mi-cr-addrow{
+    justify-self: start !important;
+  }
+
+
+  .mi-cr-totalLine{
+    gap: 0;
+  }
+
+  /* =========================
+     ✅ FILTROS: abajo con acciones sticky
+  ========================= */
+  .mi-cr-filters__body{
+   overflow: visible;
+
+  }
+  .mi-cr-filters{
+    border-radius: 16px !important;
+    overflow: scroll !important;
+    max-height: 38vh;
+  }
+
+
+  .mi-cr-filters__dates{
+    grid-template-columns: 1fr 1fr !important;
+    gap: 10px !important;
+  }
+
+
+}
+
+/* Móvil chico: fechas en 1 columna */
+@media (max-width: 560px){
+  .mi-cr-filters__dates{
+    grid-template-columns: 1fr  1fr!important;
+  }
+
+  /* Cards más compactas */
+  .mi-cr-row.mi-cr-row--car{
+    grid-template-columns: 1fr !important;
+    grid-template-areas:
+      "desc"
+      "qty"
+      "price"
+      "iva"
+      "ivaMonto"
+      "total"
+      "action";
+  }
+
+  .mi-cr-col--action{
+    justify-content: flex-start !important;
+  }
+}
+
+/* Dark mode: cards y sticky coherentes */
+@media (max-width: 980px){
+  .mi-modal__container.mi-modal--dark .mi-cr-row.mi-cr-row--car{
+    background: rgba(6,18,28,.82) !important;
+    border-color: rgba(255,255,255,.10) !important;
+    box-shadow: 0 18px 45px rgba(0,0,0,.45) !important;
+  }
+
+  .mi-modal__container.mi-modal--dark .mi-cr-col--qty::before,
+  .mi-modal__container.mi-modal--dark .mi-cr-col--price::before,
+  .mi-modal__container.mi-modal--dark .mi-cr-col--iva::before,
+  .mi-modal__container.mi-modal--dark .mi-cr-col--ivaMonto::before,
+  .mi-modal__container.mi-modal--dark .mi-cr-col--total::before{
+    color: rgba(226,232,240,.78) !important;
+  }
+
+  .mi-modal__container.mi-modal--dark .mi-cr-col--total .mi-cr-money{
+    border-color: rgba(16,185,129,.22) !important;
+    background: rgba(16,185,129,.10) !important;
+  }
+
+  .mi-modal__container.mi-modal--dark .mi-cr-filters__actions{
+    background: var(--color-bg-soft) !important;
+  }
+}
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+@media (max-width: 900px){
+  .mi-row3,
+  .mi-row2{
+    grid-template-columns: 1fr;
+  }
+
+  .mi-em-grid,
+  .mi-cr-grid{
+    grid-template-columns: 1fr;
+  }
+
+  .mi-modal__container--mov{
+    min-height: auto;
+    max-height: 94vh;
+  }
+
+  .modal-nc-container{
+    width: min(96vw, 96vw) !important;
+    min-width: unset !important;
+    max-width: 96vw !important;
+    max-height: 90vh !important;
+  }
+
+  .modal-nc-body{
+    overflow-y: auto !important;
+  }
+
+  .modal-nc-grid{
+    grid-template-columns: 1fr !important;
+  }
+
+  .modal-nc-summary__rows{
+    grid-template-columns: 1fr !important;
+  }
+
+  .modal-nc-card__row{
+    grid-template-columns: 1fr !important;
+    gap: 3px !important;
+  }
+
+  .modal-nc-card__row strong{
+    text-align: left !important;
+  }
+}
+
+@media (max-width: 780px){
+  .mi-cr-table__head,
+  .mi-cr-row{
+    grid-template-columns: 1fr;
+  }
+}
+.nv-cell-input--right{text-align: right !important;}
+@media (max-width: 600px){
+  .modal-nc-grid{
+    grid-template-columns: 1fr;
+  }
+}
+
+
+
+
+
+
+
+
+
+
+/* =========================================================
+   ✅ Movimientos — Header actions en MOBILE:
+   2 arriba (Facturar / Exportar) + 1 abajo (Movimiento)
+   Solo <= 720px — NO afecta desktop
+========================================================= */
+@media (max-width: 720px){
+  .mov-card__actions{
+    width: 100%;
+    justify-content: space-between;
+  }
+  .boton-exportar-wrap{
+    margin-left: auto;
+  }
+    .mov-page--compras .mov-tableWrap--compras {
+    overflow: auto;
+    padding: 10px;
+
+  }
+  #vents-comppr-wit{
+    max-width: none !important;
+  }
+  .is-right{
+    text-align: left !important ;
+  }
+  .title-mov{
+    flex-direction: row;
+    justify-content: space-between;
+  }
+  .fc-footnote{
+    display: none;
+  }
+  /* el contenedor de botones */
+
+
+  /* cada botón ocupa ancho completo de su celda */
+  .mov-card__actions .mov-btn{
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* ✅ 3er botón (Nuevo Movimiento) baja y ocupa 2 columnas */
+  .mov-card__actions .mov-btn:nth-child(3){
+    grid-column: 1 / -1;
+  }
+}
+/* Mobile: convertir tabla a cards */
+@media (max-width: 720px) {
+  #Flujo_Cj-tableWrap{
+    min-height: 55vh !important;
+    max-height: 55vh !important;
+  }
+    .mov-card__actions{
+  flex-wrap: nowrap;
+}
+  /* Ocultamos el header de tabla */
+  .mov-gridTable--head {
+    display: none !important;
+  }
+
+  /* Evitar que el wrapper fuerce scroll horizontal */
+  .mov-tableWrap {
+   overflow: auto;
+        min-height: 54vh !important;
+        max-height: 54vh !important;
+  }
+
+  /* Cada fila como card */
+.mov-gridTable--row {
+    display: block !important; /* ⚠️ cambia grid por block */
+    padding: 6px;
+    margin: 10px;
+    border: 1px solid var(--color-border, rgba(255,255,255,0.08));
+    border-radius: 16px;
+    background: var(--color-bg, #0e1a2b);
+}
+
+
+  /* Celdas en formato "label + value" */
+  .mov-gridTable--row .mov-gridCell {
+    display: grid;
+    grid-template-columns: 120px 1fr;
+    gap: 10px;
+    align-items: start;
+    padding: 0;
+    border: 0;
+    min-height: auto;
+  }
+
+  /* Label via data-label */
+  .mov-gridTable--row .mov-gridCell::before {
+    content: attr(data-label);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--color-text-muted, #6b7280);
+    line-height: 1.2;
+    padding-top: 2px;
+  }
+
+  /* El texto del valor */
+  .mov-ellipsissss {
+    display: block;
+    overflow: visible;
+    text-overflow: initial;
+    white-space: normal;
+    line-height: 1.25;
+  }
+
+  /* TOTAL centrado no hace falta en mobile */
+  .mov-gridTable--row .mov-gridCell.is-center {
+    justify-items: start;
+    text-align: left;
+  }
+
+  /* Acciones abajo (full width) */
+  .mov-gridCell--actions {
+    grid-template-columns: 120px 1fr;
+  }
+
+  .mov-actionsInline {
+    justify-content: flex-start;
+    gap: 10px;
+  }
+
+  /* Botones superiores */
+  .mov-card__actions .mov-btn {
+    flex: 1 1 100%;
+  }
+}
+
+/* Mobile muy chico */
+@media (max-width: 420px) {
+  .mov-gridTable--row .mov-gridCell {
+    grid-template-columns: 1fr 1fr;
+    padding: 2px 0;
+  }
+
+  .mov-card__title {
+    font-size: 18px;
+  }
+}
+/* =========================================================
+   RESPONSIVE | Modal Nueva Compra
+   - Agregar al FINAL del CSS
+   - No modifica la vista desktop
+========================================================= */
+
+@media (max-width: 1200px){
+  .mi-modal__container--mov{
+    min-width: auto;
+    width: min(1100px, 98vw);
+  }
+
+  .mi-cr-grid{
+    grid-template-columns: 1fr 290px;
+  }
+
+  .mi-cr-table__head,
+  .mi-cr-row{
+    grid-template-columns: minmax(260px, 2.2fr) 72px 120px 84px 120px 120px 36px;
+  }
+}
+
+@media (max-width: 1024px){
+  .mi-modal__overlay{
+    padding: 10px;
+  }
+
+  .mi-modal__container{
+    width: 100%;
+    max-width: 100%;
+    min-width: 0 !important;
+    min-height: 92vh;
+    max-height: 92vh;
+    border-radius: 16px;
+  }
+
+  .mi-modal__container--mov{
+    min-width: 0 !important;
+    width: 100%;
+  }
+
+  .mi-modal__content{
+    padding: 10px;
+  }
+
+  .mi-cr-grid{
+    grid-template-columns: 1fr;
+    gap: 10px;
+    overflow: hidden;
+  }
+
+  .mi-cr-table{
+    order: 1;
+    min-width: 0;
+  }
+
+  .mi-cr-filters{
+    order: 2;
+    min-width: 0;
+  }
+
+  .mi-cr-filters__body{
+    overflow: visible;
+  }
+
+  .mi-cr-table__rows{
+    overflow-x: auto;
+    overflow-y: auto;
+  }
+
+
+
+  .mi-cr-table__foot{
+    flex-wrap: wrap;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .mi-cr-foot-actions{
+    width: 100%;
+    flex-wrap: nowrap;
+  }
+
+
+
+  .mi-cr-totalLine{
+    flex: 1 1 160px;
+    min-width: 150px;
+    justify-content: space-between;
+  }
+
+  .mi-cr-filters__actions{
+    flex-direction: column;
+  }
+
+  .mi-cr-filters__dates{
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px){
+  .mi-modal__overlay{
+    padding: 0;
+  }
+
+  .mi-modal__container{
+    width: 100vw;
+    height: 100vh;
+    max-height: 100vh;
+    min-height: 100vh;
+    border-radius: 0;
+  }
+
+  .mi-modal__container--mov{
+    min-height: 100vh;
+    max-height: 100vh;
+  }
+
+  .mi-modal__header{
+    padding: 12px 14px;
+    gap: 10px;
+  }
+
+  .mi-modal__head-icon{
+    width: 32px;
+    height: 32px;
+    font-size: 14px;
+  }
+
+  .mi-modal__title{
+    font-size: .98rem;
+  }
+
+  .mi-modal__close{
+    width: 36px;
+    height: 36px;
+  }
+
+  .mi-modal__content{
+    padding: 8px;
+  }
+
+  .mi-cr-grid{
+    gap: 8px;
+  }
+
+  .mi-cr-table,
+  .mi-cr-filters{
+    border-radius: 12px;
+  }
+
+  .mi-cr-table__head > div{
+    font-size: 10px;
+    padding: 0 8px;
+  }
+
+  .mi-cr-cell{
+    padding: 0 4px;
+  }
+
+  .mi-cr-cell--detalle{
+    padding: 4px 6px;
+  }
+
+  .mi-cr-cell .nv-cell-input{
+    font-size: 13px;
+    height: 32px;
+    padding: 0 7px;
+  }
+
+
+
+  .mi-cr-table__foot{
+    padding: 10px;
+  }
+
+  .mi-cr-foot-actions{
+    gap: 6px;
+  }
+
+  .nv-foot-btn{
+    flex: 1 1 calc(50% - 3px);
+    justify-content: center;
+  }
+
+  .nv-foot-sep{
+    display: none;
+  }
+
+  .mi-cr-totals{
+    gap: 8px;
+  }
+
+  .mi-cr-totalLine{
+    width: 100%;
+    min-width: 0;
+  }
+
+  .mi-cr-filters__top{
+    padding: 10px;
+  }
+
+  .mi-cr-filters__body{
+    padding: 6px 10px 10px;
+    gap: 8px;
+  }
+
+  .mi-uploadBar{
+    grid-template-columns: 1fr;
+  }
+
+  .mi-uploadBar__btn{
+    width: 100%;
+  }
+
+  .mi-uploadFile{
+    padding: 10px;
+  }
+
+  .mi-uploadFile__name{
+    font-size: 12.5px;
+  }
+
+  .fl-input,
+  .fl-select,
+  .fl-input[type="date"]{
+    font-size: 14px !important;
+    padding: 15px 11px 10px;
+  }
+
+  .fl-label{
+    font-size: .8rem;
+  }
+
+  .mi-cr-link{
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 560px){
+  .mi-modal__header{
+    padding: 10px 12px;
+  }
+
+  .mi-modal__title{
+    font-size: .94rem;
+  }
+
+  .mi-modal__content{
+    padding: 6px;
+  }
+
+  .mi-cr-grid{
+    gap: 6px;
+  }
+
+  .mi-cr-table,
+  .mi-cr-filters{
+    border-radius: 10px;
+  }
+
+  .mi-cr-filters__top{
+    padding: 9px;
+  }
+
+  .mi-cr-filters__body{
+    padding: 6px 9px 9px;
+  }
+
+
+
+  .mi-cr-cell .nv-cell-input{
+    height: 30px;
+    font-size: 12.5px;
+  }
+
+  .mi-cr-del{
+    width: 22px;
+    height: 22px;
+    font-size: 13px;
+  }
+
+  .nv-foot-btn{
+    flex: 1 1 100%;
+    height: 32px;
+    font-size: 11.5px;
+  }
+
+  .nv-foot-btn__icon{
+    width: 14px;
+    height: 14px;
+    font-size: 10px;
+  }
+
+  .mi-cr-totalLine{
+    padding: 7px 10px 7px 12px;
+    font-size: .78rem;
+  }
+
+  .mi-uploadCard__head,
+  .mi-uploadCard__body{
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .mi-uploadFile__icon{
+    width: 30px;
+    height: 30px;
+    font-size: 13px;
+  }
+
+  .mi-cr-filters__actions{
+    gap: 8px;
+  }
+
+  .mit-btn--block{
+    height: 42px;
+  }
+}
+
+@media (max-width: 420px){
+  .mi-modal__head-icon{
+    display: none;
+  }
+
+  .mi-modal__header{
+    gap: 8px;
+  }
+
+  .mi-modal__title{
+    font-size: .9rem;
+  }
+
+
+
+  .mi-cr-table__head > div{
+    font-size: 9.5px;
+    letter-spacing: .04em;
+  }
+
+  .fl-input,
+  .fl-select,
+  .fl-input[type="date"]{
+    font-size: 13px !important;
+  }
+
+  .mi-uploadFile{
+    gap: 8px;
+  }
+
+  .mi-uploadFile__name{
+    font-size: 12px;
+  }
+
+  .mi-uploadFile__size,
+  .mi-uploadFile__empty{
+    font-size: 11px;
+  }
+}/* =========================================================
+   RESPONSIVE SIN SCROLL HORIZONTAL
+   - Desktop no se toca
+   - En móvil cada fila pasa a card
+========================================================= */
+
+@media (max-width: 1024px){
+  .mi-modal__overlay{
+    padding: 10px;
+  }
+
+  .mi-modal__container{
+    width: 100%;
+    max-width: 100%;
+    min-width: 0 !important;
+    min-height: 92vh;
+    max-height: 92vh;
+    border-radius: 16px;
+  }
+
+  .mi-modal__container--mov{
+    min-width: 0 !important;
+    width: 100%;
+  }
+
+  .mi-modal__content{
+    padding: 10px;
+  }
+
+  .mi-cr-grid{
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .mi-cr-table{
+    order: 1;
+    min-width: 0;
+  }
+
+  .mi-cr-filters{
+    order: 2;
+    min-width: 0;
+  }
+
+  .mi-cr-filters__body{
+    overflow: visible !important;
+  }
+  .mov-card__head{
+    padding: 10px;
+  }
+
+  .mi-cr-table__foot{
+    flex-wrap: wrap;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+
+
+
+
+  .mi-cr-totalLine{
+    flex: 1 1 160px;
+    min-width: 150px;
+    justify-content: space-between;
+  }
+
+  .mi-cr-filters__actions{
+    flex-direction: row;
+  }
+
+  .mi-cr-filters__dates{
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px){
+  .mi-modal__overlay{
+    padding: 0;
+  }
+.mi-modal__formPad{
+  position: relative;
+}
+.ordenpagobuttos{
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  margin: 10px;
+}
+
+
+  .mi-modal__container--mov{
+    min-height: 100vh;
+    max-height: 100vh;
+  }
+
+  .mi-modal__header{
+    padding: 12px 14px;
+    gap: 10px;
+  }
+
+  .mi-modal__head-icon{
+    width: 32px;
+    height: 32px;
+    font-size: 14px;
+  }
+
+  .mi-modal__title{
+    font-size: .98rem;
+  }
+
+  .mi-modal__close{
+    width: 36px;
+    height: 36px;
+  }
+
+  .mi-modal__content{
+    padding: 8px;
+  }
+
+  .mi-cr-grid{
+    gap: 8px;
+  }
+
+  .mi-cr-table,
+  .mi-cr-filters{
+    border-radius: 12px;
+  }
+
+  /* ocultamos header de tabla en móvil */
+  .mi-cr-table__head{
+    display: none;
+  }
+
+  .mi-cr-table__rows{
+    overflow: visible;
+    padding: 8px;
+  }
+
+  /* cada fila pasa a card */
+  .mi-cr-row{
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas:
+      "detalle detalle"
+      "cantidad precio"
+      "iva ivamonto"
+      "total total"
+      "delete delete";
+    gap: 10px;
+    min-height: auto;
+    padding: 12px;
+    margin-bottom: 10px;
+    border: 1px solid var(--color-border-strong);
+    border-radius: 12px;
+    background: var(--color-bg);
+    box-shadow: var(--shadow-sm);
+  }
+  .mi-cr-totals{
+    display: grid !important;
+    width: 100%;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+  }
+  .mi-cr-totalLine--total{
+    grid-column: -1/1;
+  }
+  .cc-cliente-table__body{
+    height: calc(100vh - 478px) !important;
+  }
+  .mi-cr-row:last-child{
+    margin-bottom: 0;
+  }
+
+  .mi-cr-row > .mi-cr-cell{
+    border-left: none !important;
+    padding: 0;
+    min-width: 0;
+    height: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 6px;
+  }
+#mov-tableWrap--afs{
+max-height: 40vh !important;
+min-height: 40vh !important;
+}
+.modal-nc-summary{
+  margin: 10px 0;
+  overflow: clip;
+  min-height: fit-content;
+}
+  .mi-cr-row > .mi-cr-cell::before{
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--color-text-muted);
+    letter-spacing: .02em;
+  }
+
+  .mi-cr-row > .mi-cr-cell:nth-child(1){
+    grid-area: detalle;
+  }
+  .mi-cr-row > .mi-cr-cell:nth-child(1)::before{
+    content: "Detalle";
+  }
+
+  .mi-cr-row > .mi-cr-cell:nth-child(2){
+    grid-area: cantidad;
+  }
+  .mi-cr-row > .mi-cr-cell:nth-child(2)::before{
+    content: "Cantidad";
+  }
+
+  .mi-cr-row > .mi-cr-cell:nth-child(3){
+    grid-area: precio;
+  }
+  .mi-cr-row > .mi-cr-cell:nth-child(3)::before{
+    content: "Precio";
+  }
+
+  .mi-cr-row > .mi-cr-cell:nth-child(4){
+    grid-area: iva;
+  }
+  .mi-cr-row > .mi-cr-cell:nth-child(4)::before{
+    content: "IVA %";
+  }
+
+  .mi-cr-row > .mi-cr-cell:nth-child(5){
+    grid-area: ivamonto;
+  }
+  .mi-cr-row > .mi-cr-cell:nth-child(5)::before{
+    content: "IVA $";
+  }
+
+  .mi-cr-row > .mi-cr-cell:nth-child(6){
+    grid-area: total;
+  }
+  .mi-cr-row > .mi-cr-cell:nth-child(6)::before{
+    content: "Total";
+  }
+
+  .mi-cr-row > .mi-cr-cell:nth-child(7){
+    grid-area: delete;
+    align-items: flex-end;
+  }
+  .mi-cr-row > .mi-cr-cell:nth-child(7)::before{
+    display: none;
+  }
+
+  .mi-cr-cell--detalle{
+    padding: 0;
+    gap: 6px;
+  }
+
+  .mi-cr-cell .nv-cell-input{
+    width: 100%;
+    height: 38px;
+    font-size: 14px;
+    padding: 0 10px;
+    border: 1px solid var(--color-border-strong);
+    background: var(--color-bg);
+    border-radius: 10px;
+  }
+
+  .mi-cr-cell--mono,
+  .mi-cr-cell--soft,
+  .mi-cr-cell--total-val{
+    min-height: 38px;
+    border: 1px solid var(--color-border-strong);
+    border-radius: 10px;
+    padding: 10px 12px;
+    background: var(--color-surface);
+    justify-content: center;
+  }
+
+  .mi-cr-cell--right{
+    align-items: stretch;
+  }
+
+  .mi-cr-cell--right,
+  .mi-cr-cell--center{
+    justify-content: flex-start;
+  }
+
+  .mi-cr-cell--mono{
+    font-size: .92rem;
+  }
+
+  .mi-cr-cell--total-val{
+    font-size: 1rem;
+    font-weight: 700;
+  }
+
+  #delete_cell{
+    padding: 0 !important;
+  }
+
+  .mi-cr-del{
+    width: 34px;
+    height: 34px;
+    margin-left: auto;
+    margin-right: 0;
+    border-radius: 10px;
+    border: 1px solid rgba(239,68,68,.20);
+    background: rgba(239,68,68,.08);
+  }
+
+  .mi-cr-table__foot{
+    padding: 10px;
+  }
+
+  .mi-cr-foot-actions{
+    gap: 6px;
+  }
+
+  .nv-foot-btn{
+    flex: 1 1 calc(50% - 3px);
+    justify-content: center;
+    min-height: 34px;
+  }
+
+  .nv-foot-sep{
+    display: none;
+  }
+
+  .mi-cr-totals{
+    gap: 8px;
+  }
+
+  .mi-cr-totalLine{
+    width: 100%;
+    min-width: 0;
+  }
+
+  .mi-cr-filters__top{
+    padding: 10px;
+  }
+
+  .mi-cr-filters__body{
+    padding: 6px 10px 10px;
+    gap: 8px;
+  }
+
+  .mi-uploadBar{
+    grid-template-columns: 1fr;
+  }
+
+  .mi-uploadBar__btn{
+    width: 100%;
+  }
+
+  .mi-uploadFile{
+    padding: 10px;
+  }
+
+  .mi-uploadFile__name{
+    font-size: 12.5px;
+  }
+
+  .fl-input,
+  .fl-select,
+  .fl-input[type="date"]{
+    font-size: 14px !important;
+    padding: 15px 11px 10px;
+  }
+
+  .fl-label{
+    font-size: .8rem;
+  }
+
+  .mi-cr-link{
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 560px){
+  .mi-modal__header{
+    padding: 10px 12px;
+  }
+
+  .mi-modal__title{
+    font-size: .94rem;
+  }
+
+  .mi-modal__content{
+    padding: 6px;
+  }
+
+  .mi-cr-grid{
+    gap: 6px;
+  }
+
+  .mi-cr-table,
+  .mi-cr-filters{
+    border-radius: 10px;
+  }
+
+  .mi-cr-table__rows{
+    padding: 6px;
+  }
+
+  .mi-cr-row{
+    grid-template-columns: 1fr !important;
+    grid-template-areas:
+      "detalle"
+      "cantidad"
+      "precio"
+      "iva"
+      "ivamonto"
+      "total"
+      "delete";
+    gap: 8px;
+    padding: 10px;
+    border-radius: 10px;
+  }
+
+  .mi-cr-cell .nv-cell-input{
+    height: 36px;
+    font-size: 13px;
+  }
+
+  .mi-cr-cell--mono,
+  .mi-cr-cell--soft,
+  .mi-cr-cell--total-val{
+    min-height: 36px;
+    padding: 9px 10px;
+    font-size: .88rem;
+  }
+
+  .mi-cr-del{
+    width: 32px;
+    height: 32px;
+    font-size: 13px;
+  }
+
+  .nv-foot-btn{
+    flex: 1 1 100%;
+    height: 32px;
+    font-size: 11.5px;
+  }
+
+  .nv-foot-btn__icon{
+    width: 14px;
+    height: 14px;
+    font-size: 10px;
+  }
+
+  .mi-cr-totalLine{
+    padding: 7px 10px 7px 12px;
+    font-size: .78rem;
+  }
+
+  .mi-uploadCard__head,
+  .mi-uploadCard__body{
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .mi-uploadFile__icon{
+    width: 30px;
+    height: 30px;
+    font-size: 13px;
+  }
+
+  .mi-cr-filters__actions{
+    gap: 8px;
+  }
+
+  .mit-btn--block{
+    height: 42px;
+  }
+}
+
+@media (max-width: 420px){
+  .mi-modal__head-icon{
+    display: none;
+  }
+
+  .mi-modal__header{
+    gap: 8px;
+  }
+
+  .mi-modal__title{
+    font-size: .9rem;
+  }
+
+  .fl-input,
+  .fl-select,
+  .fl-input[type="date"]{
+    font-size: 13px !important;
+  }
+
+  .mi-uploadFile{
+    gap: 8px;
+  }
+
+  .mi-uploadFile__name{
+    font-size: 12px;
+  }
+
+  .mi-uploadFile__size,
+  .mi-uploadFile__empty{
+    font-size: 11px;
+  }
+}/* =========================================================
+   CC PROVEEDORES — acciones inline desktop
+========================================================= */
+.cc-actionsInline{
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+}
+
+.cc-verBtn{
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  background: #fff;
+  color: #111827;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .14s ease, border-color .14s ease, color .14s ease, transform .14s ease;
+}
+
+.cc-verBtn:hover:not(:disabled){
+  transform: translateY(-1px);
+}
+
+.cc-verBtn--danger{
+  background: rgba(220, 53, 69, 0.12);
+  border-color: rgba(220, 53, 69, 0.35);
+  color: #d63c50;
+}
+
+.cc-verBtn--danger:hover:not(:disabled){
+  background: rgba(220, 53, 69, 0.18);
+  border-color: rgba(220, 53, 69, 0.45);
+  color: #b91c1c;
+}
+
+/* =========================================================
+   MOBILE CARD
+========================================================= */
+.cc-mobileCard{
+  display: none;
+}
+
+.cc-mobileCard__top{
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.cc-mobileCard__main{
+  min-width: 0;
+  flex: 1;
+}
+
+.cc-mobileCard__title{
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+  line-height: 1.3;
+  word-break: break-word;
+}
+
+.cc-mobileCard__detail{
+  margin-top: 6px;
+  font-size: 12px;
+  color: #6b7280;
+  line-height: 1.45;
+  word-break: break-word;
+}
+
+.cc-mobileCard__date{
+  flex: 0 0 auto;
+  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 600;
+  color: #4b5563;
+  background: #f3f4f6;
+  border: 1px solid rgba(0,0,0,.06);
+  border-radius: 999px;
+  padding: 6px 10px;
+}
+
+.cc-mobileCard__amounts{
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.cc-mobileCard__amountBox{
+  border: 1px solid rgba(0,0,0,.08);
+  background: #f8fafc;
+  border-radius: 12px;
+  padding: 10px 12px;
+  min-width: 0;
+}
+
+.cc-mobileCard__label{
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: #6b7280;
+  margin-bottom: 6px;
+}
+
+.cc-mobileCard__value{
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #111827;
+  word-break: break-word;
+}
+
+.cc-mobileCard__value--active{
+  color: #111827;
+}
+
+.cc-mobileCard__value--muted{
+  color: #9ca3af;
+}
+
+.cc-mobileCard__saldoRow{
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-top: 1px solid rgba(0,0,0,.08);
+  padding-top: 12px;
+}
+
+.cc-mobileCard__saldo{
+  font-size: 15px;
+  font-weight: 700;
+  color: #111827;
+  text-align: right;
+  word-break: break-word;
+}
+
+.cc-mobileCard__actions{
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.cc-mobileCard__actionBtn{
+  width: 100%;
+  min-height: 42px;
+  border-radius: 12px;
+  border: 1px solid rgba(0,0,0,.10);
+  background: #fff;
+  color: #111827;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 12px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .14s ease, border-color .14s ease, color .14s ease, transform .14s ease;
+}
+
+.cc-mobileCard__actionBtn:hover:not(:disabled){
+  transform: translateY(-1px);
+  background: #f9fafb;
+}
+
+.cc-mobileCard__actionBtn--danger{
+  background: rgba(220, 53, 69, 0.08);
+  border-color: rgba(220, 53, 69, 0.24);
+  color: #c6283e;
+}
+
+.cc-mobileCard__actionBtn--danger:hover:not(:disabled){
+  background: rgba(220, 53, 69, 0.14);
+  border-color: rgba(220, 53, 69, 0.32);
+}
+
+.cc-mobileCard__actionBtn.is-disabled,
+.cc-mobileCard__actionBtn:disabled{
+  background: #f3f4f6;
+  color: #9ca3af;
+  cursor: not-allowed;
+  opacity: .75;
+}
+
+/* =========================================================
+   RESPONSIVE — sin scroll horizontal, vista tarjetas
+   Desktop NO se toca
+========================================================= */
+@media (max-width: 1100px){
+  .cc-cliente-table{
+    overflow-x: hidden;
+  }
+
+  .cc-cliente-table__head,
+  .cc-cliente-table__row,
+  .cc-cliente-table__totals{
+    min-width: 0;
+  }
+}
+
+@media (max-width: 900px){
+  .mov-card__head{
+    align-items: stretch;
+  }
+
+  .mov-card__headLeft{
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .mov-headFilters{
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .cc-filter,
+  .cc-filter--search,
+  .cc-filter--cal,
+  .cc-floatingField,
+  .cc-calTrigger,
+  .cc-searchInput,
+  .cc-searchInput__fieldWrap{
+    width: 100%;
+    min-width: 0;
+  }
+
+  .cc-calTrigger{
+    min-width: 0;
+  }
+
+  .cc-cliente-table{
+    border-radius: 16px;
+    overflow: hidden;
+  }
+
+  .cc-cliente-table__desktopHead{
+    display: none !important;
+  }
+
+  .cc-cliente-table__body{
+    height: auto;
+    max-height: none;
+    overflow: visible;
+    padding: 12px;
+    background: #f8fafc;
+  }
+
+  .cc-cliente-table__row--desktop{
+    display: none !important;
+  }
+
+  .cc-mobileCard{
+    display: block;
+    background: #fff;
+    border: 1px solid rgba(0,0,0,.08);
+    border-radius: 16px;
+    box-shadow: 0 8px 22px rgba(15, 23, 42, 0.06);
+    padding: 14px;
+  }
+
+  .cc-mobileCard + .cc-mobileCard{
+    margin-top: 12px;
+  }
+
+  .cc-cliente-table__footWrap{
+    border-top: 1px solid rgba(0,0,0,.08);
+    background: #fff;
+    padding: 12px;
+  }
+
+  .cc-cliente-table__totals{
+    grid-template-columns: 1fr;
+    gap: 8px;
+    border: 1px solid rgba(0,0,0,.08);
+    border-radius: 14px;
+    padding: 12px;
+    background: #f8fafc;
+  }
+
+  .cc-cliente-table__totals .cc-cliente-table__cell{
+    padding: 0;
+  }
+
+  .cc-cliente-table__totals .cc-cliente-table__cell:nth-child(1){
+    font-size: 14px;
+    font-weight: 700;
+    color: #111827;
+    margin-bottom: 4px;
+  }
+
+  .cc-cliente-table__totals .cc-cliente-table__cell:nth-child(2),
+  .cc-cliente-table__totals .cc-cliente-table__cell:nth-child(6){
+    display: none;
+  }
+
+  .cc-cliente-table__totals .cc-cliente-table__cell:nth-child(3)::before,
+  .cc-cliente-table__totals .cc-cliente-table__cell:nth-child(4)::before,
+  .cc-cliente-table__totals .cc-cliente-table__cell:nth-child(5)::before{
+    display: inline-block;
+    margin-right: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+  }
+
+  .cc-cliente-table__totals .cc-cliente-table__cell:nth-child(3)::before{
+    content: "Débito";
+  }
+
+  .cc-cliente-table__totals .cc-cliente-table__cell:nth-child(4)::before{
+    content: "Crédito";
+  }
+
+  .cc-cliente-table__totals .cc-cliente-table__cell:nth-child(5)::before{
+    content: "Saldo";
+  }
+
+  .cc-cliente-table__totals .cc-cliente-table__cell:nth-child(3),
+  .cc-cliente-table__totals .cc-cliente-table__cell:nth-child(4),
+  .cc-cliente-table__totals .cc-cliente-table__cell:nth-child(5){
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+    font-weight: 700;
+    color: #111827;
+    border-top: 1px solid rgba(0,0,0,.06);
+    padding-top: 8px;
+  }
+}
+
+@media (max-width: 640px){
+  .contenedor-cards{
+    height: auto;
+  }
+
+  .cc-mobileCard{
+    padding: 12px;
+    border-radius: 14px;
+  }
+
+  .cc-mobileCard__top{
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .cc-mobileCard__date{
+    align-self: flex-start;
+  }
+
+  .cc-mobileCard__amounts{
+    grid-template-columns: 1fr;
+  }
+
+  .cc-footnote{
+    display: none;
+  }
+}
+
+/* =========================================================
+   DARK MODE tarjetas
+========================================================= */
+html[data-theme="oscuro"] .cc-mobileCard{
+  background: rgba(15,23,42,.72);
+  border-color: rgba(148,163,184,.14);
+  box-shadow: 0 16px 36px -26px rgba(0,0,0,.60);
+}
+
+html[data-theme="oscuro"] .cc-mobileCard__title,
+html[data-theme="oscuro"] .cc-mobileCard__saldo,
+html[data-theme="oscuro"] .cc-mobileCard__value--active{
+  color: rgba(226,232,240,.94);
+}
+
+html[data-theme="oscuro"] .cc-mobileCard__detail,
+html[data-theme="oscuro"] .cc-mobileCard__label,
+html[data-theme="oscuro"] .cc-mobileCard__date{
+  color: rgba(226,232,240,.68);
+}
+
+html[data-theme="oscuro"] .cc-mobileCard__date{
+  background: rgba(148,163,184,.10);
+  border-color: rgba(148,163,184,.14);
+}
+
+html[data-theme="oscuro"] .cc-mobileCard__amountBox{
+  background: rgba(15,23,42,.88);
+  border-color: rgba(148,163,184,.14);
+}
+
+html[data-theme="oscuro"] .cc-mobileCard__saldoRow{
+  border-top-color: rgba(148,163,184,.12);
+}
+
+html[data-theme="oscuro"] .cc-mobileCard__actionBtn{
+  background: rgba(15,23,42,.90);
+  color: rgba(226,232,240,.92);
+  border-color: rgba(148,163,184,.16);
+}
+
+html[data-theme="oscuro"] .cc-mobileCard__actionBtn:hover:not(:disabled){
+  background: rgba(78,161,255,.10);
+  border-color: rgba(78,161,255,.24);
+}
+
+html[data-theme="oscuro"] .cc-mobileCard__actionBtn--danger{
+  background: rgba(225,61,69,.10);
+  border-color: rgba(225,61,69,.22);
+  color: rgba(255,255,255,.92);
+}
+
+html[data-theme="oscuro"] .cc-cliente-table__body{
+  background: transparent;
+}
+
+html[data-theme="oscuro"] .cc-cliente-table__footWrap{
+  background: transparent;
+  border-top-color: rgba(148,163,184,.12);
+}
+
+html[data-theme="oscuro"] .cc-cliente-table__totals{
+  background: rgba(15,23,42,.72);
+  border-color: rgba(148,163,184,.14);
+}
+
+html[data-theme="oscuro"] .cc-cliente-table__totals .cc-cliente-table__cell{
+  color: rgba(226,232,240,.92);
+}
+
+html[data-theme="oscuro"] .cc-cliente-table__totals .cc-cliente-table__cell:nth-child(3),
+html[data-theme="oscuro"] .cc-cliente-table__totals .cc-cliente-table__cell:nth-child(4),
+html[data-theme="oscuro"] .cc-cliente-table__totals .cc-cliente-table__cell:nth-child(5){
+  border-top-color: rgba(148,163,184,.10);
+}/* =========================================================
+   TOTAL FINAL RESPONSIVE
+========================================================= */
+@media (max-width: 900px){
+  .cc-cliente-table__footWrap{
+    padding: 12px;
+    background: transparent;
+    border-top: none;
+  }
+
+  .cc-cliente-table__totals{
+    display: flex !important;
+    flex-direction: column;
+    gap: 0;
+    min-width: 0 !important;
+    overflow: hidden;
+    border: 1px solid rgba(0,0,0,.08);
+    border-radius: 16px;
+    background: #ffffff;
+    box-shadow: 0 8px 22px rgba(15, 23, 42, 0.06);
+    padding: 0;
+  }
+
+  .cc-cliente-table__totals .cc-cliente-table__cell{
+    min-width: 0;
+    padding: 12px 14px;
+  }
+
+  /* oculto las columnas vacías del layout desktop */
+  .cc-cliente-table__totals .cc-cliente-table__cell:nth-child(2),
+  .cc-cliente-table__totals .cc-cliente-table__cell:nth-child(6){
+    display: none;
+  }
+
+  /* título */
+  .cc-cliente-table__totals .cc-cliente-table__cell:nth-child(1){
+    font-size: 14px;
+    font-weight: 700;
+    color: #111827;
+    background: #f8fafc;
+    border-bottom: 1px solid rgba(0,0,0,.08);
+  }
+
+  /* filas de importe */
+  .cc-cliente-table__totals .cc-cliente-table__cell:nth-child(3),
+  .cc-cliente-table__totals .cc-cliente-table__cell:nth-child(4),
+  .cc-cliente-table__totals .cc-cliente-table__cell:nth-child(5){
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    text-align: left !important;
+    font-size: 13px;
+    font-weight: 700;
+    color: #111827;
+  }
+
+  .cc-cliente-table__totals .cc-cliente-table__cell:nth-child(4),
+  .cc-cliente-table__totals .cc-cliente-table__cell:nth-child(5){
+    border-top: 1px solid rgba(0,0,0,.06);
+  }
+
+  .cc-cliente-table__totals .cc-cliente-table__cell:nth-child(3)::before,
+  .cc-cliente-table__totals .cc-cliente-table__cell:nth-child(4)::before,
+  .cc-cliente-table__totals .cc-cliente-table__cell:nth-child(5)::before{
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: #6b7280;
+    flex: 0 0 auto;
+  }
+
+  .cc-cliente-table__totals .cc-cliente-table__cell:nth-child(3)::before{
+    content: "Débito";
+  }
+
+  .cc-cliente-table__totals .cc-cliente-table__cell:nth-child(4)::before{
+    content: "Crédito";
+  }
+
+  .cc-cliente-table__totals .cc-cliente-table__cell:nth-child(5)::before{
+    content: "Saldo";
+  }
+}
+
+/* =========================================================
+   DARK MODE TOTAL FINAL RESPONSIVE
+========================================================= */
+@media (max-width: 900px){
+  html[data-theme="oscuro"] .cc-cliente-table__totals{
+    background: rgba(15,23,42,.72);
+    border-color: rgba(148,163,184,.14);
+    box-shadow: 0 16px 36px -26px rgba(0,0,0,.60);
+  }
+
+  html[data-theme="oscuro"] .cc-cliente-table__totals .cc-cliente-table__cell:nth-child(1){
+    background: rgba(148,163,184,.08);
+    color: rgba(226,232,240,.94);
+    border-bottom-color: rgba(148,163,184,.12);
+  }
+
+  html[data-theme="oscuro"] .cc-cliente-table__totals .cc-cliente-table__cell:nth-child(3),
+  html[data-theme="oscuro"] .cc-cliente-table__totals .cc-cliente-table__cell:nth-child(4),
+  html[data-theme="oscuro"] .cc-cliente-table__totals .cc-cliente-table__cell:nth-child(5){
+    color: rgba(226,232,240,.94);
+  }
+
+  html[data-theme="oscuro"] .cc-cliente-table__totals .cc-cliente-table__cell:nth-child(4),
+  html[data-theme="oscuro"] .cc-cliente-table__totals .cc-cliente-table__cell:nth-child(5){
+    border-top-color: rgba(148,163,184,.10);
+  }
+
+  html[data-theme="oscuro"] .cc-cliente-table__totals .cc-cliente-table__cell:nth-child(3)::before,
+  html[data-theme="oscuro"] .cc-cliente-table__totals .cc-cliente-table__cell:nth-child(4)::before,
+  html[data-theme="oscuro"] .cc-cliente-table__totals .cc-cliente-table__cell:nth-child(5)::before{
+    color: rgba(226,232,240,.66);
+  }
+}
+
+
+@media (max-width: 720px) {
+  .cheques-cards-pn{
+    grid-template-columns: 1fr !important
+    ;
+  }
+  .mp-modal {
+    width: min(96vw, 96vw);
+    max-height: 94vh;
+  }
+
+  .mp-card__top {
+    grid-template-columns: minmax(0, 1fr) 132px auto;
+    gap: 10px;
+  }
+    #cheques-st{
+  min-height: 70vh !important;
+}
+
+
+
+}
+@media (max-width: 560px) {
+  .mp-modal__body {
+    padding: 12px;
+    gap: 12px;
+  }
+
+  .mp-card__top {
+    grid-template-columns: 1fr 1fr .5fr !important;
+  }
+
+  .mp-card__actions {
+    flex-direction: row;
+    justify-content: flex-end;
+    min-width: 0;
+  }
+
+  .mp-btn-completar,
+  .mp-btn-del {
+    width: auto;
+    min-width: 42px;
+  }
+
+  .mp-modal__footer,
+  .mp-modal__totals {
+    flex-wrap: wrap;
+  }
+
+  .mp-footer-left,
+  .mp-btn-confirmar {
+    width: 100%;
+  }
+
+  .mp-btn-agregar,
+  .mp-btn-confirmar {
+    justify-content: center;
+  }
+}
+/* =========================================================
+   RESPONSIVE — Modal detalle medios de pago compra
+   Solo mobile / tablet chica.
+   No toca la vista monitor.
+========================================================= */
+
+@media (max-width: 768px) {
+  .mi-modal__overlay {
+    padding: 10px !important;
+    align-items: flex-start;
+  }
+
+  .mdp-container {
+    width: min(100%, 100vw) !important;
+    max-width: 100% !important;
+    min-height: auto !important;
+    max-height: calc(100vh - 20px) !important;
+    margin: 0 auto;
+    border-radius: 16px !important;
+  }
+
+  .mdp-content {
+    padding: 12px !important;
+    gap: 10px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .mdp-items-grid {
+    gap: 10px;
+  }
+
+  .mi-modal__header {
+    padding: 12px 14px !important;
+    gap: 10px;
+  }
+
+  .mi-modal__head-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    font-size: 14px;
+  }
+
+  .mi-modal__title {
+    font-size: 0.98rem !important;
+    line-height: 1.15;
+  }
+
+  .mi-modal__subtitle {
+    font-size: 11px !important;
+    margin-top: 1px !important;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+  }
+
+  .mi-modal__close {
+    width: 38px;
+    height: 38px;
+    flex: 0 0 auto;
+  }
+
+  .mdp-medio-card {
+    padding: 12px !important;
+    gap: 10px !important;
+    border-radius: 12px;
+    align-items: center;
+  }
+
+  .mdp-medio-card__icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    font-size: 15px;
+  }
+
+  .mdp-medio-card__info {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .mdp-medio-card__nombre {
+    font-size: 13px !important;
+    line-height: 1.15;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .mdp-medio-card__sub {
+    font-size: 10px !important;
+    line-height: 1.1;
+  }
+
+  .mdp-medio-card__monto {
+    font-size: 13px !important;
+    white-space: nowrap;
+    flex: 0 0 auto;
+  }
+
+  .mdp-total-bar {
+    padding: 12px 14px !important;
+    border-radius: 14px !important;
+    gap: 10px;
+  }
+
+  .mdp-total-bar__label {
+    font-size: 12px !important;
+  }
+
+  .mdp-total-bar__value {
+    font-size: 13px !important;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 560px) {
+  .mi-modal__overlay {
+    padding: 8px !important;
+  }
+
+  .mdp-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: calc(100vh - 16px) !important;
+    border-radius: 14px !important;
+  }
+
+  .mi-modal__header {
+    padding: 10px 12px !important;
+    gap: 8px;
+  }
+
+  .mi-modal__head-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 9px;
+    font-size: 13px;
+  }
+
+  .mi-modal__title {
+    font-size: 0.93rem !important;
+  }
+
+  .mi-modal__subtitle {
+    font-size: 10px !important;
+  }
+
+  .mi-modal__close {
+    width: 34px;
+    height: 34px;
+  }
+
+  .mdp-content {
+    padding: 10px !important;
+    gap: 8px;
+  }
+
+  .mdp-items-grid {
+    gap: 8px;
+  }
+
+  .mdp-medio-card {
+    padding: 10px !important;
+    gap: 9px !important;
+  }
+
+  .mdp-medio-card__icon {
+    width: 34px;
+    height: 34px;
+    font-size: 14px;
+  }
+
+  .mdp-medio-card__nombre {
+    font-size: 12.5px !important;
+  }
+
+  .mdp-medio-card__sub {
+    font-size: 9.5px !important;
+  }
+
+  .mdp-medio-card__monto {
+    font-size: 12.5px !important;
+  }
+
+  .mdp-total-bar {
+    padding: 10px 12px !important;
+  }
+
+  .mdp-total-bar__label {
+    font-size: 11px !important;
+  }
+
+  .mdp-total-bar__value {
+    font-size: 12.5px !important;
+  }
+
+  .mdp-empty {
+    padding: 32px 16px !important;
+    font-size: 13px !important;
+  }
+}
+
+@media (max-width: 420px) {
+  .mi-modal__header {
+    padding: 10px 10px !important;
+  }
+
+  .mi-modal__head-icon {
+    width: 30px;
+    height: 30px;
+    font-size: 12px;
+  }
+
+  .mi-modal__title {
+    font-size: 0.88rem !important;
+  }
+
+  .mi-modal__subtitle {
+    font-size: 10px !important;
+    max-width: 180px;
+  }
+
+  .mi-modal__close {
+    width: 32px;
+    height: 32px;
+  }
+
+  .mdp-content {
+    padding: 8px !important;
+  }
+
+  .mdp-medio-card {
+    padding: 9px !important;
+    gap: 8px !important;
+  }
+
+  .mdp-medio-card__icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 9px;
+    font-size: 13px;
+  }
+
+  .mdp-medio-card__nombre {
+    font-size: 12px !important;
+  }
+
+  .mdp-medio-card__sub {
+    font-size: 9px !important;
+  }
+
+  .mdp-medio-card__monto {
+    font-size: 12px !important;
+  }
+
+  .mdp-total-bar {
+    padding: 9px 10px !important;
+  }
+
+  .mdp-total-bar__label {
+    font-size: 10.5px !important;
+  }
+
+  .mdp-total-bar__value {
+    font-size: 12px !important;
+  }
+}
+
+
+/* =========================================================
+   RESPONSIVE SEGURO — Dashboard / Panel Contable
+   Importante:
+   - NO toca la vista de monitor / escritorio.
+   - Solo se activa en mobile/tablet chica (<= 768px).
+   - El scroll queda dentro del Dashboard para que el contenido inferior
+     no quede cortado por el layout principal.
+========================================================= */
+
+@media (max-width: 768px){
+  body:has(.db){
+    overflow-x: hidden !important;
+  }
+
+  body:has(.db) #root,
+  body:has(.db) main,
+  body:has(.db) [class*="Principal"],
+  body:has(.db) [class*="principal"],
+  body:has(.db) [class*="Layout"],
+  body:has(.db) [class*="layout"],
+  body:has(.db) [class*="Content"],
+  body:has(.db) [class*="content"],
+  body:has(.db) [class*="contenido"],
+  body:has(.db) [class*="Contenido"]{
+    min-height: 0 !important;
+  }
+
+  .db{
+    width: 100% !important;
+    min-width: 0 !important;
+    height: calc(100dvh - 56px) !important;
+    max-height: calc(100dvh - 56px) !important;
+    min-height: 0 !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+    gap: 10px !important;
+    padding: 8px 8px calc(78px + env(safe-area-inset-bottom)) !important;
+  }
+
+  .db-header.db-header--dashboard{
+    flex-direction: column !important;
+    align-items: stretch !important;
+    justify-content: flex-start !important;
+    gap: 12px !important;
+    padding: 0 !important;
+  }
+
+  .db-header__left,
+  .db-header__right{
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+
+  .db-title{
+    font-size: 16px !important;
+  }
+
+  .db-subtitle{
+    max-width: 100% !important;
+    font-size: 12px !important;
+    line-height: 1.35 !important;
+  }
+
+  .db-actions,
+  .db-header__right{
+    justify-content: stretch !important;
+  }
+
+  .db-period-chip--header{
+    width: 100% !important;
+    min-height: 42px !important;
+    justify-content: center !important;
+    border-radius: 14px !important;
+    padding-inline: 12px !important;
+  }
+
+  .db-kpi-grid{
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+    flex: 0 0 auto !important;
+  }
+
+  .db-kpi{
+    min-height: 84px !important;
+    padding: 12px !important;
+    border-radius: 16px !important;
+    gap: 11px !important;
+  }
+
+  .db-kpi__icon{
+    width: 38px !important;
+    height: 38px !important;
+    min-width: 38px !important;
+    border-radius: 13px !important;
+  }
+
+  .db-kpi__label{
+    font-size: 10px !important;
+  }
+
+  .db-kpi__value{
+    font-size: clamp(17px, 5vw, 22px) !important;
+  }
+
+  .db-kpi__detail{
+    font-size: 10.5px !important;
+  }
+
+  .db-main-grid{
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+    flex: 0 0 auto !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    align-items: stretch !important;
+  }
+
+  .db-panel,
+  .db-panel--chart,
+  .db-panel--side{
+    width: 100% !important;
+    min-width: 0 !important;
+    height: auto !important;
+    min-height: auto !important;
+    max-height: none !important;
+  }
+
+  .db-panel{
+    padding: 12px !important;
+    border-radius: 16px !important;
+    overflow: visible !important;
+  }
+
+  .db-panel__head{
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+    margin-bottom: 10px !important;
+  }
+
+  .db-panel__head h2{
+    font-size: 14px !important;
+  }
+
+  .db-panel__head p{
+    font-size: 11px !important;
+    line-height: 1.35 !important;
+  }
+
+  .db-legend{
+    width: 100% !important;
+    justify-content: flex-start !important;
+    gap: 10px !important;
+    white-space: normal !important;
+  }
+
+  .db-chart{
+    width: 100% !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 6px !important;
+  }
+
+  .db-chart__plot{
+    min-width: 420px !important;
+    min-height: 170px !important;
+    gap: 8px !important;
+    padding-top: 16px !important;
+  }
+
+  .db-chart__item{
+    height: 150px !important;
+  }
+
+  .db-chart__bar{
+    width: min(24px, 82%) !important;
+  }
+
+  .db-chart__label{
+    font-size: 9.5px !important;
+  }
+
+  .db-ind-wrapper{
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+    overflow: visible !important;
+    max-height: none !important;
+  }
+
+  .db-ind-row{
+    display: contents !important;
+  }
+
+  .db-ind-resultado,
+  .db-ind-item{
+    min-height: 68px !important;
+    padding: 11px !important;
+    border-radius: 15px !important;
+  }
+
+  .db-ind-value,
+  .db-ind-resultado .db-ind-value{
+    font-size: 14px !important;
+  }
+
+  .db-footer{
+    text-align: center !important;
+    font-size: 11px !important;
+    padding-bottom: 8px !important;
+  }
+}
+
+@media (max-width: 480px){
+  .db{
+    height: calc(100dvh - 52px) !important;
+    max-height: calc(100dvh - 72px) !important;
+    padding: 10px !important;
+  }
+
+  .db-title{
+    font-size: 15px !important;
+  }
+
+  .db-subtitle{
+    font-size: 11.5px !important;
+  }
+
+  .db-period-chip--header{
+    font-size: 12px !important;
+    gap: 7px !important;
+  }
+
+  .db-period-chip--header strong{
+    max-width: 145px !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  .db-chart__plot{
+    min-width: 390px !important;
+  }
+}
+
+@supports not selector(body:has(.db)){
+  @media (max-width: 768px){
+    .db{
+      width: 100% !important;
+      min-width: 0 !important;
+      height: calc(100dvh - 56px) !important;
+      max-height: calc(100dvh - 56px) !important;
+      min-height: 0 !important;
+      overflow-x: hidden !important;
+      overflow-y: auto !important;
+      -webkit-overflow-scrolling: touch;
+      touch-action: pan-y;
+      padding-bottom: calc(78px + env(safe-area-inset-bottom)) !important;
+    }
+  }
+}
+
+/* =========================================================
+   Botón Exportar — Mobile icon-only
+   En celular se muestra solo el icono principal.
+   Se oculta el texto y la flecha del desplegable.
+========================================================= */
+@media (max-width: 720px){
+  .boton-exportar-trigger{
+    width: 42px !important;
+    min-width: 42px !important;
+    height: 42px !important;
+    padding: 0 !important;
+    justify-content: center !important;
+    gap: 0 !important;
+  }
+
+  .boton-exportar-trigger__left{
+    gap: 0 !important;
+  }
+
+  .boton-exportar-trigger__iconWrap{
+    width: 32px !important;
+    height: 32px !important;
+  }
+
+  .boton-exportar-trigger__text,
+  .boton-exportar-trigger__right{
+    display: none !important;
+  }
+}
+
+/* =========================================================
+   ANÁLISIS FINANCIERO — RESPONSIVE MOBILE/TABLET
+   Solo afecta pantallas chicas. Vista monitor intacta.
+========================================================= */
+@media (max-width: 900px) {
+  .mov-page--analisisFinanciero {
+    width: 100%;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    padding-bottom: 18px;
+  }
+
+  .mov-page--analisisFinanciero .mov-card,
+  .mov-page--analisisFinanciero .mov-card--table {
+    min-width: 0;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+
+  .mov-page--analisisFinanciero .mov-card__head {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "title title"
+      "filters actions";
+    align-items: end !important;
+    gap: 12px !important;
+    padding: 14px !important;
+  }
+
+  .mov-page--analisisFinanciero .mov-card__headLeft {
+    display: contents !important;
+  }
+
+  .mov-page--analisisFinanciero .title-mov {
+    grid-area: title;
+    min-width: 0;
+  }
+
+  .mov-page--analisisFinanciero .mov-card__title {
+    font-size: 17px;
+    line-height: 1.2;
+  }
+
+  .mov-page--analisisFinanciero .mov-card__hint {
+    font-size: 12px;
+    line-height: 1.35;
+  }
+
+  .mov-page--analisisFinanciero .mov-headFilters {
+    grid-area: filters;
+    width: 100%;
+    min-width: 0;
+    display: grid !important;
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .mov-page--analisisFinanciero .mov-filter,
+  .mov-page--analisisFinanciero .mov-filter--cal,
+  .mov-page--analisisFinanciero .floatingField {
+    width: 100%;
+    min-width: 0 !important;
+  }
+
+  .mov-page--analisisFinanciero .cc-calTrigger,
+  .mov-page--analisisFinanciero .mov-calTrigger {
+    width: 100% !important;
+    min-width: 0 !important;
+    height: 44px;
+    padding: 0 12px !important;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .mov-page--analisisFinanciero .mov-card__actions {
+    grid-area: actions;
+    width: auto !important;
+    min-width: 0;
+    justify-content: flex-end !important;
+    align-self: end;
+    flex-wrap: nowrap !important;
+  }
+
+  .mov-page--analisisFinanciero .boton-exportar-wrap {
+    flex: 0 0 auto;
+  }
+
+  .mov-page--analisisFinanciero #clrRight,
+  .mov-page--analisisFinanciero .mov-calDropdown {
+    left: 0 !important;
+    right: auto !important;
+    transform: none !important;
+    max-width: calc(100vw - 28px);
+    z-index: 9999;
+  }
+
+  .mov-page--analisisFinanciero .cal-wrap {
+    width: min(520px, calc(100vw - 28px));
+    max-width: calc(100vw - 28px);
+  }
+
+  .mov-page--analisisFinanciero .af-sectionHead {
+    padding: 0 12px !important;
+    gap: 8px;
+  }
+
+  .mov-page--analisisFinanciero .af-breakdownGrid,
+  .mov-page--analisisFinanciero .af-dispoGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 12px !important;
+    padding: 0 12px 12px !important;
+  }
+
+  .mov-page--analisisFinanciero .af-footTotals {
+    padding: 0 12px 12px !important;
+  }
+
+  .mov-page--analisisFinanciero .af-breakCard,
+  .mov-page--analisisFinanciero .af-dispoCard,
+  .mov-page--analisisFinanciero .af-totalCard {
+    min-width: 0;
+    min-height: 130px;
+    border-radius: 18px;
+    padding: 16px 12px 14px;
+  }
+
+  .mov-page--analisisFinanciero .af-breakCard__icon,
+  .mov-page--analisisFinanciero .af-dispoCard__icon,
+  .mov-page--analisisFinanciero .af-totalCard__icon,
+  .mov-page--analisisFinanciero .af-cardIconSkeleton {
+    width: 42px;
+    height: 42px;
+    margin-bottom: 10px;
+    font-size: 16px;
+  }
+
+  .mov-page--analisisFinanciero .af-breakCard__label,
+  .mov-page--analisisFinanciero .af-dispoCard__label,
+  .mov-page--analisisFinanciero .af-totalLabel {
+    font-size: 11px;
+    line-height: 1.25;
+  }
+
+  .mov-page--analisisFinanciero .af-breakCard__value,
+  .mov-page--analisisFinanciero .af-dispoCard__value,
+  .mov-page--analisisFinanciero .af-totalValue {
+    font-size: clamp(18px, 4.9vw, 24px);
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    overflow-wrap: anywhere;
+  }
+
+  .mov-page--analisisFinanciero .af-breakCard__sub,
+  .mov-page--analisisFinanciero .af-dispoCard__sub,
+  .mov-page--analisisFinanciero .af-totalSub {
+    font-size: 11px;
+    line-height: 1.3;
+  }
+}
+
+@media (max-width: 640px) {
+  .mov-page--analisisFinanciero {
+    padding: 8px 8px 22px;
+  }
+
+  .mov-page--analisisFinanciero .mov-card {
+    border-radius: 16px;
+  }
+
+  .mov-page--analisisFinanciero .mov-card__head {
+    grid-template-columns: minmax(0, 1fr) 44px;
+    gap: 10px !important;
+    padding: 12px !important;
+  }
+
+  .mov-page--analisisFinanciero .boton-exportar-trigger {
+    width: 44px !important;
+    min-width: 44px !important;
+    height: 44px !important;
+    padding: 0 !important;
+    justify-content: center !important;
+    border-radius: 14px;
+  }
+
+  .mov-page--analisisFinanciero .boton-exportar-trigger__left {
+    gap: 0;
+  }
+
+  .mov-page--analisisFinanciero .boton-exportar-trigger__iconWrap {
+    width: 34px;
+    height: 34px;
+  }
+
+  .mov-page--analisisFinanciero .boton-exportar-trigger__text,
+  .mov-page--analisisFinanciero .boton-exportar-trigger__right {
+    display: none !important;
+  }
+
+  .mov-page--analisisFinanciero .boton-exportar-menu {
+    position: absolute;
+    right: 0 !important;
+    left: auto !important;
+    min-width: min(260px, calc(100vw - 24px));
+    max-width: calc(100vw - 24px);
+  }
+
+  .mov-page--analisisFinanciero .af-breakdownGrid,
+  .mov-page--analisisFinanciero .af-dispoGrid,
+  .mov-page--analisisFinanciero .af-footTotals {
+    grid-template-columns: 1fr !important;
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+  }
+
+  .mov-page--analisisFinanciero .af-sectionHead {
+    flex-direction: column;
+    align-items: stretch !important;
+    padding: 0 10px !important;
+  }
+
+  .mov-page--analisisFinanciero .af-dispoTotal {
+    width: 100%;
+    white-space: normal;
+    font-size: 12px;
+    line-height: 1.35;
+  }
+
+  .mov-page--analisisFinanciero .af-breakCard,
+  .mov-page--analisisFinanciero .af-dispoCard,
+  .mov-page--analisisFinanciero .af-totalCard {
+    min-height: 118px;
+    padding: 15px 12px;
+  }
+}
+
+@media (max-width: 420px) {
+  .mov-page--analisisFinanciero .mov-card__title {
+    font-size: 16px;
+  }
+
+  .mov-page--analisisFinanciero .mov-card__hint {
+    font-size: 11.5px;
+  }
+
+  .mov-page--analisisFinanciero .cc-calTrigger,
+  .mov-page--analisisFinanciero .mov-calTrigger {
+    font-size: 12px;
+    padding: 0 10px !important;
+  }
+
+  .mov-page--analisisFinanciero .cal-wrap {
+    width: calc(100vw - 24px);
+  }
+
+  .mov-page--analisisFinanciero .cal-header__slot {
+    padding: 12px 14px;
+  }
+
+  .mov-page--analisisFinanciero .cal-panels {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+}

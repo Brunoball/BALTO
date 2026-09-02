@@ -1,0 +1,312 @@
+/* src/components/Contabilidad/contabilidad.css
+   Estilos propios mínimos de Contabilidad.
+   La base visual de cards, tablas, tipografías, sombras y modo oscuro se toma de Global_Section.css. */
+
+.contabilidad-page {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 0;
+}
+
+.contabilidad-cardTable {
+  overflow: hidden;
+}
+
+
+.contabilidad-gridHead {
+  background: var(--color-primary-strong);
+  overflow: hidden;
+  scrollbar-gutter: auto;
+}
+
+.contabilidad-gridHead.has-scrollbar-gutter {
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+
+.contabilidad-tableWrap {
+  overflow-x: hidden;
+}
+
+/* Estado vacío: usa la estética global de Ventas/Cuentas Corrientes (.cc-emptyState, .cc-emptyIcon, .cc-emptyText).
+   Esta clase queda solo como gancho propio, sin bordes ni alturas extra para no partir la tabla. */
+.contabilidad-emptyState {
+  border: 0;
+}
+
+.contabilidad-totalRow {
+  border-top: 1px solid color-mix(in srgb, var(--color-border) 75%, #fff);
+  background: color-mix(in srgb, var(--color-primary-soft) 64%, var(--color-surface));
+}
+
+.contabilidad-totalRow .mov-gridCell {
+  min-height: 48px;
+}
+
+
+/* =========================================================
+   CONTABILIDAD — Tabla IVA compacta
+   - No hereda la altura grande de las tablas de Movimientos.
+   - Deja siempre visible la fila de totales y evita que se corte abajo.
+========================================================= */
+
+.contabilidad-cardTable {
+  min-height: 0;
+  max-height: calc(100vh - 118px);
+}
+
+.contabilidad-cardTable .mov-card__head {
+  padding: 14px 18px 12px;
+}
+
+.contabilidad-cardTable .mov-card__title {
+  font-size: 14px;
+}
+
+.contabilidad-cardTable .mov-card__hint {
+  margin-top: 3px;
+  font-size: 11.5px;
+}
+
+.contabilidad-cardTable .mov-headFilters {
+  gap: 10px;
+}
+
+/* Buscador IVA: evita que se achique dentro del header compacto.
+   El ancho base lo toma de .cc-filter--search global, y acá solo se ajusta
+   para que conviva bien con el calendario y el botón Exportar, sin pasar de 340px. */
+.contabilidad-cardTable .mov-headFilters {
+  flex: 1 1 auto;
+  justify-content: flex-end;
+}
+
+.contabilidad-cardTable .contabilidad-searchFilter {
+  flex: 1 1 340px;
+  min-width: 260px;
+  max-width: 340px;
+}
+
+.contabilidad-cardTable .cc-filter--cal {
+  flex: 0 0 auto;
+}
+
+.contabilidad-cardTable .cc-floatingField--search,
+.contabilidad-cardTable .cc-searchInput,
+.contabilidad-cardTable .cc-searchInput__fieldWrap {
+  width: 100%;
+}
+
+@media (max-width: 900px) {
+  .contabilidad-cardTable .contabilidad-searchFilter {
+    min-width: 0;
+    max-width: none;
+  }
+}
+
+.contabilidad-cardTable .cc-floatingField,
+.contabilidad-cardTable .cc-calTrigger,
+.contabilidad-cardTable .cc-input {
+  min-height: 40px;
+}
+
+.contabilidad-tableWrap {
+  min-height: calc(100vh - 260px);
+  max-height: calc(100vh - 360px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-gutter: auto;
+}
+
+.contabilidad-cardTable.has-table-scroll .contabilidad-tableWrap {
+  scrollbar-gutter: stable;
+}
+
+.contabilidad-tableWrap .mov-gridBody--relative {
+  height: 100%;
+  min-height: 100%;
+}
+
+.contabilidad-tableWrap .mov-gridBody--relative:has(.contabilidad-emptyState) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.contabilidad-gridHead .mov-gridCell--head,
+.contabilidad-cardTable .mov-gridTable--row .mov-gridCell,
+.contabilidad-totalRow .mov-gridCell {
+  min-height: 38px;
+}
+
+.contabilidad-gridHead .mov-gridCell--head {
+  padding: 8px 12px;
+  font-size: 10.5px;
+}
+
+.contabilidad-cardTable .mov-gridTable--row .mov-gridCell {
+  padding: 8px 12px;
+  font-size: 12.5px;
+}
+
+.contabilidad-totalRow {
+  flex: 0 0 auto;
+}
+
+.contabilidad-totalRow .mov-gridCell {
+  padding: 8px 12px;
+  font-size: 12.5px;
+}
+
+.contabilidad-emptyState {
+  min-height: 170px;
+  padding: 22px 14px;
+}
+
+@media (max-width: 1300px) {
+  .contabilidad-cardTable {
+    max-height: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .contabilidad-cardTable .mov-card__head,
+  .contabilidad-cardTable .mov-card__headLeft,
+  .contabilidad-cardTable .mov-headFilters {
+    align-items: stretch;
+  }
+
+  .contabilidad-tableWrap {
+    overflow-x: auto;
+  }
+
+  .contabilidad-gridHead,
+  .contabilidad-cardTable .mov-gridTable--row,
+  .contabilidad-totalRow {
+    min-width: 760px;
+  }
+
+  .contabilidad-gridHead {
+    overflow: hidden;
+  }
+}
+
+/* Estado de carga y vacío propio de la tabla IVA */
+.contabilidad-skeletonWrap {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.contabilidad-skeletonRow .mov-skeletonBar {
+  display: inline-block;
+  max-width: 100%;
+}
+
+.contabilidad-skeletonRow .mov-gridCell.is-right .mov-skeletonBar {
+  margin-left: auto;
+}
+
+.contabilidad-emptyState {
+  width: 100%;
+  min-height: 100%;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  text-align: center;
+  margin: 0;
+  box-sizing: border-box;
+}
+
+.contabilidad-emptyState .cc-emptyIcon {
+  display: block;
+  font-size: 34px;
+  line-height: 1;
+  color: color-mix(in srgb, var(--color-primary-strong) 34%, var(--color-placeholder));
+}
+
+.contabilidad-emptyState .cc-emptyText {
+  max-width: 360px;
+  margin: 0 auto;
+  font-size: 12.5px;
+  line-height: 1.45;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+html[data-theme="oscuro"] .contabilidad-emptyState .cc-emptyIcon {
+  color: rgba(148, 163, 184, .78);
+}
+
+html[data-theme="oscuro"] .contabilidad-emptyState .cc-emptyText {
+  color: rgba(226, 232, 240, .72);
+}
+
+/* Ajuste fino: el skeleton debe ocupar exactamente la misma grilla y alto que las filas reales */
+.contabilidad-cardTable .contabilidad-skeletonWrap {
+  width: 100%;
+  display: block;
+}
+
+.contabilidad-cardTable .contabilidad-skeletonRow {
+  width: 100%;
+}
+
+.contabilidad-cardTable .contabilidad-skeletonRow .mov-gridCell {
+  min-height: 38px;
+  padding: 8px 12px;
+}
+
+.contabilidad-cardTable .contabilidad-skeletonRow .mov-skeletonBar {
+  height: 11px;
+  display: block;
+}
+
+.contabilidad-cardTable .contabilidad-skeletonRow .mov-gridCell.is-right .mov-skeletonBar {
+  margin-left: auto;
+  margin-right: 0;
+}
+
+/* =========================================================
+   CONTABILIDAD — Skeleton alineado con la tabla real
+   - Usa la misma grilla, padding y alto que las filas reales.
+   - Cubre también la fila inferior de totales para que el efecto
+     no quede cortado antes del final de la tabla.
+========================================================= */
+
+.contabilidad-cardTable .contabilidad-skeletonWrap {
+  width: 100%;
+  min-height: 100%;
+  display: block;
+}
+
+.contabilidad-cardTable .contabilidad-skeletonRow,
+.contabilidad-cardTable .contabilidad-totalRow--skeleton {
+  width: 100%;
+}
+
+.contabilidad-cardTable .contabilidad-skeletonRow .mov-gridCell,
+.contabilidad-cardTable .contabilidad-totalRow--skeleton .mov-gridCell {
+  min-height: 38px;
+  padding: 8px 12px;
+}
+
+.contabilidad-cardTable .contabilidad-skeletonRow .mov-skeletonBar,
+.contabilidad-cardTable .contabilidad-totalRow--skeleton .mov-skeletonBar {
+  height: 11px;
+  display: block;
+  max-width: 100%;
+}
+
+.contabilidad-cardTable .contabilidad-skeletonRow .mov-gridCell.is-right .mov-skeletonBar,
+.contabilidad-cardTable .contabilidad-totalRow--skeleton .mov-gridCell.is-right .mov-skeletonBar {
+  margin-left: auto;
+  margin-right: 0;
+}
+
+.contabilidad-cardTable .contabilidad-totalRow--skeleton {
+  background: color-mix(in srgb, var(--color-primary-soft) 64%, var(--color-surface));
+}

@@ -1,0 +1,62 @@
+/* =========================================================
+   ModalCargaIndividualProducto.css
+   Estilos propios de alta individual de producto.
+   Reutiliza ModalCargaMasiva.css para campos cmi-* y globals modals
+   para overlay/header/content/footer.
+   ========================================================= */
+
+@import "./ModalCargaMasiva.css";
+
+.cmi-container--individual {
+  width: min(1180px, 96vw);
+  max-height: 92vh;
+}
+
+.cmi-content--individual {
+  overflow-y: auto;
+  padding: 20px 22px;
+  background: var(--nv-surface, var(--mi-bg-soft));
+}
+
+.cmi-priceBlock--disabledByVariants {
+  border-color: rgba(245, 158, 11, 0.28);
+  background: rgba(245, 158, 11, 0.045);
+}
+
+.cmi-priceBlock--disabledByVariants .cmi-input:disabled,
+.cmi-priceBlock--disabledByVariants input:disabled,
+.cmi-priceBlock--disabledByVariants select:disabled,
+.cmi-priceBlock--disabledByVariants textarea:disabled {
+  opacity: 0.72;
+  cursor: not-allowed;
+}
+
+.cmi-priceBlock--typesForVariants {
+  border-color: rgba(59, 130, 246, 0.22);
+}
+
+/* ModalCargaMasiva.css define ".cmi-v2-formShell--producto > .cmi-v2-variantPanelOnly"
+   con "display: none !important" para su propio flujo de carga masiva (tabs Producto/Variantes).
+   Como esta hoja importa ModalCargaMasiva.css y este modal reutiliza esas mismas clases
+   para sus tabs "Producto original"/"Variantes", esa regla terminaba ocultando el panel
+   "Tiene variantes" también acá, impidiendo activar variantes desde el alta individual.
+   Se restaura la visibilidad del panel específicamente dentro de este modal. */
+.cmi-content--individual .cmi-v2-formShell--producto > .cmi-v2-variantPanelOnly {
+  display: flex !important;
+}
+
+.cmi-v2-variantModeNotice {
+  border: 1px solid rgba(59, 130, 246, 0.22);
+  border-radius: 14px;
+  background: rgba(59, 130, 246, 0.07);
+  color: var(--nv-text, #0f172a);
+  font-size: 12.5px;
+  line-height: 1.45;
+  padding: 10px 12px;
+}
+
+/* Pestañas de Nuevo producto: jerarquía por color, no por negrita. */
+.cmi-content--individual .cmi-v2-mainTab,
+.cmi-content--individual .cmi-v2-tabBtn {
+  font-weight: 500;
+}

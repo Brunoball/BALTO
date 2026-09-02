@@ -1,0 +1,284 @@
+/* src/components/Movimientos/modales/ModalEliminarMovimientos.css */
+
+/* Overlay */
+.mvdel-overlay{
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 9999999999;
+  animation: mvdelFade .14s ease-out;
+}
+
+/* Modal */
+.mvdel-modal{
+  width: min(520px, 100%);
+  background: #ffffff;
+  color: #1f2937;
+  border-radius: 16px;
+  box-shadow: 0 20px 50px rgba(0,0,0,.25);
+  position: relative;
+  padding: 22px 20px 18px;
+  animation: mvdelPop .14s ease-out;
+  border-top: 3px solid var(--mov-danger);
+}
+
+@keyframes mvdelFade{
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes mvdelPop{
+  from { transform: translateY(10px) scale(.97); opacity: .7; }
+  to { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+/* Botón cerrar */
+.mvdel-close{
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  border: 0;
+  background: #fff;
+  color: #374151;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: all .3s
+}
+
+.mvdel-close:hover{
+  background: #e5e7eb;
+}
+
+.mvdel-close:disabled{
+  opacity: .6;
+  cursor: not-allowed;
+}
+
+/* Ícono */
+.mvdel-icon{
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  margin: 4px auto 10px;
+  font-size: 22px;
+}
+
+.mvdel-icon--danger{
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+/* Título */
+.mvdel-title{
+  margin: 0;
+  text-align: center;
+  font-size: 18px;
+  font-weight: 800;
+  color: #111827;
+}
+
+.mvdel-title--danger{
+  color: #b91c1c;
+}
+
+/* Texto */
+.mvdel-body{
+  margin: 10px 0 14px;
+  text-align: center;
+  font-size: 14px;
+  color: #4b5563;
+  line-height: 1.4;
+}
+
+/* Card info */
+.mvdel-card{
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 12px 14px;
+  display: grid;
+  gap: 10px;
+}
+
+.mvdel-row{
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.mvdel-label{
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.mvdel-value{
+  font-size: 12px;
+  font-weight: 500;
+  color: #6b7280;
+  text-align: right;
+  word-break: break-word;
+}
+
+/* Acciones */
+.mvdel-actions{
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+/* Botones */
+.mvdel-btn{
+  border-radius: 12px;
+  padding: 10px 16px;
+  font-weight: 700;
+  cursor: pointer;
+  border: 0;
+  transition: transform .12s ease, background .12s ease;
+}
+
+.mvdel-btn:active{
+  transform: translateY(1px);
+}
+
+.mvdel-btn:disabled{
+  opacity: .6;
+  cursor: not-allowed;
+}
+
+/* Cancelar */
+.mvdel-btn--ghost{
+  background: #f1f5f9;
+  color: #374151;
+}
+
+.mvdel-btn--ghost:hover{
+  background: #e5e7eb;
+}
+
+/* Eliminar */
+.mvdel-btn--solid-danger{
+  background: #dc2626;
+  color: #ffffff;
+}
+
+.mvdel-btn--solid-danger:hover{
+  background: #b91c1c;
+}
+/* =========================
+   MODO OSCURO (ModalEliminarMovimientos)
+   Activación: html[data-theme="oscuro"]
+========================= */
+html[data-theme="oscuro"] .mvdel-overlay{
+  background: rgba(0,0,0,.72);
+  backdrop-filter: blur(6px);
+}
+
+html[data-theme="oscuro"] .mvdel-modal{
+  background: #0B1E33;           /* panel oscuro */
+  color: rgba(255,255,255,.88);
+  box-shadow: 0 26px 70px rgba(0,0,0,.60);
+  border-top-color: #E13D45;      /* tu rojo alerta */
+}
+
+html[data-theme="oscuro"] .mvdel-close{
+  background: rgba(255,255,255,.06);
+  color: rgba(255,255,255,.82);
+}
+
+html[data-theme="oscuro"] .mvdel-close:hover{
+  background: rgba(255,255,255,.10);
+}
+
+html[data-theme="oscuro"] .mvdel-title{
+  color: rgba(255,255,255,.92);
+}
+
+html[data-theme="oscuro"] .mvdel-title--danger{
+  color: #FF6B6B;                /* rojo más legible en oscuro */
+}
+
+html[data-theme="oscuro"] .mvdel-body{
+  color: rgba(255,255,255,.68);
+}
+
+html[data-theme="oscuro"] .mvdel-card{
+  background: rgba(255,255,255,.04);
+  border-color: rgba(255,255,255,.10);
+}
+
+html[data-theme="oscuro"] .mvdel-label{
+  color: rgba(255,255,255,.62);
+}
+
+html[data-theme="oscuro"] .mvdel-value{
+  color: rgba(255,255,255,.84);
+}
+
+html[data-theme="oscuro"] .mvdel-btn--ghost{
+  background: rgba(255,255,255,.06);
+  color: rgba(255,255,255,.86);
+}
+
+html[data-theme="oscuro"] .mvdel-btn--ghost:hover{
+  background: rgba(255,255,255,.10);
+}
+
+/* botón rojo ya está ok, pero afinamos hover para oscuro */
+html[data-theme="oscuro"] .mvdel-btn--solid-danger:hover{
+  filter: brightness(.95);
+}
+
+
+/* Variante global: dar de baja / desactivar */
+.mvdel-modal--deactivate{
+  border-top-color: #f59e0b;
+}
+
+.mvdel-icon--deactivate{
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.mvdel-title--deactivate{
+  color: #b45309;
+}
+
+.mvdel-btn--solid-primary{
+  background: #d97706;
+  color: #ffffff;
+}
+
+.mvdel-btn--solid-primary:hover{
+  background: #b45309;
+}
+
+.mvdel-extraContent{
+  margin-top: 12px;
+}
+
+html[data-theme="oscuro"] .mvdel-icon--deactivate{
+  background: rgba(245, 158, 11, .16);
+  color: #fbbf24;
+}
+
+html[data-theme="oscuro"] .mvdel-title--deactivate{
+  color: #fbbf24;
+}
+
+html[data-theme="oscuro"] .mvdel-btn--solid-primary{
+  background: #d97706;
+}
+
+html[data-theme="oscuro"] .mvdel-btn--solid-primary:hover{
+  background: #b45309;
+}

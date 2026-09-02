@@ -1,0 +1,59 @@
+/* =========================================================
+   ModalAccionEntidadStock.css
+   Ajustes propios para confirmaciones de Stock.
+   Base visual: Global_css/Global_Modals.css.
+   ========================================================= */
+
+.stock-actionDetails {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px solid var(--nv-border, rgba(10,37,64,.12));
+  background: var(--nv-card-bg, var(--mi-bg));
+}
+
+.stock-actionDetails--withWarning {
+  margin-bottom: 12px;
+}
+
+.stock-actionDetailRow {
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+}
+
+.stock-actionDetailLabel {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--nv-muted, var(--mi-muted));
+}
+
+.stock-actionDetailValue {
+  font-size: 13px;
+  color: var(--nv-text, var(--mi-text));
+  word-break: break-word;
+  font-weight: 600;
+}
+
+.stock-actionWarning {
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(245, 158, 11, .30);
+  background: rgba(245, 158, 11, .10);
+  color: #92400e;
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+html[data-theme="oscuro"] .stock-actionWarning {
+  background: rgba(245, 158, 11, .13) !important;
+  border-color: rgba(251, 191, 36, .24) !important;
+  color: rgba(253, 230, 138, .95) !important;
+}
+
+.mi-modal__container--small {
+  width: min(520px, 94vw);
+}

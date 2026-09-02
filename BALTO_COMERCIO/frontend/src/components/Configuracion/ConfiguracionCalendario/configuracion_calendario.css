@@ -1,0 +1,766 @@
+/* =============================================
+   CONFIG CALENDARIO — ESTÉTICA TIENDA NUBE
+   ============================================= */
+
+.cal-page {
+  width: 100%;
+  overflow: hidden;
+  height: calc(100vh - 110px);
+  padding: 14px 16px 18px;
+  color: var(--balto-text, #425466);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+}
+
+.cal-topbar {
+  display: none;
+}
+
+.cal-contentScroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-right: 2px;
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ── HERO ── */
+.cal-hero {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 16px;
+  border-radius: 14px;
+  border: 1px solid #d9e1ea;
+  background: #fff;
+}
+
+.cal-hero__icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #f3f6fa;
+  border: 1px solid #e4eaf1;
+  color: #53657a;
+  font-size: 15px;
+}
+
+.cal-hero__eyebrow {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  color: #7b8794;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 4px;
+}
+
+.cal-title {
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.18;
+  color: var(--balto-ink, #0a2540);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.cal-subtitle {
+  margin: 4px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--balto-text, #5b6b7c);
+  font-weight: 430;
+  max-width: 820px;
+}
+
+.cal-hero__side {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-self: end;
+}
+
+/* ── GRID DE TARJETAS — 2 columnas ── */
+.cal-metaGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.cal-metaCard {
+  border: 1px solid #d9e1ea;
+  background: #fff;
+  border-radius: 14px;
+  padding: 14px 15px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+
+.cal-metaCard--fullRow {
+  grid-column: 1 / -1;
+}
+
+/* La tarjeta de guardado mantiene siempre su lugar dentro de la grilla.
+   Antes se estiraba a fila completa cuando el modo era "Mes completo",
+   dejando un hueco a la derecha de la vista previa. */
+.cal-metaCard--save {
+  grid-column: auto;
+  align-self: stretch;
+}
+
+.cal-metaCard--save .cal-metaCard__body {
+  flex: 1;
+}
+
+.cal-metaCard--save .cal-saveActions {
+  margin-top: auto;
+}
+
+/* ── CABECERA DE TARJETA ── */
+.cal-metaCard__top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cal-metaCard__icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: #f3f5f7;
+  border: 1px solid #e4eaf1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #697586;
+  font-size: 13px;
+  flex: 0 0 auto;
+}
+
+.cal-metaCard__head {
+  min-width: 0;
+}
+
+.cal-metaCard__head h2 {
+  margin: 0 0 2px;
+  font-size: 13px;
+  line-height: 1.25;
+  font-weight: 600;
+  color: var(--balto-ink, #0a2540);
+}
+
+.cal-metaCard__head p {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.4;
+  color: #6a7989;
+  font-weight: 430;
+}
+
+/* ── CUERPO DE TARJETA ── */
+.cal-metaCard__body {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.cal-metaCard__body--stack {
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+/* ── META ITEMS ── */
+.cal-metaItem {
+  border-top: 1px solid #edf1f5;
+  padding-top: 8px;
+  min-width: 0;
+}
+
+
+
+.cal-metaItem__label {
+  display: block;
+  font-size: 9.5px;
+  font-weight: 700;
+  color: #7b8794;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 3px;
+}
+
+.cal-metaItem__value {
+  display: block;
+  font-size: 12px;
+  font-weight: 540;
+  color: #23384f;
+  line-height: 1.4;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+/* ── BADGES ── */
+.cal-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 21px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.cal-badge--ok   { background: #edf8f1; color: #237545; border-color: #d4eadc; }
+.cal-badge--off  { background: #f2f5f8; color: #5f6d7c; border-color: #dce3ea; }
+.cal-badge--warn { background: #fff8eb; color: #9d6a08; border-color: #f1dfb9; }
+.cal-badge--info { background: #eef4ff; color: #2c5aad; border-color: #c8d9f5; }
+
+/* ── ACTION ROWS (selector de modo) ── */
+.cal-actionRow {
+  width: 100%;
+  border: 1px solid #edf1f5;
+  background: #fbfcfe;
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.cal-actionRow:hover:not(:disabled) {
+  background: #f7f9fc;
+  border-color: #dbe3ec;
+}
+
+.cal-actionRow--active {
+  background: #f0f5ff;
+  border-color: #b8cef5;
+}
+
+.cal-actionRow__iconWrap {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: #f3f5f7;
+  border: 1px solid #e4eaf1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #697586;
+  font-size: 12px;
+  flex: 0 0 auto;
+}
+
+.cal-actionRow--active .cal-actionRow__iconWrap {
+  background: #e6eeff;
+  border-color: #c0d3f9;
+  color: #2c5aad;
+}
+
+.cal-actionRow__text {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cal-actionRow__title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--balto-ink, #0a2540);
+  line-height: 1.25;
+}
+
+.cal-actionRow__desc {
+  font-size: 10.5px;
+  color: #6a7989;
+  line-height: 1.35;
+  font-weight: 430;
+}
+
+.cal-actionRow__check {
+  font-size: 12px;
+  color: #2c5aad;
+  flex: 0 0 auto;
+}
+
+.cal-actionRow__chevron {
+  font-size: 11px;
+  color: #aab5c0;
+  flex: 0 0 auto;
+}
+
+/* ── INPUT DÍAS ── */
+.cal-diasRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cal-diasInput {
+  width: 90px;
+  padding: 8px 12px;
+  border: 1px solid #d9e1ea;
+  border-radius: 9px;
+  font-size: 18px;
+  font-weight: 700;
+  text-align: center;
+  background: #f7f9fc;
+  color: var(--balto-ink, #0a2540);
+  transition: border-color 0.15s;
+  -moz-appearance: textfield;
+  outline: none;
+}
+
+.cal-diasInput::-webkit-inner-spin-button,
+.cal-diasInput::-webkit-outer-spin-button {
+  opacity: 1;
+}
+
+.cal-diasInput:focus {
+  border-color: #7aaaf0;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(44, 90, 173, 0.10);
+}
+
+.cal-diasLabel {
+  font-size: 13px;
+  font-weight: 500;
+  color: #6a7989;
+}
+
+.cal-diasHint {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.45;
+  color: #7b8794;
+  font-weight: 430;
+}
+
+.cal-diasHint strong {
+  font-weight: 660;
+  color: #23384f;
+}
+
+
+
+/* ── TARJETA CANTIDAD DE DÍAS — COMPACTA ── */
+.cal-metaCard--dias {
+  padding: 12px 14px;
+  gap: 8px;
+}
+
+.cal-metaCard--dias .cal-metaCard__top {
+  gap: 9px;
+}
+
+.cal-metaCard--dias .cal-metaCard__icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+}
+
+.cal-metaCard--dias .cal-metaCard__body {
+  grid-template-columns: minmax(132px, 0.72fr) minmax(210px, 1fr);
+  grid-template-rows: auto auto;
+  align-items: center;
+  gap: 6px 12px;
+}
+
+.cal-metaCard--dias .cal-diasRow {
+  grid-column: 1;
+  grid-row: 1;
+  gap: 8px;
+}
+
+.cal-metaCard--dias .cal-diasInput {
+  width: 74px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 16px;
+}
+
+.cal-metaCard--dias .cal-diasLabel {
+  font-size: 12px;
+}
+
+.cal-metaCard--dias .cal-diasHint {
+  grid-column: 1;
+  grid-row: 2;
+  font-size: 10.5px;
+  line-height: 1.35;
+}
+
+.cal-metaCard--dias .cal-preview {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  min-height: 44px;
+  justify-content: center;
+  padding: 8px 10px;
+}
+
+/* ── PREVIEW DE RANGO ── */
+.cal-preview {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  background: #f0f5ff;
+  border: 1px solid #c8d9f5;
+  border-radius: 10px;
+  flex-wrap: wrap;
+}
+
+.cal-preview__label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #7b8794;
+  white-space: nowrap;
+}
+
+.cal-preview__range {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #1e4498;
+}
+
+.cal-preview__arrow {
+  opacity: 0.5;
+  font-weight: 400;
+}
+
+/* ── ACCIONES / GUARDAR — MISMA BASE QUE DATOS LEGALES ── */
+.cal-saveActions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding-top: 14px;
+  border-top: 1px solid rgba(10, 37, 64, 0.075);
+}
+
+.cal-saveHint {
+  margin-right: auto;
+  font-size: 11.5px;
+  color: #6a7989;
+  font-weight: 560;
+  line-height: 1.35;
+}
+
+.cal-saveHint.is-pending {
+  color: var(--balto-action, #0055bb);
+}
+
+.cal-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border-radius: 12px;
+  min-height: 38px;
+  padding: 9px 14px;
+  font-size: 12px;
+  font-weight: 720;
+  cursor: pointer;
+  transition: transform 0.14s ease, background 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+  white-space: nowrap;
+}
+
+.cal-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.cal-btn--save {
+  background: rgba(0, 85, 187, 0.92);
+  border: 1px solid rgba(0, 85, 187, 0.72);
+  color: #fff;
+  box-shadow: 0 12px 24px -18px rgba(0, 85, 187, 0.62);
+}
+
+.cal-btn--save:hover:not(:disabled) {
+  background: var(--balto-action, #0055bb);
+  border-color: var(--balto-action, #0055bb);
+}
+
+.cal-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* ── TABLET ── */
+@media (max-width: 980px) {
+  .cal-hero {
+    grid-template-columns: 44px 1fr;
+  }
+
+  .cal-hero__side {
+    grid-column: 1 / -1;
+    justify-self: start;
+    flex-wrap: wrap;
+  }
+
+  .cal-metaGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── MOBILE ── */
+@media (max-width: 640px) {
+  .cal-page {
+    padding: 10px 8px 14px;
+    gap: 10px;
+  }
+
+  .cal-hero {
+    grid-template-columns: 38px 1fr;
+    padding: 10px 12px;
+  }
+
+  .cal-hero__icon {
+    width: 38px;
+    height: 38px;
+  }
+
+  .cal-title {
+    font-size: 15px;
+  }
+
+  .cal-subtitle {
+    font-size: 11px;
+  }
+
+  .cal-hero__side {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .cal-metaGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .cal-metaCard__body {
+    grid-template-columns: 1fr;
+  }
+
+  .cal-metaCard--dias .cal-metaCard__body {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+  }
+
+  .cal-metaCard--dias .cal-diasRow,
+  .cal-metaCard--dias .cal-diasHint,
+  .cal-metaCard--dias .cal-preview {
+    grid-column: auto;
+    grid-row: auto;
+  }
+
+  .cal-metaCard--dias .cal-preview {
+    justify-content: flex-start;
+  }
+
+
+  .cal-metaItem--full {
+    grid-column: auto;
+  }
+
+  .cal-saveActions {
+    justify-content: stretch;
+  }
+
+  .cal-saveHint {
+    width: 100%;
+    margin-right: 0;
+    text-align: center;
+  }
+
+  .cal-saveActions .cal-btn {
+    flex: 1;
+  }
+}
+
+/* ── DARK MODE ── */
+[data-theme="oscuro"] .cal-hero,
+body.dark .cal-hero,
+[data-theme="oscuro"] .cal-metaCard,
+body.dark .cal-metaCard {
+  background: rgba(6, 18, 28, 0.96);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="oscuro"] .cal-metaCard__icon,
+body.dark .cal-metaCard__icon,
+[data-theme="oscuro"] .cal-hero__icon,
+body.dark .cal-hero__icon {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.10);
+  color: rgba(210, 220, 235, 0.75);
+}
+
+[data-theme="oscuro"] .cal-metaCard__head h2,
+body.dark .cal-metaCard__head h2,
+[data-theme="oscuro"] .cal-title,
+body.dark .cal-title,
+[data-theme="oscuro"] .cal-actionRow__title,
+body.dark .cal-actionRow__title {
+  color: rgba(255, 255, 255, 0.92);
+}
+
+[data-theme="oscuro"] .cal-metaCard__head p,
+body.dark .cal-metaCard__head p,
+[data-theme="oscuro"] .cal-subtitle,
+body.dark .cal-subtitle,
+[data-theme="oscuro"] .cal-actionRow__desc,
+body.dark .cal-actionRow__desc,
+[data-theme="oscuro"] .cal-diasLabel,
+body.dark .cal-diasLabel,
+[data-theme="oscuro"] .cal-diasHint,
+body.dark .cal-diasHint {
+  color: rgba(210, 220, 235, 0.60);
+}
+
+[data-theme="oscuro"] .cal-hero__eyebrow,
+body.dark .cal-hero__eyebrow,
+[data-theme="oscuro"] .cal-metaItem__label,
+body.dark .cal-metaItem__label,
+[data-theme="oscuro"] .cal-preview__label,
+body.dark .cal-preview__label {
+  color: rgba(255, 255, 255, 0.45);
+}
+
+[data-theme="oscuro"] .cal-metaItem__value,
+body.dark .cal-metaItem__value,
+[data-theme="oscuro"] .cal-diasHint strong,
+body.dark .cal-diasHint strong {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+[data-theme="oscuro"] .cal-metaItem,
+body.dark .cal-metaItem {
+  border-top-color: rgba(255, 255, 255, 0.07);
+}
+
+[data-theme="oscuro"] .cal-actionRow,
+body.dark .cal-actionRow {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="oscuro"] .cal-actionRow:hover:not(:disabled),
+body.dark .cal-actionRow:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+[data-theme="oscuro"] .cal-actionRow--active,
+body.dark .cal-actionRow--active {
+  background: rgba(44, 90, 173, 0.15);
+  border-color: rgba(44, 90, 173, 0.35);
+}
+
+[data-theme="oscuro"] .cal-actionRow__iconWrap,
+body.dark .cal-actionRow__iconWrap {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.10);
+  color: rgba(210, 220, 235, 0.70);
+}
+
+[data-theme="oscuro"] .cal-actionRow--active .cal-actionRow__iconWrap,
+body.dark .cal-actionRow--active .cal-actionRow__iconWrap {
+  background: rgba(44, 90, 173, 0.25);
+  border-color: rgba(44, 90, 173, 0.40);
+  color: rgba(140, 180, 255, 0.95);
+}
+
+[data-theme="oscuro"] .cal-actionRow__chevron,
+body.dark .cal-actionRow__chevron {
+  color: rgba(255, 255, 255, 0.25);
+}
+
+[data-theme="oscuro"] .cal-actionRow__check,
+body.dark .cal-actionRow__check {
+  color: rgba(140, 180, 255, 0.95);
+}
+
+[data-theme="oscuro"] .cal-diasInput,
+body.dark .cal-diasInput {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.90);
+}
+
+[data-theme="oscuro"] .cal-diasInput:focus,
+body.dark .cal-diasInput:focus {
+  border-color: rgba(100, 150, 255, 0.60);
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 0 0 3px rgba(44, 90, 173, 0.20);
+}
+
+[data-theme="oscuro"] .cal-preview,
+body.dark .cal-preview {
+  background: rgba(44, 90, 173, 0.10);
+  border-color: rgba(44, 90, 173, 0.25);
+}
+
+[data-theme="oscuro"] .cal-preview__range,
+body.dark .cal-preview__range {
+  color: rgba(140, 180, 255, 0.95);
+}
+
+[data-theme="oscuro"] .cal-saveActions,
+body.dark .cal-saveActions {
+  border-top-color: rgba(148, 163, 184, 0.12);
+}
+
+[data-theme="oscuro"] .cal-saveHint,
+body.dark .cal-saveHint {
+  color: rgba(210, 220, 235, 0.60);
+}
+
+[data-theme="oscuro"] .cal-saveHint.is-pending,
+body.dark .cal-saveHint.is-pending {
+  color: rgba(160, 200, 255, 0.95);
+}
+
+[data-theme="oscuro"] .cal-btn--save,
+body.dark .cal-btn--save {
+  background: rgba(78, 161, 255, 0.88);
+  border-color: rgba(78, 161, 255, 0.48);
+  color: #071018;
+  box-shadow: 0 12px 24px -18px rgba(78, 161, 255, 0.50);
+}
+
+[data-theme="oscuro"] .cal-badge--info,
+body.dark .cal-badge--info {
+  background: rgba(44, 90, 173, 0.18);
+  color: rgba(140, 180, 255, 0.95);
+  border-color: rgba(44, 90, 173, 0.35);
+}

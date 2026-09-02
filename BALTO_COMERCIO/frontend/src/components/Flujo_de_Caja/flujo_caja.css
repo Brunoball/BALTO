@@ -1,0 +1,838 @@
+/* flujo_caja.css
+   Ajustes propios de Flujo de Caja sin tocar estilos globales.
+   - Tarjetas compactas con estética tipo Dashboard.
+   - Medidas de tabla controladas por IDs/clases propias de esta sección.
+   ─────────────────────────────────────────────── */
+
+.mov-page--flujoCaja {
+  --fc-midnight: #0A2540;
+  --fc-action: #0055BB;
+  --fc-bg: #F6F9FC;
+  --fc-surface: #FFFFFF;
+  --fc-text: #425466;
+  --fc-muted: rgba(66, 84, 102, 0.72);
+  --fc-success: #22AD5C;
+  --fc-danger: #E13D45;
+  --fc-warning: #f4b942;
+  --fc-info: #4bb8ff;
+  --fc-pink: #ff6b9a;
+  --fc-success-15: rgba(34, 173, 92, 0.15);
+  --fc-danger-15: rgba(225, 61, 69, 0.15);
+  --fc-warning-18: rgba(244, 185, 66, 0.18);
+  --fc-info-16: rgba(75, 184, 255, 0.16);
+  --fc-pink-16: rgba(255, 107, 154, 0.16);
+  --fc-shadow-card: 0 12px 30px -24px rgba(10, 37, 64, 0.42);
+  --fc-shadow-card-hover: 0 16px 34px -24px rgba(10, 37, 64, 0.52);
+
+  min-height: 0;
+  height: 100%;
+  max-height: calc(100vh - 96px);
+  overflow: hidden;
+}
+
+.mov-page--flujoCaja .mov-card--table {
+  min-height: 0;
+  height: 100%;
+  max-height: calc(100vh - 96px);
+  overflow: hidden;
+}
+
+.mov-page--flujoCaja .mov-card__head {
+  flex: 0 0 auto;
+  padding: 14px 18px 0;
+}
+
+.mov-page--flujoCaja .mov-card__actions {
+  flex-shrink: 0;
+}
+
+/* Subhead (saldo base) */
+.fc-subhead {
+  flex: 0 0 auto;
+  padding: 7px 18px 6px;
+  border-bottom: 1px solid var(--mov-border, rgba(10,37,64,.10));
+  display: flex;
+  align-items: center;
+  background: color-mix(in srgb, var(--balto-bg, #F6F9FC) 60%, #fff);
+}
+
+.fc-subhead__name {
+  font-size: 12.5px;
+  font-weight: 620;
+  color: var(--balto-ink, #0A2540);
+}
+
+.fc-subhead__meta {
+  font-size: 11.5px;
+  font-weight: 440;
+  color: var(--mov-muted, #7a8a9a);
+}
+
+.fc-subhead__meta b {
+  font-weight: 680;
+  color: var(--balto-ink, #0A2540);
+}
+
+/* =========================================================
+   TARJETAS DINÁMICAS — estética tipo Dashboard
+========================================================= */
+
+.fc-paymentSummary {
+  flex: 0 0 auto;
+  padding: 10px 14px 12px;
+  border-bottom: 1px solid var(--mov-border, rgba(10,37,64,.10));
+  background: linear-gradient(180deg, rgba(255,255,255,.88), rgba(246,249,252,.68));
+}
+
+.fc-paymentSummary__head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 9px;
+}
+
+.fc-paymentSummary__title {
+  font-size: 13px;
+  font-weight: 760;
+  letter-spacing: -.01em;
+  color: var(--balto-ink, #0A2540);
+}
+
+.fc-paymentSummary__hint {
+  margin-top: 2px;
+  font-size: 10.8px;
+  line-height: 1.25;
+  color: var(--mov-muted, #7a8a9a);
+}
+
+.fc-paymentSummary__hint b {
+  color: var(--balto-ink, #0A2540);
+  font-weight: 720;
+}
+
+.fc-paymentCards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 10px;
+  min-width: 0;
+}
+
+.fc-payCard {
+  position: relative;
+  min-width: 0;
+  min-height: 88px;
+  border: 1px solid rgba(10,37,64,.09);
+  border-radius: 17px;
+  background: var(--fc-surface);
+  box-shadow: var(--fc-shadow-card);
+  padding: 12px 13px;
+  overflow: hidden;
+  transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+}
+
+.fc-payCard::after {
+  content: "";
+  position: absolute;
+  inset: auto -28px -38px auto;
+  width: 78px;
+  height: 78px;
+  border-radius: 999px;
+  opacity: .34;
+  pointer-events: none;
+}
+
+.fc-payCard--green::after { background: var(--fc-success-15); }
+.fc-payCard--blue::after { background: var(--fc-info-16); }
+.fc-payCard--pink::after { background: var(--fc-pink-16); }
+.fc-payCard--yellow::after { background: var(--fc-warning-18); }
+.fc-payCard--red::after { background: var(--fc-danger-15); }
+
+.fc-payCard:hover {
+  transform: translateY(-1px);
+  border-color: rgba(0,85,187,.18);
+  box-shadow: var(--fc-shadow-card-hover);
+}
+
+.fc-payCard__top {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  min-width: 0;
+}
+
+.fc-payCard__icon {
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  border-radius: 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--fc-action);
+  background: var(--fc-info-16);
+  font-size: 15px;
+  flex: 0 0 auto;
+}
+
+.fc-payCard--green .fc-payCard__icon { background: var(--fc-success-15); color: var(--fc-success); }
+.fc-payCard--blue .fc-payCard__icon { background: var(--fc-info-16); color: var(--fc-action); }
+.fc-payCard--pink .fc-payCard__icon { background: var(--fc-pink-16); color: var(--fc-pink); }
+.fc-payCard--yellow .fc-payCard__icon { background: var(--fc-warning-18); color: #d99a00; }
+.fc-payCard--red .fc-payCard__icon { background: var(--fc-danger-15); color: var(--fc-danger); }
+
+.fc-payCard__titleWrap {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.fc-payCard__title {
+  display: block;
+  color: var(--fc-muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .055em;
+  text-transform: uppercase;
+  margin-bottom: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fc-payCard__amount {
+  display: block;
+  color: var(--fc-midnight);
+  font-size: clamp(16px, 1.45vw, 21px);
+  font-weight: 760;
+  line-height: 1.08;
+  letter-spacing: -.025em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fc-payCard__amount.is-positive { color: #16a34a; }
+.fc-payCard__amount.is-negative { color: #dc2626; }
+
+.fc-payCard__subtitle {
+  margin-top: 4px;
+  font-size: 10.5px;
+  line-height: 1.2;
+  font-weight: 620;
+  color: var(--fc-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fc-payCard__rows {
+  position: relative;
+  z-index: 1;
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.fc-payCard__row {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 6px 8px;
+  border-radius: 11px;
+  border: 1px solid rgba(10,37,64,.07);
+  background: rgba(246,249,252,.72);
+  font-size: 10.5px;
+  color: var(--mov-muted, #7a8a9a);
+}
+
+.fc-payCard__row span,
+.fc-payCard__row b {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fc-payCard__row b {
+  font-size: 10.8px;
+  font-weight: 760;
+  flex: none;
+}
+
+.fc-paymentEmpty {
+  border: 1px dashed rgba(10,37,64,.18);
+  border-radius: 14px;
+  padding: 12px 14px;
+  color: var(--mov-muted, #7a8a9a);
+  background: rgba(255,255,255,.72);
+  font-size: 12px;
+}
+
+/* Colores semánticos de números */
+.fc-num {
+  font-weight: 560;
+  font-size: 12.6px;
+  font-variant-numeric: tabular-nums;
+}
+
+.fc-in { color: #16a34a; }
+.fc-eg { color: #dc2626; }
+
+.fc-saldo { font-weight: 700; letter-spacing: -.01em; }
+.fc-saldo--pos { color: #16a34a; }
+.fc-saldo--neg { color: #dc2626; }
+
+/* Fila seleccionable para actualizar tarjetas */
+.fc-dayRow {
+  cursor: pointer;
+  outline: none;
+  transition: background .15s ease, box-shadow .15s ease;
+}
+
+.fc-dayRow:hover {
+  background: color-mix(in srgb, var(--balto-primary, #0055bb) 5%, #fff);
+}
+
+.fc-dayRow:focus-visible {
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--balto-primary, #0055bb) 42%, transparent);
+}
+
+.fc-dayRow--selected {
+  background: color-mix(in srgb, var(--balto-primary, #0055bb) 8%, #fff);
+  box-shadow: inset 3px 0 0 var(--balto-primary, #0055bb);
+}
+
+/* Nota al pie */
+.fc-footnote {
+  flex: 0 0 auto;
+  padding: 8px 18px;
+  font-size: 10.5px;
+  line-height: 1.3;
+  color: var(--mov-muted, #7a8a9a);
+  border-top: 1px solid var(--mov-border, rgba(10,37,64,.10));
+  background: color-mix(in srgb, var(--balto-bg, #F6F9FC) 55%, #fff);
+}
+
+/* =========================================================
+   MEDIDAS PROPIAS DE LA TABLA DE FLUJO DE CAJA
+   Usamos ID para no tocar otras tablas.
+========================================================= */
+
+.mov-page--flujoCaja .mov-gridTable--head {
+  flex: 0 0 auto;
+}
+
+#Flujo_Cj-tableWrap {
+  flex: 1 1 auto;
+  min-height: calc(100vh - 410px) !important;
+  max-height: calc(100vh - 410px) !important;
+  height: auto !important;
+  overflow: auto;
+  overflow-x: hidden;
+  scrollbar-gutter: stable;
+}
+
+#Flujo_Cj-tableWrap .mov-gridBody--relative {
+  height: auto !important;
+  min-height: 0 !important;
+}
+
+#Flujo_Cj-tableWrap .mov-gridCell,
+.mov-page--flujoCaja .mov-gridTable--head .mov-gridCell--head {
+  min-height: 38px;
+  padding: 8px 10px;
+}
+
+#Flujo_Cj-tableWrap .mov-gridCell {
+  font-size: 12.4px;
+}
+
+.mov-page--flujoCaja .mov-gridTable--head .mov-gridCell--head {
+  font-size: 10.6px;
+}
+
+#calDropdown-Fl_cj {
+  left: -300px;
+}
+
+/* =========================================================
+   MODO OSCURO
+========================================================= */
+
+html[data-theme="oscuro"] .mov-page.mov-page--flujoCaja,
+body.dark .mov-page.mov-page--flujoCaja {
+  --fc-bg: #071624;
+  --fc-surface: #0b1e33;
+  --fc-text: rgba(255, 255, 255, 0.84);
+  --fc-muted: rgba(255, 255, 255, 0.68);
+  --fc-action: #4a8dff;
+  --fc-shadow-card: 0 14px 34px rgba(0, 0, 0, 0.34);
+  --fc-shadow-card-hover: 0 18px 42px rgba(0, 0, 0, 0.42);
+}
+
+html[data-theme="oscuro"] .mov-page.mov-page--flujoCaja .fc-paymentSummary,
+body.dark .mov-page.mov-page--flujoCaja .fc-paymentSummary {
+  background: rgba(15,23,42,.70) !important;
+  border-color: rgba(148,163,184,.12) !important;
+}
+
+html[data-theme="oscuro"] .mov-page.mov-page--flujoCaja .fc-paymentSummary__title,
+body.dark .mov-page.mov-page--flujoCaja .fc-paymentSummary__title,
+html[data-theme="oscuro"] .mov-page.mov-page--flujoCaja .fc-paymentSummary__hint b,
+body.dark .mov-page.mov-page--flujoCaja .fc-paymentSummary__hint b,
+html[data-theme="oscuro"] .mov-page.mov-page--flujoCaja .fc-subhead__meta b,
+body.dark .mov-page.mov-page--flujoCaja .fc-subhead__meta b {
+  color: rgba(226,232,240,.92) !important;
+}
+
+html[data-theme="oscuro"] .mov-page.mov-page--flujoCaja .fc-paymentSummary__hint,
+body.dark .mov-page.mov-page--flujoCaja .fc-paymentSummary__hint,
+html[data-theme="oscuro"] .mov-page.mov-page--flujoCaja .fc-payCard__title,
+body.dark .mov-page.mov-page--flujoCaja .fc-payCard__title,
+html[data-theme="oscuro"] .mov-page.mov-page--flujoCaja .fc-payCard__subtitle,
+body.dark .mov-page.mov-page--flujoCaja .fc-payCard__subtitle {
+  color: rgba(226,232,240,.62) !important;
+}
+
+html[data-theme="oscuro"] .mov-page.mov-page--flujoCaja .fc-payCard,
+body.dark .mov-page.mov-page--flujoCaja .fc-payCard {
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  background:
+    radial-gradient(76px 58px at 100% 0%, rgba(74, 141, 255, 0.10), transparent 64%),
+    linear-gradient(135deg, rgba(11, 30, 51, 0.92), rgba(7, 22, 36, 0.92)) !important;
+}
+
+html[data-theme="oscuro"] .mov-page.mov-page--flujoCaja .fc-payCard__row,
+body.dark .mov-page.mov-page--flujoCaja .fc-payCard__row {
+  background: rgba(15,23,42,.55) !important;
+  border-color: rgba(148,163,184,.12) !important;
+  color: rgba(226,232,240,.58) !important;
+}
+
+html[data-theme="oscuro"] .mov-page.mov-page--flujoCaja .fc-subhead,
+body.dark .mov-page.mov-page--flujoCaja .fc-subhead {
+  background: rgba(15,23,42,.75) !important;
+  border-color: rgba(148,163,184,.12) !important;
+}
+
+html[data-theme="oscuro"] .mov-page.mov-page--flujoCaja .fc-subhead__name,
+body.dark .mov-page.mov-page--flujoCaja .fc-subhead__name {
+  color: rgba(226,232,240,.92) !important;
+}
+
+html[data-theme="oscuro"] .mov-page.mov-page--flujoCaja .fc-subhead__meta,
+body.dark .mov-page.mov-page--flujoCaja .fc-subhead__meta {
+  color: rgba(226,232,240,.60) !important;
+}
+
+html[data-theme="oscuro"] .mov-page.mov-page--flujoCaja .fc-footnote,
+body.dark .mov-page.mov-page--flujoCaja .fc-footnote {
+  background: rgba(15,23,42,.65) !important;
+  border-color: rgba(148,163,184,.10) !important;
+  color: rgba(226,232,240,.48) !important;
+}
+
+html[data-theme="oscuro"] .mov-page.mov-page--flujoCaja .fc-paymentEmpty,
+body.dark .mov-page.mov-page--flujoCaja .fc-paymentEmpty {
+  background: rgba(15,23,42,.55) !important;
+  border-color: rgba(148,163,184,.16) !important;
+  color: rgba(226,232,240,.58) !important;
+}
+
+html[data-theme="oscuro"] .fc-in,
+body.dark .fc-in { color: #4ade80 !important; }
+html[data-theme="oscuro"] .fc-eg,
+body.dark .fc-eg { color: #f87171 !important; }
+html[data-theme="oscuro"] .fc-saldo--pos,
+body.dark .fc-saldo--pos { color: #4ade80 !important; }
+html[data-theme="oscuro"] .fc-saldo--neg,
+body.dark .fc-saldo--neg { color: #f87171 !important; }
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+
+@media (max-width: 1100px) {
+  .fc-paymentCards {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  }
+
+  .fc-payCard__rows {
+    grid-template-columns: 1fr;
+  }
+
+  #Flujo_Cj-tableWrap {
+    min-height: clamp(160px, 30vh, 260px) !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .mov-page--flujoCaja {
+    max-height: none;
+    overflow: visible;
+  }
+
+  .mov-page--flujoCaja .mov-card--table {
+    max-height: none;
+    overflow: visible;
+  }
+
+  .fc-paymentSummary {
+    padding: 12px 12px 14px;
+  }
+
+  .fc-paymentCards {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  }
+
+  #Flujo_Cj-tableWrap {
+    min-height: 360px !important;
+    max-height: 420px !important;
+  }
+}
+
+@media (max-width: 720px) {
+  .mov-page--flujoCaja .mov-card__head {
+    padding: 12px;
+  }
+
+  #Flujo_Cj-tableWrap {
+    min-height: 55vh !important;
+    max-height: 55vh !important;
+  }
+}
+
+@media (max-width: 560px) {
+  .fc-paymentSummary__head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .fc-paymentCards {
+    display: flex;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scroll-snap-type: x mandatory;
+  }
+
+  .fc-payCard {
+    min-width: 235px;
+    scroll-snap-align: start;
+  }
+}
+
+/* =========================================================
+   RESPONSIVE MOBILE – Flujo de Caja
+   Solo afecta a esta sección y no modifica la vista monitor.
+========================================================= */
+
+.fc-cardPager {
+  display: none;
+}
+
+@media (max-width: 720px) {
+  .mov-page--flujoCaja {
+    height: auto;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .mov-page--flujoCaja .mov-card--table {
+    height: auto;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .mov-page--flujoCaja .mov-card__head {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "fcTitle fcTitle"
+      "fcFilter fcExport";
+    gap: 10px 8px;
+    align-items: center;
+  }
+
+  .mov-page--flujoCaja .mov-card__headLeft {
+    display: contents !important;
+  }
+
+  .mov-page--flujoCaja .title-mov {
+    grid-area: fcTitle;
+    min-width: 0;
+  }
+
+  .mov-page--flujoCaja .mov-headFilters {
+    grid-area: fcFilter;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .mov-page--flujoCaja .mov-filter--cal,
+  .mov-page--flujoCaja .floatingField,
+  .mov-page--flujoCaja .mov-calTrigger,
+  .mov-page--flujoCaja .cc-calTrigger {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .mov-page--flujoCaja .mov-calTrigger,
+  .mov-page--flujoCaja .cc-calTrigger {
+    height: 44px;
+    padding-right: 38px;
+    overflow: hidden;
+  }
+
+  .mov-page--flujoCaja .mov-card__actions {
+    grid-area: fcExport;
+    justify-self: end;
+    width: auto;
+    min-width: 0;
+  }
+
+  .mov-page--flujoCaja .boton-exportar-wrap {
+    width: auto;
+  }
+
+  .mov-page--flujoCaja .boton-exportar-trigger {
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+    padding: 0 !important;
+    justify-content: center;
+    gap: 0;
+    border-radius: 14px;
+  }
+
+  .mov-page--flujoCaja .boton-exportar-trigger__left {
+    gap: 0;
+  }
+
+  .mov-page--flujoCaja .boton-exportar-trigger__iconWrap {
+    width: 32px;
+    height: 32px;
+  }
+
+  .mov-page--flujoCaja .boton-exportar-trigger__text,
+  .mov-page--flujoCaja .boton-exportar-trigger__right {
+    display: none !important;
+  }
+
+  .mov-page--flujoCaja .boton-exportar-menu {
+    right: 0;
+    left: auto;
+    min-width: min(260px, calc(100vw - 28px));
+  }
+
+  #calDropdown-Fl_cj {
+    left: 0 !important;
+    right: auto;
+    max-width: calc(100vw - 24px);
+  }
+
+  .fc-subhead {
+    padding: 9px 12px;
+  }
+
+  .fc-subhead__name,
+  .fc-subhead__meta {
+    font-size: 11px;
+    line-height: 1.35;
+  }
+}
+
+@media (max-width: 560px) {
+  .fc-paymentSummary {
+    padding: 10px 10px 12px;
+  }
+
+  .fc-cardPager {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .fc-cardPager__counter {
+    min-width: 0;
+    color: var(--fc-muted);
+    font-size: 11px;
+    font-weight: 760;
+    letter-spacing: .035em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .fc-cardPager__btn {
+    border: 1px solid rgba(0,85,187,.16);
+    background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+    color: var(--fc-action);
+    height: 34px;
+    padding: 0 12px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    font-size: 12px;
+    font-weight: 760;
+    cursor: pointer;
+    box-shadow: 0 10px 22px rgba(15, 23, 42, .08);
+    transition: transform .14s ease, box-shadow .14s ease, border-color .14s ease;
+  }
+
+  .fc-cardPager__btn:active {
+    transform: translateY(1px);
+  }
+
+  .fc-paymentCards {
+    display: flex;
+    grid-template-columns: none;
+    gap: 10px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 0;
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+    scrollbar-width: none;
+  }
+
+  .fc-paymentCards::-webkit-scrollbar {
+    display: none;
+  }
+
+  .fc-payCard {
+    flex: 0 0 100%;
+    min-width: 0;
+    scroll-snap-align: start;
+  }
+
+  .fc-payCard__rows {
+    grid-template-columns: 1fr;
+  }
+
+  .mov-page--flujoCaja .mov-gridTable--head {
+    display: none !important;
+  }
+
+  #Flujo_Cj-tableWrap {
+    min-height: 40vh !important;
+    max-height: 40vh !important;
+    padding: 8px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    background: color-mix(in srgb, var(--balto-bg, #F6F9FC) 72%, #fff);
+  }
+
+  #Flujo_Cj-tableWrap .mov-gridBody--relative {
+    display: block;
+
+  }
+  .fc-subhead{
+    display: none;
+  }
+
+  #Flujo_Cj-tableWrap .mov-gridTable--row {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px;
+    padding: 10px;
+    margin-bottom: 10px;
+    border: 1px solid rgba(10,37,64,.09);
+    border-radius: 16px;
+    background: rgba(255,255,255,.92);
+    box-shadow: 0 10px 22px rgba(15,23,42,.055);
+  }
+
+  #Flujo_Cj-tableWrap .mov-gridTable--row.fc-dayRow--selected {
+    box-shadow:
+      inset 3px 0 0 var(--balto-primary, #0055bb),
+      0 10px 22px rgba(15,23,42,.06);
+  }
+
+  #Flujo_Cj-tableWrap .mov-gridCell {
+    min-height: auto;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 3px;
+    text-align: left;
+  }
+
+  #Flujo_Cj-tableWrap .mov-gridCell:first-child {
+    grid-column: 1 / -1;
+  }
+
+  #Flujo_Cj-tableWrap .mov-gridCell::before {
+    content: attr(data-label);
+    color: var(--fc-muted);
+    font-size: 10px;
+    line-height: 1;
+    font-weight: 800;
+    letter-spacing: .055em;
+    text-transform: uppercase;
+  }
+
+  #Flujo_Cj-tableWrap .fc-num,
+  #Flujo_Cj-tableWrap .mov-ellipsissss {
+    max-width: 100%;
+    font-size: 13px;
+  }
+
+  .fc-footnote {
+    padding: 9px 12px;
+    font-size: 10px;
+  }
+}
+
+@media (max-width: 380px) {
+  .mov-page--flujoCaja .mov-card__head {
+    grid-template-columns: minmax(0, 1fr) 42px;
+  }
+
+  .mov-page--flujoCaja .boton-exportar-trigger {
+    width: 42px;
+    min-width: 42px;
+    height: 42px;
+  }
+
+  .fc-cardPager__counter {
+    font-size: 10px;
+  }
+
+  .fc-cardPager__btn {
+    padding: 0 10px;
+  }
+}
+
+@media (max-width: 560px) {
+  html[data-theme="oscuro"] .mov-page.mov-page--flujoCaja #Flujo_Cj-tableWrap,
+  body.dark .mov-page.mov-page--flujoCaja #Flujo_Cj-tableWrap {
+    background: rgba(15,23,42,.46) !important;
+  }
+
+  html[data-theme="oscuro"] .mov-page.mov-page--flujoCaja #Flujo_Cj-tableWrap .mov-gridTable--row,
+  body.dark .mov-page.mov-page--flujoCaja #Flujo_Cj-tableWrap .mov-gridTable--row {
+    background: rgba(11, 30, 51, .88) !important;
+    border-color: rgba(148,163,184,.12) !important;
+    box-shadow: 0 10px 22px rgba(0,0,0,.22) !important;
+  }
+
+  html[data-theme="oscuro"] .mov-page.mov-page--flujoCaja .fc-cardPager__btn,
+  body.dark .mov-page.mov-page--flujoCaja .fc-cardPager__btn {
+    background: rgba(15,23,42,.78) !important;
+    border-color: rgba(148,163,184,.16) !important;
+    color: #8ab4ff !important;
+    box-shadow: none !important;
+  }
+}

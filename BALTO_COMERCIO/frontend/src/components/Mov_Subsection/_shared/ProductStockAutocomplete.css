@@ -1,0 +1,127 @@
+.psa-wrap {
+  position: relative;
+  width: 100%;
+}
+
+.psa-input {
+  width: 100%;
+}
+
+.psa-list {
+  background: var(--nv-bg, #fff);
+  border: 1px solid var(--nv-border-md, rgba(15,23,42,.16));
+  border-radius: 9px;
+  box-shadow: 0 14px 38px rgba(15,23,42,.18);
+  list-style: none;
+  padding: 5px;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.psa-item,
+.psa-variant {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--nv-text, #0A2540);
+  border-radius: 7px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 9px;
+  text-align: left;
+  font-size: .85rem;
+  line-height: 1.2;
+  user-select: none;
+}
+
+.psa-item:hover,
+.psa-item.is-active,
+.psa-variant:hover,
+.psa-variant.is-active {
+  background: var(--nv-action-10, rgba(0,85,187,.10));
+  outline: 1px solid var(--nv-action-18, rgba(0,85,187,.18));
+}
+
+.psa-item-main,
+.psa-variant-main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.psa-label,
+.psa-variant-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 700;
+}
+
+.psa-meta,
+.psa-variant-meta {
+  color: var(--nv-muted, #64748b);
+  font-size: 11px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.psa-arrow {
+  color: var(--nv-muted, #64748b);
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.psa-children {
+  margin: 2px 0 5px 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.psa-variant {
+  padding-left: 10px;
+  border-left: 2px solid rgba(15,23,42,.12);
+}
+
+.psa-empty {
+  padding: 8px 10px;
+  color: var(--nv-muted, #64748b);
+  font-size: .85rem;
+}
+
+.mi-modal--dark .psa-list {
+  background: rgba(6,18,28,.98);
+  border-color: rgba(255,255,255,.14);
+  box-shadow: 0 22px 55px rgba(0,0,0,.45);
+}
+
+.mi-modal--dark .psa-item,
+.mi-modal--dark .psa-variant {
+  color: rgba(255,255,255,.88);
+}
+
+.mi-modal--dark .psa-meta,
+.mi-modal--dark .psa-variant-meta,
+.mi-modal--dark .psa-arrow,
+.mi-modal--dark .psa-empty {
+  color: rgba(255,255,255,.62);
+}
+
+.mi-modal--dark .psa-item:hover,
+.mi-modal--dark .psa-item.is-active,
+.mi-modal--dark .psa-variant:hover,
+.mi-modal--dark .psa-variant.is-active {
+  background: rgba(255,255,255,.10);
+}
+
+.mi-modal--dark .psa-variant {
+  border-left-color: rgba(255,255,255,.16);
+}

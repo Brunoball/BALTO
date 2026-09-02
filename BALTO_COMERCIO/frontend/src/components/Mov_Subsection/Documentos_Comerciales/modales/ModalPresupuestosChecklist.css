@@ -1,0 +1,79 @@
+/* =========================================================
+   CHECKLISTS DE PRESUPUESTOS
+   ---------------------------------------------------------
+   La caja de selección usa la base global gm-inline-check-*.
+   Este archivo conserva únicamente la composición propia de
+   los checklists presentes en los modales de Presupuestos.
+========================================================= */
+
+.presupuesto-check-card.gm-inline-check {
+  width: 100%;
+  height: auto;
+  min-width: 0;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 10px;
+}
+
+.presupuesto-check-card .gm-inline-check__box {
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+  border-radius: 6px;
+}
+
+.presupuesto-check-card .gm-inline-check__box::after {
+  width: 9px;
+  height: 9px;
+  border-radius: 3px;
+}
+
+.presupuesto-check-card__copy {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  text-align: left;
+}
+
+.presupuesto-check-card__copy b {
+  color: var(--gm-text, var(--mi-text, #0f172a));
+  font-size: .82rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.presupuesto-check-card__copy small {
+  color: var(--gm-muted, var(--mi-muted, #64748b));
+  font-size: .7rem;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.presupuesto-check-card:hover .gm-inline-check__box {
+  border-color: var(--gm-accent, var(--mi-primary-600, #0055bb));
+}
+
+.presupuesto-check-card:focus-within .gm-inline-check__box {
+  border-color: var(--gm-accent, var(--mi-primary-600, #0055bb));
+  box-shadow: 0 0 0 3px var(--gm-accent-soft, rgba(0, 85, 187, .08));
+}
+
+.presupuesto-check-card input:disabled ~ * {
+  opacity: .58;
+}
+
+.presupuesto-mode-toggle.presupuesto-check-card,
+.presupuesto-save-model__toggle.presupuesto-check-card {
+  width: auto;
+  flex: 1 1 auto;
+}
+
+html[data-theme="oscuro"] .presupuesto-check-card__copy b,
+body.dark .presupuesto-check-card__copy b {
+  color: rgba(241, 247, 255, .94);
+}
+
+html[data-theme="oscuro"] .presupuesto-check-card__copy small,
+body.dark .presupuesto-check-card__copy small {
+  color: rgba(210, 220, 235, .68);
+}

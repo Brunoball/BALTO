@@ -1,0 +1,71 @@
+﻿# =========================
+# BALTO - Git Ignore
+# =========================
+
+# Node
+**/node_modules/
+
+# Builds generados
+**/build/
+**/dist/
+
+# Playwright
+**/test-results/
+**/playwright-report/
+**/blob-report/
+**/tests/.auth/
+
+# Variables de entorno / secretos
+**/.env
+**/.env.local
+**/.env.development
+**/.env.development.local
+**/.env.production
+**/.env.production.local
+**/.env.playwright
+
+# Sí permitimos plantillas
+!**/.env.example
+!**/.env.development.local.example
+!**/.env.production.example
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Basura / temporales
+*.tmp
+*.bak
+*.zip
+Thumbs.db
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+
+# =========================
+# Extras frontend
+# =========================
+
+**/coverage/
+**/.pnp/
+**/.pnp.js
+
+**/.npm/
+**/.cache/
+**/.vite/
+**/.eslintcache
+
+**/playwright/.cache/
+**/playwright/.auth/
+**/playwright-report-cross-browser/
+
+**/.env.test.local
+
+desktop.ini
+*.temp
+*.swp
+*.code-workspace

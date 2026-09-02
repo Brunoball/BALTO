@@ -1,0 +1,182 @@
+/* Responsive exclusivo de Documentos Comerciales. */
+
+@media (max-width: 720px) {
+  .doccom-subpage.mov-page,
+  .mov-page:has(.doccom-presupuestosTable) {
+    min-width: 0;
+  }
+
+  /* Las tres pestañas quedan siempre visibles, sin scroll horizontal. */
+  .doccom-tabsRow,
+  .doccom-titleBlock,
+  .doc-card__head .mov-card__headLeft,
+  .doccom-clientDocs__head .mov-card__headLeft {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .doccom-tabsRow .doccom-googleTabs {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: 100% !important;
+    max-width: 100%;
+    gap: 3px;
+    padding: 0;
+    overflow: visible;
+    scrollbar-width: none;
+  }
+
+  .doccom-tabsRow .doccom-googleTabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .doccom-tabsRow .doccom-googleTab {
+    width: 100%;
+    min-width: 0;
+    padding: 9px 4px 10px;
+    gap: 0;
+    font-size: 11px;
+    line-height: 1;
+  }
+
+  .doccom-tabsRow .doccom-googleTab__icon {
+    display: none;
+  }
+
+  .doccom-tabsRow .doccom-googleTab__label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .doccom-tabsRow .doccom-googleTab.is-active::after {
+    left: 8px;
+    right: 8px;
+  }
+
+  /* Presupuestos: navegación, filtros y acciones en bloques legibles. */
+  .doccom-presupuestosTable .doc-card__head {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .doccom-presupuestosTable .mov-card__headLeft,
+  .doccom-presupuestosTable .mov-headFilters,
+  .doccom-presupuestosTable .mov-card__actions {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .doccom-presupuestosTable .mov-card__headLeft,
+  .doccom-presupuestosTable .mov-headFilters {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .doccom-presupuestosTable .mov-headFilters .cc-filter {
+    width: 100%;
+    max-width: none;
+  }
+
+  .doccom-presupuestosTable .mov-card__actions {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 8px !important;
+  }
+
+  .doccom-presupuestosTable .mov-card__actions > *,
+  .doccom-presupuestosTable .mov-card__actions .mov-btn {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .doccom-presupuestosTable .mov-card__actions .mov-btn {
+    padding-inline: 8px;
+    font-size: 12px;
+  }
+
+  /* Facturas y Remitos: pestañas arriba y contenido en una sola columna. */
+  .doccom-clientDocs__head {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .doccom-clientDocs__summary {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: 100%;
+    gap: 6px;
+  }
+
+  .doccom-clientDocs__summary > div {
+    min-width: 0;
+    min-height: 54px;
+    padding: 8px 6px 8px 10px;
+    border-radius: 12px;
+  }
+
+  .doccom-clientDocs__summary strong {
+    font-size: 1rem;
+  }
+
+  .doccom-clientDocs__summary span {
+    overflow: hidden;
+    font-size: 10px;
+    line-height: 1.15;
+    text-overflow: ellipsis;
+  }
+
+  .doccom-clientDocs__layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  .doccom-clientList,
+  .doccom-docPanel {
+    width: 100%;
+    min-width: 0;
+    padding: 10px;
+    border-radius: 14px;
+  }
+
+  .doccom-clientList__body {
+    max-height: 220px;
+  }
+
+  .doccom-docPanel__top {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .doccom-filter--docs {
+    width: 100%;
+  }
+
+  .doccom-docTableWrap.mov-tableWrap {
+    min-height: 310px;
+    max-height: 52vh;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+@media (max-width: 390px) {
+  .doccom-tabsRow .doccom-googleTab {
+    font-size: 10px;
+    padding-inline: 2px;
+  }
+
+  .doccom-presupuestosTable .mov-card__actions .mov-btn {
+    font-size: 11px;
+  }
+}

@@ -1,0 +1,714 @@
+.mu-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 16, 30, 0.55);
+  backdrop-filter: blur(5px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999999999;
+  padding: 16px;
+  animation: mu-fade 0.15s ease;
+}
+
+.mu-modal {
+  width: min(880px, 96vw);
+  max-height: 92vh;
+  background: var(--nv-bg, #fff);
+  border-radius: 20px;
+  box-shadow:
+    0 32px 80px -20px rgba(0, 0, 0, 0.32),
+    0 0 0 1px rgba(15, 23, 42, 0.1);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: mu-pop 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  font-family: "DM Sans", "Instrument Sans", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+html[data-theme="oscuro"] .mu-modal,
+body.dark .mu-modal {
+  background: rgba(6, 18, 28, 0.97);
+  box-shadow:
+    0 32px 80px -20px rgba(0, 0, 0, 0.55),
+    0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+/* ── HEADER ── */
+.mu-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 20px;
+  background: var(--nv-midnight, #0a2540);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  flex: 0 0 auto;
+}
+
+html[data-theme="oscuro"] .mu-header,
+body.dark .mu-header {
+  background: linear-gradient(180deg, #0a2540, #071a2c);
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+.mu-header__icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  font-size: 15px;
+  color: #fff;
+}
+
+.mu-header__texts {
+  flex: 1;
+  min-width: 0;
+}
+
+.mu-header__title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #fff;
+  letter-spacing: -0.01em;
+}
+
+.mu-header__subtitle {
+  margin: 2px 0 0;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.55);
+  font-weight: 400;
+}
+
+.mu-close {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: #fff;
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition:
+    transform 0.15s ease,
+    background 0.15s ease;
+  font-size: 14px;
+}
+
+.mu-close:hover {
+  background: rgba(255, 255, 255, 0.12);
+  transform: rotate(90deg);
+}
+
+.mu-close:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ── BODY ── */
+.mu-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 16px;
+  background: var(--nv-surface, #f7f9fc);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+html[data-theme="oscuro"] .mu-body,
+body.dark .mu-body {
+  background: rgba(10, 25, 40, 0.6);
+}
+
+/* ── NOTA EDICIÓN PROPIO USUARIO ── */
+.mu-self-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(0, 85, 187, 0.08);
+  border: 1px solid rgba(0, 85, 187, 0.2);
+  font-size: 12px;
+  font-weight: 600;
+  color: #0055bb;
+  line-height: 1.4;
+}
+
+html[data-theme="oscuro"] .mu-self-note,
+body.dark .mu-self-note {
+  background: rgba(0, 85, 187, 0.14);
+  border-color: rgba(0, 85, 187, 0.28);
+  color: rgba(140, 190, 255, 0.92);
+}
+
+.mu-self-note__icon {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  background: rgba(0, 85, 187, 0.12);
+  border: 1px solid rgba(0, 85, 187, 0.22);
+  display: grid;
+  place-items: center;
+  font-size: 10px;
+  flex: 0 0 auto;
+  margin-top: 1px;
+}
+
+/* ── SECCIÓN ── */
+.mu-section {
+  border: 1px solid var(--nv-border-md, rgba(15, 23, 42, 0.16));
+  border-radius: 14px;
+  background: var(--nv-bg, #fff);
+  overflow: visible;
+}
+
+.mu-section--spaced {
+  margin-bottom: 12px;
+}
+
+html[data-theme="oscuro"] .mu-section,
+body.dark .mu-section {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.mu-section__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 14px;
+  background: var(--nv-head-bg, #f0f4fa);
+  border-bottom: 1px solid var(--nv-border, rgba(15, 23, 42, 0.1));
+  border-radius: 14px 14px 0 0;
+}
+
+html[data-theme="oscuro"] .mu-section__head,
+body.dark .mu-section__head {
+  background: rgba(255, 255, 255, 0.05);
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+.mu-section__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--blue-action, #0055bb);
+  flex: 0 0 auto;
+}
+
+.mu-section__dot--gray {
+  background: #64748b;
+}
+
+.mu-section__label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--nv-muted, #5a6a7e);
+}
+
+html[data-theme="oscuro"] .mu-section__label,
+body.dark .mu-section__label {
+  color: rgba(210, 220, 235, 0.7);
+}
+
+.mu-section__body {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow: visible;
+}
+
+/* ── GRID DOS COLUMNAS ── */
+.mu-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+}
+
+.mu-col-full {
+  grid-column: 1 / -1;
+}
+
+/* ── CAMPO FLOATING LABEL ── */
+.mu-field {
+  position: relative;
+  min-width: 0;
+}
+
+.mu-field__icon {
+  position: absolute;
+  left: 11px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 12px;
+  color: var(--nv-muted, #5a6a7e);
+  pointer-events: none;
+  z-index: 2;
+  transition: color 0.14s;
+}
+
+html[data-theme="oscuro"] .mu-field__icon,
+body.dark .mu-field__icon {
+  color: rgba(210, 220, 235, 0.55);
+}
+
+.mu-input,
+.mu-select {
+  width: 100%;
+  height: 44px;
+  border: 1px solid var(--nv-border-md, rgba(15, 23, 42, 0.16));
+  border-radius: 11px;
+  background: var(--nv-bg, #fff);
+  padding: 0 12px 0 34px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--nv-text, #0a2540);
+  outline: none;
+  transition:
+    border-color 0.14s,
+    box-shadow 0.14s,
+    background 0.14s;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.mu-select {
+  appearance: none;
+  cursor: pointer;
+}
+
+.mu-input:focus,
+.mu-select:focus {
+  border-color: var(--blue-action, #0055bb);
+  box-shadow: 0 0 0 3px rgba(0, 85, 187, 0.1);
+  background: var(--nv-bg, #fff);
+}
+
+.mu-input:disabled,
+.mu-select:disabled {
+  background: rgba(241, 245, 249, 0.7);
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+html[data-theme="oscuro"] .mu-input,
+html[data-theme="oscuro"] .mu-select,
+body.dark .mu-input,
+body.dark .mu-select {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.92);
+}
+
+html[data-theme="oscuro"] .mu-input:focus,
+html[data-theme="oscuro"] .mu-select:focus,
+body.dark .mu-input:focus,
+body.dark .mu-select:focus {
+  border-color: rgba(0, 85, 187, 0.65);
+  box-shadow: 0 0 0 3px rgba(0, 85, 187, 0.18);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+html[data-theme="oscuro"] .mu-input:disabled,
+html[data-theme="oscuro"] .mu-select:disabled,
+body.dark .mu-input:disabled,
+body.dark .mu-select:disabled {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+/* ── FLOATING LABEL ── */
+.mu-label {
+  position: absolute;
+  left: 34px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 13px;
+  color: var(--nv-muted, #5a6a7e);
+  pointer-events: none;
+  transform-origin: left top;
+  transition: all 0.14s ease;
+  background: transparent;
+  padding: 0 3px;
+  z-index: 2;
+}
+
+html[data-theme="oscuro"] .mu-label,
+body.dark .mu-label {
+  color: rgba(210, 220, 235, 0.7);
+}
+
+/* Label activo — input con foco o con valor */
+.mu-input:focus + .mu-label,
+.mu-input:not(:placeholder-shown) + .mu-label {
+  top: -5px;
+  transform: translateY(0) scale(0.82);
+  color: var(--blue-action, #0055bb);
+  background: var(--nv-bg, #fff);
+}
+
+/* Select siempre con label arriba */
+.mu-select + .mu-label {
+  top: -5px;
+  transform: translateY(0) scale(0.82);
+  color: var(--blue-action, #0055bb);
+  background: var(--nv-bg, #fff);
+}
+
+/* Dark mode — labels activos */
+html[data-theme="oscuro"] .mu-input:focus + .mu-label,
+html[data-theme="oscuro"] .mu-input:not(:placeholder-shown) + .mu-label,
+html[data-theme="oscuro"] .mu-select + .mu-label,
+body.dark .mu-input:focus + .mu-label,
+body.dark .mu-input:not(:placeholder-shown) + .mu-label,
+body.dark .mu-select + .mu-label {
+  color: rgba(140, 190, 255, 0.92);
+  background: rgba(6, 18, 28, 0.92);
+}
+
+/* ── HINT CONTRASEÑA ── */
+.mu-hint {
+  font-size: 11px;
+  color: var(--nv-muted, #5a6a7e);
+  line-height: 1.35;
+  padding: 0 2px;
+  margin-top: -4px;
+}
+
+html[data-theme="oscuro"] .mu-hint,
+body.dark .mu-hint {
+  color: rgba(210, 220, 235, 0.55);
+}
+
+/* ── FOOTER ── */
+.mu-footer {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--nv-border-md, rgba(15, 23, 42, 0.16));
+  background: var(--nv-bg, #fff);
+}
+
+.mu-saveHint {
+  margin-right: auto;
+  font-size: 11.5px;
+  color: #6a7989;
+  font-weight: 560;
+  line-height: 1.35;
+}
+
+.mu-saveHint.is-pending {
+  color: var(--blue-action, #0055bb);
+}
+
+html[data-theme="oscuro"] .mu-footer,
+body.dark .mu-footer {
+  background: rgba(6, 18, 28, 0.97);
+  border-top-color: rgba(255, 255, 255, 0.1);
+}
+
+html[data-theme="oscuro"] .mu-saveHint,
+body.dark .mu-saveHint {
+  color: rgba(210, 220, 235, 0.60);
+}
+
+html[data-theme="oscuro"] .mu-saveHint.is-pending,
+body.dark .mu-saveHint.is-pending {
+  color: rgba(140, 190, 255, 0.92);
+}
+
+.mu-btn-cancel {
+  appearance: none;
+  height: 38px;
+  padding: 0 16px;
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  background: transparent;
+  color: var(--nv-muted, #5a6a7e);
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition:
+    background 0.14s,
+    border-color 0.14s;
+}
+
+.mu-btn-cancel:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.03);
+  border-color: rgba(148, 163, 184, 0.7);
+}
+
+.mu-btn-cancel:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+html[data-theme="oscuro"] .mu-btn-cancel,
+body.dark .mu-btn-cancel {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.75);
+}
+
+html[data-theme="oscuro"] .mu-btn-cancel:hover:not(:disabled),
+body.dark .mu-btn-cancel:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.mu-btn-submit {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 38px;
+  padding: 9px 14px;
+  border-radius: 12px;
+  background: rgba(0, 85, 187, 0.92);
+  border: 1px solid rgba(0, 85, 187, 0.72);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 720;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+  box-shadow: 0 12px 24px -18px rgba(0, 85, 187, 0.62);
+  transition: transform 0.14s ease, background 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.mu-btn-submit:hover:not(:disabled) {
+  background: var(--balto-action, #0055bb);
+  border-color: var(--balto-action, #0055bb);
+  transform: translateY(-1px);
+}
+
+.mu-btn-submit:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+html[data-theme="oscuro"] .mu-btn-submit,
+body.dark .mu-btn-submit {
+  background: rgba(78, 161, 255, 0.88);
+  border-color: rgba(78, 161, 255, 0.48);
+  color: #071018;
+  box-shadow: 0 12px 24px -18px rgba(78, 161, 255, 0.50);
+}
+
+/* ── ANIMACIONES ── */
+@keyframes mu-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes mu-pop {
+  from { opacity: 0; transform: translateY(12px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ── RESPONSIVE ── */
+@media (max-width: 560px) {
+  .mu-grid-2 {
+    grid-template-columns: 1fr;
+  }
+
+  .mu-col-full {
+    grid-column: auto;
+  }
+
+  .mu-footer {
+    flex-direction: column-reverse;
+  }
+
+  .mu-saveHint {
+    width: 100%;
+    margin-right: 0;
+    text-align: center;
+  }
+
+  .mu-btn-cancel,
+  .mu-btn-submit {
+    width: 100%;
+    justify-content: center;
+  }
+}html[data-theme="oscuro"] .mu-select {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.92);
+}
+
+html[data-theme="oscuro"] .mu-select option {
+  background: #071a2c;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+/* =============================================
+   MODAL USUARIO — CONTRASEÑA / OJO / SEGURIDAD
+   ============================================= */
+
+.mu-field--password {
+  position: relative;
+}
+
+.mu-input--password {
+  padding-right: 46px !important;
+}
+
+.mu-password-eye {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  width: 32px;
+  height: 32px;
+  transform: translateY(-50%);
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+  color: #697586;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    transform 0.15s ease;
+  z-index: 3;
+}
+
+.mu-password-eye:hover:not(:disabled) {
+  background: #eef4ff;
+  border-color: #c8d9f5;
+  color: #2c5aad;
+}
+
+.mu-password-eye:active:not(:disabled) {
+  transform: translateY(-50%) scale(0.96);
+}
+
+.mu-password-eye:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.mu-password-strength {
+  margin-top: 8px;
+  padding: 9px 10px;
+  border-radius: 11px;
+  background: #f7f9fc;
+  border: 1px solid #e5ebf2;
+}
+
+.mu-password-strength__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 7px;
+  font-size: 11px;
+  color: #6a7989;
+  font-weight: 600;
+}
+
+.mu-password-strength__top strong {
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.mu-password-strength__top strong.is-weak {
+  color: #ef4444;
+}
+
+.mu-password-strength__top strong.is-regular {
+  color: #f59e0b;
+}
+
+.mu-password-strength__top strong.is-good {
+  color: #3b82f6;
+}
+
+.mu-password-strength__top strong.is-strong {
+  color: #22c55e;
+}
+
+.mu-password-strength__bar {
+  width: 100%;
+  height: 7px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: #e5eaf1;
+}
+
+.mu-password-strength__fill {
+  height: 100%;
+  border-radius: inherit;
+  transition:
+    width 0.2s ease,
+    background-color 0.2s ease;
+}
+
+.mu-password-strength__hint {
+  margin: 7px 0 0;
+  font-size: 10.5px;
+  line-height: 1.35;
+  color: #7b8794;
+  font-weight: 500;
+}
+
+.mu-hint {
+  margin: 8px 0 0;
+}
+
+/* Dark mode */
+[data-theme="oscuro"] .mu-password-eye,
+body.dark .mu-password-eye {
+  color: rgba(210, 220, 235, 0.68);
+}
+
+[data-theme="oscuro"] .mu-password-eye:hover:not(:disabled),
+body.dark .mu-password-eye:hover:not(:disabled) {
+  background: rgba(44, 90, 173, 0.18);
+  border-color: rgba(44, 90, 173, 0.38);
+  color: rgba(140, 180, 255, 0.95);
+}
+
+[data-theme="oscuro"] .mu-password-strength,
+body.dark .mu-password-strength {
+  background: rgba(255, 255, 255, 0.045);
+  border-color: rgba(255, 255, 255, 0.09);
+}
+
+[data-theme="oscuro"] .mu-password-strength__top,
+body.dark .mu-password-strength__top {
+  color: rgba(210, 220, 235, 0.65);
+}
+
+[data-theme="oscuro"] .mu-password-strength__bar,
+body.dark .mu-password-strength__bar {
+  background: rgba(255, 255, 255, 0.10);
+}
+
+[data-theme="oscuro"] .mu-password-strength__hint,
+body.dark .mu-password-strength__hint {
+  color: rgba(210, 220, 235, 0.52);
+}

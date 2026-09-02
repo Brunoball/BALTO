@@ -1,0 +1,57 @@
+/* =========================================================
+   Recibos - responsive de cabecera
+   Solo celulares. Reutiliza las clases mov-* existentes.
+========================================================= */
+
+@media (max-width: 720px) {
+  .mov-page[data-section="recibos"] .mov-card--table > .mov-card__head {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px 10px;
+  }
+
+  .mov-page[data-section="recibos"] .mov-card--table > .mov-card__head > .mov-card__headLeft,
+  .mov-page[data-section="recibos"] .mov-card--table .mov-card__headLeft > .mov-headFilters {
+    display: contents;
+  }
+
+  .mov-page[data-section="recibos"] .mov-card--table .title-mov {
+    grid-column: 1 / -1;
+    min-width: 0;
+  }
+
+  .mov-page[data-section="recibos"] .mov-card--table .mov-filter--cal {
+    grid-column: 1 / -1;
+    width: min(100%, 340px);
+    justify-self: center;
+  }
+
+  .mov-page[data-section="recibos"] .mov-card--table .mov-filter--cal .mov-calTrigger {
+    width: 100%;
+  }
+
+  .mov-page[data-section="recibos"] .mov-card--table .mov-search {
+    grid-column: 1;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .mov-page[data-section="recibos"] .mov-card--table .mov-searchInput,
+  .mov-page[data-section="recibos"] .mov-card--table .mov-searchInput input {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .mov-page[data-section="recibos"] .mov-card--table > .mov-card__head > .mov-card__actions {
+    grid-column: 2;
+    width: auto;
+    min-width: max-content;
+    margin: 0;
+    align-self: stretch;
+  }
+
+  .mov-page[data-section="recibos"] .mov-card--table > .mov-card__head > .mov-card__actions > * {
+    height: 100%;
+  }
+}

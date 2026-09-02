@@ -1,0 +1,2059 @@
+/* ================================================
+   StockProveedores.css
+   Estilos propios del componente (prefijo .sp-)
+   Depende de movimientos.css / Global_Section.css para las clases .mov-*
+   ================================================ */
+
+
+.scat-emptyText {
+  font-size: 13px;
+  color: var(--mov-muted);
+  font-weight: 520;
+  text-align: center;
+}
+/* ── Grid tabla ── */
+.sp-grid { grid-template-columns: 1fr 120px 108px; }
+
+/* ── Wrapper del botón: necesario para posicionar el dropdown ── */
+.sp-dropWrap {
+  position: relative;
+}
+
+/* ── Dropdown flotante ── */
+.sp-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 300;
+  width: 300px;
+
+  background: #fff;
+  border: 1px solid rgba(10, 37, 64, 0.13);
+  border-radius: 14px;
+  box-shadow:
+    0 20px 48px -10px rgba(10, 37, 64, 0.22),
+    0 4px 12px rgba(10, 37, 64, 0.08);
+
+  padding: 18px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+
+  animation: sp-dropIn 180ms cubic-bezier(0.4, 0, 0.2, 1) both;
+  transform-origin: top right;
+}
+
+@keyframes sp-dropIn {
+  from { opacity: 0; transform: scale(0.95) translateY(-6px); }
+  to   { opacity: 1; transform: scale(1)    translateY(0);    }
+}
+
+/* flecha decorativa apuntando al botón */
+.sp-dropdown::before {
+  content: "";
+  position: absolute;
+  top: -6px;
+  right: 18px;
+  width: 11px;
+  height: 11px;
+  background: #fff;
+  border-left: 1px solid rgba(10, 37, 64, 0.13);
+  border-top:  1px solid rgba(10, 37, 64, 0.13);
+  transform: rotate(45deg);
+  border-radius: 2px 0 0 0;
+}
+
+/* título del dropdown */
+.sp-dropdown__title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--balto-ink);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 2px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(10, 37, 64, 0.08);
+}
+
+/* banner edición */
+.sp-editBanner {
+  font-size: 11px;
+  font-weight: 650;
+  color: var(--balto-action);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: -4px;
+}
+
+/* ── Floating field ── */
+.sp-floatingField {
+  position: relative;
+  width: 100%;
+}
+
+.sp-input {
+  width: 100%;
+  height: 52px;
+  padding: 22px 14px 8px;
+  border-radius: 10px;
+  border: 1.5px solid rgba(10, 37, 64, 0.14);
+  background: #fff;
+  outline: none;
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(10, 37, 64, 0.9);
+  font-family: inherit;
+  transition:
+    border-color 140ms ease,
+    box-shadow   140ms ease,
+    background   140ms ease;
+}
+
+.sp-input:hover    { border-color: rgba(10, 37, 64, 0.28); }
+.sp-input:focus    { border-color: rgba(0, 85, 187, 0.55); box-shadow: 0 0 0 3px rgba(0, 85, 187, 0.18); background: #fafcff; }
+.sp-input:disabled { opacity: 0.55; cursor: not-allowed; background: #f6f9fc; }
+
+.sp-floatingLabel {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(66, 84, 102, 0.76);
+  pointer-events: none;
+  background: #fff;
+  padding: 0 6px;
+  margin-left: -6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  z-index: 2;
+  transition:
+    top       150ms ease,
+    transform 150ms ease,
+    font-size 150ms ease,
+    color     150ms ease;
+}
+
+.sp-floatingField.is-active .sp-floatingLabel,
+.sp-floatingField:focus-within .sp-floatingLabel,
+.sp-input:not(:placeholder-shown) + .sp-floatingLabel {
+  top: 0;
+  transform: translateY(-50%);
+  font-size: 11px;
+  font-weight: 700;
+  color: #0055bb;
+  letter-spacing: 0.02em;
+}
+
+/* ── Acciones del form ── */
+.sp-formActions {
+  display: flex;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+.sp-formActions .mov-btn {
+  flex: 1;
+  height: 42px;
+  justify-content: center;
+}
+
+/* ── Botón con dropdown abierto ── */
+.sp-btn--open {
+  background:   color-mix(in srgb, var(--balto-action) 10%, #fff) !important;
+  border-color: color-mix(in srgb, var(--balto-action) 35%, #fff) !important;
+  color:        var(--balto-action) !important;
+  box-shadow:   none !important;
+}
+
+/* ── Chips de estado ── */
+.sp-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  border: 1px solid transparent;
+  user-select: none;
+}
+
+.sp-chip--active   { background: rgba(16, 185, 129, 0.12); color: #057a55; border-color: rgba(16, 185, 129, 0.30); }
+.sp-chip--inactive { background: rgba(148, 163, 184, 0.12); color: #64748b; border-color: rgba(148, 163, 184, 0.30); }
+
+/* ── Fila en modo edición ── */
+.sp-row--editing       { background: rgba(0, 85, 187, 0.05) !important; }
+.sp-row--editing:hover { background: rgba(0, 85, 187, 0.08) !important; }
+
+/* ================================================
+   DARK MODE
+   ================================================ */
+html[data-theme="oscuro"] .sp-dropdown {
+  background: #0f1929 !important;
+  border-color: rgba(148, 163, 184, 0.18) !important;
+  box-shadow:
+    0 24px 56px -12px rgba(0, 0, 0, 0.65),
+    0 4px 14px rgba(0, 0, 0, 0.30) !important;
+}
+
+html[data-theme="oscuro"] .sp-dropdown::before {
+  background: #0f1929 !important;
+  border-color: rgba(148, 163, 184, 0.18) !important;
+}
+
+html[data-theme="oscuro"] .sp-dropdown__title {
+  color: rgba(226, 232, 240, 0.92) !important;
+  border-bottom-color: rgba(148, 163, 184, 0.14) !important;
+}
+
+html[data-theme="oscuro"] .sp-input {
+  background: rgba(15, 23, 42, 0.88) !important;
+  color: rgba(226, 232, 240, 0.92) !important;
+  border-color: rgba(148, 163, 184, 0.18) !important;
+}
+
+html[data-theme="oscuro"] .sp-input:focus {
+  background: rgba(15, 23, 42, 0.96) !important;
+  border-color: rgba(78, 161, 255, 0.45) !important;
+  box-shadow: 0 0 0 3px rgba(78, 161, 255, 0.18) !important;
+}
+
+html[data-theme="oscuro"] .sp-floatingLabel {
+  background: transparent !important;
+  color: rgba(226, 232, 240, 0.65) !important;
+}
+
+html[data-theme="oscuro"] .sp-floatingField.is-active .sp-floatingLabel,
+html[data-theme="oscuro"] .sp-floatingField:focus-within .sp-floatingLabel {
+  color: rgba(78, 161, 255, 0.92) !important;
+}
+
+html[data-theme="oscuro"] .sp-btn--open {
+  background:   rgba(78, 161, 255, 0.12) !important;
+  border-color: rgba(78, 161, 255, 0.28) !important;
+  color:        rgba(78, 161, 255, 0.95) !important;
+}
+
+html[data-theme="oscuro"] .sp-chip--active   { background: rgba(16, 185, 129, 0.16) !important; color: #34d399 !important; }
+html[data-theme="oscuro"] .sp-chip--inactive { background: rgba(148, 163, 184, 0.16) !important; color: #94a3b8 !important; }
+
+html[data-theme="oscuro"] .sp-row--editing { background: rgba(78, 161, 255, 0.08) !important; }
+
+html[data-theme="oscuro"] .sp-editBanner { color: rgba(78, 161, 255, 0.90) !important; }
+
+
+/* ── Grid tabla: 5 columnas ── */
+.scat-grid {
+  grid-template-columns: 1.4fr 2fr 110px 90px 108px;
+}
+
+/* ── Wrapper del botón (necesario para posicionar el dropdown) ── */
+.scat-dropWrap {
+  position: relative;
+}
+
+/* ── Dropdown flotante ── */
+.scat-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 300;
+  width: 320px;
+
+  background: #fff;
+  border: 1px solid rgba(10, 37, 64, 0.13);
+  border-radius: 14px;
+  box-shadow:
+    0 20px 48px -10px rgba(10, 37, 64, 0.22),
+    0 4px 12px rgba(10, 37, 64, 0.08);
+
+  padding: 18px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+
+  animation: scat-dropIn 180ms cubic-bezier(0.4, 0, 0.2, 1) both;
+  transform-origin: top right;
+}
+
+@keyframes scat-dropIn {
+  from { opacity: 0; transform: scale(0.95) translateY(-6px); }
+  to   { opacity: 1; transform: scale(1)    translateY(0);    }
+}
+
+/* flecha decorativa */
+.scat-dropdown::before {
+  content: "";
+  position: absolute;
+  top: -6px;
+  right: 18px;
+  width: 11px;
+  height: 11px;
+  background: #fff;
+  border-left: 1px solid rgba(10, 37, 64, 0.13);
+  border-top:  1px solid rgba(10, 37, 64, 0.13);
+  transform: rotate(45deg);
+  border-radius: 2px 0 0 0;
+}
+
+/* título del dropdown */
+.scat-dropdown__title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--balto-ink);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 2px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(10, 37, 64, 0.08);
+}
+
+/* banner modo edición */
+.scat-editBanner {
+  font-size: 11px;
+  font-weight: 650;
+  color: var(--balto-action);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: -4px;
+}
+
+/* ── Floating field ── */
+.scat-floatingField {
+  position: relative;
+  width: 100%;
+}
+
+.scat-input {
+  width: 100%;
+  height: 52px;
+  padding:  14px 8px;
+  border-radius: 10px;
+  border: 1.5px solid rgba(10, 37, 64, 0.14);
+  background: #fff;
+  outline: none;
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(10, 37, 64, 0.9);
+  font-family: inherit;
+  transition:
+    border-color 140ms ease,
+    box-shadow   140ms ease,
+    background   140ms ease;
+}
+
+.scat-input:hover    { border-color: rgba(10, 37, 64, 0.28); }
+.scat-input:focus    { border-color: rgba(0, 85, 187, 0.55); box-shadow: 0 0 0 3px rgba(0, 85, 187, 0.18); background: #fafcff; }
+.scat-input:disabled { opacity: 0.55; cursor: not-allowed; background: #f6f9fc; }
+
+/* textarea variante */
+.scat-input--textarea {
+  height: auto;
+  min-height: 80px;
+  padding-top: 22px;
+  resize: vertical;
+}
+
+/* floating label */
+.scat-floatingLabel {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(66, 84, 102, 0.76);
+  pointer-events: none;
+  background: #fff;
+  padding: 0 6px;
+  margin-left: -6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  z-index: 2;
+  transition:
+    top       150ms ease,
+    transform 150ms ease,
+    font-size 150ms ease,
+    color     150ms ease;
+}
+
+/* label de textarea: ancla en la parte superior desde el inicio */
+.scat-floatingField--textarea .scat-floatingLabel {
+  top: 14px;
+  transform: none;
+}
+
+/* label activo (input) */
+.scat-floatingField.is-active .scat-floatingLabel,
+.scat-floatingField:focus-within .scat-floatingLabel,
+.scat-input:not(:placeholder-shown) + .scat-floatingLabel {
+  top: 0;
+  transform: translateY(-50%);
+  font-size: 11px;
+  font-weight: 700;
+  color: #0055bb;
+  letter-spacing: 0.02em;
+}
+
+/* label activo (textarea) */
+.scat-floatingField--textarea.is-active .scat-floatingLabel,
+.scat-floatingField--textarea:focus-within .scat-floatingLabel {
+  top: -8px;
+  transform: none;
+  font-size: 11px;
+  font-weight: 700;
+  color: #0055bb;
+  letter-spacing: 0.02em;
+}
+
+/* ── Acciones del form ── */
+.scat-formActions {
+  display: flex;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+.scat-formActions .mov-btn {
+  flex: 1;
+  height: 42px;
+  justify-content: center;
+}
+
+/* ── Botón con dropdown abierto ── */
+.scat-btn--open {
+  background:    color-mix(in srgb, var(--balto-action) 10%, #fff) !important;
+  border-color:  color-mix(in srgb, var(--balto-action) 35%, #fff) !important;
+  color:         var(--balto-action) !important;
+  box-shadow:    none !important;
+}
+
+/* ── Chips de estado ── */
+.scat-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  border: 1px solid transparent;
+  user-select: none;
+}
+
+.scat-chip--active   { background: rgba(16, 185, 129, 0.12); color: #057a55; border-color: rgba(16, 185, 129, 0.30); }
+.scat-chip--inactive { background: rgba(148, 163, 184, 0.12); color: #64748b; border-color: rgba(148, 163, 184, 0.30); }
+
+/* ── Fila en modo edición ── */
+.scat-row--editing       { background: rgba(0, 85, 187, 0.05) !important; }
+.scat-row--editing:hover { background: rgba(0, 85, 187, 0.08) !important; }
+
+/* ── Contador de productos ── */
+.scat-prodCount {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+  color: var(--balto-text, #425466);
+}
+
+/* ================================================
+   DARK MODE
+   ================================================ */
+html[data-theme="oscuro"] .scat-dropdown {
+  background: #0f1929 !important;
+  border-color: rgba(148, 163, 184, 0.18) !important;
+  box-shadow:
+    0 24px 56px -12px rgba(0, 0, 0, 0.65),
+    0 4px 14px rgba(0, 0, 0, 0.30) !important;
+}
+
+html[data-theme="oscuro"] .scat-dropdown::before {
+  background: #0f1929 !important;
+  border-color: rgba(148, 163, 184, 0.18) !important;
+}
+
+html[data-theme="oscuro"] .scat-dropdown__title {
+  color: rgba(226, 232, 240, 0.92) !important;
+  border-bottom-color: rgba(148, 163, 184, 0.14) !important;
+}
+
+html[data-theme="oscuro"] .scat-input {
+  background: rgba(15, 23, 42, 0.88) !important;
+  color: rgba(226, 232, 240, 0.92) !important;
+  border-color: rgba(148, 163, 184, 0.18) !important;
+}
+
+html[data-theme="oscuro"] .scat-input:focus {
+  background: rgba(15, 23, 42, 0.96) !important;
+  border-color: rgba(78, 161, 255, 0.45) !important;
+  box-shadow: 0 0 0 3px rgba(78, 161, 255, 0.18) !important;
+}
+
+html[data-theme="oscuro"] .scat-floatingLabel {
+  background:rgba(15, 23, 42, 0.96)!important;
+  color: rgba(226, 232, 240, 0.65) !important;
+}
+
+html[data-theme="oscuro"] .scat-floatingField.is-active .scat-floatingLabel,
+html[data-theme="oscuro"] .scat-floatingField:focus-within .scat-floatingLabel {
+  color: rgba(78, 161, 255, 0.92) !important;
+}
+
+html[data-theme="oscuro"] .scat-btn--open {
+  background:   rgba(78, 161, 255, 0.12) !important;
+  border-color: rgba(78, 161, 255, 0.28) !important;
+  color:        rgba(78, 161, 255, 0.95) !important;
+}
+
+html[data-theme="oscuro"] .scat-chip--active   { background: rgba(16, 185, 129, 0.16) !important; color: #34d399 !important; }
+html[data-theme="oscuro"] .scat-chip--inactive { background: rgba(148, 163, 184, 0.16) !important; color: #94a3b8 !important; }
+
+html[data-theme="oscuro"] .scat-row--editing { background: rgba(78, 161, 255, 0.08) !important; }
+
+html[data-theme="oscuro"] .scat-editBanner { color: rgba(78, 161, 255, 0.90) !important; }
+
+html[data-theme="oscuro"] .scat-prodCount { color: rgba(226, 232, 240, 0.75) !important; }
+
+/* ── Imagen / thumb ── */
+.prod-productCell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.prod-thumb {
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--mov-border);
+  background: color-mix(in srgb, var(--balto-bg) 70%, #fff);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.prod-thumb__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.prod-thumb__placeholder {
+  font-size: 15px;
+  color: color-mix(in srgb, var(--balto-text) 50%, #fff);
+}
+
+/* ── SKU ── */
+.prod-sku {
+  font-size: 12px;
+  font-weight: 560;
+  letter-spacing: .04em;
+  color: var(--mov-muted);
+  font-family: "SF Mono", "Fira Code", "Cascadia Code", ui-monospace, monospace;
+}
+
+/* ── Precio promo ── */
+.prod-promo {
+  color: var(--balto-success);
+  font-weight: 580;
+}
+
+/* ── Columnas con orden: cursor pointer ── */
+.prod-th--sortable {
+  cursor: pointer;
+  user-select: none;
+  gap: 6px;
+}
+
+.prod-th--sortable:hover {
+  background: rgba(255,255,255,.06);
+}
+
+/* ── Ícono sort ── */
+.prod-sortIcon {
+  font-size: 10px;
+  margin-left: 4px;
+  flex-shrink: 0;
+}
+
+.prod-sortIcon--inactive {
+  opacity: .4;
+}
+
+.prod-sortIcon--active {
+  opacity: 1;
+  color: rgba(255,255,255,.95);
+}
+
+/* ── Footer de tabla: paginación + acciones ── */
+.stock-tableFooter {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+  padding: 8px;
+  border: 1px solid var(--mov-border, rgba(10, 37, 64, 0.10));
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--balto-bg, #f7f9fc) 82%, #fff);
+}
+
+.stock-tableFooter > .prod-pagination {
+  grid-column: 2;
+  justify-self: center;
+}
+
+.stock-tableFooter > .stock-tableActionsMobile {
+  grid-column: 3;
+  justify-self: end;
+}
+
+.stock-tableFooter--onlyActions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* ── Paginación minimalista ── */
+.prod-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-width: 0;
+  flex: 0 1 auto;
+  flex-wrap: wrap;
+}
+
+.prod-pagination__pages {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.prod-pagination__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 30px;
+  height: 30px;
+  padding: 0 9px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--mov-muted);
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 140ms ease, border-color 140ms ease, color 140ms ease, transform 140ms ease;
+}
+
+.prod-pagination__btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: rgba(0, 85, 187, 0.16);
+  background: rgba(0, 85, 187, 0.07);
+  color: var(--balto-action, #0055bb);
+}
+
+.prod-pagination__btn.is-active {
+  border-color: rgba(0, 85, 187, 0.22);
+  background: rgba(0, 85, 187, 0.10);
+  color: var(--balto-action, #0055bb);
+}
+
+.prod-pagination__btn:disabled {
+  cursor: not-allowed;
+  opacity: .45;
+}
+
+.prod-pagination__btn--nav {
+  min-width: 74px;
+}
+
+.prod-page-dots {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 30px;
+  color: var(--mov-muted);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.prod-pagination__summary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  padding: 0 6px;
+  font-size: 11.5px;
+  font-weight: 650;
+  color: var(--mov-muted);
+  white-space: nowrap;
+}
+
+/* ── Dark mode: thumbnail ── */
+html[data-theme="oscuro"] .prod-thumb {
+  background: rgba(15,23,42,.88) !important;
+  border-color: rgba(148,163,184,.14) !important;
+}
+
+html[data-theme="oscuro"] .prod-thumb__placeholder {
+  color: rgba(148,163,184,.55) !important;
+}
+
+html[data-theme="oscuro"] .prod-sku {
+  color: rgba(148,163,184,.72) !important;
+}
+
+html[data-theme="oscuro"] .prod-promo {
+  color: rgba(34,173,92,.90) !important;
+}
+.mi-modal__container--categorias .mi-cr-grid {
+  grid-template-columns: 280px 1fr;
+}
+
+.mi-cr-grid-categorias {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 2fr) 110px 80px 90px;
+  align-items: center;
+}
+
+.mi-cr-cell {
+  min-width: 0;
+}
+
+.mi-cr-cell--ellipsis {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.mi-cr-cell__ellipsis {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mi-cr-table__summary{
+  display: flex;
+}
+.nv-foot-btn--sm{
+  padding: 0 8px;
+}
+.mi-cr-table__rows--mcs{
+  height: calc(100vh - 380px);
+}
+.mov-chip--danger {
+  background: rgba(220, 38, 38, 0.14);
+  color: #dc2626;
+  border: 1px solid rgba(220, 38, 38, 0.22);
+}
+
+html[data-theme="oscuro"] .mov-chip--danger {
+  background: rgba(220, 38, 38, 0.18);
+  color: #f87171;
+  border-color: rgba(248, 113, 113, 0.26);
+}
+
+.sc-grid { grid-template-columns: 1fr 120px 108px; }
+
+
+.sc-dropWrap {
+  position: relative;
+}
+
+.sc-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 300;
+  width: 300px;
+
+  background: #fff;
+  border: 1px solid rgba(10,37,64,.13);
+  border-radius: 14px;
+  box-shadow: 0 20px 48px -10px rgba(10,37,64,.22), 0 4px 12px rgba(10,37,64,.08);
+
+  padding: 18px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+
+  animation: sc-dropIn 180ms cubic-bezier(.4,0,.2,1) both;
+  transform-origin: top right;
+}
+
+@keyframes sc-dropIn {
+  from { opacity: 0; transform: scale(.95) translateY(-6px); }
+  to   { opacity: 1; transform: scale(1)  translateY(0);     }
+}
+
+.sc-dropdown::before {
+  content: "";
+  position: absolute;
+  top: -6px;
+  right: 18px;
+  width: 11px;
+  height: 11px;
+  background: #fff;
+  border-left: 1px solid rgba(10,37,64,.13);
+  border-top:  1px solid rgba(10,37,64,.13);
+  transform: rotate(45deg);
+  border-radius: 2px 0 0 0;
+}
+
+/* título del dropdown */
+.sc-dropdown__title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--balto-ink);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 2px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(10,37,64,.08);
+}
+
+/* banner edición */
+.sc-editBanner {
+  font-size: 11px;
+  font-weight: 650;
+  color: var(--balto-action);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: -4px;
+}
+
+/* ── Floating field ── */
+.sc-floatingField { position: relative; width: 100%; }
+
+.sc-input {
+  width: 100%;
+  height: 52px;
+  padding: 22px 14px 8px;
+  border-radius: 10px;
+  border: 1.5px solid rgba(10,37,64,.14);
+  background: #fff;
+  outline: none;
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(10,37,64,.90);
+  font-family: inherit;
+  transition: border-color 140ms ease, box-shadow 140ms ease, background 140ms ease;
+}
+.sc-input:hover   { border-color: rgba(10,37,64,.28); }
+.sc-input:focus   { border-color: rgba(0,85,187,.55); box-shadow: 0 0 0 3px rgba(0,85,187,.18); background: #fafcff; }
+.sc-input:disabled{ opacity: .55; cursor: not-allowed; background: #f6f9fc; }
+
+.sc-floatingLabel {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(66,84,102,.76);
+  pointer-events: none;
+  background: #fff;
+  padding: 0 6px;
+  margin-left: -6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  z-index: 2;
+  transition: top 150ms ease, transform 150ms ease, font-size 150ms ease, color 150ms ease;
+}
+.sc-floatingField.is-active .sc-floatingLabel,
+.sc-floatingField:focus-within .sc-floatingLabel,
+.sc-input:not(:placeholder-shown) + .sc-floatingLabel {
+  top: 0;
+  transform: translateY(-50%);
+  font-size: 11px;
+  font-weight: 700;
+  color: #0055BB;
+  letter-spacing: .02em;
+}
+
+/* ── Acciones del form ── */
+.sc-formActions {
+  display: flex;
+  gap: 8px;
+  padding-top: 4px;
+}
+.sc-formActions .mov-btn {
+  flex: 1;
+  height: 42px;
+  justify-content: center;
+}
+
+/* ── Botón activo ── */
+.sc-btn--open {
+  background: color-mix(in srgb, var(--balto-action) 10%, #fff) !important;
+  border-color: color-mix(in srgb, var(--balto-action) 35%, #fff) !important;
+  color: var(--balto-action) !important;
+  box-shadow: none !important;
+}
+
+/* ── Chips estado ── */
+.sc-chip {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 3px 10px; border-radius: 999px;
+  font-size: 11px; font-weight: 700; letter-spacing: .2px;
+  border: 1px solid transparent; user-select: none;
+}
+.sc-chip--active  { background: rgba(16,185,129,.12); color: #057A55; border-color: rgba(16,185,129,.30); }
+.sc-chip--inactive{ background: rgba(148,163,184,.12); color: #64748b; border-color: rgba(148,163,184,.30); }
+
+/* ── Fila en edición ── */
+.sc-row--editing { background: rgba(0,85,187,.05) !important; }
+.sc-row--editing:hover { background: rgba(0,85,187,.08) !important; }
+
+/* ─── Dark mode ─── */
+html[data-theme="oscuro"] .sc-dropdown {
+  background: #0f1929 !important;
+  border-color: rgba(148,163,184,.18) !important;
+  box-shadow: 0 24px 56px -12px rgba(0,0,0,.65), 0 4px 14px rgba(0,0,0,.30) !important;
+}
+html[data-theme="oscuro"] .sc-dropdown::before {
+  background: #0f1929 !important;
+  border-color: rgba(148,163,184,.18) !important;
+}
+html[data-theme="oscuro"] .sc-dropdown__title { color: rgba(226,232,240,.92) !important; border-bottom-color: rgba(148,163,184,.14) !important; }
+html[data-theme="oscuro"] .sc-input {
+  background: rgba(15,23,42,.88) !important;
+  color: rgba(226,232,240,.92) !important;
+  border-color: rgba(148,163,184,.18) !important;
+}
+html[data-theme="oscuro"] .sc-input:focus {
+  background: rgba(15,23,42,.96) !important;
+  border-color: rgba(78,161,255,.45) !important;
+  box-shadow: 0 0 0 3px rgba(78,161,255,.18) !important;
+}
+html[data-theme="oscuro"] .sc-floatingLabel { background: transparent !important; color: rgba(226,232,240,.65) !important; }
+html[data-theme="oscuro"] .sc-floatingField.is-active .sc-floatingLabel,
+html[data-theme="oscuro"] .sc-floatingField:focus-within .sc-floatingLabel { color: rgba(78,161,255,.92) !important; }
+html[data-theme="oscuro"] .sc-btn--open { background: rgba(78,161,255,.12) !important; border-color: rgba(78,161,255,.28) !important; color: rgba(78,161,255,.95) !important; }
+html[data-theme="oscuro"] .sc-chip--active  { background: rgba(16,185,129,.16) !important; color: #34d399 !important; }
+html[data-theme="oscuro"] .sc-chip--inactive{ background: rgba(148,163,184,.16) !important; color: #94a3b8 !important; }
+html[data-theme="oscuro"] .sc-row--editing  { background: rgba(78,161,255,.08) !important; }
+html[data-theme="oscuro"] .sc-editBanner    { color: rgba(78,161,255,.90) !important; }
+;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* Stock 2.0 - agregado visual mínimo, respetando estética original */
+.prod-variantBadge {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  margin-top: 3px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--nv-action, #2563eb);
+  background: rgba(37, 99, 235, .10);
+  border: 1px solid rgba(37, 99, 235, .18);
+}
+.prod-productCell { align-items: center; }
+.prod-productCell .mov-ellipsissss { display: block; }
+
+/* Stock 2.0 - desplegable de variantes en tabla principal */
+.prod-expandBtn,
+.prod-expandSpacer {
+  flex: 0 0 26px;
+  width: 26px;
+  height: 26px;
+}
+
+.prod-expandBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--mov-border, rgba(10,37,64,.12));
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--balto-bg, #f7f9fc) 82%, #fff);
+  color: var(--balto-action, #0055bb);
+  cursor: pointer;
+  transition: background .15s ease, border-color .15s ease, transform .15s ease;
+}
+
+.prod-expandBtn:hover {
+  background: color-mix(in srgb, var(--balto-action, #0055bb) 10%, #fff);
+  border-color: color-mix(in srgb, var(--balto-action, #0055bb) 32%, #fff);
+}
+
+.prod-expandSpacer {
+  display: inline-block;
+}
+
+.prod-variantsDetailRow {
+  width: 100%;
+  padding: 12px;
+  border-bottom: 1px solid var(--mov-border, rgba(10,37,64,.08));
+  background: color-mix(in srgb, var(--balto-bg, #f7f9fc) 88%, #fff);
+}
+
+.prod-variantsPanel {
+  border: 1px solid var(--mov-border, rgba(10,37,64,.10));
+  border-radius: 14px;
+  background: var(--balto-card, #fff);
+  overflow: hidden;
+  box-shadow: 0 10px 28px -22px rgba(10,37,64,.35);
+}
+
+.prod-variantsPanel__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--mov-border, rgba(10,37,64,.08));
+}
+
+.prod-variantsPanel__head strong {
+  display: block;
+  color: var(--balto-text, #0a2540);
+  font-size: 13px;
+}
+
+.prod-variantsPanel__head span,
+.prod-variantsPanel__empty {
+  color: var(--mov-muted, #64748b);
+  font-size: 12px;
+  font-weight: 550;
+}
+
+.prod-variantsPanel__empty {
+  padding: 13px 12px;
+}
+
+.prod-variantsMiniTable {
+  width: 100%;
+}
+
+.prod-variantsMiniTable__head,
+.prod-variantsMiniTable__row {
+  display: grid;
+  grid-template-columns: 1.45fr .85fr .65fr .9fr .9fr .9fr .75fr .65fr;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+}
+
+.prod-variantsMiniTable__head {
+  color: var(--mov-muted, #64748b);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .02em;
+  background: color-mix(in srgb, var(--balto-bg, #f7f9fc) 78%, #fff);
+}
+
+.prod-variantsMiniTable__row {
+  border-top: 1px solid var(--mov-border, rgba(10,37,64,.06));
+  font-size: 12px;
+  color: var(--balto-text, #0a2540);
+}
+
+.prod-variantsMiniTable__row b,
+.prod-variantsMiniTable__row small {
+  display: block;
+  min-width: 0;
+}
+
+.prod-variantsMiniTable__row small {
+  margin-top: 2px;
+  color: var(--mov-muted, #64748b);
+  font-size: 11px;
+  font-weight: 520;
+}
+
+.prod-variantsMiniTable__row.is-inactive {
+  opacity: .78;
+  background: color-mix(in srgb, var(--balto-bg, #f7f9fc) 88%, #fff);
+}
+
+.prod-variantBadge--active {
+  background: rgba(16, 185, 129, .12);
+  color: #047857;
+}
+
+.prod-variantActions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.prod-variantExtraPrices {
+  color: var(--mov-muted, #64748b);
+}
+
+
+html[data-theme="oscuro"] .prod-expandBtn {
+  background: rgba(15,23,42,.72) !important;
+  border-color: rgba(148,163,184,.18) !important;
+  color: rgba(78,161,255,.95) !important;
+}
+
+html[data-theme="oscuro"] .prod-variantsDetailRow {
+  background: rgba(15,23,42,.35) !important;
+  border-bottom-color: rgba(148,163,184,.12) !important;
+}
+
+html[data-theme="oscuro"] .prod-variantsPanel,
+html[data-theme="oscuro"] .prod-variantsMiniTable__head {
+  background: rgba(15,23,42,.86) !important;
+  border-color: rgba(148,163,184,.16) !important;
+}
+
+html[data-theme="oscuro"] .prod-variantsPanel__head,
+html[data-theme="oscuro"] .prod-variantsMiniTable__row {
+  border-color: rgba(148,163,184,.12) !important;
+}
+
+html[data-theme="oscuro"] .prod-variantsPanel__head strong,
+html[data-theme="oscuro"] .prod-variantsMiniTable__row {
+  color: rgba(226,232,240,.92) !important;
+}
+
+html[data-theme="oscuro"] .prod-variantsPanel__head span,
+html[data-theme="oscuro"] .prod-variantsPanel__empty,
+html[data-theme="oscuro"] .prod-variantsMiniTable__head,
+html[data-theme="oscuro"] .prod-variantsMiniTable__row small {
+  color: rgba(226,232,240,.62) !important;
+}
+
+html[data-theme="oscuro"] .prod-variantsMiniTable__row.is-inactive {
+  background: rgba(15,23,42,.56) !important;
+}
+
+html[data-theme="oscuro"] .prod-variantBadge--active {
+  background: rgba(16,185,129,.14) !important;
+  color: rgba(110,231,183,.95) !important;
+}
+
+@media (max-width: 900px) {
+  .prod-variantsDetailRow { padding-left: 12px; }
+  .prod-variantsMiniTable__head { display: none; }
+  .prod-variantsMiniTable__row {
+    grid-template-columns: 1fr;
+    gap: 6px;
+    padding: 12px;
+  }
+}
+
+/* Stock v2 - filtro jerárquico de categorías */
+.stock-catFilter {
+  position: relative;
+  min-width: 226px;
+}
+
+.stock-catFilterTrigger {
+  display: flex !important;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.stock-catFilterTrigger:disabled {
+  cursor: not-allowed;
+}
+
+.stock-catFilterTrigger__text {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-weight: 650;
+  color: var(--balto-text, #0a2540);
+}
+
+.stock-catFilterTrigger__icon {
+  flex: 0 0 auto;
+  color: var(--balto-action, #0055bb);
+  transition: transform .16s ease;
+}
+
+.stock-catFilter.is-open .stock-catFilterTrigger__icon {
+  transform: rotate(180deg);
+}
+
+.stock-catFilterPanel {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 7px);
+  z-index: 120;
+  max-height: 330px;
+  overflow: auto;
+  padding: 6px;
+  border: 1px solid rgba(10, 37, 64, .16);
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 18px 42px -18px rgba(10, 37, 64, .35), 0 6px 16px rgba(10, 37, 64, .08);
+}
+
+.stock-catFilterNode {
+  display: block;
+}
+
+.stock-catFilterOption {
+  width: 100%;
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--balto-text, #0a2540);
+  font: inherit;
+  transition: background .14s ease, color .14s ease;
+}
+
+button.stock-catFilterOption {
+  cursor: pointer;
+}
+
+.stock-catFilterOption:hover,
+.stock-catFilterOption.is-selected {
+  background: rgba(0, 85, 187, .10);
+  color: var(--balto-action, #0055bb);
+}
+
+.stock-catFilterOption.is-selected .stock-catFilterLabel {
+  font-weight: 800;
+}
+
+.stock-catFilterExpand {
+  flex: 0 0 24px;
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 8px;
+  background: rgba(10, 37, 64, .06);
+  color: var(--balto-action, #0055bb);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.stock-catFilterExpand:hover {
+  background: rgba(0, 85, 187, .14);
+}
+
+.stock-catFilterExpand--empty {
+  background: transparent;
+  cursor: default;
+}
+
+.stock-catFilterLabel {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 650;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.stock-catFilterChildren {
+  margin-top: 2px;
+}
+
+.stock-catFilterEmpty {
+  padding: 12px 10px;
+  font-size: 12px;
+  color: var(--mov-muted, #64748b);
+  font-weight: 600;
+}
+
+html[data-theme="oscuro"] .stock-catFilterTrigger__text {
+  color: rgba(226,232,240,.92) !important;
+}
+
+html[data-theme="oscuro"] .stock-catFilterPanel {
+  background: rgba(15,23,42,.96) !important;
+  border-color: rgba(148,163,184,.18) !important;
+  box-shadow: 0 18px 42px -18px rgba(0,0,0,.65), 0 6px 16px rgba(0,0,0,.28) !important;
+}
+
+html[data-theme="oscuro"] .stock-catFilterOption {
+  color: rgba(226,232,240,.86) !important;
+}
+
+html[data-theme="oscuro"] .stock-catFilterOption:hover,
+html[data-theme="oscuro"] .stock-catFilterOption.is-selected {
+  background: rgba(78,161,255,.14) !important;
+  color: rgba(78,161,255,.96) !important;
+}
+
+html[data-theme="oscuro"] .stock-catFilterExpand {
+  background: rgba(148,163,184,.10) !important;
+  color: rgba(78,161,255,.96) !important;
+}
+
+/* Stock v2 - precios extra en variantes desplegadas */
+.prod-variantExtraPrices {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.prod-variantExtraPrices small {
+  display: inline-flex !important;
+  align-items: center;
+  width: max-content;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(0, 85, 187, 0.08);
+  color: var(--balto-action, #0055bb) !important;
+  font-size: 10.5px !important;
+  font-weight: 700 !important;
+}
+
+html[data-theme="oscuro"] .prod-variantExtraPrices small {
+  background: rgba(78,161,255,.12) !important;
+  color: rgba(147,197,253,.95) !important;
+}
+
+
+/* Los estilos específicos de modales de stock se movieron a Stock/modales/*.css. */
+
+/* El estado dado de baja ya no usa borde punteado: queda unificado con los chips de estado. */
+.prod-variantBadge--inactive {
+  opacity: 1;
+  border-style: solid;
+}
+
+/* Stock: alto propio de tabla.
+   Se reduce respecto al global para que la paginación quede visible
+   cuando hay muchos registros. */
+.stock-tableWrap {
+  min-height: calc(100vh - 330px) !important;
+  max-height: calc(100vh - 330px) !important;
+}
+
+/* Sin registros no hay contenido que desplazar: evita mostrar una barra
+   de scroll vacia y deja de reservar su espacio. */
+.stock-tableWrap--empty {
+  overflow-y: hidden !important;
+  scrollbar-gutter: auto !important;
+}
+
+/* Stock: acciones principales debajo de la tabla desde 1300px */
+.stock-tableActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.stock-tableActionsMobile,
+.stock-tableActionsAddMobile {
+  display: none;
+}
+
+.stock-tableActions .mov-btn {
+  height: 44px;
+  padding: 0 14px;
+  border-radius: 11px;
+  font-size: 13px;
+  font-weight: 650;
+  box-shadow: none;
+}
+
+.stock-tableActions .mov-btn svg {
+  font-size: 12px;
+}
+
+/* Header de Stock: el buscador puede ceder ancho cuando la barra lateral
+   reduce el espacio disponible. El titulo conserva una base legible y los
+   filtros se adaptan sin superponerse. */
+@media (min-width: 901px) {
+  .stock-page .mov-card__headLeft {
+    align-items: flex-end;
+  }
+
+  .stock-page .title-mov {
+    flex: 0 1 205px;
+    min-width: 150px;
+  }
+
+  .stock-page .mov-headFilters {
+    flex: 1 1 auto;
+  }
+
+  .stock-page .mov-headFilters .cc-filter--search {
+    width: auto;
+    min-width: 160px;
+    flex: 1 1 320px;
+  }
+
+  .stock-page .mov-headFilters > .cc-filter:not(.cc-filter--search) {
+    min-width: 170px;
+    flex: 0 1 226px;
+  }
+
+  .stock-page .stock-catFilter {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+@media (min-width: 1501px) {
+  .stock-tableWrap--with-pagination {
+    min-height: calc(100vh - 300px) !important;
+    max-height: calc(100vh - 300px) !important;
+  }
+
+  .stock-tableWrap--without-pagination {
+    min-height: calc(100vh - 240px) !important;
+    max-height: calc(100vh - 240px) !important;
+  }
+
+  .stock-tableFooter--onlyActions {
+    display: none;
+  }
+}
+
+@media (max-width: 1500px) {
+  .stock-tableActionsDesktop {
+    display: none !important;
+  }
+
+  .stock-tableActionsAddMobile {
+    display: flex !important;
+    margin-left: auto;
+  }
+
+  .stock-tableActionsMobile {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+  }
+
+  .stock-tableWrap {
+    min-height: calc(100vh - 300px) !important;
+    max-height: calc(100vh - 300px) !important;
+  }
+
+  .stock-tableFooter {
+    align-items: stretch;
+  }
+
+  .stock-tableActionsMobile .mov-btn {
+    min-width: 150px;
+    height: 34px;
+    padding-inline: 8px;
+  }
+}
+
+
+@media (max-width: 980px) and (min-width: 621px) {
+  .stock-tableFooter {
+    grid-template-columns: 1fr;
+  }
+
+  .stock-tableFooter > .prod-pagination,
+  .stock-tableFooter > .stock-tableActionsMobile {
+    grid-column: 1;
+    justify-self: center;
+  }
+}
+
+@media (max-width: 620px) {
+  .stock-tableFooter {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .stock-tableFooter > .prod-pagination,
+  .stock-tableFooter > .stock-tableActionsMobile {
+    grid-column: auto;
+    justify-self: stretch;
+  }
+
+  .prod-pagination {
+    justify-content: center;
+  }
+
+  .prod-pagination__summary {
+    flex-basis: 100%;
+    order: 4;
+  }
+
+  .stock-tableActionsAddMobile,
+  .stock-tableActionsMobile {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .stock-tableWrap {
+    min-height: 46vh !important;
+    max-height: 46vh !important;
+  }
+
+  .stock-tableActionsAddMobile .stock-tableActions,
+  .stock-tableActionsMobile {
+    width: 100%;
+  }
+
+  .stock-tableActions .mov-btn,
+  .stock-tableActionsMobile .mov-btn {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+
+  .stock-tableActionsMobile .stock-actionBtn__text {
+    display: none;
+  }
+
+  .stock-tableActionsMobile .stock-actionBtn {
+    justify-content: center;
+  }
+
+  .prod-variantBadge__label,
+  .prod-variantBadge__detail {
+    display: none;
+  }
+}
+
+html[data-theme="oscuro"] .stock-tableFooter {
+  background: rgba(15, 23, 42, 0.56) !important;
+  border-color: rgba(148, 163, 184, 0.16) !important;
+}
+
+html[data-theme="oscuro"] .prod-pagination__btn:hover:not(:disabled),
+html[data-theme="oscuro"] .prod-pagination__btn.is-active {
+  background: rgba(78, 161, 255, 0.12) !important;
+  border-color: rgba(78, 161, 255, 0.22) !important;
+  color: rgba(147, 197, 253, 0.98) !important;
+}
+
+/* Stock: botones principales con identidad visual propia */
+.stock-tableActions .stock-actionBtn {
+  border-width: 1px;
+  box-shadow: none !important;
+  transition:
+    transform 140ms ease,
+    background 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease;
+}
+
+.stock-tableActions .stock-actionBtn:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.stock-tableActions .stock-actionBtn--bajas {
+  background: rgba(124, 58, 237, 0.10) !important;
+  border-color: rgba(124, 58, 237, 0.24) !important;
+  color: #6d28d9 !important;
+}
+
+.stock-tableActions .stock-actionBtn--bajas:hover:not(:disabled) {
+  background: rgba(124, 58, 237, 0.15) !important;
+  border-color: rgba(124, 58, 237, 0.34) !important;
+}
+
+.stock-tableActions .stock-actionBtn--ajuste {
+  background: rgba(14, 165, 143, 0.10) !important;
+  border-color: rgba(14, 165, 143, 0.24) !important;
+  color: #0f766e !important;
+}
+
+.stock-tableActions .stock-actionBtn--ajuste:hover:not(:disabled) {
+  background: rgba(14, 165, 143, 0.15) !important;
+  border-color: rgba(14, 165, 143, 0.34) !important;
+}
+
+.stock-tableActions .stock-actionBtn:disabled {
+  opacity: 0.48;
+  transform: none !important;
+  cursor: not-allowed;
+}
+
+/* Stock: centrado de columnas puntuales en la subtabla de variantes */
+.prod-variantsMiniTable__head span:nth-child(2),
+.prod-variantsMiniTable__head span:nth-child(3),
+.prod-variantsMiniTable__head span:nth-child(7),
+.prod-variantsMiniTable__head span:nth-child(8),
+.prod-variantsMiniTable__row > span:nth-child(2),
+.prod-variantsMiniTable__row > span:nth-child(3),
+.prod-variantsMiniTable__row > span:nth-child(7),
+.prod-variantsMiniTable__row > span:nth-child(8) {
+  justify-self: center;
+  text-align: center;
+}
+
+.prod-variantsMiniTable__row > span:nth-child(2),
+.prod-variantsMiniTable__row > span:nth-child(3),
+.prod-variantsMiniTable__row > span:nth-child(7),
+.prod-variantsMiniTable__row > span:nth-child(8) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Stock: chips de estado de variantes con la misma lógica visual que los chips de stock */
+.prod-variantBadge {
+  min-height: 24px;
+  margin-top: 0;
+  padding: 3px 10px;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 0.01em;
+  line-height: 1;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.26);
+}
+
+.prod-variantBadge--active {
+  background: rgba(16, 185, 129, 0.13) !important;
+  color: #047857 !important;
+  border-color: rgba(16, 185, 129, 0.26) !important;
+}
+
+.prod-variantBadge--inactive {
+  background: rgba(220, 38, 38, 0.12) !important;
+  color: #b91c1c !important;
+  border-color: rgba(220, 38, 38, 0.24) !important;
+  border-style: solid;
+  opacity: 1;
+}
+
+html[data-theme="oscuro"] .stock-tableActions .stock-actionBtn--bajas {
+  background: rgba(167, 139, 250, 0.13) !important;
+  border-color: rgba(167, 139, 250, 0.28) !important;
+  color: #c4b5fd !important;
+}
+
+html[data-theme="oscuro"] .stock-tableActions .stock-actionBtn--bajas:hover:not(:disabled) {
+  background: rgba(167, 139, 250, 0.18) !important;
+  border-color: rgba(167, 139, 250, 0.38) !important;
+}
+
+html[data-theme="oscuro"] .stock-tableActions .stock-actionBtn--ajuste {
+  background: rgba(45, 212, 191, 0.12) !important;
+  border-color: rgba(45, 212, 191, 0.26) !important;
+  color: #5eead4 !important;
+}
+
+html[data-theme="oscuro"] .stock-tableActions .stock-actionBtn--ajuste:hover:not(:disabled) {
+  background: rgba(45, 212, 191, 0.17) !important;
+  border-color: rgba(45, 212, 191, 0.36) !important;
+}
+
+html[data-theme="oscuro"] .prod-variantBadge--active {
+  background: rgba(16, 185, 129, 0.16) !important;
+  color: #34d399 !important;
+  border-color: rgba(52, 211, 153, 0.28) !important;
+}
+
+html[data-theme="oscuro"] .prod-variantBadge--inactive {
+  background: rgba(220, 38, 38, 0.18) !important;
+  color: #f87171 !important;
+  border-color: rgba(248, 113, 113, 0.28) !important;
+}
+
+@media (max-width: 900px) {
+  .prod-variantsMiniTable__row > span:nth-child(2),
+  .prod-variantsMiniTable__row > span:nth-child(3),
+  .prod-variantsMiniTable__row > span:nth-child(7),
+  .prod-variantsMiniTable__row > span:nth-child(8) {
+    justify-self: stretch;
+    justify-content: flex-start;
+    text-align: left;
+  }
+}
+
+
+/* Stock: chips reales de estado en la subtabla de variantes.
+   Separados del badge de cantidad de variantes para que Activa/Dada de baja no hereden estilos distintos. */
+.prod-statusChip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 86px;
+  min-height: 28px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  margin: 0 auto;
+  box-shadow: none;
+}
+
+.prod-statusChip--active {
+  background: rgba(16, 185, 129, 0.13) !important;
+  color: #047857 !important;
+  border-color: rgba(16, 185, 129, 0.26) !important;
+}
+
+.prod-statusChip--inactive {
+  background: rgba(220, 38, 38, 0.12) !important;
+  color: #b91c1c !important;
+  border-color: rgba(220, 38, 38, 0.24) !important;
+}
+
+html[data-theme="oscuro"] .prod-statusChip--active {
+  background: rgba(16, 185, 129, 0.16) !important;
+  color: #34d399 !important;
+  border-color: rgba(52, 211, 153, 0.28) !important;
+}
+
+html[data-theme="oscuro"] .prod-statusChip--inactive {
+  background: rgba(239, 68, 68, 0.18) !important;
+  color: #fca5a5 !important;
+  border-color: rgba(248, 113, 113, 0.28) !important;
+}
+
+/* Stock: alinear a la derecha las columnas de precios en la subtabla de variantes */
+.prod-variantsMiniTable__head span:nth-child(4),
+.prod-variantsMiniTable__head span:nth-child(5),
+.prod-variantsMiniTable__head span:nth-child(6),
+.prod-variantsMiniTable__row > span:nth-child(4),
+.prod-variantsMiniTable__row > span:nth-child(5),
+.prod-variantsMiniTable__row > span:nth-child(6) {
+  justify-self: end;
+  text-align: right;
+}
+
+.prod-variantsMiniTable__row > span:nth-child(4),
+.prod-variantsMiniTable__row > span:nth-child(5),
+.prod-variantsMiniTable__row > span:nth-child(6) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  width: 100%;
+}
+
+@media (max-width: 900px) {
+  .prod-variantsMiniTable__head span:nth-child(4),
+  .prod-variantsMiniTable__head span:nth-child(5),
+  .prod-variantsMiniTable__head span:nth-child(6),
+  .prod-variantsMiniTable__row > span:nth-child(4),
+  .prod-variantsMiniTable__row > span:nth-child(5),
+  .prod-variantsMiniTable__row > span:nth-child(6) {
+    justify-self: stretch;
+    text-align: left;
+  }
+
+  .prod-variantsMiniTable__row > span:nth-child(4),
+  .prod-variantsMiniTable__row > span:nth-child(5),
+  .prod-variantsMiniTable__row > span:nth-child(6) {
+    justify-content: flex-start;
+  }
+}
+
+/* Stock: despliegue de variantes desde la fila completa + badge de cantidad */
+.mov-gridTable--row.prod-row--expandable {
+  cursor: pointer;
+  user-select: none;
+  transition: background .16s ease, box-shadow .16s ease, border-color .16s ease;
+}
+
+.mov-gridTable--row.prod-row--expandable:hover {
+  background: color-mix(in srgb, var(--nv-action, #0055BB) 5%, var(--balto-card, #fff));
+}
+
+.mov-gridTable--row.prod-row--expandable:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--nv-action, #0055BB) 56%, transparent);
+  outline-offset: -2px;
+}
+
+.mov-gridTable--row.prod-row--expandable.is-variants-open {
+  background: color-mix(in srgb, var(--nv-action, #0055BB) 7%, var(--balto-card, #fff));
+  box-shadow: inset 3px 0 0 var(--nv-action, #0055BB);
+}
+
+.mov-gridTable--row.prod-row--expandable .mov-iconBtn,
+.mov-gridTable--row.prod-row--expandable a,
+.mov-gridTable--row.prod-row--expandable input,
+.mov-gridTable--row.prod-row--expandable button,
+.mov-gridTable--row.prod-row--expandable select,
+.mov-gridTable--row.prod-row--expandable textarea {
+  user-select: auto;
+}
+
+.prod-productCell {
+  gap: 12px;
+}
+
+.prod-variantBadge--count {
+  display: flex;
+  align-items: center;
+  min-height: 30px !important;
+  padding: 0 12px !important;
+  border-radius: 999px !important;
+  border: 1px solid color-mix(in srgb, var(--nv-action, #0055BB) 26%, transparent) !important;
+
+  background: linear-gradient(135deg,
+    color-mix(in srgb, var(--nv-action, #0055BB) 14%, var(--balto-card, #fff)),
+    color-mix(in srgb, var(--nv-action, #0055BB) 7%, var(--balto-card, #fff))
+  ) !important;
+  color: var(--nv-action, #0055BB) !important;
+  font-size: 12px !important;
+  font-weight: 680 !important;
+  letter-spacing: .01em !important;
+  box-shadow: 0 8px 18px -14px color-mix(in srgb, var(--nv-action, #0055BB) 70%, transparent) !important;
+}
+
+.prod-variantBadge__label {
+  margin-left: 4px;
+}
+
+.prod-variantBadge--count::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: .72;
+}
+
+.prod-row--expandable.is-variants-open .prod-variantBadge--count {
+  border-color: color-mix(in srgb, var(--nv-action, #0055BB) 42%, transparent) !important;
+  box-shadow: 0 10px 22px -16px color-mix(in srgb, var(--nv-action, #0055BB) 76%, transparent) !important;
+}
+
+html[data-theme="oscuro"] .mov-gridTable--row.prod-row--expandable:hover {
+  background: rgba(78, 161, 255, 0.08) !important;
+}
+
+html[data-theme="oscuro"] .mov-gridTable--row.prod-row--expandable.is-variants-open {
+  background: rgba(78, 161, 255, 0.11) !important;
+  box-shadow: inset 3px 0 0 rgba(78, 161, 255, 0.88);
+}
+
+html[data-theme="oscuro"] .prod-variantBadge--count {
+  background: linear-gradient(135deg, rgba(78, 161, 255, 0.18), rgba(37, 99, 235, 0.10)) !important;
+  color: #93c5fd !important;
+  border-color: rgba(147, 197, 253, 0.24) !important;
+  box-shadow: 0 10px 22px -17px rgba(78, 161, 255, 0.72) !important;
+}
+
+/* Stock: chip de producto dado de baja en la fila principal.
+   Se separa del badge de variantes para que no quede como etiqueta plana sin fondo. */
+.prod-productCell > .prod-variantBadge--inactive,
+.mov-gridCell .prod-productCell > .prod-variantBadge--inactive {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: fit-content !important;
+  min-height: 28px !important;
+  margin-top: 4px !important;
+  padding: 0 12px !important;
+  border-radius: 999px !important;
+  border: 1px solid rgba(220, 38, 38, 0.28) !important;
+  background: rgba(220, 38, 38, 0.12) !important;
+  color: #b91c1c !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  line-height: 1 !important;
+  letter-spacing: 0.01em !important;
+  box-shadow: none !important;
+  opacity: 1 !important;
+}
+
+html[data-theme="oscuro"] .prod-productCell > .prod-variantBadge--inactive,
+html[data-theme="oscuro"] .mov-gridCell .prod-productCell > .prod-variantBadge--inactive {
+  border-color: rgba(248, 113, 113, 0.30) !important;
+  background: rgba(239, 68, 68, 0.18) !important;
+  color: #fca5a5 !important;
+}
+
+/* Modal de espera para ajustes masivos de precios */
+.stock-priceLoadingOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000000000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 22px;
+  background: rgba(4, 12, 24, 0.58);
+  backdrop-filter: blur(5px);
+}
+
+.stock-priceLoadingModal {
+  width: min(480px, 92vw);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  padding: 30px 32px 28px;
+  border-radius: 24px;
+  background: var(--nv-bg, #fff);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow: 0 28px 80px rgba(10, 37, 64, 0.32);
+  text-align: center;
+}
+
+.stock-priceLoadingModal__icon {
+  width: 124px;
+  height: 124px;
+  margin-bottom: 18px;
+  border-radius: 28px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  color: var(--nv-action, #0055BB);
+  background: rgba(0, 85, 187, 0.07);
+  box-shadow: inset 0 0 0 1px rgba(0, 85, 187, 0.07);
+}
+
+.stock-priceLoadingModal__gif {
+  width: 108px;
+  height: 108px;
+  object-fit: contain;
+  display: block;
+}
+
+.stock-priceLoadingModal__content {
+  width: 100%;
+}
+
+.stock-priceLoadingModal__content h3 {
+  margin: 0 0 10px;
+  color: var(--nv-text, #0A2540);
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.stock-priceLoadingModal__content p {
+  margin: 0 0 12px;
+  color: var(--nv-muted, #5A6A7E);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.45;
+}
+
+.stock-priceLoadingModal__content small {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 100%;
+  padding: 9px 14px;
+  border-radius: 999px;
+  background: rgba(0, 85, 187, 0.08);
+  color: var(--nv-action, #0055BB);
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+html[data-theme="oscuro"] .stock-priceLoadingModal__icon,
+html[data-theme="oscuro"] .stock-priceLoadingModal__content small {
+  background: rgba(78, 161, 255, 0.12);
+}
+
+@media (max-width: 520px) {
+  .stock-priceLoadingModal {
+    padding: 26px 20px 24px;
+  }
+
+  .stock-priceLoadingModal__icon {
+    width: 112px;
+    height: 112px;
+  }
+
+  .stock-priceLoadingModal__gif {
+    width: 98px;
+    height: 98px;
+  }
+
+  .stock-priceLoadingModal__content h3 {
+    font-size: 18px;
+  }
+
+  .stock-priceLoadingModal__content small {
+    border-radius: 14px;
+  }
+}
+
+/* Modal local para elegir entre baja lógica y eliminación permanente */
+
+/* Reportes de Stock */
+.stock-tableActions .stock-actionBtn--reportes {
+  border-color: rgba(0, 85, 187, 0.26);
+  color: var(--nv-action, #0055bb);
+  background: rgba(0, 85, 187, 0.06);
+}
+
+.stock-tableActions .stock-actionBtn--reportes:hover:not(:disabled) {
+  border-color: rgba(0, 85, 187, 0.42);
+  background: rgba(0, 85, 187, 0.12);
+}
+
+html[data-theme="oscuro"] .stock-tableActions .stock-actionBtn--reportes {
+  border-color: rgba(78, 161, 255, 0.34);
+  color: #78b7ff;
+  background: rgba(78, 161, 255, 0.10);
+}

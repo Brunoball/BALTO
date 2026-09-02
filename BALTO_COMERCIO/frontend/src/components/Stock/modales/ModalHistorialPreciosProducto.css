@@ -1,0 +1,131 @@
+/* =========================================================
+   ModalHistorialPreciosProducto.css
+   Estilos específicos del historial de precios de un producto.
+   Usa la base compartida de ModalAjustePrecios.css + globals modals.
+   ========================================================= */
+
+/* =========================================================
+   Stock 2.0 · Historial de precios por producto + tabs
+   ========================================================= */
+.ap-tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px;
+  border-radius: 16px;
+  background: var(--nv-bg, #fff);
+  border: 1px solid var(--nv-border-md, rgba(10, 37, 64, 0.12));
+  box-shadow: 0 10px 24px rgba(10, 37, 64, 0.05);
+}
+
+.ap-tab {
+  border: 0;
+  background: transparent;
+  color: var(--nv-muted, #5A6A7E);
+  min-height: 38px;
+  padding: 0 16px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  font-weight: 850;
+  font-family: inherit;
+  transition: background .16s ease, color .16s ease, box-shadow .16s ease;
+}
+
+.ap-tab:hover {
+  background: color-mix(in srgb, var(--nv-action, #0055BB) 8%, transparent);
+  color: var(--nv-action, #0055BB);
+}
+
+.ap-tab.is-active {
+  background: var(--nv-action, #0055BB);
+  color: #fff;
+  box-shadow: 0 10px 22px rgba(0, 85, 187, 0.22);
+}
+
+
+
+.ap-modal--historyProduct {
+  width: min(1180px, 96vw);
+}
+
+.ap-historyTable--product .ap-historyTable__head,
+.ap-historyTable--product .ap-historyTable__row {
+  grid-template-columns: minmax(230px, 1.55fr) minmax(110px, .75fr) minmax(105px, .7fr) minmax(105px, .7fr) minmax(105px, .7fr);
+}
+
+.mov-actionsInline .mov-iconBtn[title="Historial de precios"] {
+  color: var(--nv-action, #0055BB);
+}
+
+html[data-theme="oscuro"] .ap-tabs {
+  background: rgba(15, 23, 42, 0.88) !important;
+  border-color: rgba(148, 163, 184, 0.18) !important;
+}
+
+html[data-theme="oscuro"] .ap-tab {
+  color: rgba(203, 213, 225, 0.78) !important;
+}
+
+html[data-theme="oscuro"] .ap-tab:hover {
+  background: rgba(78, 161, 255, 0.12) !important;
+  color: rgba(147, 197, 253, 0.96) !important;
+}
+
+html[data-theme="oscuro"] .ap-tab.is-active {
+  background: var(--nv-action, #0055BB) !important;
+  color: #fff !important;
+}
+
+@media (max-width: 720px) {
+  .ap-tabs {
+    overflow-x: auto;
+  }
+
+  .ap-tab {
+    white-space: nowrap;
+  }
+
+  .ap-historyTable--product {
+    overflow-x: auto;
+  }
+
+  .ap-historyTable--product .ap-historyTable__head,
+  .ap-historyTable--product .ap-historyTable__row {
+    min-width: 820px;
+  }
+}
+
+
+/* Ajuste visual liviano pedido: tabs del historial sin tipografía pesada */
+.ap-tab {
+  min-height: 34px;
+  padding: 0 13px;
+  border-radius: 11px;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.ap-tabs {
+  padding: 5px;
+  border-radius: 14px;
+  box-shadow: 0 10px 24px -22px rgba(10, 37, 64, 0.42);
+}
+
+/* Historial de precios: clicks más firmes para abrir/cerrar grupos */
+.ap-historyItem__head {
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.ap-historyItem__head > * {
+  pointer-events: none;
+}
+
+.ap-historyItem__head:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--nv-action, #0055BB) 54%, transparent);
+  outline-offset: -2px;
+}

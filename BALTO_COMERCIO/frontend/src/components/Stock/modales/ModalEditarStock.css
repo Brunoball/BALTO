@@ -1,0 +1,29 @@
+/* =========================================================
+   ModalEditarStock.css
+   Estilos propios del modal de edición de producto.
+   Reutiliza los campos cmi-* y la base global de modales.
+   ========================================================= */
+
+@import "./ModalCargaIndividualProducto.css";
+
+.cmi-container--editar {
+  width: min(1180px, 96vw);
+  max-height: 92vh;
+  min-height: auto;
+}
+
+/* Mismo problema que en ModalCargaIndividualProducto.css: ModalCargaMasiva.css
+   define ".cmi-v2-formShell--producto > .cmi-v2-variantPanelOnly { display: none !important; }"
+   para su propio wizard de carga masiva, y ese CSS global termina ocultando el panel
+   "Variantes del producto" acá también, ya que este modal reutiliza las mismas clases
+   para sus tabs "Producto original"/"Variantes" (que además vuelven a "producto" cada
+   vez que se recarga el producto). Se restaura la visibilidad del panel en este modal. */
+.cmi-container--editar .cmi-v2-formShell--producto > .cmi-v2-variantPanelOnly {
+  display: flex !important;
+}
+
+/* Pestañas de Editar producto: mantener tipografía liviana. */
+.cmi-container--editar .cmi-v2-mainTab,
+.cmi-container--editar .cmi-v2-tabBtn {
+  font-weight: 500;
+}

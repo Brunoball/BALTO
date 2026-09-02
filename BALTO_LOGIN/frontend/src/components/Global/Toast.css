@@ -1,0 +1,12 @@
+.balto-toast {
+  position: fixed; right: 24px; bottom: 24px; z-index: 1000;
+  display: flex; align-items: center; gap: 18px;
+  min-width: min(390px, calc(100vw - 32px)); max-width: 520px;
+  padding: 14px 16px; border-radius: 14px; color: white;
+  background: #23334a; box-shadow: 0 18px 50px rgba(22, 40, 67, .23);
+  font-size: 14px; font-weight: 650;
+}
+.balto-toast--exito { background: #19754b; }
+.balto-toast--error { background: #a53636; }
+.balto-toast--advertencia { background: #8b5a13; }
+.balto-toast button { border: 0; background: transparent; color: inherit; font-size: 22px; cursor: pointer; }
