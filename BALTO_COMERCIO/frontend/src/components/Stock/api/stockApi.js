@@ -2,6 +2,50 @@ import BASE_URL from "../../../config/config";
 
 export const API_URL = `${String(BASE_URL || "").replace(/\/+$/, "")}/api.php`;
 
+// Single-flight exclusivo para lecturas de Stock.
+//
+// Si dos componentes piden exactamente la misma lectura mientras la primera
+// todavía está en curso, comparten esa petición. No se guardan respuestas: la
+// entrada se elimina apenas finaliza el GET.
+//
+// `_r` es únicamente un cache-buster, por eso no forma parte de la identidad
+// lógica de la lectura. En cambio, cualquier escritura incrementa la generación
+// antes de salir al servidor; de ese modo un GET posterior a una alta/edición/
+// baja/importación nunca puede reutilizar una lectura iniciada antes del cambio.
+const inFlightStockGets = new Map();
+let stockReadGeneration = 0;
+
+function markStockWriteStarted() {
+  stockReadGeneration += 1;
+}
+
+function stockGetRequestKey(action, params = {}, strict = true) {
+  const canonical = new URLSearchParams();
+  const entries = params instanceof URLSearchParams
+    ? Array.from(params.entries())
+    : Object.entries(params || {});
+
+  entries.forEach(([key, value]) => {
+    if (key === "_r") return;
+    if (value !== null && value !== undefined && value !== "") {
+      canonical.append(String(key), String(value));
+    }
+  });
+  canonical.sort();
+
+  const sessionKey = (localStorage.getItem("session_key") || "").trim();
+  const token = (localStorage.getItem("token") || "").trim();
+
+  return [
+    stockReadGeneration,
+    strict ? "strict" : "lenient",
+    sessionKey,
+    token,
+    String(action || ""),
+    canonical.toString(),
+  ].join("|");
+}
+
 export function buildHeadersGET() {
   const sessionKey = (localStorage.getItem("session_key") || "").trim();
   const token = (localStorage.getItem("token") || "").trim();
@@ -141,15 +185,29 @@ function buildActionUrl(action, params = {}) {
 }
 
 export async function stockGet(action, params = {}, { strict = true } = {}) {
-  const res = await fetch(buildActionUrl(action, params), {
-    method: "GET",
-    headers: buildHeadersGET(),
-    cache: "no-store",
+  const requestKey = stockGetRequestKey(action, params, strict);
+  const pending = inFlightStockGets.get(requestKey);
+  if (pending) return pending;
+
+  const request = (async () => {
+    const res = await fetch(buildActionUrl(action, params), {
+      method: "GET",
+      headers: buildHeadersGET(),
+      cache: "no-store",
+    });
+    return strict ? parseJsonOrThrow(res) : parseJsonResponse(res);
+  })().finally(() => {
+    if (inFlightStockGets.get(requestKey) === request) {
+      inFlightStockGets.delete(requestKey);
+    }
   });
-  return strict ? parseJsonOrThrow(res) : parseJsonResponse(res);
+
+  inFlightStockGets.set(requestKey, request);
+  return request;
 }
 
 export async function stockPost(action, body = {}, { strict = true } = {}) {
+  markStockWriteStarted();
   const res = await fetch(buildActionUrl(action), {
     method: "POST",
     headers: buildHeadersJSON(),
@@ -172,6 +230,7 @@ export async function stockPostPayload(payload = {}, options = {}) {
 }
 
 export async function stockPostMultipart(action, formData, { strict = true } = {}) {
+  markStockWriteStarted();
   const res = await fetch(buildActionUrl(action), {
     method: "POST",
     headers: buildHeadersMultipart(),

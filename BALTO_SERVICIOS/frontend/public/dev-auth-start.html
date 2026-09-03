@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <meta name="robots" content="noindex,nofollow" />
+  <title>BALTO · Conectando frontend local</title>
+  <style>
+    :root { color-scheme: light; font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 24px; background: #f4f7fb; color: #172033; }
+    .card { width: min(440px, 100%); padding: 28px; border-radius: 18px; background: #fff; box-shadow: 0 16px 40px rgba(15, 23, 42, .10); text-align: center; }
+    .spinner { width: 38px; height: 38px; margin: 0 auto 18px; border: 4px solid #dbe4ef; border-top-color: #1f5e8c; border-radius: 50%; animation: spin .75s linear infinite; }
+    h1 { margin: 0 0 8px; font-size: 21px; }
+    p { margin: 0; line-height: 1.5; color: #526174; }
+    .actions { display: none; margin-top: 18px; gap: 10px; justify-content: center; flex-wrap: wrap; }
+    button { border: 0; border-radius: 10px; padding: 10px 14px; cursor: pointer; background: #e9eef5; color: #172033; font-weight: 600; }
+    button.primary { background: #1f5e8c; color: #fff; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <div class="spinner" id="spinner" aria-hidden="true"></div>
+    <h1 id="title">Conectando con BALTO</h1>
+    <p id="message">Validando la sesión para abrir el frontend que está corriendo en tu PC.</p>
+    <div class="actions" id="actions">
+      <button class="primary" id="retry" type="button">Reintentar</button>
+      <button id="login" type="button">Ir al login</button>
+    </div>
+  </main>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const EXPECTED_SYSTEM = "SERVICIOS";
+      const DEV_HOSTS = new Set(["localhost", "127.0.0.1"]);
+      const DEV_PORT = "3000";
+      const HANDOFF_PARAM = "balto_auth";
+      const API_CHECK = "/BALTO_SERVICIOS/api/routes/api.php?action=auth_session_check";
+      const GLOBAL_LOGIN = "/";
+      const BRIDGE_VERSION = "20260903_v9";
+
+      const title = document.getElementById("title");
+      const message = document.getElementById("message");
+      const spinner = document.getElementById("spinner");
+      const actions = document.getElementById("actions");
+      const retryButton = document.getElementById("retry");
+      const loginButton = document.getElementById("login");
+
+      function isAllowedReturn(raw) {
+        try {
+          const url = new URL(String(raw || ""));
+          return (
+            url.protocol === "http:" &&
+            DEV_HOSTS.has(String(url.hostname || "").toLowerCase()) &&
+            url.port === DEV_PORT
+          );
+        } catch {
+          return false;
+        }
+      }
+
+      function encodeBase64UrlUtf8(value) {
+        const bytes = new TextEncoder().encode(String(value || ""));
+        let binary = "";
+        bytes.forEach((byte) => { binary += String.fromCharCode(byte); });
+        return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+      }
+
+      function clearRemoteAuth() {
+        try {
+          ["session_key", "usuario", "token", "sessionKey", "x_session", "X-Session", "balto_sistema"]
+            .forEach((key) => localStorage.removeItem(key));
+        } catch {}
+
+        try {
+          ["balto_session_key", "balto_usuario", "balto_sistema"].forEach((name) => {
+            document.cookie = `${name}=; Max-Age=0; Path=/; SameSite=Lax; Secure`;
+          });
+        } catch {}
+      }
+
+      function loginUrl(returnTo) {
+        const target = new URL(GLOBAL_LOGIN, window.location.origin);
+        target.searchParams.set("balto_dev_return", returnTo);
+        target.searchParams.set("balto_dev_system", EXPECTED_SYSTEM);
+        target.searchParams.set("balto_dev_issued", String(Date.now()));
+        target.searchParams.set("balto_bridge", BRIDGE_VERSION);
+        return target.toString();
+      }
+
+      function redirectToLogin(returnTo) {
+        window.location.replace(loginUrl(returnTo));
+      }
+
+      function sendBack(returnTo, sessionKey, usuario) {
+        const target = new URL(returnTo);
+        const payload = {
+          v: 1,
+          issued_at: Date.now(),
+          session_key: sessionKey,
+          usuario: JSON.stringify(usuario),
+        };
+        const fragment = new URLSearchParams();
+        fragment.set(HANDOFF_PARAM, encodeBase64UrlUtf8(JSON.stringify(payload)));
+        target.hash = fragment.toString();
+        window.location.replace(target.toString());
+      }
+
+      async function validateExistingSession(returnTo) {
+        const sessionKey = String(localStorage.getItem("session_key") || "").trim();
+        if (!sessionKey) {
+          redirectToLogin(returnTo);
+          return;
+        }
+
+        const response = await fetch(API_CHECK, {
+          method: "GET",
+          headers: { "X-Session": sessionKey, Accept: "application/json" },
+          cache: "no-store",
+          credentials: "include",
+        });
+
+        const text = await response.text();
+        let data = {};
+        try { data = text ? JSON.parse(text) : {}; } catch {}
+
+        const system = String(data?.sistema?.codigo || data?.sistema_codigo || "").trim().toUpperCase();
+        const ok = response.ok && data?.exito !== false && data?.sesion_valida === true && system === EXPECTED_SYSTEM;
+
+        if (!ok) {
+          clearRemoteAuth();
+          redirectToLogin(returnTo);
+          return;
+        }
+
+        const usuario = data?.usuario && typeof data.usuario === "object" ? data.usuario : null;
+        if (!usuario) {
+          clearRemoteAuth();
+          redirectToLogin(returnTo);
+          return;
+        }
+
+        try { localStorage.setItem("usuario", JSON.stringify(usuario)); } catch {}
+        sendBack(returnTo, sessionKey, usuario);
+      }
+
+      function showError(text) {
+        spinner.style.display = "none";
+        title.textContent = "No se pudo abrir BALTO local";
+        message.textContent = text;
+        actions.style.display = "flex";
+      }
+
+      async function run() {
+        actions.style.display = "none";
+        spinner.style.display = "block";
+        title.textContent = "Conectando con BALTO";
+        message.textContent = "Validando la sesión para abrir el frontend que está corriendo en tu PC.";
+
+        const params = new URLSearchParams(window.location.search);
+        const returnTo = String(params.get("return_to") || "").trim();
+
+        if (!isAllowedReturn(returnTo)) {
+          showError("El destino local solicitado no es válido. BALTO local debe ejecutarse en localhost:3000 o 127.0.0.1:3000.");
+          return;
+        }
+
+        try {
+          await validateExistingSession(returnTo);
+        } catch (error) {
+          console.warn(`[BALTO ${EXPECTED_SYSTEM} bridge] Error validando sesión:`, error);
+          showError("No se pudo contactar la API. Revisá la conexión y reintentá.");
+        }
+      }
+
+      retryButton.addEventListener("click", run);
+      loginButton.addEventListener("click", () => {
+        const params = new URLSearchParams(window.location.search);
+        const returnTo = String(params.get("return_to") || "").trim();
+        if (!isAllowedReturn(returnTo)) {
+          showError("El destino local solicitado no es válido.");
+          return;
+        }
+        clearRemoteAuth();
+        redirectToLogin(returnTo);
+      });
+
+      run();
+    })();
+  </script>
+</body>
+</html>

@@ -1,3 +1,5 @@
+import { movSubsectionFetch } from "../../_shared/api/singleFlightFetch.js";
+
 /**
  * Capa HTTP de Ventas.
  * Mantiene el mismo contrato histórico de autenticación y parseo de la pantalla
@@ -51,7 +53,7 @@ async function parseJsonOrThrow(res) {
 }
 
 export function ventasFetch(url, options = {}) {
-  return fetch(url, options);
+  return movSubsectionFetch(url, options);
 }
 
 export async function ventasApiGet(url) {

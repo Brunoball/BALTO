@@ -2,6 +2,11 @@ import BASE_URL from "../../../config/config";
 
 export const CC_API_URL = `${String(BASE_URL || "").replace(/\/+$/, "")}/api.php`;
 
+// Evita GET idénticos concurrentes sin cachear datos. Esto es importante en
+// las vistas de detalle/historial, donde selección + efectos de React pueden
+// solicitar el mismo recurso casi al mismo tiempo.
+const inFlightGetRequests = new Map();
+
 export function getAuthInfo() {
   const sessionKey = (
     localStorage.getItem("session_key") ||
@@ -94,9 +99,32 @@ async function parseJsonStrict(res) {
   }
 }
 
+
+function getRequestKey(url, mode) {
+  const { sessionKey, token } = getAuthInfo();
+  return `${mode}|${sessionKey}|${token}|${String(url)}`;
+}
+
+async function getDeduped(url, mode, parser) {
+  const requestKey = getRequestKey(url, mode);
+  const pending = inFlightGetRequests.get(requestKey);
+  if (pending) return pending;
+
+  const request = (async () => {
+    const res = await fetch(url, { method: "GET", headers: buildHeadersGET() });
+    return parser(res);
+  })().finally(() => {
+    if (inFlightGetRequests.get(requestKey) === request) {
+      inFlightGetRequests.delete(requestKey);
+    }
+  });
+
+  inFlightGetRequests.set(requestKey, request);
+  return request;
+}
+
 export async function ccApiGet(url) {
-  const res = await fetch(url, { method: "GET", headers: buildHeadersGET() });
-  return parseJsonLoose(res);
+  return getDeduped(url, "loose", parseJsonLoose);
 }
 
 export async function ccApiPost(url, body) {
@@ -109,11 +137,7 @@ export async function ccApiPost(url, body) {
 }
 
 export async function ccApiGetStrict(url) {
-  const res = await fetch(url, {
-    method: "GET",
-    headers: buildHeadersGET(),
-  });
-  return parseJsonStrict(res);
+  return getDeduped(url, "strict", parseJsonStrict);
 }
 
 export async function ccApiPostActionStrict(action, body) {

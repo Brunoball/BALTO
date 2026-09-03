@@ -1,26 +1,23 @@
-import "../auth/localGlobalAuthBridge";
-
 /**
- * Base de la API de BALTO COMERCIO.
+ * Base de la API de BALTO SERVICIOS.
  * En desarrollo apunta al backend publicado en Hostinger, salvo override por .env.
  */
 const BASE_URL = String(
   process.env.REACT_APP_API_URL ||
-    "https://balto.3devsnet.com/BALTO_COMERCIO/api/routes"
+    "https://balto.3devsnet.com/BALTO_SERVICIOS/api/routes"
 ).replace(/\/+$/, "");
 
 /**
- * URL pública del LOGIN GLOBAL.
- * La raíz de balto.3devsnet.com sirve internamente BALTO_LOGIN.
+ * Entrada central de BALTO.
  */
-export const BALTO_LOGIN_URL = String(
-  process.env.REACT_APP_BALTO_LOGIN_URL || "https://balto.3devsnet.com/"
+export const BALTO_ACCESS_URL = String(
+  process.env.REACT_APP_BALTO_ACCESS_URL || "https://balto.3devsnet.com/"
 ).trim();
 
 /**
- * Basename del router de BALTO COMERCIO.
+ * Basename del router de BALTO SERVICIOS.
  * Local: /
- * Producción futura: se puede definir REACT_APP_ROUTER_BASENAME=/BALTO_COMERCIO
+ * Producción: se puede definir REACT_APP_ROUTER_BASENAME=/BALTO_SERVICIOS
  */
 export const APP_BASENAME = String(
   process.env.REACT_APP_ROUTER_BASENAME || "/"
@@ -28,5 +25,3 @@ export const APP_BASENAME = String(
 
 export default BASE_URL;
 
-
-//npx playwright test --project=chromium --workers=1 --reporter=list

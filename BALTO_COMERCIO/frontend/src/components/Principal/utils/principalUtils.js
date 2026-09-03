@@ -140,19 +140,6 @@ export function applyTheme(tema) {
   document.body.classList.toggle("dark", tema === "oscuro");
 }
 
-export function getSessionKey() {
-  return String(localStorage.getItem("session_key") || "").trim();
-}
-
-export function hardClientLogoutCleanup() {
-  try {
-    sessionStorage.clear();
-    localStorage.removeItem("token");
-    localStorage.removeItem("session_key");
-    localStorage.removeItem("usuario");
-  } catch {}
-}
-
 export function setLastActivityNow() {
   try {
     sessionStorage.setItem(LAST_ACTIVITY_KEY, String(Date.now()));

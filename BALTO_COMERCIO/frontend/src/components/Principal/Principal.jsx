@@ -36,13 +36,12 @@ import {
 } from "./api/principalApi";
 import usePrincipalIdleLogout from "./hooks/usePrincipalIdleLogout";
 import usePrincipalSessionGuard from "./hooks/usePrincipalSessionGuard";
+import { clearClientSession, getSessionKey, redirectToCentralAccess } from "../../session/sessionClient";
 import { prefetchRoute } from "./utils/principalPrefetch";
 import {
   applyTheme,
   getLogoToneFromImageSrc,
   getModuleKeyByPath,
-  getSessionKey,
-  hardClientLogoutCleanup,
   normalizePlanId,
   normalizePlanNivel,
   normalizeRol,
@@ -320,7 +319,7 @@ const Principal = () => {
         tenantLogoIconoDbRef.current = "";
         tenantLogoPrincipalDbRef.current = "";
 
-        hardClientLogoutCleanup();
+        clearClientSession();
 
         setShowLogoutModal(false);
         setDrawerOpen(false);
@@ -336,16 +335,10 @@ const Principal = () => {
 
         closingRef.current = false;
 
-        if (silent) {
-          window.location.replace("/");
-          return;
-        }
-
-        navigate("/", { replace: true });
+        redirectToCentralAccess();
       }
     },
     [
-      navigate,
       revokeTenantLogoIconoObjectUrl,
       revokeTenantLogoPrincipalObjectUrl,
     ]
@@ -357,8 +350,8 @@ const Principal = () => {
     const sk = getSessionKey();
 
     if (!sk) {
-      hardClientLogoutCleanup();
-      navigate("/", { replace: true });
+      clearClientSession();
+      redirectToCentralAccess();
       return;
     }
 
@@ -390,7 +383,7 @@ const Principal = () => {
 
     setLastActivityNow();
 
-  }, [doLogout, navigate]);
+  }, [doLogout]);
 
   useEffect(() => {
     loadTenantLogos();

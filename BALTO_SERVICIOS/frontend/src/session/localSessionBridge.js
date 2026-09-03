@@ -2,7 +2,7 @@ const DEV_HOSTS = new Set(["localhost", "127.0.0.1"]);
 const DEV_PORT = "3000";
 const HANDOFF_PARAM = "balto_auth";
 const MAX_HANDOFF_AGE_MS = 20 * 60 * 1000;
-const BRIDGE_VERSION = "20260903_v9";
+const BRIDGE_VERSION = "20260903_v11";
 
 function isBrowser() {
   return typeof window !== "undefined" && typeof document !== "undefined";
@@ -22,8 +22,9 @@ function decodeBase64UrlUtf8(value) {
   return new TextDecoder().decode(bytes);
 }
 
-function parseUsuario(raw) {
+function parseStoredUser(raw) {
   if (!raw) return null;
+
   try {
     const parsed = JSON.parse(raw);
     return parsed && typeof parsed === "object" ? parsed : null;
@@ -32,7 +33,7 @@ function parseUsuario(raw) {
   }
 }
 
-function cleanAuthFragment() {
+function cleanHandoffFragment() {
   try {
     const cleanUrl = `${window.location.pathname}${window.location.search}`;
     window.history.replaceState(window.history.state, "", cleanUrl || "/");
@@ -53,13 +54,18 @@ function consumeHandoffFromFragment() {
     const payload = JSON.parse(decodeBase64UrlUtf8(encoded));
     const sessionKey = String(payload?.session_key || "").trim();
     const usuarioRaw = String(payload?.usuario || "").trim();
-    const usuario = parseUsuario(usuarioRaw);
+    const usuario = parseStoredUser(usuarioRaw);
     const issuedAt = Number(payload?.issued_at || 0);
     const age = Date.now() - issuedAt;
 
     if (payload?.v !== 1) throw new Error("Versión de handoff inválida.");
     if (!sessionKey || !usuario) throw new Error("Handoff incompleto.");
-    if (!Number.isFinite(issuedAt) || issuedAt <= 0 || age < -5000 || age > MAX_HANDOFF_AGE_MS) {
+    if (
+      !Number.isFinite(issuedAt) ||
+      issuedAt <= 0 ||
+      age < -5000 ||
+      age > MAX_HANDOFF_AGE_MS
+    ) {
       throw new Error("Handoff vencido.");
     }
 
@@ -67,21 +73,25 @@ function consumeHandoffFromFragment() {
     localStorage.setItem("usuario", usuarioRaw);
     localStorage.removeItem("token");
 
-    cleanAuthFragment();
-    window.__BALTO_LOCAL_AUTH_BRIDGE__ = { status: "received", at: Date.now() };
+    cleanHandoffFragment();
+    window.__BALTO_LOCAL_SESSION_BRIDGE__ = {
+      status: "received",
+      at: Date.now(),
+    };
+
     return true;
   } catch (error) {
-    console.warn("[BALTO auth bridge] No se pudo consumir el handoff local:", error);
-    cleanAuthFragment();
+    console.warn("[BALTO session bridge] No se pudo consumir el handoff local:", error);
+    cleanHandoffFragment();
     return false;
   }
 }
 
-function hasUsableLocalAuth() {
+function hasUsableLocalSession() {
   try {
     const sessionKey = String(localStorage.getItem("session_key") || "").trim();
     const usuarioRaw = String(localStorage.getItem("usuario") || "").trim();
-    return Boolean(sessionKey && parseUsuario(usuarioRaw));
+    return Boolean(sessionKey && parseStoredUser(usuarioRaw));
   } catch {
     return false;
   }
@@ -90,40 +100,64 @@ function hasUsableLocalAuth() {
 function buildLocalReturnUrl() {
   const target = new URL(window.location.href);
   target.hash = "";
+
   if (target.pathname === "/" || target.pathname === "") {
     target.pathname = "/panel";
   }
+
   return target.toString();
 }
 
-function getDevBridgeStartUrl() {
-  const configured = String(process.env.REACT_APP_DEV_AUTH_START_URL || "").trim();
-  return configured || "https://balto.3devsnet.com/BALTO_SERVICIOS/dev-auth-start.html";
+function getGlobalLoginUrl() {
+  const configured = String(process.env.REACT_APP_BALTO_LOGIN_URL || "").trim();
+  const fallback = "https://balto.3devsnet.com/";
+
+  if (!configured) return fallback;
+
+  try {
+    const url = new URL(configured);
+    if (url.protocol !== "http:" && url.protocol !== "https:") return fallback;
+    return url.toString();
+  } catch {
+    return fallback;
+  }
 }
 
-export function redirectToGlobalLoginBridge() {
+export function redirectToCentralAccessBridge() {
   if (!isLocalDevelopmentOrigin()) return false;
-  if (window.__BALTO_LOCAL_AUTH_BRIDGE__?.status === "redirecting") return true;
+  if (window.__BALTO_LOCAL_SESSION_BRIDGE__?.status === "redirecting") return true;
 
-  const startUrl = new URL(getDevBridgeStartUrl());
-  // Evita que el navegador o LiteSpeed reutilicen una versión anterior del
-  // gateway. El return_to suele ser siempre igual durante el desarrollo.
-  startUrl.searchParams.set("balto_bridge", BRIDGE_VERSION);
-  startUrl.searchParams.set("return_to", buildLocalReturnUrl());
-  window.__BALTO_LOCAL_AUTH_BRIDGE__ = { status: "redirecting", at: Date.now() };
-  window.location.replace(startUrl.toString());
+  // Desarrollo local: ir DIRECTO al Login Global. No pasar por
+  // /BALTO_SERVICIOS/dev-auth-start.html ni depender del build de Servicios
+  // publicado en Hostinger. El Login Global devuelve la sesión mediante
+  // #balto_auth=... al return_to local indicado abajo.
+  const loginUrl = new URL(getGlobalLoginUrl());
+  loginUrl.searchParams.set("balto_dev_return", buildLocalReturnUrl());
+  loginUrl.searchParams.set("balto_dev_system", "SERVICIOS");
+  loginUrl.searchParams.set("balto_dev_issued", String(Date.now()));
+  loginUrl.searchParams.set("balto_bridge", BRIDGE_VERSION);
+
+  window.__BALTO_LOCAL_SESSION_BRIDGE__ = {
+    status: "redirecting",
+    at: Date.now(),
+  };
+
+  window.location.replace(loginUrl.toString());
   return true;
 }
 
-export function bootstrapLocalGlobalAuthBridge() {
+export function bootstrapLocalSessionBridge() {
   if (!isLocalDevelopmentOrigin()) return false;
   if (consumeHandoffFromFragment()) return true;
-  if (hasUsableLocalAuth()) {
-    window.__BALTO_LOCAL_AUTH_BRIDGE__ = { status: "ready", at: Date.now() };
+
+  if (hasUsableLocalSession()) {
+    window.__BALTO_LOCAL_SESSION_BRIDGE__ = {
+      status: "ready",
+      at: Date.now(),
+    };
     return true;
   }
-  redirectToGlobalLoginBridge();
+
+  redirectToCentralAccessBridge();
   return true;
 }
-
-bootstrapLocalGlobalAuthBridge();

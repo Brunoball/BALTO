@@ -1,7 +1,8 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
-import BASE_URL, { BALTO_LOGIN_URL, APP_BASENAME } from "./config/config";
-import { redirectToGlobalLoginBridge } from "./auth/localGlobalAuthBridge";
+import { APP_BASENAME } from "./config/config";
+import GlobalSessionGate from "./session/GlobalSessionGate";
+import { getStoredUser, hasSession, redirectToCentralAccess } from "./session/sessionClient";
 import { getBaltoPlanIdFromUsuario } from "./utils/demoMode";
 
 /* Layout del panel */
@@ -89,52 +90,8 @@ const AnalisisFinanciero = resolveComponent(AnalisisFinancieroModule, [
 ]);
 
 /* =========================================================
-   Auth global BALTO
+   Sesión y permisos de navegación
 ========================================================= */
-function getSessionKey() {
-  try {
-    return (localStorage.getItem("session_key") || "").trim();
-  } catch {
-    return "";
-  }
-}
-
-function clearGlobalAuth() {
-  try {
-    localStorage.removeItem("session_key");
-    localStorage.removeItem("usuario");
-    localStorage.removeItem("token");
-    localStorage.removeItem("sessionKey");
-    localStorage.removeItem("x_session");
-    localStorage.removeItem("X-Session");
-  } catch {}
-
-  try {
-    sessionStorage.clear();
-  } catch {}
-}
-
-function redirectToGlobalLogin() {
-  // En localhost siempre hay que pasar por dev-auth-start.html. Ese gateway
-  // registra el return_to antes de abrir el LOGIN global; ir directo al LOGIN
-  // pierde el retorno y termina en "No hay un retorno local pendiente".
-  if (redirectToGlobalLoginBridge()) return;
-
-  try {
-    if (window.location.href !== BALTO_LOGIN_URL) {
-      window.location.replace(BALTO_LOGIN_URL);
-    }
-  } catch {
-    window.location.href = BALTO_LOGIN_URL;
-  }
-}
-
-function isAuthenticated() {
-  // El navegador solo usa session_key para decidir si debe intentar entrar.
-  // La identidad, tenant, rol, plan y vertical se revalidan en el backend antes de montar Principal.
-  return Boolean(getSessionKey());
-}
-
 function normalizeRol(value, idRol = null) {
   const id = Number(idRol);
   const v = String(value ?? "").trim().toLowerCase().replace(/[\s-]+/g, "_");
@@ -150,15 +107,7 @@ function normalizeRol(value, idRol = null) {
 }
 
 function getUsuarioLogueado() {
-  try {
-    const rawUser = localStorage.getItem("usuario");
-    if (!rawUser) return null;
-
-    const u = JSON.parse(rawUser);
-    return u && typeof u === "object" ? u : null;
-  } catch {
-    return null;
-  }
+  return getStoredUser();
 }
 
 function isAdminUser() {
@@ -179,229 +128,20 @@ function planAllowsModule(modulo) {
   return true;
 }
 
-function safeJsonParse(text) {
-  try {
-    return JSON.parse(text);
-  } catch {
-    return null;
-  }
-}
-
-function authFailureCode(data) {
-  return String(data?.codigo || data?.code || "").trim().toUpperCase();
-}
-
-function isDefinitiveAuthFailure(status, data) {
-  const code = authFailureCode(data);
-  if (status === 401) return true;
-
-  return [
-    "SESSION_REQUIRED",
-    "SESSION_INVALID",
-    "SESSION_REVOKED",
-    "SESSION_EXPIRED",
-    "SESION_REQUERIDA",
-    "SESION_INVALIDA",
-    "SESION_REVOCADA",
-    "SESION_EXPIRADA",
-    "USUARIO_INACTIVO",
-    "USUARIO_DESHABILITADO",
-    "TENANT_INACTIVO",
-    "TENANT_DESHABILITADO",
-    "SISTEMA_NO_AUTORIZADO",
-  ].includes(code);
-}
-
-async function validateGlobalSession() {
-  const sessionKey = getSessionKey();
-  if (!sessionKey) {
-    return { ok: false, status: 401, data: { codigo: "SESSION_REQUIRED" } };
-  }
-
-  const response = await fetch(`${BASE_URL}/api.php?action=auth_session_check`, {
-    method: "GET",
-    headers: {
-      "X-Session": sessionKey,
-      Accept: "application/json",
-    },
-    cache: "no-store",
-  });
-
-  const text = await response.text();
-  const data = safeJsonParse(text) || {};
-
-  if (!response.ok || data?.exito === false || data?.sesion_valida !== true) {
-    return { ok: false, status: response.status, data };
-  }
-
-  const sistema = String(data?.sistema?.codigo || data?.sistema_codigo || "")
-    .trim()
-    .toUpperCase();
-
-  if (sistema !== "COMERCIO") {
-    return {
-      ok: false,
-      status: 403,
-      data: {
-        exito: false,
-        codigo: "SISTEMA_NO_AUTORIZADO",
-        mensaje: "La sesión global no corresponde a BALTO_COMERCIO.",
-      },
-    };
-  }
-
-  return { ok: true, status: response.status, data };
-}
-
-/*
- * Principal ya emite auth:unauthorized cuando detecta sesión expirada.
- * Interceptamos únicamente 401 para no convertir 403 funcionales (por ejemplo,
- * permisos/demo) en un cierre de sesión. Al registrarse al cargar App.js,
- * este handler evita que el logout silencioso legacy termine en la raíz vieja.
- */
-if (typeof window !== "undefined" && !window.__BALTO_COMERCIO_GLOBAL_AUTH_BOUND__) {
-  window.__BALTO_COMERCIO_GLOBAL_AUTH_BOUND__ = true;
-  window.addEventListener("auth:unauthorized", (event) => {
-    const status = Number(event?.detail?.status || 0);
-    if (status !== 401) return;
-
-    try {
-      event.stopImmediatePropagation();
-    } catch {}
-
-    clearGlobalAuth();
-    redirectToGlobalLogin();
-  });
-}
-
-function GlobalLoginRedirect() {
+function CentralAccessRedirect() {
   useEffect(() => {
-    clearGlobalAuth();
-    redirectToGlobalLogin();
+    redirectToCentralAccess();
   }, []);
 
   return (
     <div style={{ padding: 24, fontFamily: "sans-serif" }}>
-      Redirigiendo a BALTO LOGIN…
+      Abriendo acceso BALTO…
     </div>
   );
-}
-
-function GlobalSessionGate({ children }) {
-  const [state, setState] = useState({ status: "checking", message: "" });
-
-  const verify = useCallback(async () => {
-    if (!getSessionKey()) {
-      clearGlobalAuth();
-      redirectToGlobalLogin();
-      return;
-    }
-
-    setState({ status: "checking", message: "" });
-
-    try {
-      const result = await validateGlobalSession();
-
-      if (!result.ok) {
-        if (isDefinitiveAuthFailure(result.status, result.data)) {
-          clearGlobalAuth();
-          redirectToGlobalLogin();
-          return;
-        }
-
-        const mensaje =
-          result.data?.mensaje ||
-          result.data?.error ||
-          `No se pudo validar la sesión global (HTTP ${result.status || 0}).`;
-
-        setState({ status: "error", message: mensaje });
-        return;
-      }
-
-      if (result.data?.usuario && typeof result.data.usuario === "object") {
-        localStorage.setItem("usuario", JSON.stringify(result.data.usuario));
-      }
-
-      setState({ status: "ready", message: "" });
-    } catch (error) {
-      setState({
-        status: "error",
-        message:
-          "No se pudo contactar la API de BALTO_COMERCIO para validar la sesión. " +
-          "Revisá conexión/CORS y volvé a intentar.",
-      });
-    }
-  }, []);
-
-  useEffect(() => {
-    verify();
-  }, [verify]);
-
-  if (state.status === "ready") return children;
-
-  if (state.status === "error") {
-    return (
-      <div
-        style={{
-          minHeight: "100vh",
-          display: "grid",
-          placeItems: "center",
-          padding: 24,
-          background: "#f4f7fb",
-          fontFamily: "sans-serif",
-        }}
-      >
-        <div
-          style={{
-            width: "min(560px, 100%)",
-            background: "white",
-            border: "1px solid #dbe2ea",
-            borderRadius: 12,
-            padding: 24,
-            boxShadow: "0 12px 32px rgba(15, 23, 42, .08)",
-          }}
-        >
-          <h2 style={{ marginTop: 0 }}>No se pudo validar la sesión</h2>
-          <p>{state.message}</p>
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-            <button type="button" onClick={verify}>
-              Reintentar
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                clearGlobalAuth();
-                redirectToGlobalLogin();
-              }}
-            >
-              Ir a BALTO LOGIN
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div
-      style={{
-        minHeight: "100vh",
-        display: "grid",
-        placeItems: "center",
-        fontFamily: "sans-serif",
-      }}
-    >
-      Validando sesión global…
-    </div>
-  );
-}
-
-function RutaProtegida({ children }) {
-  return isAuthenticated() ? children : <GlobalLoginRedirect />;
 }
 
 function RutaModulo({ modulo, children }) {
-  if (!isAuthenticated()) return <GlobalLoginRedirect />;
+  if (!hasSession()) return <CentralAccessRedirect />;
 
   return planAllowsModule(modulo) ? (
     children
@@ -411,13 +151,13 @@ function RutaModulo({ modulo, children }) {
 }
 
 function RutaAdmin({ children }) {
-  if (!isAuthenticated()) return <GlobalLoginRedirect />;
+  if (!hasSession()) return <CentralAccessRedirect />;
 
   return isAdminUser() ? children : <Navigate to="/panel/dashboard" replace />;
 }
 
 function RutaNoDemoConfig({ children }) {
-  if (!isAuthenticated()) return <GlobalLoginRedirect />;
+  if (!hasSession()) return <CentralAccessRedirect />;
 
   // En DEMO la configuración queda visible como vista previa,
   // pero solo Calendario global debe ser navegable/editable.
@@ -439,32 +179,27 @@ export default function App() {
   return (
     <Router basename={APP_BASENAME}>
       <Routes>
-        {/* BALTO_COMERCIO ya no posee login propio como entrada. */}
         <Route
           path="/"
           element={
-            isAuthenticated() ? (
+            hasSession() ? (
               <Navigate to="/panel" replace />
             ) : (
-              <GlobalLoginRedirect />
+              <CentralAccessRedirect />
             )
           }
         />
-        <Route path="/registro" element={<GlobalLoginRedirect />} />
-        <Route path="/reset-password" element={<GlobalLoginRedirect />} />
 
-        {/* Panel protegido + validación real de sesión MASTER/COMERCIO */}
+        {/* Panel protegido + validación real de sesión MASTER/SERVICIOS */}
         <Route
           path="/panel"
           element={
             <GlobalSessionGate>
-              <RutaProtegida>
-                <DateRangeProvider>
-                  <ListasProvider>
-                    <Principal />
-                  </ListasProvider>
-                </DateRangeProvider>
-              </RutaProtegida>
+              <DateRangeProvider>
+                <ListasProvider>
+                  <Principal />
+                </ListasProvider>
+              </DateRangeProvider>
             </GlobalSessionGate>
           }
         >

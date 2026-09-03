@@ -1,3 +1,5 @@
+import { movSubsectionFetch } from "../../_shared/api/singleFlightFetch.js";
+
 /**
  * Capa HTTP de Otros Egresos.
  * Centraliza el transporte y conserva el contrato histórico de autenticación.
@@ -24,5 +26,5 @@ export function getOtrosEgresosAuthInfo() {
 }
 
 export function otrosEgresosFetch(url, options = {}) {
-  return fetch(url, options);
+  return movSubsectionFetch(url, options);
 }

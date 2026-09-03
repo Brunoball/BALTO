@@ -98,9 +98,23 @@ export default function ModalRecuperarContra({
         return;
       }
 
-      setMaskedEmail(
-        ocultarEmail(respuesta.data?.email) || "tu correo registrado"
-      );
+      // Nunca mostramos el estado de éxito por un simple HTTP 200.
+      // El backend debe confirmar explícitamente que aceptó el correo para envío.
+      if (respuesta.data?.correo_enviado !== true) {
+        onToast?.(
+          "error",
+          respuesta.data?.mensaje ||
+            "El servidor no confirmó el envío del correo. Intentá nuevamente."
+        );
+        return;
+      }
+
+      const emailVisible =
+        String(respuesta.data?.email_mascarado || "").trim() ||
+        ocultarEmail(respuesta.data?.email) ||
+        "tu correo registrado";
+
+      setMaskedEmail(emailVisible);
       setStep("sent");
     } catch (error) {
       onToast?.(

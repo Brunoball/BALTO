@@ -1,3 +1,5 @@
+import { movSubsectionFetch } from "../../_shared/api/singleFlightFetch.js";
+
 /**
  * Capa HTTP de Órdenes de Pago.
  * Centraliza autenticación, parseo JSON y transporte sin alterar los contratos existentes.
@@ -57,7 +59,7 @@ export async function parseJsonOrThrow(res) {
 }
 
 export function ordenesPagoFetch(url, options = {}) {
-  return fetch(url, options);
+  return movSubsectionFetch(url, options);
 }
 
 export async function apiGet(url) {

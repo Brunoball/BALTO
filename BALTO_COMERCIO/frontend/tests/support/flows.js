@@ -1159,11 +1159,33 @@ export async function payReceivable(page, productName) {
     await expect(dialog.locator('.gm-payment-row--method select').first()).not.toHaveValue('', { timeout: 2_000 });
     await expect(dialog.getByRole('button', { name: /Confirmar cobro/i })).toBeEnabled({ timeout: 2_000 });
   }).toPass({
-    timeout: 35_000,
-    intervals: [150, 300, 600, 1_000],
+    // Frontend local + API remota: la hidratación del modal puede tardar más
+    // durante una corrida larga. El reintento sigue siendo acotado a este flujo.
+    timeout: 90_000,
+    intervals: [150, 300, 600, 1_000, 2_000],
   });
 
+  // Registramos el listener ANTES del click para no perder una respuesta rápida
+  // y verificamos la confirmación real del backend, no sólo el estado visual.
+  const responsePromise = page.waitForResponse(
+    (response) =>
+      response.request().method() === 'POST' &&
+      new URL(response.url()).searchParams.get('action') === 'recibos_confirmar_pago',
+    { timeout: 120_000 },
+  );
+
   await dialog.getByRole('button', { name: /Confirmar cobro/i }).click();
+
+  const response = await responsePromise;
+  const body = await response.json().catch(() => ({}));
+  expect(
+    response.status(),
+    `El recibo debe guardarse: HTTP ${response.status()} ${JSON.stringify(body)}`,
+  ).toBeLessThan(400);
+  expect(
+    body?.exito !== false && body?.success !== false,
+    body?.mensaje || body?.message || 'No se pudo confirmar el cobro del recibo',
+  ).toBeTruthy();
 
   const finalizar = page.getByRole('button', { name: /^Finalizar$/i }).last();
   await expect(finalizar).toBeVisible({ timeout: 45_000 });

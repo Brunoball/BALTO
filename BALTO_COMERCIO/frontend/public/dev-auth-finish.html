@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="robots" content="noindex,nofollow" />
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0" />
+  <title>BALTO · Volviendo a localhost</title>
+</head>
+<body>
+  <p style="font-family:system-ui,sans-serif;padding:24px">Volviendo al frontend local…</p>
+  <script>
+    (() => {
+      const params = new URLSearchParams(window.location.search);
+      const returnTo = String(params.get("return_to") || "").trim();
+      const start = new URL("/BALTO_COMERCIO/dev-auth-start.html", window.location.origin);
+      if (returnTo) start.searchParams.set("return_to", returnTo);
+      start.searchParams.set("balto_bridge", "20260903_v9");
+      window.location.replace(start.toString());
+    })();
+  </script>
+</body>
+</html>

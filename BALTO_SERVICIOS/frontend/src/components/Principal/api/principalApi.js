@@ -1,6 +1,6 @@
 import BASE_URL from "../../../config/config";
+import { getSessionKey } from "../../../session/sessionClient";
 import {
-  getSessionKey,
   isSessionExpiredResponse,
   looksLikeUnauthorizedPayload,
 } from "../utils/principalUtils";

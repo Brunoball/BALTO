@@ -9,6 +9,7 @@ import React, {
   useCallback,
 } from "react";
 import BASE_URL from "../config/config";
+import { clearClientSession, redirectToCentralAccess } from "../session/sessionClient";
 import Toast from "../components/Global/Toast.jsx";
 
 import "../components/Global/Global_css/roots.css";
@@ -20,9 +21,6 @@ const PING_INTERVAL_MS = 2500;
 const PING_TIMEOUT_MS = 3500;
 const FAILS_TO_LOCK = 2;
 const SUCCESSES_TO_UNLOCK = 3;
-const BALTO_LOGIN_URL =
-  String(process.env.REACT_APP_BALTO_LOGIN_URL || "https://balto.3devsnet.com/").trim() ||
-  "https://balto.3devsnet.com/";
 
 function buildPingUrl() {
   const base = String(BASE_URL || "").trim().replace(/\/+$/, "");
@@ -294,13 +292,8 @@ export default function NetworkProvider({ children }) {
               <button
                 className="net-btnGhost"
                 onClick={() => {
-                  try {
-                    sessionStorage.clear();
-                    localStorage.removeItem("token");
-                    localStorage.removeItem("session_key");
-                    localStorage.removeItem("usuario");
-                  } catch {}
-                  window.location.href = BALTO_LOGIN_URL;
+                  clearClientSession();
+                  redirectToCentralAccess();
                 }}
               >
                 Salir

@@ -2,6 +2,12 @@ import BASE_URL from "../../../config/config";
 
 const API = `${BASE_URL}/api.php`;
 
+// Single-flight: si React dispara el mismo GET dos veces mientras la primera
+// petición todavía está en curso, ambos consumidores comparten la misma
+// Promise. No guarda respuestas ni introduce datos viejos: al finalizar la
+// petición la entrada se elimina inmediatamente.
+const inFlightGetRequests = new Map();
+
 function parseJsonOrThrow(res, invalidLabel = "Respuesta inválida (no es JSON).") {
   return res.text().then((text) => {
     if (!text) throw new Error("Respuesta vacía del servidor.");
@@ -44,8 +50,23 @@ async function apiGet(params) {
   if (sessionKey) headers["X-Session"] = sessionKey;
 
   const qs = params instanceof URLSearchParams ? params : new URLSearchParams(params || {});
-  const res = await fetch(`${API}?${qs.toString()}`, { method: "GET", headers });
-  return parseJsonOrThrow(res);
+  const url = `${API}?${qs.toString()}`;
+  const requestKey = `${sessionKey}|${url}`;
+
+  const pending = inFlightGetRequests.get(requestKey);
+  if (pending) return pending;
+
+  const request = (async () => {
+    const res = await fetch(url, { method: "GET", headers });
+    return parseJsonOrThrow(res);
+  })().finally(() => {
+    if (inFlightGetRequests.get(requestKey) === request) {
+      inFlightGetRequests.delete(requestKey);
+    }
+  });
+
+  inFlightGetRequests.set(requestKey, request);
+  return request;
 }
 
 export async function listarMovimientos({ fechaDesde, fechaHasta, q = "", limit, offset, includeTotal = 0 }) {

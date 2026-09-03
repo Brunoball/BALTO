@@ -5,6 +5,9 @@ import "./index.css";
 import App from "./App";
 import reportWebVitals from "./reportWebVitals";
 import NetworkProvider from "./context/NetworkContext";
+import { bootstrapLocalSessionBridge } from "./session/localSessionBridge";
+
+bootstrapLocalSessionBridge();
 
 if (!window.__BALTO_FETCH_PATCHED__) {
   window.__BALTO_FETCH_PATCHED__ = true;

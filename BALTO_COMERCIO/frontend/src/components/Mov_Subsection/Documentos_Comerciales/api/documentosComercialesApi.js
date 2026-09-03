@@ -1,3 +1,5 @@
+import { movSubsectionFetch } from "../../_shared/api/singleFlightFetch.js";
+
 import BASE_URL from "../../../../config/config.jsx";
 
 export const DOCUMENTOS_API = `${BASE_URL}/api.php`;
@@ -17,5 +19,5 @@ export function buildDocumentosUrl(action, params = {}) {
  * distintos, evitando cambiar mensajes o criterios de éxito durante la rearquitectura.
  */
 export function documentosRequest(url, options = {}) {
-  return fetch(url, options);
+  return movSubsectionFetch(url, options);
 }

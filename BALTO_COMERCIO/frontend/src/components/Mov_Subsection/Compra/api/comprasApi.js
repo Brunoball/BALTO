@@ -1,3 +1,5 @@
+import { movSubsectionFetch } from "../../_shared/api/singleFlightFetch.js";
+
 /**
  * Capa HTTP de Compras.
  * La pantalla principal usa estas funciones para conservar exactamente su
@@ -61,7 +63,7 @@ async function parseJsonOrThrow(res) {
 }
 
 export function comprasFetch(url, options = {}) {
-  return fetch(url, options);
+  return movSubsectionFetch(url, options);
 }
 
 export async function comprasApiGet(url) {
