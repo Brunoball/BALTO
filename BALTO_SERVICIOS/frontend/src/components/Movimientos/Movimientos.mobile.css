@@ -1,0 +1,68 @@
+/* Ajustes exclusivos de la vista mobile de Movimientos.
+   En monitor no cambia la estructura: el wrapper usa display: contents. */
+
+.mov-mobileSearchExportLine {
+  display: contents;
+}
+
+.mov-card__actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.mov-card__actions--mobile {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .mov-card__actions--desktop {
+    display: none !important;
+  }
+
+  .mov-mobileSearchExportLine {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: stretch;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .mov-mobileSearchExportLine .cc-filter--search,
+  .mov-mobileSearchExportLine .cc-floatingField--search,
+  .mov-mobileSearchExportLine .cc-searchInput,
+  .mov-mobileSearchExportLine .cc-searchInput__fieldWrap {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .mov-card__actions--mobile {
+    display: flex !important;
+    align-items: stretch;
+    justify-content: flex-end;
+    flex: 0 0 auto;
+  }
+
+  .mov-card__actions--mobile > * {
+    height: 100%;
+  }
+
+  .mov-card__actions--mobile > button,
+  .mov-card__actions--mobile > * > button:first-child {
+    min-height: 46px;
+    height: 100%;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 420px) {
+  .mov-mobileSearchExportLine {
+    gap: 6px;
+  }
+
+  .mov-card__actions--mobile > button,
+  .mov-card__actions--mobile > * > button:first-child {
+    min-width: 46px;
+    padding-inline: 12px;
+  }
+}

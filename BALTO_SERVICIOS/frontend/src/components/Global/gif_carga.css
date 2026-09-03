@@ -1,0 +1,100 @@
+/* src/components/Global/gif_carga.css */
+
+/* =========================
+   Overlay REAL (sin mover layout)
+========================= */
+.balto-loading-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  /* Sutil pro */
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(1.6px);
+
+  /* Fade */
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 180ms ease;
+
+  z-index: 50;
+}
+
+.balto-loading-overlay.is-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.balto-loading-overlay.is-hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* =========================
+   Caja pro
+========================= */
+.balto-loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  background: rgba(245, 248, 252, 0.96);
+  padding: 10px 12px;
+  border-radius: 18px;
+
+  box-shadow:
+    0 10px 40px rgba(10, 37, 64, 0.20),
+    0 0 35px rgba(10, 37, 64, 0.12);
+
+  /* micro anim */
+  transform: translateY(8px) scale(0.985);
+  transition: transform 180ms ease;
+}
+
+.balto-loading-overlay.is-visible .balto-loading-container {
+  transform: translateY(0px) scale(1);
+}
+
+/* =========================
+   GIF
+========================= */
+.balto-loading-img {
+  width: 260px;
+  height: auto;
+  margin-bottom: 12px;
+
+  user-select: none;
+  pointer-events: none;
+  filter: drop-shadow(0 0 18px rgba(10, 37, 64, 0.22));
+}
+
+/* =========================
+   Texto + puntitos
+========================= */
+.balto-loading-text {
+  color: #0A2540;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  margin: 0;
+}
+
+/* Puntitos animados */
+.balto-loading-text::after {
+  content: "";
+  display: inline-block;
+  width: 1.2em; /* reserva espacio */
+  text-align: left;
+  animation: baltoDots 1.6s steps(4, end) infinite;
+}
+
+@keyframes baltoDots {
+  0%   { content: ""; }
+  25%  { content: "."; }
+  50%  { content: ".."; }
+  75%  { content: "..."; }
+  100% { content: ""; }
+}

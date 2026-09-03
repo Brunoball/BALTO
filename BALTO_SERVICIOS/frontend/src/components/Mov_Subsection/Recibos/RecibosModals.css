@@ -1,0 +1,339 @@
+/* =========================================================
+   Recibos - pago V2
+   ---------------------------------------------------------
+   Mantiene las medidas específicas del modal con clases gm-*.
+========================================================= */
+
+.gm-receipt-pay-modal {
+  --gm-receipt-table-cols: 44px 100px minmax(0, 1fr) 140px 130px 54px;
+}
+
+.gm-receipt-pay-layout,
+.gm-receipt-table {
+  min-height: 0;
+}
+
+.gm-receipt-actions .gm-action-btn { min-width: 0; }
+
+.gm-receipt-table-head,
+.gm-receipt-row {
+  grid-template-columns: var(--gm-receipt-table-cols);
+}
+
+.gm-receipt-table-head { border-bottom: 1px solid var(--gm-border); }
+
+.gm-receipt-th--sel,
+.gm-receipt-th--center,
+.gm-receipt-th--info { text-align: center; }
+
+.gm-receipt-th--right { text-align: right; }
+.gm-receipt-th--desc { text-align: left; }
+
+.gm-receipt-row {
+  min-height: 42px;
+  cursor: pointer;
+}
+
+.gm-receipt-row.is-paid {
+  opacity: .72;
+  cursor: default;
+}
+
+.gm-receipt-row.is-checked { background: var(--gm-accent-soft) !important; }
+.gm-receipt-row.is-checked:hover { background: var(--gm-accent-soft-hover) !important; }
+
+html[data-theme="oscuro"] .gm-receipt-row.is-checked,
+.gm-modal-container--dark .gm-receipt-row.is-checked { background: rgba(0, 85, 187, .22) !important; }
+
+.gm-receipt-td {
+  color: var(--gm-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gm-receipt-td--sel {
+  padding: 0;
+  justify-content: center;
+}
+
+.gm-receipt-td--desc {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gm-receipt-td--info {
+  justify-content: center;
+  padding: 0 8px;
+  overflow: visible;
+}
+
+.gm-receipt-table-foot-stats,
+.gm-receipt-table-foot-totals {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.gm-receipt-total-pill {
+  gap: 8px;
+  padding: 5px 12px 5px 14px;
+}
+
+.gm-receipt-total-pill span { white-space: nowrap; }
+.gm-receipt-total-pill b { font-size: .9rem; }
+
+.gm-receipt-select-all-btn {
+  min-height: 36px;
+  height: 36px;
+  aspect-ratio: auto;
+}
+
+
+@media (max-width: 1100px) {
+  .gm-receipt-pay-modal {
+    --gm-receipt-table-cols: 44px 90px minmax(160px, 1fr) 100px 115px 50px;
+  }
+
+  .gm-receipt-th,
+  .gm-receipt-td {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+
+  .gm-receipt-th { font-size: 10px; }
+  .gm-receipt-td { font-size: 13px; }
+}
+
+@media (max-width: 768px) {
+  .gm-receipt-table-head { display: none; }
+
+  .gm-receipt-table-body {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  .gm-receipt-row {
+    grid-template-columns: 34px minmax(0, 1fr) auto 34px;
+    grid-template-areas:
+      "sel fecha monto info"
+      "sel desc desc desc"
+      "sel estado estado estado";
+    gap: 6px 10px;
+    min-height: unset;
+    padding: 10px 12px;
+    border: 1px solid var(--gm-border);
+    border-radius: 12px;
+    background: var(--gm-bg);
+  }
+
+  .gm-receipt-row:nth-child(even) { background: var(--gm-bg); }
+  .gm-receipt-row > .gm-receipt-td:not(:first-child) { border-left: 0; }
+
+  .gm-receipt-td {
+    padding: 0;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: unset;
+  }
+
+  .gm-receipt-td--sel {
+    grid-area: sel;
+    align-self: stretch;
+    justify-content: flex-start;
+    padding-top: 2px;
+  }
+
+  .gm-receipt-row > .gm-receipt-td:nth-child(2) {
+    grid-area: fecha;
+    font-size: 12px;
+    color: var(--gm-muted);
+    font-weight: 600;
+  }
+
+  .gm-receipt-td--desc {
+    grid-area: desc;
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.35;
+  }
+
+  .gm-receipt-td--center {
+    grid-area: estado;
+    justify-content: flex-start;
+    text-align: left;
+  }
+
+  .gm-receipt-td--right {
+    grid-area: monto;
+    justify-self: end;
+    text-align: right;
+    font-size: 13px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .gm-receipt-td--info {
+    grid-area: info;
+    justify-self: end;
+    padding: 0;
+  }
+
+  .gm-receipt-info-btn { width: 30px; height: 30px; }
+
+  .gm-receipt-table-foot {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .gm-receipt-table-foot-stats,
+  .gm-receipt-table-foot-totals {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .gm-receipt-total-pill {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .gm-receipt-select-all-btn { min-height: 38px; }
+
+}
+
+@media (max-width: 520px) {
+  .gm-receipt-table-body {
+    gap: 6px;
+    padding: 6px;
+  }
+
+  .gm-receipt-row {
+    gap: 5px 8px;
+    padding: 10px;
+  }
+
+  .gm-receipt-row > .gm-receipt-td:nth-child(2) { font-size: 11px; }
+  .gm-receipt-td--desc { font-size: 12px; }
+  .gm-receipt-td--right { font-size: 12px; }
+  .gm-receipt-stat { font-size: 11px; }
+}
+
+
+
+
+
+/* =========================================================
+   Recibos - editar recibo
+   ---------------------------------------------------------
+   Estilos propios de esta sección: layout, autocomplete y
+   resumen del modal de edición. No se globalizan porque no
+   son patrón compartido suficiente.
+========================================================= */
+
+
+.rec-edit-modal {
+  width: min(980px, 96vw);
+  min-height: 60vh;
+  max-height: 90vh;
+}
+
+.rec-edit-layout {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.rec-edit-main {
+  min-width: 0;
+  min-height: 0;
+  border: 1px solid var(--gm-border);
+  border-radius: 14px;
+  background: var(--gm-bg);
+  box-shadow: var(--mi-shadow-sm, 0 12px 28px rgba(15, 23, 42, .08));
+  overflow: auto;
+  padding: 16px;
+}
+
+.rec-edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.rec-edit-rel { position: relative; }
+
+.rec-edit-autocomplete {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 50;
+  background: var(--gm-bg);
+  border: 1px solid var(--gm-border);
+  border-radius: 12px;
+  box-shadow: var(--mi-shadow, 0 18px 40px rgba(15, 23, 42, .16));
+  overflow: hidden;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.rec-edit-autocomplete__item {
+  width: 100%;
+  border: none;
+  background: transparent;
+  text-align: left;
+  padding: 10px 12px;
+  font-size: 13px;
+  color: var(--gm-text);
+  cursor: pointer;
+  transition: background .12s ease;
+  font-family: inherit;
+}
+
+.rec-edit-autocomplete__item:hover {
+  background: var(--color-primary-soft, var(--gm-accent-soft));
+}
+
+.rec-edit-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.rec-edit-summary-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.rec-edit-summary-row:last-child { margin-bottom: 0; }
+.rec-edit-action { flex: 1; }
+
+html[data-theme="oscuro"] .rec-edit-main,
+html[data-theme="oscuro"] .rec-edit-autocomplete {
+  background: var(--gm-bg);
+  border-color: rgba(255, 255, 255, .10);
+}
+
+html[data-theme="oscuro"] .rec-edit-autocomplete__item:hover {
+  background: rgba(0, 85, 187, .22);
+}
+
+@media (max-width: 1100px) {
+  
+.rec-edit-modal {
+  width: min(980px, 96vw);
+  min-height: 60vh;
+  max-height: 90vh;
+}
+
+.rec-edit-layout { grid-template-columns: 1fr; }
+  .rec-edit-grid-3 { grid-template-columns: 1fr; }
+}

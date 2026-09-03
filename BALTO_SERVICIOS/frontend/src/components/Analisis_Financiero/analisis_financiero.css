@@ -1,0 +1,1420 @@
+/* analisis_financiero.css
+   Solo lo que NO existe en movimientos.css.
+   El componente hereda mov-page, mov-card, mov-gridTable, etc. de movimientos.css
+   ─────────────────────────────────────────────────────────────────────────── */
+
+
+
+/* ── Fila resaltada (Resultado Neto) ── */
+.af-row--resultado {
+  background: color-mix(in srgb, var(--balto-ink) 4%, #fff) !important;
+  border-top: 1px solid color-mix(in srgb, var(--balto-ink) 12%, #fff) !important;
+  border-bottom: 1px solid color-mix(in srgb, var(--balto-ink) 12%, #fff) !important;
+}
+.af-row--resultado:hover {
+  background: rgba(0, 85, 187, 0.07) !important;
+}
+
+/* ── Concepto resultado en negrita ── */
+.af-concept--resultado {
+  font-weight: 660 !important;
+  color: var(--balto-ink) !important;
+  letter-spacing: 0.01em;
+}
+
+/* ── Importes con color semántico ── */
+.af-importe        { font-weight: 540; font-size: 13px; }
+.af-importe--ingreso { color: #16a34a; }
+.af-importe--egreso  { color: #dc2626; }
+.af-importe--pos     { color: #16a34a; font-weight: 700; }
+.af-importe--neg     { color: #dc2626; font-weight: 700; }
+
+/* ── Tarjetas de totales al pie ── */
+.af-footTotals {
+  display: flex;
+  gap: 14px;
+  padding: 16px 20px;
+  background: color-mix(in srgb, var(--balto-bg, #F6F9FC) 55%, #fff);
+  flex-wrap: wrap;
+}
+
+.af-totalCard {
+  flex: 1 1 220px;
+  min-width: 0;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--mov-border, rgba(10,37,64,.12));
+  background: #fff;
+}
+
+.af-totalCard--pos { border-color: rgba(22, 163, 74, .28); background: rgba(22, 163, 74, .04); }
+.af-totalCard--neg { border-color: rgba(220, 38,  38, .28); background: rgba(220, 38, 38, .04); }
+.af-totalCard--ctrl{ border-color: rgba(241, 196, 15, .30); background: rgba(241, 196, 15, .04); }
+
+.af-totalTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.af-totalLabel {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--balto-text, #425466);
+}
+
+.af-totalValue {
+  font-size: 22px;
+  font-weight: 720;
+  letter-spacing: -0.02em;
+  color: var(--balto-ink, #0A2540);
+  line-height: 1.1;
+  margin-bottom: 4px;
+}
+
+.af-totalSub {
+  font-size: 11px;
+  color: var(--mov-muted, #7a8a9a);
+  font-weight: 440;
+  line-height: 1.3;
+}
+
+/* =========================
+   Tarjetas resumen
+========================= */
+.af-summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin: 16px 0 18px;
+}
+
+.af-summaryCard {
+  position: relative;
+  overflow: hidden;
+  border-radius: 18px;
+  padding: 18px;
+  min-height: 120px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    linear-gradient(180deg, rgba(8, 25, 58, 0.95) 0%, rgba(5, 16, 38, 0.98) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 10px 30px rgba(0, 0, 0, 0.22);
+}
+
+.af-summaryCard::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  border-radius: 18px 0 0 18px;
+}
+
+.af-summaryCard--ingreso::before {
+  background: linear-gradient(180deg, #11d27c 0%, #0ca35f 100%);
+}
+
+.af-summaryCard--egreso::before {
+  background: linear-gradient(180deg, #ff7b7b 0%, #ff5252 100%);
+}
+
+.af-summaryCard__label {
+  font-size: 0.82rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.68);
+  margin-bottom: 8px;
+  font-weight: 700;
+}
+
+.af-summaryCard__value {
+  font-size: clamp(1.4rem, 2vw, 2rem);
+  font-weight: 800;
+  line-height: 1.1;
+  color: #ffffff;
+  margin-bottom: 8px;
+}
+
+.af-summaryCard--ingreso .af-summaryCard__value {
+  color: #3be38d;
+}
+
+.af-summaryCard--egreso .af-summaryCard__value {
+  color: #ff7b7b;
+}
+
+.af-summaryCard__sub {
+  font-size: 0.92rem;
+  color: rgba(255, 255, 255, 0.52);
+}
+
+/* =========================
+   Disponibilidades
+========================= */
+.af-dispoSection {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.af-sectionHead {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding: 0 20px;
+}
+
+.af-sectionTitle {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #ffffff;
+  margin-bottom: 4px;
+}
+
+.af-dispoTotal {
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 0.98rem;
+  white-space: nowrap;
+}
+
+.af-dispoTotal strong {
+  color: #3be38d;
+}
+
+.af-dispoGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.af-dispoCard {
+  border-radius: 18px;
+  padding: 18px;
+  border: 1px solid rgba(59, 227, 141, 0.16);
+  background:
+    linear-gradient(180deg, rgba(7, 24, 56, 0.95) 0%, rgba(4, 15, 34, 0.98) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 8px 22px rgba(0, 0, 0, 0.2);
+}
+
+.af-dispoCard__label {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.7);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-bottom: 8px;
+}
+
+.af-dispoCard__value {
+  font-size: 1.55rem;
+  font-weight: 800;
+  color: #3be38d;
+  line-height: 1.1;
+  margin-bottom: 6px;
+}
+
+.af-dispoCard__sub {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.af-emptyDispo {
+  margin-top: 6px;
+}
+
+/* =========================
+   Responsive
+========================= */
+@media (max-width: 1200px) {
+  .af-summaryGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .af-summaryGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .af-sectionHead {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .af-dispoGrid {
+    grid-template-columns: 1fr;
+  }
+}/* =========================
+   Detalle sin tabla
+========================= */
+.af-breakdownSection {
+  margin-top: 6px;
+}
+
+.af-sectionHead--breakdown {
+  margin-bottom: 14px;
+}
+
+.af-sectionTitle--light {
+  color: var(--balto-ink);
+}
+
+.af-breakdownGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.af-breakCard {
+  position: relative;
+  overflow: hidden;
+  border-radius: 18px;
+  padding: 18px;
+  min-height: 138px;
+  background: #fff;
+  border: 1px solid var(--mov-border, rgba(10, 37, 64, 0.12));
+  box-shadow: 0 10px 26px -20px rgba(10, 37, 64, 0.24);
+  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+}
+
+.af-breakCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 36px -24px rgba(10, 37, 64, 0.3);
+}
+
+.af-breakCard::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  border-radius: 18px 0 0 18px;
+  background: linear-gradient(180deg, rgba(10, 37, 64, 0.22) 0%, rgba(0, 85, 187, 0.3) 100%);
+}
+
+.af-breakCard--ingreso::before {
+  background: linear-gradient(180deg, #22c55e 0%, #16a34a 100%);
+}
+
+.af-breakCard--egreso::before {
+  background: linear-gradient(180deg, #fb7185 0%, #dc2626 100%);
+}
+
+.af-breakCard__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.af-breakCard__label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--balto-text);
+  line-height: 1.35;
+}
+
+.af-breakCard__badge {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 24px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: rgba(10, 37, 64, 0.06);
+  color: var(--balto-ink);
+  border: 1px solid rgba(10, 37, 64, 0.1);
+}
+
+.af-breakCard__badge--ingreso {
+  background: rgba(34, 197, 94, 0.1);
+  color: #15803d;
+  border-color: rgba(34, 197, 94, 0.18);
+}
+
+.af-breakCard__badge--egreso {
+  background: rgba(239, 68, 68, 0.1);
+  color: #b91c1c;
+  border-color: rgba(239, 68, 68, 0.18);
+}
+
+.af-breakCard__value {
+  font-size: clamp(1.25rem, 1.7vw, 1.8rem);
+  line-height: 1.08;
+  font-weight: 720;
+  color: var(--balto-ink);
+  margin-bottom: 10px;
+  letter-spacing: -0.02em;
+}
+
+.af-breakCard__value--ingreso {
+  color: #15803d;
+}
+
+.af-breakCard__value--egreso {
+  color: #b91c1c;
+}
+
+.af-breakCard__sub {
+  font-size: 0.9rem;
+  color: var(--mov-muted);
+  line-height: 1.35;
+  font-weight: 430;
+}
+
+.af-breakCard--skeleton {
+  min-height: 138px;
+  pointer-events: none;
+}
+
+.af-emptyBlock {
+  margin-top: 4px;
+  border: 1px dashed rgba(10, 37, 64, 0.14);
+  border-radius: 16px;
+  background: rgba(246, 249, 252, 0.75);
+}
+
+/* =========================
+   Ajustes resumen superior
+========================= */
+.af-summaryGrid {
+  margin: 16px 0 14px;
+}
+
+.af-summaryCard {
+  min-height: 128px;
+}
+
+/* =========================
+   Disponibilidades
+========================= */
+.af-dispoSection {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--mov-border, rgba(10, 37, 64, 0.12));
+}
+
+/* =========================
+   Responsive
+========================= */
+
+
+@media (max-width: 760px) {
+  .af-summaryGrid,
+  .af-breakdownGrid,
+  .af-dispoGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .af-breakCard__top {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .af-sectionHead {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+/* =========================
+   Dark mode
+========================= */
+html[data-theme="oscuro"] .af-sectionTitle--light {
+  color: rgba(226, 232, 240, 0.92);
+}
+
+html[data-theme="oscuro"] .af-breakCard {
+  background: rgba(15, 23, 42, 0.68);
+  border-color: rgba(148, 163, 184, 0.16);
+  box-shadow: 0 16px 34px -24px rgba(0, 0, 0, 0.52);
+}
+
+html[data-theme="oscuro"] .af-breakCard__label {
+  color: rgba(226, 232, 240, 0.72);
+}
+
+html[data-theme="oscuro"] .af-breakCard__value {
+  color: rgba(255, 255, 255, 0.94);
+}
+
+html[data-theme="oscuro"] .af-breakCard__value--ingreso {
+  color: #4ade80;
+}
+
+html[data-theme="oscuro"] .af-breakCard__value--egreso {
+  color: #fb7185;
+}
+
+html[data-theme="oscuro"] .af-breakCard__sub {
+  color: rgba(226, 232, 240, 0.55);
+}
+
+html[data-theme="oscuro"] .af-breakCard__badge {
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(226, 232, 240, 0.92);
+  border-color: rgba(148, 163, 184, 0.14);
+}
+
+html[data-theme="oscuro"] .af-breakCard__badge--ingreso {
+  background: rgba(34, 197, 94, 0.12);
+  color: #4ade80;
+  border-color: rgba(34, 197, 94, 0.2);
+}
+
+html[data-theme="oscuro"] .af-breakCard__badge--egreso {
+  background: rgba(244, 63, 94, 0.12);
+  color: #fb7185;
+  border-color: rgba(244, 63, 94, 0.2);
+}
+
+html[data-theme="oscuro"] .af-emptyBlock {
+  background: rgba(15, 23, 42, 0.42);
+  border-color: rgba(148, 163, 184, 0.16);
+}/* =========================
+   AJUSTE COMPACTO
+========================= */
+
+/* contenedor general */
+.mov-page--analisisFinanciero .mov-card--table {
+  gap: 0;
+}
+
+/* resumen superior */
+.af-summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(180px, 1fr));
+  gap: 10px;
+  margin: 12px 0 12px;
+}
+
+.af-summaryCard {
+  border-radius: 14px;
+  padding: 14px 14px 12px;
+  min-height: 96px;
+}
+
+.af-summaryCard__label {
+  font-size: 0.72rem;
+  margin-bottom: 6px;
+}
+
+.af-summaryCard__value {
+  font-size: clamp(1.05rem, 1.3vw, 1.45rem);
+  margin-bottom: 4px;
+  line-height: 1.05;
+}
+
+.af-summaryCard__sub {
+  font-size: 0.8rem;
+  line-height: 1.2;
+}
+
+/* detalle en tarjetas */
+.af-breakdownSection {
+  margin-top: 2px;
+}
+
+.af-sectionHead--breakdown {
+  margin-bottom: 10px;
+}
+
+.af-breakdownGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(170px, 1fr));
+  gap: 10px;
+  padding: 0 10px;
+}
+
+.af-breakCard {
+  border-radius: 14px;
+  padding: 14px;
+  min-height: 104px;
+}
+
+.af-breakCard__top {
+  margin-bottom: 10px;
+  gap: 8px;
+}
+
+.af-breakCard__label {
+  font-size: 0.72rem;
+  line-height: 1.2;
+}
+
+.af-breakCard__badge {
+  min-height: 20px;
+  padding: 3px 8px;
+  font-size: 0.65rem;
+}
+
+.af-breakCard__value {
+  font-size: clamp(1rem, 1.25vw, 1.35rem);
+  margin-bottom: 6px;
+  line-height: 1.05;
+}
+
+.af-breakCard__sub {
+  font-size: 0.78rem;
+  line-height: 1.2;
+}
+
+/* resultado */
+.af-footTotals {
+  gap: 10px;
+  padding: 12px 14px;
+}
+
+.af-totalCard {
+  padding: 12px 14px;
+  border-radius: 14px;
+  flex: 1 1 100%;
+}
+
+.af-totalValue {
+  font-size: 1.35rem;
+  margin-bottom: 2px;
+}
+
+.af-totalSub {
+  font-size: 0.78rem;
+}
+
+/* disponibilidades */
+.af-dispoSection {
+  margin-top: 14px;
+  padding-top: 14px;
+}
+
+.af-dispoGrid {
+  grid-template-columns: repeat(4, minmax(170px, 1fr));
+  gap: 10px;
+}
+
+.af-dispoCard {
+  border-radius: 14px;
+  padding: 14px;
+}
+
+.af-dispoCard__label {
+  font-size: 0.76rem;
+  margin-bottom: 6px;
+}
+
+.af-dispoCard__value {
+  font-size: 1.2rem;
+  margin-bottom: 4px;
+}
+
+.af-dispoCard__sub {
+  font-size: 0.78rem;
+}
+
+
+
+@media (max-width: 760px) {
+  .af-summaryGrid,
+  .af-breakdownGrid,
+  .af-dispoGrid {
+    grid-template-columns: 1fr;
+  }
+}/* =========================
+   Tarjetas resumen - CLARO por defecto
+========================= */
+.af-summaryCard {
+  position: relative;
+  overflow: hidden;
+  border-radius: 14px;
+  padding: 14px 14px 12px;
+  min-height: 96px;
+  border: 1px solid var(--mov-border, rgba(10, 37, 64, 0.12));
+  background: #ffffff;
+  box-shadow: 0 10px 24px -20px rgba(10, 37, 64, 0.18);
+}
+
+.af-summaryCard::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  border-radius: 14px 0 0 14px;
+}
+
+.af-summaryCard--ingreso::before {
+  background: linear-gradient(180deg, #22c55e 0%, #16a34a 100%);
+}
+
+.af-summaryCard--egreso::before {
+  background: linear-gradient(180deg, #fb7185 0%, #dc2626 100%);
+}
+
+.af-summaryCard__label {
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #516174;
+  margin-bottom: 6px;
+  font-weight: 700;
+}
+
+.af-summaryCard__value {
+  font-size: clamp(1.05rem, 1.3vw, 1.45rem);
+  font-weight: 800;
+  line-height: 1.05;
+  color: #0a2540;
+  margin-bottom: 4px;
+}
+
+.af-summaryCard--ingreso .af-summaryCard__value {
+  color: #15803d;
+}
+
+.af-summaryCard--egreso .af-summaryCard__value {
+  color: #c81e1e;
+}
+
+.af-summaryCard__sub {
+  font-size: 0.8rem;
+  color: #6b7a8c;
+  line-height: 1.2;
+}
+
+/* =========================
+   Disponibilidades - CLARO por defecto
+========================= */
+.af-dispoCard {
+  border-radius: 14px;
+  padding: 14px;
+  border: 1px solid rgba(34, 197, 94, 0.16);
+  background: #ffffff;
+  box-shadow: 0 10px 24px -20px rgba(10, 37, 64, 0.18);
+}
+
+.af-dispoCard__label {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #516174;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-bottom: 6px;
+}
+
+.af-dispoCard__value {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: #15803d;
+  line-height: 1.05;
+  margin-bottom: 4px;
+}
+
+.af-dispoCard__sub {
+  font-size: 0.78rem;
+  color: #6b7a8c;
+}
+
+/* =========================
+   Dark mode
+========================= */
+html[data-theme="oscuro"] .af-summaryCard {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(180deg, rgba(8, 25, 58, 0.95) 0%, rgba(5, 16, 38, 0.98) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 10px 30px rgba(0, 0, 0, 0.22);
+}
+
+html[data-theme="oscuro"] .af-summaryCard__label {
+  color: rgba(255, 255, 255, 0.68);
+}
+
+html[data-theme="oscuro"] .af-summaryCard__value {
+  color: #ffffff;
+}
+
+html[data-theme="oscuro"] .af-summaryCard--ingreso .af-summaryCard__value {
+  color: #3be38d;
+}
+
+html[data-theme="oscuro"] .af-summaryCard--egreso .af-summaryCard__value {
+  color: #ff7b7b;
+}
+
+html[data-theme="oscuro"] .af-summaryCard__sub {
+  color: rgba(255, 255, 255, 0.52);
+}
+
+html[data-theme="oscuro"] .af-dispoCard {
+  border: 1px solid rgba(59, 227, 141, 0.16);
+  background: linear-gradient(180deg, rgba(7, 24, 56, 0.95) 0%, rgba(4, 15, 34, 0.98) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 8px 22px rgba(0, 0, 0, 0.2);
+}
+
+html[data-theme="oscuro"] .af-dispoCard__label {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+html[data-theme="oscuro"] .af-dispoCard__value {
+  color: #3be38d;
+}
+
+html[data-theme="oscuro"] .af-dispoCard__sub {
+  color: rgba(255, 255, 255, 0.5);
+}
+#clrRight{
+  left: -200px;
+}
+
+/* =========================================================
+   TARJETAS ANÁLISIS FINANCIERO — MISMA ESTRUCTURA DASHBOARD
+   Ícono circular + título + valor + detalle, sin tocar cálculos.
+========================================================= */
+.mov-page--analisisFinanciero {
+  --af-midnight: #0A2540;
+  --af-action: #0055BB;
+  --af-bg: #F6F9FC;
+  --af-surface: #FFFFFF;
+  --af-text: #425466;
+  --af-text-muted: rgba(66, 84, 102, 0.72);
+  --af-success: #22AD5C;
+  --af-danger: #E13D45;
+  --af-warning: #f4b942;
+  --af-info: #4bb8ff;
+  --af-pink: #ff6b9a;
+  --af-action-10: rgba(0, 85, 187, 0.1);
+  --af-success-15: rgba(34, 173, 92, 0.15);
+  --af-danger-15: rgba(225, 61, 69, 0.15);
+  --af-warning-18: rgba(244, 185, 66, 0.18);
+  --af-info-16: rgba(75, 184, 255, 0.16);
+  --af-pink-16: rgba(255, 107, 154, 0.16);
+  --af-shadow-md: 0 10px 26px rgba(10, 37, 64, 0.1);
+  --af-shadow-lg: 0 18px 45px rgba(10, 37, 64, 0.13);
+  --af-trans: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.mov-page--analisisFinanciero .af-sectionHead {
+  padding: 0 14px;
+  margin-bottom: 12px;
+}
+
+.mov-page--analisisFinanciero .af-sectionTitle {
+  color: var(--af-midnight);
+  font-size: 17px;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.mov-page--analisisFinanciero .af-sectionTitle--light {
+  color: var(--af-midnight);
+}
+
+.mov-page--analisisFinanciero .af-dispoTotal {
+  color: var(--af-text-muted);
+  font-size: 12.5px;
+  font-weight: 650;
+}
+
+.mov-page--analisisFinanciero .af-dispoTotal strong {
+  color: var(--af-success);
+  font-weight: 800;
+}
+
+.mov-page--analisisFinanciero .af-breakdownGrid,
+.mov-page--analisisFinanciero .af-dispoGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  padding: 0 14px 14px;
+  min-width: 0;
+}
+
+.mov-page--analisisFinanciero .af-footTotals {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+  padding: 0 14px 14px;
+  background: transparent;
+}
+
+.mov-page--analisisFinanciero .af-breakCard,
+.mov-page--analisisFinanciero .af-dispoCard,
+.mov-page--analisisFinanciero .af-totalCard {
+  position: relative;
+  min-width: 0;
+  min-height: 142px;
+  background: var(--af-surface);
+  border: 1px solid rgba(10, 37, 64, 0.09);
+  border-radius: 20px;
+  box-shadow: var(--af-shadow-md);
+  padding: 20px 16px 17px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  transition: var(--af-trans);
+}
+
+.mov-page--analisisFinanciero .af-breakCard:hover,
+.mov-page--analisisFinanciero .af-dispoCard:hover,
+.mov-page--analisisFinanciero .af-totalCard:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--af-shadow-lg);
+}
+
+.mov-page--analisisFinanciero .af-breakCard::before,
+.mov-page--analisisFinanciero .af-dispoCard::before,
+.mov-page--analisisFinanciero .af-totalCard::before {
+  display: none !important;
+}
+
+.mov-page--analisisFinanciero .af-breakCard::after,
+.mov-page--analisisFinanciero .af-dispoCard::after,
+.mov-page--analisisFinanciero .af-totalCard::after {
+  content: "";
+  position: absolute;
+  inset: auto -40px -55px auto;
+  width: 115px;
+  height: 115px;
+  border-radius: 999px;
+  opacity: 0.46;
+  pointer-events: none;
+}
+
+.mov-page--analisisFinanciero .af-breakCard--ingreso::after,
+.mov-page--analisisFinanciero .af-totalCard--pos::after,
+.mov-page--analisisFinanciero .af-dispoCard::after {
+  background: var(--af-success-15);
+}
+
+.mov-page--analisisFinanciero .af-breakCard--egreso::after,
+.mov-page--analisisFinanciero .af-totalCard--neg::after {
+  background: var(--af-danger-15);
+}
+
+.mov-page--analisisFinanciero .af-breakCard--neutral::after {
+  background: var(--af-info-16);
+}
+
+.mov-page--analisisFinanciero .af-breakCard__icon,
+.mov-page--analisisFinanciero .af-dispoCard__icon,
+.mov-page--analisisFinanciero .af-totalCard__icon,
+.mov-page--analisisFinanciero .af-cardIconSkeleton {
+  width: 48px;
+  height: 48px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 12px;
+  font-size: 18px;
+  flex: 0 0 auto;
+}
+
+.mov-page--analisisFinanciero .af-breakCard--ingreso .af-breakCard__icon,
+.mov-page--analisisFinanciero .af-totalCard--pos .af-totalCard__icon,
+.mov-page--analisisFinanciero .af-dispoCard__icon {
+  background: var(--af-success-15);
+  color: var(--af-success);
+}
+
+.mov-page--analisisFinanciero .af-breakCard--egreso .af-breakCard__icon,
+.mov-page--analisisFinanciero .af-totalCard--neg .af-totalCard__icon {
+  background: var(--af-danger-15);
+  color: var(--af-danger);
+}
+
+.mov-page--analisisFinanciero .af-breakCard--neutral .af-breakCard__icon {
+  background: var(--af-info-16);
+  color: var(--af-action);
+}
+
+.mov-page--analisisFinanciero .af-cardIconSkeleton {
+  display: block;
+  background: rgba(10, 37, 64, 0.08);
+}
+
+.mov-page--analisisFinanciero .af-breakCard__body,
+.mov-page--analisisFinanciero .af-dispoCard__body,
+.mov-page--analisisFinanciero .af-totalCard__body {
+  width: 100%;
+  min-width: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.mov-page--analisisFinanciero .af-breakCard__label,
+.mov-page--analisisFinanciero .af-dispoCard__label,
+.mov-page--analisisFinanciero .af-totalLabel {
+  display: block;
+  color: var(--af-text-muted);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  line-height: 1.25;
+  margin: 0 0 4px;
+}
+
+.mov-page--analisisFinanciero .af-breakCard__value,
+.mov-page--analisisFinanciero .af-dispoCard__value,
+.mov-page--analisisFinanciero .af-totalValue {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  color: var(--af-midnight);
+  font-size: clamp(21px, 2vw, 28px);
+  font-weight: 800;
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.mov-page--analisisFinanciero .af-breakCard__value--ingreso,
+.mov-page--analisisFinanciero .af-totalCard--pos .af-totalValue,
+.mov-page--analisisFinanciero .af-dispoCard__value {
+  color: var(--af-success);
+}
+
+.mov-page--analisisFinanciero .af-breakCard__value--egreso,
+.mov-page--analisisFinanciero .af-totalCard--neg .af-totalValue {
+  color: var(--af-danger);
+}
+
+.mov-page--analisisFinanciero .af-breakCard__sub,
+.mov-page--analisisFinanciero .af-dispoCard__sub,
+.mov-page--analisisFinanciero .af-totalSub {
+  display: block;
+  color: var(--af-text-muted);
+  font-size: 12px;
+  margin-top: 6px;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+.mov-page--analisisFinanciero .af-breakCard__badge,
+.mov-page--analisisFinanciero .af-totalTop {
+  display: none !important;
+}
+
+@media (max-width: 1200px) {
+  .mov-page--analisisFinanciero .af-breakdownGrid,
+  .mov-page--analisisFinanciero .af-dispoGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .mov-page--analisisFinanciero .af-breakdownGrid,
+  .mov-page--analisisFinanciero .af-dispoGrid,
+  .mov-page--analisisFinanciero .af-footTotals {
+    grid-template-columns: 1fr;
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .mov-page--analisisFinanciero .af-sectionHead {
+    padding: 0 10px;
+  }
+}
+
+html[data-theme="oscuro"] .mov-page--analisisFinanciero,
+body.dark .mov-page--analisisFinanciero {
+  --af-bg: #071624;
+  --af-surface: #0b1e33;
+  --af-text: rgba(255, 255, 255, 0.84);
+  --af-text-muted: rgba(255, 255, 255, 0.68);
+  --af-action: #4a8dff;
+  --af-shadow-md: 0 14px 34px rgba(0, 0, 0, 0.45);
+  --af-shadow-lg: 0 18px 45px rgba(0, 0, 0, 0.55);
+}
+
+html[data-theme="oscuro"] .mov-page--analisisFinanciero .af-breakCard,
+html[data-theme="oscuro"] .mov-page--analisisFinanciero .af-dispoCard,
+html[data-theme="oscuro"] .mov-page--analisisFinanciero .af-totalCard,
+body.dark .mov-page--analisisFinanciero .af-breakCard,
+body.dark .mov-page--analisisFinanciero .af-dispoCard,
+body.dark .mov-page--analisisFinanciero .af-totalCard {
+  background: var(--af-surface) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+html[data-theme="oscuro"] .mov-page--analisisFinanciero .af-sectionTitle,
+html[data-theme="oscuro"] .mov-page--analisisFinanciero .af-sectionTitle--light,
+html[data-theme="oscuro"] .mov-page--analisisFinanciero .af-breakCard__value,
+html[data-theme="oscuro"] .mov-page--analisisFinanciero .af-totalValue,
+body.dark .mov-page--analisisFinanciero .af-sectionTitle,
+body.dark .mov-page--analisisFinanciero .af-sectionTitle--light,
+body.dark .mov-page--analisisFinanciero .af-breakCard__value,
+body.dark .mov-page--analisisFinanciero .af-totalValue {
+  color: rgba(226, 232, 240, 0.92);
+}
+
+html[data-theme="oscuro"] .mov-page--analisisFinanciero .af-breakCard__label,
+html[data-theme="oscuro"] .mov-page--analisisFinanciero .af-dispoCard__label,
+html[data-theme="oscuro"] .mov-page--analisisFinanciero .af-totalLabel,
+html[data-theme="oscuro"] .mov-page--analisisFinanciero .af-breakCard__sub,
+html[data-theme="oscuro"] .mov-page--analisisFinanciero .af-dispoCard__sub,
+html[data-theme="oscuro"] .mov-page--analisisFinanciero .af-totalSub,
+html[data-theme="oscuro"] .mov-page--analisisFinanciero .af-dispoTotal,
+body.dark .mov-page--analisisFinanciero .af-breakCard__label,
+body.dark .mov-page--analisisFinanciero .af-dispoCard__label,
+body.dark .mov-page--analisisFinanciero .af-totalLabel,
+body.dark .mov-page--analisisFinanciero .af-breakCard__sub,
+body.dark .mov-page--analisisFinanciero .af-dispoCard__sub,
+body.dark .mov-page--analisisFinanciero .af-totalSub,
+body.dark .mov-page--analisisFinanciero .af-dispoTotal {
+  color: rgba(226, 232, 240, 0.68) !important;
+}
+
+html[data-theme="oscuro"] .mov-page--analisisFinanciero .af-breakCard__value--ingreso,
+html[data-theme="oscuro"] .mov-page--analisisFinanciero .af-totalCard--pos .af-totalValue,
+html[data-theme="oscuro"] .mov-page--analisisFinanciero .af-dispoCard__value,
+html[data-theme="oscuro"] .mov-page--analisisFinanciero .af-dispoTotal strong,
+body.dark .mov-page--analisisFinanciero .af-breakCard__value--ingreso,
+body.dark .mov-page--analisisFinanciero .af-totalCard--pos .af-totalValue,
+body.dark .mov-page--analisisFinanciero .af-dispoCard__value,
+body.dark .mov-page--analisisFinanciero .af-dispoTotal strong {
+  color: #4ade80 !important;
+}
+
+html[data-theme="oscuro"] .mov-page--analisisFinanciero .af-breakCard__value--egreso,
+html[data-theme="oscuro"] .mov-page--analisisFinanciero .af-totalCard--neg .af-totalValue,
+body.dark .mov-page--analisisFinanciero .af-breakCard__value--egreso,
+body.dark .mov-page--analisisFinanciero .af-totalCard--neg .af-totalValue {
+  color: #fb7185 !important;
+}
+
+/* =========================================================
+   ANÁLISIS FINANCIERO — RESPONSIVE MOBILE/TABLET
+   Solo afecta pantallas chicas. Vista monitor intacta.
+========================================================= */
+@media (max-width: 900px) {
+  .mov-page--analisisFinanciero {
+    width: 100%;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    padding-bottom: 18px;
+  }
+
+  .mov-page--analisisFinanciero .mov-card,
+  .mov-page--analisisFinanciero .mov-card--table {
+    min-width: 0;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+
+  .mov-page--analisisFinanciero .mov-card__head {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "title title"
+      "filters actions";
+    align-items: end !important;
+    gap: 12px !important;
+    padding: 14px !important;
+  }
+
+  .mov-page--analisisFinanciero .mov-card__headLeft {
+    display: contents !important;
+  }
+
+  .mov-page--analisisFinanciero .title-mov {
+    grid-area: title;
+    min-width: 0;
+  }
+
+  .mov-page--analisisFinanciero .mov-card__title {
+    font-size: 17px;
+    line-height: 1.2;
+  }
+
+  .mov-page--analisisFinanciero .mov-card__hint {
+    font-size: 12px;
+    line-height: 1.35;
+  }
+
+  .mov-page--analisisFinanciero .mov-headFilters {
+    grid-area: filters;
+    width: 100%;
+    min-width: 0;
+    display: grid !important;
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .mov-page--analisisFinanciero .mov-filter,
+  .mov-page--analisisFinanciero .mov-filter--cal,
+  .mov-page--analisisFinanciero .floatingField {
+    width: 100%;
+    min-width: 0 !important;
+  }
+
+  .mov-page--analisisFinanciero .cc-calTrigger,
+  .mov-page--analisisFinanciero .mov-calTrigger {
+    width: 100% !important;
+    min-width: 0 !important;
+    height: 44px;
+    padding: 0 12px !important;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .mov-page--analisisFinanciero .mov-card__actions {
+    grid-area: actions;
+    width: auto !important;
+    min-width: 0;
+    justify-content: flex-end !important;
+    align-self: end;
+    flex-wrap: nowrap !important;
+  }
+
+  .mov-page--analisisFinanciero .boton-exportar-wrap {
+    flex: 0 0 auto;
+  }
+
+  .mov-page--analisisFinanciero #clrRight,
+  .mov-page--analisisFinanciero .mov-calDropdown {
+    left: 0 !important;
+    right: auto !important;
+    transform: none !important;
+    max-width: calc(100vw - 28px);
+    z-index: 9999;
+  }
+
+  .mov-page--analisisFinanciero .cal-wrap {
+    width: min(520px, calc(100vw - 28px));
+    max-width: calc(100vw - 28px);
+  }
+
+  .mov-page--analisisFinanciero .af-sectionHead {
+    padding: 0 12px !important;
+    gap: 8px;
+  }
+
+  .mov-page--analisisFinanciero .af-breakdownGrid,
+  .mov-page--analisisFinanciero .af-dispoGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 12px !important;
+    padding: 0 12px 12px !important;
+  }
+
+  .mov-page--analisisFinanciero .af-footTotals {
+    padding: 0 12px 12px !important;
+  }
+
+  .mov-page--analisisFinanciero .af-breakCard,
+  .mov-page--analisisFinanciero .af-dispoCard,
+  .mov-page--analisisFinanciero .af-totalCard {
+    min-width: 0;
+    min-height: 130px;
+    border-radius: 18px;
+    padding: 16px 12px 14px;
+  }
+
+  .mov-page--analisisFinanciero .af-breakCard__icon,
+  .mov-page--analisisFinanciero .af-dispoCard__icon,
+  .mov-page--analisisFinanciero .af-totalCard__icon,
+  .mov-page--analisisFinanciero .af-cardIconSkeleton {
+    width: 42px;
+    height: 42px;
+    margin-bottom: 10px;
+    font-size: 16px;
+  }
+
+  .mov-page--analisisFinanciero .af-breakCard__label,
+  .mov-page--analisisFinanciero .af-dispoCard__label,
+  .mov-page--analisisFinanciero .af-totalLabel {
+    font-size: 11px;
+    line-height: 1.25;
+  }
+
+  .mov-page--analisisFinanciero .af-breakCard__value,
+  .mov-page--analisisFinanciero .af-dispoCard__value,
+  .mov-page--analisisFinanciero .af-totalValue {
+    font-size: clamp(18px, 4.9vw, 24px);
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    overflow-wrap: anywhere;
+  }
+
+  .mov-page--analisisFinanciero .af-breakCard__sub,
+  .mov-page--analisisFinanciero .af-dispoCard__sub,
+  .mov-page--analisisFinanciero .af-totalSub {
+    font-size: 11px;
+    line-height: 1.3;
+  }
+}
+
+@media (max-width: 640px) {
+  .mov-page--analisisFinanciero {
+    padding: 8px 8px 22px;
+  }
+
+  .mov-page--analisisFinanciero .mov-card {
+    border-radius: 16px;
+  }
+
+  .mov-page--analisisFinanciero .mov-card__head {
+    grid-template-columns: minmax(0, 1fr) 44px;
+    gap: 10px !important;
+    padding: 12px !important;
+  }
+
+  .mov-page--analisisFinanciero .boton-exportar-trigger {
+    width: 44px !important;
+    min-width: 44px !important;
+    height: 44px !important;
+    padding: 0 !important;
+    justify-content: center !important;
+    border-radius: 14px;
+  }
+
+  .mov-page--analisisFinanciero .boton-exportar-trigger__left {
+    gap: 0;
+  }
+
+  .mov-page--analisisFinanciero .boton-exportar-trigger__iconWrap {
+    width: 34px;
+    height: 34px;
+  }
+
+  .mov-page--analisisFinanciero .boton-exportar-trigger__text,
+  .mov-page--analisisFinanciero .boton-exportar-trigger__right {
+    display: none !important;
+  }
+
+  .mov-page--analisisFinanciero .boton-exportar-menu {
+    position: absolute;
+    right: 0 !important;
+    left: auto !important;
+    min-width: min(260px, calc(100vw - 24px));
+    max-width: calc(100vw - 24px);
+  }
+
+  .mov-page--analisisFinanciero .af-breakdownGrid,
+  .mov-page--analisisFinanciero .af-dispoGrid,
+  .mov-page--analisisFinanciero .af-footTotals {
+    grid-template-columns: 1fr !important;
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+  }
+
+  .mov-page--analisisFinanciero .af-sectionHead {
+    flex-direction: column;
+    align-items: stretch !important;
+    padding: 0 10px !important;
+  }
+
+  .mov-page--analisisFinanciero .af-dispoTotal {
+    width: 100%;
+    white-space: normal;
+    font-size: 12px;
+    line-height: 1.35;
+  }
+
+  .mov-page--analisisFinanciero .af-breakCard,
+  .mov-page--analisisFinanciero .af-dispoCard,
+  .mov-page--analisisFinanciero .af-totalCard {
+    min-height: 118px;
+    padding: 15px 12px;
+  }
+}
+
+@media (max-width: 420px) {
+  .mov-page--analisisFinanciero .mov-card__title {
+    font-size: 16px;
+  }
+
+  .mov-page--analisisFinanciero .mov-card__hint {
+    font-size: 11.5px;
+  }
+
+  .mov-page--analisisFinanciero .cc-calTrigger,
+  .mov-page--analisisFinanciero .mov-calTrigger {
+    font-size: 12px;
+    padding: 0 10px !important;
+  }
+
+  .mov-page--analisisFinanciero .cal-wrap {
+    width: calc(100vw - 24px);
+  }
+
+  .mov-page--analisisFinanciero .cal-header__slot {
+    padding: 12px 14px;
+  }
+
+  .mov-page--analisisFinanciero .cal-panels {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+}
+
+/* =========================================================
+   FIX MOBILE — scroll interno de Análisis Financiero
+   - Solo mobile/tablet
+   - Evita que el contenedor padre corte las tarjetas
+   - Vista monitor intacta
+========================================================= */
+@media (max-width: 900px) {
+  .mov-page--analisisFinanciero {
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: calc(100dvh - 54px) !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+    padding-bottom: calc(90px + env(safe-area-inset-bottom)) !important;
+    box-sizing: border-box;
+  }
+
+  .mov-page--analisisFinanciero .mov-card,
+  .mov-page--analisisFinanciero .mov-card--table {
+    flex: 0 0 auto !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  .mov-page--analisisFinanciero .af-breakdownSection,
+  .mov-page--analisisFinanciero .af-dispoSection,
+  .mov-page--analisisFinanciero .af-footTotals {
+    flex: 0 0 auto;
+  }
+
+  .mov-page--analisisFinanciero .af-dispoSection {
+    padding-bottom: 32px;
+  }
+}
+
+@media (max-width: 640px) {
+  .mov-page--analisisFinanciero {
+    max-height: calc(100dvh - 48px) !important;
+    padding-bottom: 20px !important;
+  }
+}

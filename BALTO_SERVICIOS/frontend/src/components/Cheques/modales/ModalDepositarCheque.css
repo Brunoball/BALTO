@@ -1,0 +1,95 @@
+/* =========================================================
+   Modal Depositar Cheque
+   Usa la base visual de Global_Modals.css y define solo estilos propios
+   del modal de depósito.
+========================================================= */
+
+.cheque-deposito-modal {
+  width: min(560px, 94vw);
+}
+
+.cheque-deposito-modal__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cheque-deposito-modal__question {
+  margin: 0 0 14px;
+  font-size: 14px;
+  color: var(--mi-muted);
+  font-weight: 400;
+  line-height: 1.45;
+}
+
+.cheque-deposito-modal__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.cheque-deposito-modal__fieldFull {
+  grid-column: 1 / -1;
+}
+
+.cheque-deposito-modal__amount {
+  font-weight: 700;
+  color: var(--color-success, var(--nv-tot-color, #057a55));
+}
+
+.cheque-deposito-modal__error {
+  display: block;
+  margin-top: 6px;
+  color: var(--color-danger, #b91c1c);
+  font-weight: 700;
+  font-size: 12px;
+}
+
+.cheque-deposito-modal__info {
+  padding: 10px 14px;
+  border-radius: var(--radius-md, 10px);
+  background: var(--color-warning-soft, rgba(245, 158, 11, .12));
+  border-left: 3px solid var(--color-warning, #f59e0b);
+  font-size: 13px;
+  color: color-mix(in srgb, var(--color-warning, #f59e0b) 55%, var(--mi-text));
+  margin-bottom: 4px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  line-height: 1.45;
+}
+
+.cheque-deposito-modal__infoIcon {
+  margin-top: 2px;
+  flex-shrink: 0;
+  color: var(--color-warning, #f59e0b);
+}
+
+.cheque-deposito-modal__infoStrong {
+  font-weight: 600;
+}
+
+.cheque-deposito-modal__actions {
+  margin-top: 14px;
+}
+
+html[data-theme="oscuro"] .cheque-deposito-modal__info,
+body.dark .cheque-deposito-modal__info {
+  background: rgba(245, 158, 11, .10);
+  color: rgba(255, 237, 213, .88);
+}
+
+@media (max-width: 560px) {
+  .cheque-deposito-modal__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .cheque-deposito-modal__actions {
+    flex-direction: column-reverse;
+  }
+
+  .cheque-deposito-modal__actions .mit-btn {
+    width: 100%;
+  }
+}

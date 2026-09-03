@@ -1,0 +1,920 @@
+/* =========================================================
+   MODALES DE PRESUPUESTO — estilos propios
+   Usan base compartida: GlobalsModalsV2.css + estilos locales propios
+   Maneja: ModalNuevoPresupuesto y ModalAsignarPresupuestoVenta
+   ========================================================= */
+
+.presupuesto-modal,
+.dc-asignar-modal {
+  --mp-bg: var(--nv-bg, var(--mi-bg, #ffffff));
+  --mp-surface: var(--nv-surface, var(--mi-bg-soft, #f8fafc));
+  --mp-surface-2: var(--nv-surface2, rgba(15, 23, 42, .025));
+  --mp-border: var(--nv-border, var(--mi-border, rgba(15, 23, 42, .10)));
+  --mp-border-md: var(--nv-border-md, var(--mi-border, rgba(15, 23, 42, .14)));
+  --mp-text: var(--nv-text, var(--mi-text, #0f172a));
+  --mp-muted: var(--nv-muted, var(--mi-muted, #64748b));
+  --mp-placeholder: var(--nv-placeholder, #94a3b8);
+  --mp-action: var(--nv-action, var(--mi-primary-600, #0055bb));
+  --mp-action-soft: var(--nv-action-10, rgba(0, 85, 187, .10));
+  --mp-head-bg: var(--nv-head-bg, var(--mi-bg-soft, #f8fafc));
+  --mp-shadow-sm: var(--nv-shadow-sm, 0 8px 20px rgba(15, 23, 42, .06));
+  --mp-shadow-md: var(--nv-shadow-md, 0 16px 34px rgba(15, 23, 42, .10));
+}
+
+/* Tabla de productos del presupuesto */
+.presupuesto-modal__content .gm-table,
+.dc-asignar-content .gm-table {
+  min-width: 0;
+}
+
+.presupuesto-modal__content .gm-table-head > div,
+.presupuesto-modal__content .gm-table-cell,
+.dc-asignar-content .gm-table-head > div,
+.dc-asignar-content .gm-table-cell {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.presupuesto-modal__content .gm-table-cell:has(button),
+.dc-asignar-content .gm-table-cell:has(button) {
+  overflow: visible;
+}
+
+/* Ajustes locales sobre piezas globales V2 */
+.presupuesto-modal .gm-cell-input,
+.dc-asignar-modal .gm-cell-input {
+  width: 100%;
+}
+
+.presupuesto-modal .gm-table-cell--detail .gm-cell-input,
+.dc-asignar-modal .gm-table-cell--detail .gm-cell-input {
+  width: 100%;
+}
+
+.presupuesto-modal .gm-aside,
+.dc-asignar-modal .gm-aside {
+  overflow-y: auto;
+  overflow-x: visible;
+}
+
+.dc-prov-wrap {
+  position: relative;
+  z-index: 300;
+  overflow: visible !important;
+}
+
+.dc-prov-wrap:focus-within { z-index: 400; }
+
+/* Autocomplete cliente — centra el label cuando está vacío y lo flota al escribir/seleccionar */
+.dc-prov-wrap--cliente {
+  position: relative;
+}
+
+.dc-prov-wrap--cliente .dc-autocomplete-input {
+  padding: 10px 12px;
+}
+
+.dc-prov-wrap--cliente .dc-label--autocomplete {
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 5;
+}
+
+.dc-prov-wrap--cliente:focus-within .dc-label--autocomplete,
+.dc-prov-wrap--cliente.dc-prov-wrap--filled .dc-label--autocomplete {
+  top: -5px;
+  transform: translateY(0) scale(.82);
+  color: var(--mp-action);
+  background: var(--mp-bg);
+}
+
+html[data-theme="oscuro"] .dc-prov-wrap--cliente:focus-within .dc-label--autocomplete,
+html[data-theme="oscuro"] .dc-prov-wrap--cliente.dc-prov-wrap--filled .dc-label--autocomplete,
+body.dark .dc-prov-wrap--cliente:focus-within .dc-label--autocomplete,
+body.dark .dc-prov-wrap--cliente.dc-prov-wrap--filled .dc-label--autocomplete {
+  color: rgba(140, 190, 255, .92);
+  background: var(--mp-bg);
+}
+
+.dc-info,
+.presupuesto-info {
+  border: 1px solid var(--mp-border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  color: var(--mp-muted);
+  background: var(--mp-surface-2);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.presupuesto-modal .gm-actions,
+.dc-asignar-modal .gm-actions {
+  gap: 8px;
+}
+
+.presupuesto-modal .gm-actions .mit-btn,
+.dc-asignar-modal .gm-actions .mit-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.dc-totals {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.dc-total-line {
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border: 1px solid var(--mp-border);
+  border-radius: 999px;
+  background: var(--mp-bg);
+  color: var(--mp-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.dc-total-line b {
+  color: var(--mp-text);
+  font-family: 'DM Mono', 'Fira Mono', monospace;
+  font-size: 12px;
+}
+
+.dc-total-line--total {
+  border-color: rgba(0, 85, 187, .28);
+  background: rgba(0, 85, 187, .08);
+  color: var(--mp-action);
+}
+
+.dc-total-line--total b {
+  color: var(--mp-action);
+  font-weight: 800;
+}
+
+html[data-theme="oscuro"] .dc-total-line {
+  background: rgba(255, 255, 255, .06);
+  border-color: rgba(255, 255, 255, .10);
+}
+
+html[data-theme="oscuro"] .dc-total-line--total {
+  background: rgba(0, 85, 187, .18);
+  border-color: rgba(0, 85, 187, .38);
+}
+
+/* Nuevo Presupuesto — condiciones comerciales */
+.presupuesto-terms {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--mp-border);
+  border-radius: 16px;
+  background: var(--mp-surface-2);
+}
+
+.presupuesto-terms__title {
+  color: var(--mp-text);
+  font-size: .86rem;
+  font-weight: 800;
+  letter-spacing: -.01em;
+}
+
+.presupuesto-terms__row {
+  display: grid;
+  grid-template-columns: minmax(120px, 150px) 1fr;
+  align-items: center;
+  gap: 10px;
+}
+
+.presupuesto-terms__field { margin: 0; }
+
+.presupuesto-terms__hint {
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--mp-border-md);
+  border-radius: 12px;
+  padding: 8px 10px;
+  background: var(--mp-bg);
+  color: var(--mp-text);
+  font-size: .78rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.presupuesto-terms__block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+}
+
+.presupuesto-terms__block > span {
+  color: var(--mp-muted);
+  font-size: .76rem;
+  font-weight: 800;
+}
+
+.presupuesto-terms__textarea {
+  min-height: 68px;
+  height: auto;
+  resize: vertical;
+  padding-top: 10px;
+  line-height: 1.35;
+}
+
+.presupuesto-terms__row--split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: stretch;
+  gap: 10px;
+}
+
+.presupuesto-terms__row--split .presupuesto-terms__block { min-width: 0; }
+
+.presupuesto-modal__content .gm-table {
+  min-height: 0;
+}
+
+.presupuesto-modal__content .gm-table-body {
+  flex: 1 1 260px;
+  min-height: 180px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.presupuesto-modal__content .gm-table > .presupuesto-terms {
+  flex: 0 1 auto;
+  width: 100%;
+  max-width: 100%;
+  max-height: clamp(240px, 34vh, 360px);
+  box-sizing: border-box;
+  margin: 0;
+  border-left: 0;
+  border-right: 0;
+  border-bottom: 0;
+  border-radius: 0;
+  border-top: 1px solid var(--mp-border-md);
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 14px 12px 12px;
+  gap: 12px;
+  background: var(--mp-bg);
+}
+
+.presupuesto-modal__content .gm-table > .presupuesto-terms *,
+.presupuesto-modal__content .gm-table > .presupuesto-terms *::before,
+.presupuesto-modal__content .gm-table > .presupuesto-terms *::after {
+  box-sizing: border-box;
+}
+
+.presupuesto-modal__content .gm-table > .presupuesto-terms .presupuesto-terms__row,
+.presupuesto-modal__content .gm-table > .presupuesto-terms .presupuesto-terms__row--split {
+  min-width: 0;
+}
+
+.presupuesto-modal__content .gm-table > .presupuesto-terms .presupuesto-terms__textarea,
+.presupuesto-modal__content .gm-table > .presupuesto-terms .gm-input {
+  max-width: 100%;
+}
+
+.presupuesto-modal__content .gm-table > .presupuesto-terms .presupuesto-terms__title {
+  padding: 0 2px;
+  color: var(--mp-text);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+}
+
+.presupuesto-modal__content .gm-table > .presupuesto-terms .presupuesto-terms__field {
+  position: relative;
+  min-width: 0;
+}
+
+.presupuesto-modal__content .gm-table > .presupuesto-terms .presupuesto-terms__textarea {
+  width: 100%;
+  min-height: 62px;
+  height: auto;
+  resize: vertical;
+  padding: 16px 10px 8px;
+  line-height: 1.35;
+}
+
+.presupuesto-modal__content .gm-table > .presupuesto-terms .presupuesto-terms__field--small .gm-input {
+  height: 42px;
+  padding-top: 10px;
+}
+
+.presupuesto-modal__content .gm-table > .presupuesto-terms textarea.gm-input + .gm-label {
+  top: 21px;
+}
+
+.presupuesto-modal__content .gm-table > .presupuesto-terms textarea.gm-input:focus + .gm-label,
+.presupuesto-modal__content .gm-table > .presupuesto-terms textarea.gm-input:not(:placeholder-shown) + .gm-label {
+  top: -5px;
+  transform: translateY(0) scale(.82);
+  color: var(--mp-action);
+  background: var(--mp-bg);
+}
+
+.presupuesto-modal__content .gm-table > .presupuesto-terms .presupuesto-terms__hint {
+  min-height: 42px;
+  border-radius: 12px;
+  border: 1px solid var(--mp-border-md);
+  color: var(--mp-text);
+}
+
+html[data-theme="oscuro"] .presupuesto-terms,
+body.dark .presupuesto-terms {
+  background: rgba(15, 23, 42, .42);
+  border-color: rgba(148, 163, 184, .18);
+}
+
+html[data-theme="oscuro"] .presupuesto-terms__hint,
+body.dark .presupuesto-terms__hint {
+  background: rgba(255, 255, 255, .06);
+  border-color: rgba(255, 255, 255, .14);
+  color: rgba(255, 255, 255, .92);
+}
+
+html[data-theme="oscuro"] .presupuesto-modal__content .gm-table > .presupuesto-terms,
+body.dark .presupuesto-modal__content .gm-table > .presupuesto-terms {
+  background: var(--mp-bg);
+  border-top-color: rgba(255, 255, 255, .10);
+}
+
+html[data-theme="oscuro"] .presupuesto-modal__content .gm-table > .presupuesto-terms textarea.gm-input:focus + .gm-label,
+html[data-theme="oscuro"] .presupuesto-modal__content .gm-table > .presupuesto-terms textarea.gm-input:not(:placeholder-shown) + .gm-label,
+body.dark .presupuesto-modal__content .gm-table > .presupuesto-terms textarea.gm-input:focus + .gm-label,
+body.dark .presupuesto-modal__content .gm-table > .presupuesto-terms textarea.gm-input:not(:placeholder-shown) + .gm-label {
+  color: rgba(140, 190, 255, .92);
+  background: var(--mp-bg);
+}
+
+/* Asignar presupuesto a venta */
+.dc-asignar-modal {
+  width: min(1200px, calc(100vw - 24px));
+  border-radius: 28px !important;
+  overflow: hidden;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, .22), 0 6px 20px rgba(15, 23, 42, .12) !important;
+}
+
+.dc-asignar-head-subtitle {
+  margin: 4px 0 0;
+  color: var(--mp-muted);
+  font-size: .82rem;
+  line-height: 1.4;
+  font-weight: 500;
+}
+
+.dc-asignar-content { padding: 14px; }
+.dc-asignar-grid { align-items: stretch; }
+
+.dc-asignar-products {
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+.dc-asignar-products__rows {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+}
+
+.dc-asignar-product-row small {
+  display: block;
+  margin-top: 3px;
+  color: var(--mp-placeholder);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.dc-asignar-product-row .mdm-product-name,
+.dc-asignar-product-row small {
+  min-width: 0;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: inline-block;
+}
+
+.dc-asignar-products__foot { gap: 12px; }
+
+.dc-asignar-empty {
+  margin: 12px;
+  padding: 18px;
+  border: 1px dashed rgba(100, 116, 139, .35);
+  border-radius: 16px;
+  color: var(--mp-muted);
+  text-align: center;
+  font-weight: 700;
+  background: var(--mp-surface-2);
+}
+
+.dc-asignar-side .gm-aside {
+  display: grid;
+  gap: 12px;
+}
+
+.dc-asignar-convertido {
+  margin: 12px 16px 0;
+  padding: 13px 16px;
+  border: 1px solid rgba(15, 138, 95, .2);
+  border-radius: 16px;
+  color: #0f8a5f;
+  background: rgba(15, 138, 95, .10);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  font-size: .875rem;
+}
+
+.dc-asignar-convertido span {
+  display: block;
+  margin-top: 2px;
+  font-size: .79rem;
+  font-weight: 500;
+  color: #0f8a5f;
+  opacity: .85;
+}
+
+.dc-asignar-doc-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border: 1px solid var(--mp-border);
+  border-radius: 999px;
+  background: var(--mp-bg);
+  box-shadow: var(--mp-shadow-sm);
+  white-space: nowrap;
+}
+
+.dc-asignar-doc-chip span {
+  font-size: .62rem;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  color: var(--mp-placeholder);
+  font-weight: 800;
+}
+
+.dc-asignar-doc-chip b {
+  color: var(--mp-action);
+  font-size: .84rem;
+  font-weight: 800;
+  font-family: 'DM Mono', 'Fira Mono', monospace;
+}
+
+.dc-asignar-loading {
+  min-height: 260px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--mp-muted);
+}
+
+.dc-asignar-modal .dc-asignar-readonly-input,
+.dc-asignar-modal .dc-asignar-readonly-field-input {
+  pointer-events: none;
+  cursor: default;
+  background: transparent;
+}
+
+.dc-asignar-modal .dc-asignar-readonly-input {
+  height: auto;
+  min-height: 30px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  padding-top: 3px;
+  padding-bottom: 3px;
+  color: var(--mp-text);
+  font-weight: 600;
+}
+
+.dc-asignar-modal .dc-asignar-readonly-input:hover,
+.dc-asignar-modal .dc-asignar-readonly-input:focus,
+.dc-asignar-modal .dc-asignar-readonly-field-input:hover,
+.dc-asignar-modal .dc-asignar-readonly-field-input:focus {
+  border-color: transparent;
+  box-shadow: none;
+  background: transparent;
+}
+
+.dc-asignar-modal .dc-asignar-readonly-input small {
+  margin-top: 0;
+  color: var(--mp-muted);
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 1.15;
+}
+
+.dc-asignar-modal .dc-asignar-row-lock {
+  width: 24px;
+  height: 24px;
+  display: block;
+}
+
+.dc-asignar-modal .gm-section-divider { margin-top: 2px; }
+
+.dc-asignar-modal .dc-asignar-readonly-input,
+.dc-asignar-modal .dc-asignar-readonly-input span,
+.dc-asignar-modal .dc-asignar-readonly-input small,
+.dc-asignar-modal .dc-asignar-readonly-field-input {
+  min-width: 0;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dc-payment-readonly-panel {
+  display: grid;
+  gap: 10px;
+}
+
+.dc-cheques-loading {
+  color: var(--mp-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+html[data-theme="oscuro"] .dc-asignar-head-subtitle,
+body.dark .dc-asignar-head-subtitle {
+  color: rgba(210, 220, 235, .68);
+}
+
+
+/* =========================================================
+   Corrección tabla Documentos Comerciales sobre Global V2
+   ---------------------------------------------------------
+   Usa la misma estructura real que Ventas/Compras:
+   gm-table--movement + gm-table-th + gm-row-delete + gm-summary-chip.
+   Acá quedan solo columnas y detalles propios del presupuesto.
+========================================================= */
+.dc-presupuesto-table .gm-table-head,
+.dc-presupuesto-table .gm-table-row,
+.dc-asignar-products .gm-table-head,
+.dc-asignar-products .gm-table-row {
+  grid-template-columns: minmax(210px, 2.4fr) 72px minmax(108px, 1fr) 80px minmax(92px, 1fr) minmax(96px, 1fr) 36px !important;
+}
+
+.dc-presupuesto-table .gm-table-th.right,
+.dc-asignar-products .gm-table-th.right {
+  text-align: right;
+}
+
+.dc-presupuesto-table .gm-table-head,
+.dc-asignar-products .gm-table-head {
+  border-bottom: 1px solid var(--gm-border);
+}
+
+.dc-presupuesto-table .gm-table-row,
+.dc-asignar-products .gm-table-row {
+  min-height: 54px;
+}
+
+.dc-presupuesto-table #delete_cell,
+.dc-asignar-products #delete_cell {
+  padding: 0 !important;
+}
+
+.dc-presupuesto-table .stock_cant,
+.dc-asignar-products .stock_cant {
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dc-presupuesto-table .gm-cell-input--select,
+.dc-asignar-products .gm-cell-input--select {
+  min-width: 0;
+}
+
+.dc-presupuesto-table .gm-row-delete.dc-row-delete {
+  width: 24px !important;
+  height: 24px !important;
+  min-width: 24px !important;
+  min-height: 24px !important;
+  padding: 0 !important;
+  border-radius: 6px !important;
+  font-size: 14px !important;
+  line-height: 1 !important;
+}
+
+.dc-presupuesto-table .gm-summary-chips,
+.dc-asignar-products .gm-summary-chips {
+  margin-left: auto;
+}
+
+@media (max-width: 980px) {
+  .dc-presupuesto-table .gm-table-head,
+  .dc-presupuesto-table .gm-table-row,
+  .dc-asignar-products .gm-table-head,
+  .dc-asignar-products .gm-table-row {
+    grid-template-columns: minmax(190px, 2.2fr) 66px minmax(96px, .9fr) 72px minmax(84px, .85fr) minmax(92px, .95fr) 34px !important;
+  }
+}
+
+/* Medios de pago en presupuesto ya convertido: vista simple, sin bloque falso de cheque */
+.dc-payment-readonly-panel {
+  display: grid;
+  gap: 8px;
+}
+
+.dc-payment-readonly-card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(33, 82, 130, .12);
+  border-radius: 14px;
+  background: #ffffff;
+  padding: 12px 13px;
+  display: grid;
+  gap: 10px;
+  box-shadow: 0 8px 18px rgba(15, 44, 76, .06);
+}
+
+.dc-payment-readonly-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: rgba(47, 128, 237, .55);
+}
+
+.dc-payment-readonly-main {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.dc-payment-readonly-main > div {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.dc-payment-readonly-main b {
+  color: #17324b;
+  font-size: .86rem;
+  font-weight: 700;
+  line-height: 1.12;
+  text-transform: uppercase;
+  letter-spacing: .01em;
+}
+
+.dc-payment-readonly-main span {
+  color: #718094;
+  font-size: .72rem;
+  font-weight: 500;
+}
+
+.dc-payment-readonly-main strong {
+  max-width: 142px;
+  color: #2168b8;
+  font-family: 'DM Mono', 'Fira Mono', monospace;
+  font-size: .84rem;
+  font-weight: 700;
+  line-height: 1.14;
+  letter-spacing: -.025em;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.dc-payment-readonly-cheque {
+  position: relative;
+  border: 1px solid rgba(23, 50, 75, .10);
+  border-radius: 12px;
+  background: #f9fbfc;
+  padding: 10px 11px 8px;
+  display: grid;
+  gap: 0;
+  color: #2d4156;
+  font-size: .74rem;
+  font-weight: 500;
+}
+
+.dc-payment-readonly-cheque > b {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+  color: #0f766e;
+  font-size: .78rem;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.dc-payment-readonly-cheque > b::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(15, 118, 110, .72);
+}
+
+.dc-payment-readonly-cheque span {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+  padding: 4px 0;
+  border-top: 1px solid rgba(23, 50, 75, .07);
+  line-height: 1.2;
+}
+
+.dc-payment-readonly-cheque span b {
+  color: #41566d;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.dc-payment-readonly-cheque span:not(:has(b)) {
+  justify-content: flex-end;
+  text-align: right;
+}
+
+.dc-asignar-actions .gm-action-btn {
+  width: 100%;
+  min-width: 0;
+}
+
+html[data-theme="oscuro"] .dc-payment-readonly-card,
+body.dark .dc-payment-readonly-card {
+  background: rgba(15, 30, 48, .96);
+  border-color: rgba(255, 255, 255, .10);
+  box-shadow: 0 10px 22px rgba(0, 0, 0, .24);
+}
+
+html[data-theme="oscuro"] .dc-payment-readonly-card::before,
+body.dark .dc-payment-readonly-card::before {
+  background: rgba(119, 185, 255, .48);
+}
+
+html[data-theme="oscuro"] .dc-payment-readonly-main b,
+body.dark .dc-payment-readonly-main b {
+  color: rgba(238, 246, 255, .88);
+}
+
+html[data-theme="oscuro"] .dc-payment-readonly-main span,
+body.dark .dc-payment-readonly-main span {
+  color: rgba(210, 220, 235, .58);
+}
+
+html[data-theme="oscuro"] .dc-payment-readonly-main strong,
+body.dark .dc-payment-readonly-main strong {
+  color: #77b9ff;
+}
+
+html[data-theme="oscuro"] .dc-payment-readonly-cheque,
+body.dark .dc-payment-readonly-cheque {
+  background: rgba(255, 255, 255, .04);
+  border-color: rgba(255, 255, 255, .09);
+  color: rgba(238, 246, 255, .78);
+}
+
+html[data-theme="oscuro"] .dc-payment-readonly-cheque > b,
+body.dark .dc-payment-readonly-cheque > b {
+  color: rgba(118, 229, 210, .88);
+}
+
+html[data-theme="oscuro"] .dc-payment-readonly-cheque > b::before,
+body.dark .dc-payment-readonly-cheque > b::before {
+  background: rgba(118, 229, 210, .65);
+}
+
+html[data-theme="oscuro"] .dc-payment-readonly-cheque span,
+body.dark .dc-payment-readonly-cheque span {
+  border-top-color: rgba(255, 255, 255, .07);
+}
+
+html[data-theme="oscuro"] .dc-payment-readonly-cheque span b,
+body.dark .dc-payment-readonly-cheque span b {
+  color: rgba(220, 235, 245, .68);
+}
+
+.presupuesto-actions .gm-action-btn {
+  width: 100%;
+  min-width: 0;
+}
+
+
+/* === Presupuestos personalizados y modelos base === */
+.presupuesto-mode-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 0 0 14px;
+  padding: 13px 15px;
+  border: 1px solid rgba(15, 23, 42, .12);
+  border-radius: 14px;
+  background: rgba(248, 250, 252, .88);
+}
+
+.presupuesto-mode-panel.is-active {
+  border-color: rgba(0, 85, 187, .34);
+  background: rgba(0, 85, 187, .06);
+}
+
+.presupuesto-mode-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.presupuesto-model-button {
+  flex: 0 0 auto;
+  width: auto;
+  min-height: 36px;
+  height: 36px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-size: .74rem;
+}
+
+.presupuesto-model-loaded {
+  max-width: 290px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 7px 9px;
+  border-radius: 9px;
+  background: rgba(0, 85, 187, .09);
+  color: #0055bb;
+  font-size: .7rem;
+}
+
+.presupuesto-save-model {
+  display: grid;
+  gap: 11px;
+  margin-top: 4px;
+  padding: 12px;
+  border: 1px solid rgba(15, 23, 42, .10);
+  border-radius: 12px;
+  background: rgba(248, 250, 252, .72);
+}
+
+.presupuesto-save-model.is-active {
+  border-color: rgba(0, 85, 187, .28);
+  background: rgba(0, 85, 187, .05);
+}
+
+.presupuesto-save-model__fields {
+  display: grid;
+  gap: 10px;
+}
+
+.presupuesto-model-description {
+  min-height: 68px;
+  resize: vertical;
+  padding-top: 18px !important;
+}
+
+html[data-theme="oscuro"] .presupuesto-mode-panel,
+body.dark .presupuesto-mode-panel,
+html[data-theme="oscuro"] .presupuesto-save-model,
+body.dark .presupuesto-save-model {
+  background: rgba(255, 255, 255, .035);
+  border-color: rgba(255, 255, 255, .11);
+}
+
+html[data-theme="oscuro"] .presupuesto-mode-panel.is-active,
+body.dark .presupuesto-mode-panel.is-active,
+html[data-theme="oscuro"] .presupuesto-save-model.is-active,
+body.dark .presupuesto-save-model.is-active {
+  background: rgba(78, 152, 255, .10);
+  border-color: rgba(119, 185, 255, .32);
+}
+
+@media (max-width: 850px) {
+  .presupuesto-mode-panel {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .presupuesto-mode-actions {
+    justify-content: flex-start;
+  }
+}

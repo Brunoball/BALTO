@@ -1,0 +1,442 @@
+/* =========================
+   Modal Factura Balto
+========================= */
+
+.mfb-modal-container{
+  max-width: 1180px;
+}
+
+.mfb-grid{
+  display: grid;
+  grid-template-columns: 390px 1fr;
+  gap: 16px;
+}
+
+/* spacing helpers */
+
+.mfb-mt12{
+  margin-top: 12px;
+}
+
+.mfb-mt16{
+  margin-top: 16px;
+}
+
+.mfb-mb8{
+  margin-bottom: 8px;
+}
+
+/* confirm checkbox */
+
+.mfb-confirm{
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.mfb-confirm-check{
+  margin-top: 3px;
+}
+
+/* pdf preview */
+
+.mfb-preview{
+  width: 100%;
+  height: 50vh;
+  border: 1px solid rgba(148,163,184,.35);
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+/* icon spacing */
+
+.mfb-icon{
+  margin-left: 8px;
+}.arca-resumen-grid{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap:40px;
+  margin-top:12px;
+}
+
+.arca-col{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+
+.arca-row{
+  display:grid;
+  grid-template-columns:150px 1fr;
+  font-size:14px;
+}
+
+.arca-row b{
+  font-weight:600;
+  opacity:.85;
+}
+.mfb-mt14{
+    margin-top: 10px;
+}/* =========================
+   Checklist confirmación
+========================= */
+
+.mfb-check{
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  cursor: pointer;
+  padding: 12px 14px;
+  border: 1px solid rgba(148,163,184,.35);
+  border-radius: 14px;
+  background: rgba(241,245,249,.65);
+  transition: border-color .18s ease, box-shadow .18s ease, background .18s ease, transform .18s ease;
+  user-select: none;
+}
+
+.mfb-check:hover{
+  background: rgba(226,232,240,.55);
+  border-color: rgba(0,85,187,.25);
+}
+
+.mfb-check__input{
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.mfb-check__box{
+  width: 22px;
+  height: 22px;
+  min-width: 22px;
+  margin-top: 1px;
+  border-radius: 7px;
+  border: 1.5px solid rgba(148,163,184,.75);
+  background: #fff;
+  display: grid;
+  place-items: center;
+  transition: background .18s ease, border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+}
+
+.mfb-check__icon{
+  font-size: 12px;
+  opacity: 0;
+  transform: scale(.75);
+  transition: opacity .16s ease, transform .16s ease;
+  color: #fff;
+}
+
+.mfb-check__text{
+  color: var(--mi-text);
+  line-height: 1.45;
+  font-size: .95rem;
+  font-weight: 400;
+}
+
+.mfb-check__text b{
+  font-weight: 600;
+}
+
+/* checked */
+.mfb-check__input:checked + .mfb-check__box{
+  background: var(--mi-primary);
+  border-color: var(--mi-primary);
+  box-shadow: 0 0 0 3px rgba(0,85,187,.14);
+}
+
+.mfb-check__input:checked + .mfb-check__box .mfb-check__icon{
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* focus */
+.mfb-check__input:focus-visible + .mfb-check__box{
+  box-shadow: 0 0 0 3px rgba(0,85,187,.18);
+  border-color: var(--mi-primary-600);
+}
+
+/* disabled */
+.mfb-check__input:disabled + .mfb-check__box{
+  opacity: .65;
+  cursor: not-allowed;
+}
+
+.mfb-check__input:disabled ~ .mfb-check__text{
+  opacity: .7;
+}
+
+.mfb-check:has(.mfb-check__input:disabled){
+  cursor: not-allowed;
+  opacity: .82;
+}
+
+/* dark mode */
+.mi-modal--dark .mfb-check{
+  background: rgba(255,255,255,.05);
+  border-color: rgba(255,255,255,.10);
+}
+
+.mi-modal--dark .mfb-check:hover{
+  background: rgba(255,255,255,.08);
+  border-color: rgba(0,85,187,.35);
+}
+
+.mi-modal--dark .mfb-check__box{
+  background: rgba(255,255,255,.05);
+  border-color: rgba(255,255,255,.18);
+}
+
+.mi-modal--dark .mfb-check__text{
+  color: rgba(255,255,255,.92);
+}/* =========================
+   Modal Factura Balto
+========================= */
+
+.mfb-modal-container{
+  max-width: 1180px;
+}
+
+/* ya no hace falta grid 2 columnas para resumen/preview */
+.mfb-grid{
+  display: block;
+}
+
+.mfb-error-top{
+  margin-bottom: 12px;
+}
+
+/* =========================
+   Tabs
+========================= */
+
+.mfb-tabs{
+  display: flex;
+  gap: 10px;
+  padding: 4px;
+  flex-wrap: nowrap;
+}
+
+.mfb-tab{
+  appearance: none;
+  border: 1px solid rgba(148,163,184,.35);
+  background: #f8fafc;
+  color: var(--mi-text);
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-size: .94rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background .18s ease, border-color .18s ease, color .18s ease, box-shadow .18s ease;
+}
+
+.mfb-tab:hover{
+  background: #eef2f7;
+  border-color: rgba(0,85,187,.25);
+}
+
+.mfb-tab.is-active{
+  background: rgba(0,85,187,.10);
+  border-color: rgba(0,85,187,.42);
+  color: var(--mi-primary);
+  box-shadow: 0 0 0 3px rgba(0,85,187,.10);
+}
+
+/* spacing helpers */
+
+.mfb-mt8{
+  margin-top: 8px;
+}
+
+.mfb-mt12{
+  margin-top: 12px;
+}
+
+.mfb-mt14{
+  margin-top: 10px;
+}
+
+.mfb-mt16{
+  margin-top: 16px;
+}
+
+.mfb-mb6{
+  margin-bottom: 6px;
+}
+
+.mfb-mb8{
+  margin-bottom: 8px;
+}
+
+/* pdf preview */
+
+.mi-tanel{
+  padding: 10px;
+}
+/* icon spacing */
+
+.mfb-icon{
+  margin-left: 8px;
+}
+
+.arca-resumen-grid{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+  margin-top: 12px;
+}
+
+.arca-col{
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.arca-row{
+  display: grid;
+  grid-template-columns: 150px 1fr;
+  font-size: 14px;
+  gap: 10px;
+}
+
+.arca-row b{
+  font-weight: 600;
+  opacity: .85;
+}
+
+/* =========================
+   Checklist confirmación
+========================= */
+
+.mfb-check{
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  cursor: pointer;
+  padding: 12px 14px;
+  border: 1px solid rgba(148,163,184,.35);
+  border-radius: 14px;
+  background: rgba(241,245,249,.65);
+  transition: border-color .18s ease, box-shadow .18s ease, background .18s ease, transform .18s ease;
+  user-select: none;
+}
+
+.mfb-check:hover{
+  background: rgba(226,232,240,.55);
+  border-color: rgba(0,85,187,.25);
+}
+
+.mfb-check__input{
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.mfb-check__box{
+  width: 22px;
+  height: 22px;
+  min-width: 22px;
+  margin-top: 1px;
+  border-radius: 7px;
+  border: 1.5px solid rgba(148,163,184,.75);
+  background: #fff;
+  display: grid;
+  place-items: center;
+  transition: background .18s ease, border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+}
+
+.mfb-check__icon{
+  font-size: 12px;
+  opacity: 0;
+  transform: scale(.75);
+  transition: opacity .16s ease, transform .16s ease;
+  color: #fff;
+}
+
+.mfb-check__text{
+  color: var(--mi-text);
+  line-height: 1.45;
+  font-size: .95rem;
+  font-weight: 400;
+}
+
+.mfb-check__text b{
+  font-weight: 600;
+}
+
+/* checked */
+.mfb-check__input:checked + .mfb-check__box{
+  background: var(--mi-primary);
+  border-color: var(--mi-primary);
+  box-shadow: 0 0 0 3px rgba(0,85,187,.14);
+}
+
+.mfb-check__input:checked + .mfb-check__box .mfb-check__icon{
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* focus */
+.mfb-check__input:focus-visible + .mfb-check__box{
+  box-shadow: 0 0 0 3px rgba(0,85,187,.18);
+  border-color: var(--mi-primary-600);
+}
+
+/* disabled */
+.mfb-check__input:disabled + .mfb-check__box{
+  opacity: .65;
+  cursor: not-allowed;
+}
+
+.mfb-check__input:disabled ~ .mfb-check__text{
+  opacity: .7;
+}
+
+.mfb-check:has(.mfb-check__input:disabled){
+  cursor: not-allowed;
+  opacity: .82;
+}
+
+/* =========================
+   Responsive
+========================= */
+
+@media (max-width: 900px){
+  .arca-resumen-grid{
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+
+  .arca-row{
+    grid-template-columns: 130px 1fr;
+  }
+
+  .mfb-preview{
+    height: 62vh;
+  }
+}
+
+@media (max-width: 640px){
+
+
+  .mfb-tab{
+    width: 100%;
+    text-align: left;
+  }
+
+  .arca-row{
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+
+  .arca-row b{
+    opacity: .72;
+  }
+}
+.padding-tabpanel{
+  padding: 10px;
+  overflow: auto;
+  overflow-x: hidden;
+  height: calc(100vh - 300px);
+  max-height: 470px;
+}

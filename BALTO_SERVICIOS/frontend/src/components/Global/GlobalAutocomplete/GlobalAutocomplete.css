@@ -1,0 +1,64 @@
+.ga-wrap{
+  position: relative;
+  width: 100%;
+}
+
+.ga-input{
+  width: 100%;
+}
+
+.ga-list{
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 90;
+  background: var(--nv-bg, #fff);
+  border: 1px solid var(--nv-border-md, rgba(15,23,42,.16));
+  border-radius: 8px;
+  box-shadow: 0 12px 36px rgba(15,23,42,.18);
+  list-style: none;
+  padding: 4px;
+  margin: 0;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.ga-item{
+  padding: 7px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: .85rem;
+  color: var(--nv-text, #0A2540);
+  transition: background .10s;
+  user-select: none;
+}
+
+.ga-item:hover{
+  background: var(--nv-action-10, rgba(0,85,187,.10));
+}
+
+.ga-item.is-active{
+  background: var(--nv-action-10, rgba(0,85,187,.10));
+  outline: 1px solid var(--nv-action-18, rgba(0,85,187,.18));
+}
+
+.ga-item.is-empty{
+  cursor: default;
+  opacity: .7;
+}
+
+.mi-modal--dark .ga-list{
+  background: rgba(6,18,28,.98);
+  border-color: rgba(255,255,255,.14);
+  box-shadow: 0 22px 55px rgba(0,0,0,.45);
+}
+
+.mi-modal--dark .ga-item{
+  color: rgba(255,255,255,.88);
+}
+
+.mi-modal--dark .ga-item:hover,
+.mi-modal--dark .ga-item.is-active{
+  background: rgba(255,255,255,.10);
+}

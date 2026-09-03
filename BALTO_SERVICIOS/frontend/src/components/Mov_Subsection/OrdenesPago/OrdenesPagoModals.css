@@ -1,0 +1,390 @@
+/* =========================================================
+   ORDENES DE PAGO - MODALES
+   ---------------------------------------------------------
+   CSS local de la sección. Mantiene únicamente medidas,
+   columnas y detalles propios de Órdenes de Pago.
+   La base visual compartida queda en GlobalsModalsV2.css.
+========================================================= */
+
+.gm-order-pay-modal {
+  --gm-order-table-cols: 44px 100px minmax(0, 1fr) 140px 130px 54px;
+}
+
+.gm-order-table { min-height: 0; }
+
+.gm-order-table-head,
+.gm-order-row {
+  grid-template-columns: var(--gm-order-table-cols);
+}
+
+.gm-order-table-head { border-bottom: 1px solid var(--gm-border); }
+
+.gm-order-th--sel,
+.gm-order-th--center,
+.gm-order-th--info { text-align: center; }
+
+.gm-order-th--right { text-align: right; }
+.gm-order-th--desc { text-align: left; }
+
+.gm-order-row {
+  min-height: 42px;
+  cursor: pointer;
+}
+
+.gm-order-row.is-paid {
+  opacity: .72;
+  cursor: default;
+}
+
+.gm-order-row.is-checked { background: var(--gm-accent-soft) !important; }
+.gm-order-row.is-checked:hover { background: var(--gm-accent-soft-hover) !important; }
+
+html[data-theme="oscuro"] .gm-order-row.is-checked { background: rgba(0, 85, 187, .22) !important; }
+
+.gm-order-td {
+  color: var(--gm-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gm-order-td--sel {
+  padding: 0;
+  justify-content: center;
+}
+
+.gm-order-td--desc {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gm-order-td--info {
+  justify-content: center;
+  padding: 0 8px;
+  overflow: visible;
+}
+
+.gm-order-table-foot-stats,
+.gm-order-table-foot-totals {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.gm-order-total-pill {
+  gap: 8px;
+  padding: 5px 12px 5px 14px;
+}
+
+.gm-order-total-pill span { white-space: nowrap; }
+.gm-order-total-pill b { font-size: .9rem; }
+
+.gm-order-select-all-btn {
+  min-height: 36px;
+  height: 36px;
+  aspect-ratio: auto;
+}
+
+@media (max-width: 1100px) {
+  .gm-order-pay-modal {
+    --gm-order-table-cols: 44px 90px minmax(160px, 1fr) 100px 115px 50px;
+  }
+
+  .gm-order-th,
+  .gm-order-td {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+
+  .gm-order-th { font-size: 10px; }
+  .gm-order-td { font-size: 13px; }
+}
+
+@media (max-width: 768px) {
+  .gm-order-table-head { display: none; }
+
+  .gm-order-table-body {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  .gm-order-row {
+    grid-template-columns: 34px minmax(0, 1fr) auto 34px;
+    grid-template-areas:
+      "sel fecha monto info"
+      "sel desc desc desc"
+      "sel estado estado estado";
+    gap: 6px 10px;
+    min-height: unset;
+    padding: 10px 12px;
+    border: 1px solid var(--gm-border);
+    border-radius: 12px;
+    background: var(--gm-bg);
+  }
+
+  .gm-order-row:nth-child(even) { background: var(--gm-bg); }
+  .gm-order-row > .gm-order-td:not(:first-child) { border-left: 0; }
+
+  .gm-order-td {
+    padding: 0;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: unset;
+  }
+
+  .gm-order-td--sel {
+    grid-area: sel;
+    align-self: stretch;
+    justify-content: flex-start;
+    padding-top: 2px;
+  }
+
+  .gm-order-row > .gm-order-td:nth-child(2) {
+    grid-area: fecha;
+    font-size: 12px;
+    color: var(--gm-muted);
+    font-weight: 600;
+  }
+
+  .gm-order-td--desc {
+    grid-area: desc;
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.35;
+  }
+
+  .gm-order-td--center {
+    grid-area: estado;
+    justify-content: flex-start;
+    text-align: left;
+  }
+
+  .gm-order-td--right {
+    grid-area: monto;
+    justify-self: end;
+    text-align: right;
+    font-size: 13px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .gm-order-td--info {
+    grid-area: info;
+    justify-self: end;
+    padding: 0;
+  }
+
+  .gm-order-td--info .gm-info-btn { width: 30px; height: 30px; }
+
+  .gm-order-table-foot {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .gm-order-table-foot-stats,
+  .gm-order-table-foot-totals {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .gm-order-total-pill {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .gm-order-select-all-btn { min-height: 38px; }
+}
+
+@media (max-width: 520px) {
+  .gm-order-table-body {
+    gap: 6px;
+    padding: 6px;
+  }
+
+  .gm-order-row {
+    gap: 5px 8px;
+    padding: 10px;
+  }
+
+  .gm-order-row > .gm-order-td:nth-child(2) { font-size: 11px; }
+  .gm-order-td--desc { font-size: 12px; }
+  .gm-order-td--right { font-size: 12px; }
+  .gm-order-total-pill {
+    padding: 6px 10px 6px 12px;
+    font-size: 12px;
+  }
+
+  .gm-order-total-pill b { font-size: 12px; }
+}
+
+
+/* =========================================================
+   Órdenes de Pago - editar orden
+   ---------------------------------------------------------
+   Estilos propios del modal de edición: distribución interna,
+   autocomplete y resumen. No son patrones globales.
+========================================================= */
+
+.gm-order-edit-modal .mi-er-layout{
+  flex:1;
+  min-height:0;
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 430px;
+  gap:18px;
+  overflow:hidden;
+}
+
+.gm-order-edit-modal .mi-er-main{
+  min-width:0;
+  min-height:0;
+  border:1px solid var(--nv-border-md);
+  border-radius:14px;
+  background:var(--nv-bg);
+  box-shadow:var(--nv-shadow-sm);
+  overflow:auto;
+  padding:16px;
+}
+
+.gm-order-edit-modal .mi-er-form{
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+}
+
+.gm-order-edit-modal .mi-er-rel{ position:relative; }
+
+.gm-order-edit-modal .mi-er-autocomplete{
+  position:absolute;
+  top:calc(100% + 6px);
+  left:0;
+  right:0;
+  z-index:50;
+  background:var(--nv-bg);
+  border:1px solid var(--nv-border-md);
+  border-radius:12px;
+  box-shadow:var(--nv-shadow-md);
+  overflow:hidden;
+  max-height:240px;
+  overflow-y:auto;
+}
+
+.gm-order-edit-modal .mi-er-autocomplete__item{
+  width:100%;
+  border:none;
+  background:transparent;
+  text-align:left;
+  padding:10px 12px;
+  font-size:13px;
+  color:var(--nv-text);
+  cursor:pointer;
+  transition:background .12s ease;
+  font-family:inherit;
+}
+
+.gm-order-edit-modal .mi-er-autocomplete__item:hover{ background:var(--nv-row-hover); }
+
+.gm-order-edit-modal .mi-er-grid-3{
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr;
+  gap:12px;
+}
+
+.gm-order-edit-modal .mi-er-summary-row{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin-bottom:12px;
+}
+
+.gm-order-edit-modal .mi-er-summary-row:last-child{ margin-bottom:0; }
+.gm-order-edit-modal .mi-er-action{ flex:1; }
+
+@media (max-width: 1100px){
+  .gm-order-edit-modal .mi-er-layout{ grid-template-columns:1fr; }
+  .gm-order-edit-modal .mi-er-grid-3{ grid-template-columns:1fr; }
+}
+
+/* =========================================================
+   ÓRDENES DE PAGO · CABECERA RESPONSIVE
+   Solo celulares. Reutiliza la estructura existente.
+========================================================= */
+@media (max-width: 720px) {
+  .mov-page--ordenesPago .mov-card__head {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px 8px;
+    align-items: stretch;
+  }
+
+  .mov-page--ordenesPago .mov-card__headLeft,
+  .mov-page--ordenesPago .mov-headFilters {
+    display: contents;
+  }
+
+  .mov-page--ordenesPago .title-mov {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  .mov-page--ordenesPago .mov-headFilters .mov-filter--cal {
+    grid-column: 1 / -1;
+    width: min(100%, 340px);
+    min-width: 0;
+    margin-inline: auto;
+    justify-self: center;
+  }
+
+  .mov-page--ordenesPago .mov-headFilters .mov-calTrigger {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+  }
+
+  .mov-page--ordenesPago .mov-headFilters .mov-search {
+    grid-column: 1;
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+    align-self: stretch;
+  }
+
+  .mov-page--ordenesPago .mov-headFilters .mov-searchInput,
+  .mov-page--ordenesPago .mov-headFilters .mov-input--floating {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .mov-page--ordenesPago .mov-card__actions {
+    grid-column: 2;
+    width: auto !important;
+    min-width: 0;
+    margin: 0 !important;
+    align-self: stretch;
+  }
+
+  .mov-page--ordenesPago .mov-card__actions .boton-exportar-wrap,
+  .mov-page--ordenesPago .mov-card__actions .boton-exportar-trigger {
+    width: auto;
+    min-width: 0;
+    height: 100%;
+    margin: 0;
+  }
+}
+
+@media (max-width: 420px) {
+  .mov-page--ordenesPago .mov-card__head {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px 6px;
+  }
+
+  .mov-page--ordenesPago .mov-card__actions .boton-exportar-trigger {
+    padding-inline: 9px;
+    font-size: 12px;
+  }
+}

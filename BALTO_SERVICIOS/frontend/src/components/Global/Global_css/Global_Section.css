@@ -1,0 +1,1596 @@
+
+
+/* =========================
+   BASE
+========================= */
+
+*{ box-sizing: border-box; }
+
+.mov-page{
+  width: 100%;
+  min-height: 100%;
+  color: var(--color-text);
+  background: var(--color-bg-soft);
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+}
+
+/* =========================
+   Alert
+========================= */
+
+.mov-alert{
+  margin: 0 18px 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--color-danger) 10%, #fff);
+  border: 1px solid color-mix(in srgb, var(--color-danger) 24%, #fff);
+  color: color-mix(in srgb, var(--color-danger) 60%, var(--color-primary-strong));
+  font-weight: 560;
+}
+
+/* =========================
+   CARD (Tabla)
+========================= */
+
+.mov-card{
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+}
+
+.mov-card--table{
+  display:flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* =========================
+   HEAD (título + filtros + acciones)
+========================= */
+
+.mov-card__head{
+  padding: 16px 20px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  
+}
+
+.mov-card__headLeft{
+  display:flex;
+  justify-content: space-between;
+  gap: 14px;
+  width: 100%;
+  min-width: 0;
+}
+
+.mov-card__title{
+  font-size: 15px;
+  letter-spacing: -0.01em;
+  font-weight: 620;
+
+}
+
+.mov-card__hint{
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+  font-weight: 460;
+}
+
+.mov-card__hint b{ font-weight: 620; color: var(--color-primary-strong); }
+
+.mov-card__actions{
+  display:flex;
+  gap: 10px;
+  flex: 0 0 auto;
+}
+
+/* =========================
+   FILTERS
+========================= */
+
+.mov-headFilters{
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  gap: 12px;
+  min-width: 0;
+}
+
+.mov-filter,
+.mov-search{
+  display:flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mov-filter label,
+.mov-search label{
+  display:block;
+  font-size: 11px;
+  font-weight: 600;          /* ✅ no grueso */
+  color: color-mix(in srgb, var(--color-text-muted) 86%, #000);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.mov-filter select,
+.mov-search input{
+  width: 100%;
+  height: 44px;
+  border-radius: 12px;
+
+  background: color-mix(in srgb, var(--color-bg-soft) 62%, #fff);
+  padding: 0 12px;
+  outline: none;
+  color: var(--color-primary-strong);
+  font-weight: 520;
+  transition: border-color var(--transition-base), box-shadow var(--transition-base), background var(--transition-base);
+}
+
+.mov-search input::placeholder{
+  color: color-mix(in srgb, var(--color-text-muted) 62%, #fff);
+  font-weight: 460;
+}
+
+.mov-filter select:focus,
+.mov-search input:focus{
+  background: #fff;
+  border-color: color-mix(in srgb, var(--color-primary) 60%, #fff);
+  box-shadow: var(--focus-ring);
+}
+
+/* =========================
+   SEARCH: X (limpiar)
+========================= */
+
+.mov-clearSearch{
+  position:absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 30px;
+  height: 26px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--color-border) 70%, #fff);
+  background: #fff;
+  color: color-mix(in srgb, var(--color-text-muted) 70%, #000);
+  cursor: pointer;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  font-size: 18px;
+  font-weight: 600;
+  transition: transform var(--transition-base), box-shadow var(--transition-base), background var(--transition-base);
+}
+
+.mov-clearSearch:hover{
+  background: color-mix(in srgb, var(--color-bg-soft) 70%, #fff);
+  transform: translateY(-50%) translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.mov-clearSearch:active{ transform: translateY(-50%); box-shadow: none; }
+
+/* =========================
+   BUTTONS
+========================= */
+
+.mov-btn{
+  height: 44px;
+  border-radius: 12px;
+  border: 1px solid var(--color-border);
+  background: #fff;
+  font-weight: 580;          /* ✅ */
+  padding: 0 14px;
+  cursor: pointer;
+  color: var(--color-primary-strong);
+  transition: transform var(--transition-base), box-shadow var(--transition-base), background var(--transition-base), border-color var(--transition-base);
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap: 5px;
+}
+
+.mov-btn:hover{
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+  background: color-mix(in srgb, var(--color-bg-soft) 70%, #fff);
+}
+
+.mov-btn:disabled{
+  opacity: .6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.mov-btn--ghost{
+  background: color-mix(in srgb, var(--color-bg-soft) 65%, #fff);
+}
+
+.mov-btn--primary{
+  background: var(--color-primary);
+  border-color: color-mix(in srgb, var(--color-primary) 60%, #fff);
+  color: #fff;
+  box-shadow: 0 10px 22px rgba(0,85,187,.18);
+}
+
+.mov-btn--primary:hover{
+  background: color-mix(in srgb, var(--color-primary) 88%, #000);
+  box-shadow: 0 14px 26px rgba(0,85,187,.22);
+}
+
+.mov-btn--primary:focus-visible{
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(0,85,187,.18), 0 10px 22px rgba(0,85,187,.18);
+}
+
+.mov-btn--excel{
+  border: 1px solid color-mix(in srgb, var(--color-success) 55%, #fff);
+  background: var(--color-success);
+  color: #fff;
+  font-weight: 580;
+}
+
+.mov-btn--excel:hover{
+  background: #fff;
+  color: var(--color-success);
+  border-color: var(--color-success);
+}
+
+/* =========================
+   TABS BAR
+========================= */
+
+.mov-tabsBar{
+  display:flex;
+  align-items:center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 10px 12px;
+  background: linear-gradient(180deg, #fff, color-mix(in srgb, var(--color-bg-soft) 60%, #fff));
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 70%, #fff);
+}
+
+.mov-tabs{
+  display:flex;
+  align-items:center;
+  gap: 8px;
+  padding: 6px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-bg-soft) 70%, #fff);
+  overflow-x:auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.mov-tab{
+  appearance:none;
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+
+  height: 32px;
+  padding: 0 14px;
+  border-radius: 999px;
+
+  font-weight: 560;         /* ✅ */
+  font-size: 13px;
+  color: color-mix(in srgb, var(--color-text-muted) 88%, #000);
+  transition: background var(--transition-base), transform var(--transition-base), box-shadow var(--transition-base), color var(--transition-base);
+  white-space: nowrap;
+  user-select: none;
+}
+
+.mov-tab:hover{
+  background: rgba(0,85,187,.08);
+  color: var(--color-primary);
+  transform: translateY(-1px);
+}
+
+.mov-tab.is-active{
+  background: #fff;
+  color: var(--color-primary);
+  border-color: color-mix(in srgb, var(--color-primary) 24%, #fff);
+  box-shadow: var(--shadow-sm);
+}
+
+/* CTA a la derecha */
+
+.mov-tabsCta{
+  flex: 0 0 auto;
+  white-space: nowrap;
+  padding: 0 16px;
+}
+
+/* =========================
+   TABLE WRAP (scroll)
+========================= */
+
+.mov-tableWrap{
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  overflow-x: hidden;
+  max-height: calc(100vh - 240px);
+  min-height: calc(100vh - 240px);
+}
+
+.mov-tableWrap--mov{
+    max-height: calc(100vh - 240px)  !important;
+    min-height: calc(100vh - 240px)  !important
+}
+
+/* header sticky */
+
+/* contenedor */
+
+.mov-gridTable{display:grid;}
+
+/* celdas: centrado vertical global */
+
+.mov-gridCell,
+.mov-gridCell--head{
+  display:flex;
+  align-items:center;
+  min-height: 44px;
+  min-width: 0;
+}
+
+/* celdas */
+
+.mov-gridCell{
+  padding: 10px 12px;
+  color: color-mix(in srgb, var(--color-primary-strong) 78%, #000);
+  font-size: 13px;
+  font-weight: 440;         /* ✅ base liviana */
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  justify-content: flex-start;
+}
+
+.mov-gridCell--head{
+  padding: 11px 12px;
+  font-size: 11px;
+  font-weight: 600;         /* ✅ */
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,.92);
+  justify-content: flex-start;
+}
+
+/* filas */
+
+.mov-gridTable--row{
+  background: #fff;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 60%, #fff);
+  transition: background var(--transition-base);
+}
+
+.mov-gridTable--row:hover{
+  background: rgba(0,85,187,.05);
+}
+
+/* helpers alineación */
+
+.is-right{ justify-content:flex-end; text-align:right; }
+
+.is-center{ justify-content:center; text-align:center; }
+
+/* “strong” pero sin negrita exagerada */
+
+.is-strong{
+  font-weight: 560;         /* ✅ */
+  color: var(--color-primary-strong);
+}
+
+/* acciones */
+
+.mov-gridCell--actions{
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+  justify-content: center;
+}
+
+.mov-actionsInline{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap: 7px;
+}
+
+.mov-iconBtn{
+  width: 26px;
+  height: 24px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  background: #fff;
+  color: color-mix(in srgb, var(--color-text-muted) 80%, #000);
+  cursor:pointer;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  transition: transform var(--transition-base), box-shadow var(--transition-base), background var(--transition-base), border-color var(--transition-base), color var(--transition-base);
+}
+
+.mov-iconBtn:hover{
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+  background: rgba(0,85,187,.08);
+  border-color: rgba(0,85,187,.25);
+  color: var(--color-primary);
+}
+
+.mov-iconBtn--danger{
+  border-color: color-mix(in srgb, var(--color-danger) 28%, #fff);
+  color: color-mix(in srgb, var(--color-danger) 72%, #000);
+}
+
+.mov-iconBtn--danger:hover{
+  background: color-mix(in srgb, var(--color-danger) 10%, #fff);
+  border-color: color-mix(in srgb, var(--color-danger) 40%, #fff);
+  color: var(--color-danger);
+}
+
+.mov-iconBtn:disabled{
+  opacity: .6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* vacío */
+
+.mov-emptyRow{
+  padding: 22px 12px;
+  text-align:center;
+  color: var(--color-text-muted);
+  font-weight: 520;         /* ✅ */
+}
+
+/* ellipsis interno (tu <span>) */
+
+.mov-ellipsissss{
+  display:block;
+  min-width:0;
+  overflow:hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: 100%;
+  font-weight: 420 !important; /* ✅ bien fino */
+}
+
+.mov-tabsBar--mov{
+  margin-left: auto;
+}
+
+/* agregalo a src/components/Movimientos/movimientos.css */
+
+.mov-gridBody--relative{
+  position: relative;
+  height: calc(100vh - 250px);
+}
+
+/* =========================================================
+   MOV — Alineación dinámica entre header y cuerpo
+   - El cuerpo conserva su scroll natural
+   - El header reserva gutter únicamente si el cuerpo scrollea
+========================================================= */
+
+.mov-tableWrap,
+.mov-tableWrap--mov{
+  overflow: auto;
+  overflow-x: hidden;
+}
+
+.mov-gridTable--head{
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--color-primary-strong);
+  color: rgba(255,255,255,.92);
+  border-bottom: 1px solid rgba(255,255,255,.10);
+  overflow: hidden;
+}
+
+.mov-gridTable--head.has-y-scroll{
+  scrollbar-gutter: stable;
+}
+
+/* Chips de estado (tabla) */
+
+.mov-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: .2px;
+  border: 1px solid rgba(255,255,255,.12);
+  user-select: none;
+}
+
+/* opcional: fila pagada un poquito más “suave” */
+
+.mov-row--paid {
+  opacity: .92;
+}
+
+/* Ajustes generales en pantallas medianas */
+
+.Margen-top{
+  margin-top: 12px;
+}
+
+/* Efecto mínimo mientras carga rápido (sin spinner) */
+
+.mov-softLoading {
+  opacity: 0.82;
+  filter: blur(0.3px);
+  transition: opacity 120ms ease, filter 120ms ease;
+  pointer-events: none; /* evita clicks mientras actualiza */
+}
+
+/* =========================================================
+   MOVIMIENTOS — Skeleton Shimmer (Stripe-like)
+   Pegalo AL FINAL de movimientos.css
+========================================================= */
+
+/* wrapper general skeleton */
+
+.mov-skeletonWrap,
+.mov-skeletonMore{
+  width: 100%;
+}
+
+/* fila skeleton (mantiene misma estructura) */
+
+.mov-row--skeleton{
+  pointer-events: none;
+}
+
+.mov-row--skeleton .mov-gridCell{
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+
+/* barrita skeleton */
+
+.mov-skeletonBar{
+  display: block;
+  height: 12px;
+  border-radius: 999px;
+  width: 60%;
+  position: relative;
+  overflow: hidden;
+
+  /* base */
+  background: color-mix(in srgb, var(--color-primary-strong) 8%, #fff);
+}
+
+/* shimmer */
+
+.mov-skeletonBar::after{
+  content:"";
+  position:absolute;
+  inset: 0;
+  transform: translateX(-120%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255,255,255,.55),
+    transparent
+  );
+  animation: movShimmer 1.15s infinite;
+}
+
+/* skeleton icons (acciones) */
+
+.mov-skelActions{
+  display:inline-flex;
+  gap: 10px;
+  align-items:center;
+  justify-content:center;
+}
+
+.mov-skelIcon{
+  width: 36px;
+  height: 34px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--color-border) 70%, #fff);
+  background: color-mix(in srgb, var(--color-primary-strong) 8%, #fff);
+  position: relative;
+  overflow: hidden;
+}
+
+.mov-skelIcon::after{
+  content:"";
+  position:absolute;
+  inset: 0;
+  transform: translateX(-120%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255,255,255,.55),
+    transparent
+  );
+  animation: movShimmer 1.15s infinite;
+}
+
+/* zona skeleton "cargar más" abajo */
+
+.mov-skeletonMore{
+  margin-top: 10px;
+  opacity: .92;
+}
+
+/* anim */
+
+@keyframes movShimmer{
+  0%   { transform: translateX(-120%); }
+  100% { transform: translateX(120%); }
+}
+
+/* accesibilidad */
+
+/* =========================================================
+   ✅ Botón "Cargar todos" (Movimientos)
+========================================================= */
+
+.mov-btn--loadAll{
+  height: 42px;
+  padding: 0 16px;
+  border-radius: 12px;
+  font-weight: 600;
+  letter-spacing: .2px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+
+  background: rgba(0,85,187,.10);          /* action soft */
+  border: 1px solid rgba(0,85,187,.28);
+  color: var(--color-primary);               /* #0055BB */
+  box-shadow: 0 8px 18px rgba(0,0,0,.06);
+
+  transition: transform .14s ease, background .14s ease, border-color .14s ease, box-shadow .14s ease;
+}
+
+.mov-btn--loadAll:hover{
+  background: rgba(0,85,187,.16);
+  border-color: rgba(0,85,187,.38);
+  transform: translateY(-1px);
+  box-shadow: 0 12px 22px rgba(0,0,0,.09);
+}
+
+.mov-btn--loadAll:active{
+  transform: translateY(0px);
+  box-shadow: 0 8px 18px rgba(0,0,0,.06);
+}
+
+.mov-btn--loadAll:focus-visible{
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(0,85,187,.22), 0 10px 22px rgba(0,0,0,.08);
+}
+
+/* ✅ Disabled / Loading */
+
+.mov-btn--loadAll:disabled{
+  opacity: .55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.mov-btnText--mobile { display: none; }
+
+.title-mov{
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+
+}
+
+/* =============================================
+   Agregar al final del CSS de Movimientos
+   Estilos para el trigger del Calendario
+============================================= */
+
+.mov-filter--cal {
+  position: relative;
+}
+
+.mov-calTrigger:hover:not(:disabled) {
+  border-color: rgba(10, 37, 64, 0.45);
+  box-shadow: 0 1px 4px rgba(10, 37, 64, 0.08);
+}
+
+.mov-calTrigger.is-open {
+  border-color: #0a2540;
+  box-shadow: 0 0 0 2px rgba(10, 37, 64, 0.12);
+  background: rgba(10, 37, 64, 0.02);
+}
+
+.mov-calTrigger:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.mov-calTrigger__arrow {
+  margin-left: auto;
+  font-size: 10px;
+  color: rgba(10, 37, 64, 0.4);
+}
+
+.mov-calDropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 999;
+  animation: mov-calFadeIn 140ms ease;
+}
+
+@keyframes mov-calFadeIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.floatingField{
+  position: relative;
+}
+
+.floatingField--search{
+  width: 100%;
+  min-width: 320px;
+}
+
+.mov-searchInput{
+  position: relative;
+  width: 100%;
+}
+
+.mov-input--floating{
+  width: 100%;
+  height: 44px;
+  padding: 22px 42px 8px 14px;
+  border-radius: 10px;
+  border: 1.5px solid rgba(10, 37, 64, 0.14);
+  background: #fff;
+  outline: none;
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(10, 37, 64, 0.90);
+  transition: border-color 140ms ease, box-shadow 140ms ease, background 140ms ease;
+}
+
+.mov-input--floating:hover{
+  border-color: rgba(10, 37, 64, 0.28);
+}
+
+.mov-input--floating:focus{
+  border-color: rgba(0, 85, 187, 0.55);
+  box-shadow: 0 0 0 3px rgba(0, 85, 187, 0.18);
+  background: #fafcff;
+}
+
+.floatingField.is-active .floatingLabel,
+.floatingField:focus-within .floatingLabel,
+.mov-input--floating:not(:placeholder-shown) + .floatingLabel{
+  top: 0;
+  transform: translateY(-50%);
+  font-size: 11px;
+  font-weight: 700;
+  color: #0055BB;
+  letter-spacing: 0.02em;
+}
+
+.clearSearch--inside{
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 3;
+}
+
+.floatingLabel{
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(66, 84, 102, 0.76);
+  pointer-events: none;
+  background: #fff;
+  padding: 0 6px;
+  margin-left: -6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  z-index: 2;
+  transition: top 150ms ease,
+    transform 150ms ease,
+    font-size 150ms ease,
+    color 150ms ease,
+    opacity 150ms ease;
+}
+
+.floatingLabel--active{
+  top: 0;
+  transform: translateY(-50%);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-primary);
+  letter-spacing: 0.02em;
+}
+
+.mov-calTrigger{
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 14px;
+  background: #fff;
+  border: 1.5px solid rgba(10, 37, 64, 0.14);
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(10, 37, 64, 0.85);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 150ms ease;
+  min-width: 200px;
+  font-family: inherit;
+}
+
+#vents-comppr-wit{
+min-width: 250px;
+max-width: 250px;
+}
+
+.mi-date-field{
+  cursor: pointer;
+}
+
+.mi-date-field .fl-input{
+  cursor: pointer;
+}
+
+/* OK (verde) */
+
+.mov-chip--ok{
+  background: rgba(34, 197, 94, 0.14);
+  color: #16a34a;
+  border-color: rgba(34, 197, 94, 0.22);
+}
+
+/* WARN (amarillo/naranja) */
+
+.mov-chip--warn{
+  background: rgba(245, 158, 11, 0.14);
+  color: #f59e0b;
+  border-color: rgba(245, 158, 11, 0.22);
+}
+
+/* DANGER (rojo) */
+
+.mov-chip--danger {
+  background: rgba(220, 38, 38, 0.14);
+  color: #dc2626;
+  border-color: rgba(220, 38, 38, 0.22);
+}
+
+/* INFO (azul - para depósito) */
+
+.mov-chip--info {
+  background: rgba(59, 130, 246, 0.14);
+  color: #3b82f6;
+  border-color: rgba(59, 130, 246, 0.22);
+}
+
+/* NEUTRO (gris) */
+
+.mov-chip--neutral {
+  background: rgba(148, 163, 184, 0.14);
+  color: #64748b;
+  border-color: rgba(148, 163, 184, 0.22);
+}
+
+/* =========================================================
+   COLORES SEMÁNTICOS DE IMPORTES (igual que Flujo de Caja)
+========================================================= */
+
+.fc-num {
+  font-weight: 520;
+  font-size: 13px;
+}
+
+.fc-in {
+  color: #16a34a;
+}
+
+.fc-eg {
+  color: #dc2626;
+}
+
+.fc-saldo {
+  font-weight: 660;
+  letter-spacing: -0.01em;
+}
+
+.fc-saldo--pos {
+  color: #16a34a;
+}
+
+.fc-saldo--neg {
+  color: #dc2626;
+}
+
+/* =========================================================
+   FLUJO DE CHEQUES — Colores por evento
+========================================================= */
+
+/* Base del chip */
+
+.flujo-badge {
+  gap: 6px;
+  font-weight: 560;
+}
+
+/* INGRESO A CARTERA — Verde */
+
+.flujo-badge.mov-chip--ok {
+  background: rgba(34, 173, 92, 0.13);
+  color: #16864a;
+  border-color: rgba(34, 173, 92, 0.28);
+}
+
+/* DEPOSITADO EN BANCO — Azul */
+
+.flujo-badge.mov-chip--info {
+  background: rgba(0, 85, 187, 0.12);
+  color: #0055bb;
+  border-color: rgba(0, 85, 187, 0.28);
+}
+
+/* USADO COMO PAGO — Naranja */
+
+.flujo-badge.mov-chip--warn {
+  background: rgba(245, 158, 11, 0.15);
+  color: #b86b00;
+  border-color: rgba(245, 158, 11, 0.30);
+}
+
+/* DEVUELTO — Violeta grisáceo */
+
+.flujo-badge.mov-chip--neutral {
+  background: rgba(124, 58, 237, 0.12);
+  color: #6d28d9;
+  border-color: rgba(124, 58, 237, 0.26);
+}
+
+/* EGRESO / ANULACIÓN — Rojo */
+
+.flujo-badge.mov-chip--danger {
+  background: rgba(225, 61, 69, 0.13);
+  color: #c92f38;
+  border-color: rgba(225, 61, 69, 0.28);
+}
+
+/* INGRESO A CARTERA — Verde */
+
+/* DEPOSITADO EN BANCO — Azul */
+
+/* USADO COMO PAGO — Amarillo/Naranja */
+
+/* DEVUELTO — Violeta */
+
+/* EGRESO / ANULACIÓN — Rojo */
+
+/* =====================================================
+   cc_header_filters.css
+   Estilos del área de cabecera / barra de filtros
+   (Head, Filters, Tabs, Búsqueda, Calendario trigger)
+   Extraído de cuentas_corrientes.css
+===================================================== */
+
+/* =========================
+   Head
+========================= */
+
+.cc-card__head{
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(10, 37, 64, 0.08);
+  background: var(--color-white);
+}
+
+.cc-card__head--clientes{
+  padding-top: 10px;
+}
+
+.cc-card__headLeft{
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  width: 100%;
+  min-width: 0;
+  flex-wrap: nowrap;
+  align-items: flex-end;
+}
+
+.cc-card__headLeft--full{
+  width: 100%;
+}
+
+.cc-headTitle{
+  display: flex;
+  flex-direction: column;
+}
+
+.cc-card__hint{
+  margin-top: 5px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+.cc-card__actions{
+  display: flex;
+  gap: 10px;
+  flex: 0 0 auto;
+}
+
+/* =========================
+   Filters
+========================= */
+
+.cc-headFilters{
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.cc-headFilters--full{
+  width: 100%;
+}
+
+.cc-filter{
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cc-filter label{
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(66, 84, 102, 0.75);
+  margin-bottom: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+.cc-filter label svg{
+  margin-right: 5px;
+  opacity: .8;
+}
+
+.cc-filter select{
+  width: 100%;
+  height: 44px;
+  border-radius: 10px;
+  border: 1.5px solid rgba(10, 37, 64, 0.14);
+  background: #fff;
+  padding: 0 14px;
+  outline: none;
+  font-weight: 500;
+  font-size: 13px;
+  color: rgba(10, 37, 64, 0.90);
+  min-width: 180px;
+  transition: border-color var(--transition-base), box-shadow var(--transition-base);
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+}
+
+.cc-input{
+  width: 100%;
+  height: 44px;
+  border-radius: 10px;
+  border: 1.5px solid rgba(10, 37, 64, 0.14);
+  padding: 0 0 0 14px;
+  outline: none;
+  font-weight: 500;
+  font-size: 13px;
+  color: rgba(10, 37, 64, 0.90);
+  transition: border-color var(--transition-base), box-shadow var(--transition-base);
+}
+
+.cc-filter select:hover,
+.cc-input:hover{
+  border-color: rgba(10, 37, 64, 0.28);
+}
+
+.cc-filter select:focus,
+.cc-input:focus{
+  border-color: rgba(0, 85, 187, 0.55);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+  background: #fafcff;
+}
+
+/* Botón estándar */
+
+.cc-btn{
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 10px;
+  border: 1.5px solid rgba(0, 85, 187, 0.28);
+  background: rgba(0, 85, 187, 0.08);
+  color: rgba(10, 37, 64, 0.92);
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all var(--transition-base);
+  letter-spacing: 0.01em;
+}
+
+.cc-btn:hover{
+  background: rgba(0, 85, 187, 0.14);
+  border-color: rgba(0, 85, 187, 0.45);
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
+}
+
+.cc-btn:active{
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+.cc-btn:disabled{
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* =========================
+   Tabs — estilo Google
+========================= */
+
+.cc-headFilters--tabs{
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 0;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid rgba(10, 37, 64, 0.10);
+  box-shadow: none;
+}
+
+.cc-btnex.cc-btnex--tab{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  padding: 0 16px;
+  border-radius: 0;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  background: transparent;
+  color: rgba(10, 37, 64, 0.48);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow: none;
+  transition: color 150ms ease, border-color 150ms ease;
+}
+
+.cc-btnex.cc-btnex--tab:hover:not(:disabled){
+  color: rgba(10, 37, 64, 0.80);
+  background: rgba(10, 37, 64, 0.04);
+  border-radius: 4px 4px 0 0;
+}
+
+.cc-btnex.cc-btnex--tab.is-open{
+  color: var(--color-primary);
+  border-bottom: 2px solid var(--color-primary);
+  font-weight: 600;
+}
+
+.cc-btnex.cc-btnex--tab.is-open:hover{
+  color: var(--color-primary);
+  background: rgba(0, 85, 187, 0.04);
+  border-radius: 4px 4px 0 0;
+}
+
+.cc-btnex.cc-btnex--tab:active:not(:disabled){
+  background: rgba(10, 37, 64, 0.07);
+}
+
+.cc-btnex.cc-btnex--tab:disabled{
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* =========================
+   Botón Exportar Excel
+========================= */
+
+.cc-btn--excel{
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 10px;
+  border: 1.5px solid rgba(34, 173, 92, 0.75);
+  background: var(--color-success);
+  color: #fff;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition: all .18s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(34, 173, 92, 0.18);
+}
+
+.cc-btn--excel:hover:not(:disabled){
+  background: #1d9e52;
+  border-color: #1d9e52;
+  color: #fff;
+  box-shadow: 0 8px 22px rgba(34, 173, 92, 0.30);
+  transform: translateY(-1px);
+}
+
+.cc-btn--excel:active:not(:disabled){
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(34, 173, 92, 0.18);
+}
+
+.cc-btn--excel:disabled{
+  opacity: 0.48;
+  cursor: not-allowed;
+  filter: grayscale(0.2);
+  box-shadow: none;
+  transform: none;
+}
+
+/* =========================
+   Buscador / Clear
+========================= */
+
+.cc-searchInput{
+  position: relative;
+  width: 100%;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.cc-searchInput__fieldWrap{
+  position: relative;
+  flex: 1;
+}
+
+.cc-searchInput__arrow{
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  opacity: 0.6;
+  pointer-events: none;
+  font-size: 12px;
+}
+
+.cc-clearSearch{
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  border: 1px solid rgba(10, 37, 64, 0.12);
+  background: rgba(10, 37, 64, 0.04);
+  color: rgba(10, 37, 64, 0.55);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 140ms ease;
+}
+
+.cc-clearSearch:hover{
+  background: rgba(225, 61, 69, 0.08);
+  border-color: rgba(225, 61, 69, 0.25);
+  color: var(--color-danger);
+  transform: translateY(-50%) scale(1.08);
+}
+
+.cc-clearSearch:active{
+  transform: translateY(-50%) scale(1);
+}
+
+.cc-clearSearch--inside{
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+/* =========================
+   Suggestions
+========================= */
+
+.cc-suggestions{
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 1000;
+  background: var(--color-surface, #fff);
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.18);
+}
+
+.cc-suggestions__scroll{
+  max-height: 260px;
+  overflow: auto;
+}
+
+.cc-suggestions__item{
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.cc-suggestions__item:hover{
+  background: rgba(0, 85, 187, 0.08);
+}
+
+/* =========================
+   Calendario trigger
+========================= */
+
+.cc-filter--cal{
+  position: relative;
+}
+
+.cc-filter--search{
+  min-width: 320px;
+  flex: 1;
+  position: relative;
+}
+
+.cc-calTrigger{
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  height: 44px;
+  padding: 0 14px;
+  background: #fff;
+  border: 1.5px solid rgba(10, 37, 64, 0.14);
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(10, 37, 64, 0.85);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 150ms ease;
+  min-width: 200px;
+  font-family: inherit;
+}
+
+.cc-calTrigger:hover{
+  border-color: rgba(10, 37, 64, 0.32);
+  background: rgba(10, 37, 64, 0.02);
+  box-shadow: 0 2px 8px rgba(10, 37, 64, 0.06);
+}
+
+.cc-calTrigger.is-open{
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(0, 85, 187, 0.14);
+  background: #fafcff;
+  color: var(--color-primary-strong);
+}
+
+.cc-calTrigger__arrow{
+  margin-left: auto;
+  font-size: 10px;
+  color: rgba(10, 37, 64, 0.35);
+  transition: transform 150ms ease;
+}
+
+.cc-calTrigger.is-open .cc-calTrigger__arrow{
+  transform: rotate(180deg);
+}
+
+.cc-calDropdown{
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 999;
+  animation: cc-calFadeIn 150ms ease;
+  filter: drop-shadow(0 12px 32px rgba(10, 37, 64, 0.14));
+}
+
+@keyframes cc-calFadeIn{
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* =========================
+   Floating label
+========================= */
+
+.cc-floatingField{
+  position: relative;
+  min-width: 0;
+}
+
+.cc-floatingField .cc-input,
+.cc-floatingField .cc-calTrigger{
+  width: 100%;
+}
+
+.cc-floatingLabel{
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(66, 84, 102, 0.76);
+  pointer-events: none;
+  background: #fff;
+  padding: 0 6px;
+  margin-left: -6px;
+  transition:
+    top 150ms ease,
+    transform 150ms ease,
+    font-size 150ms ease,
+    color 150ms ease,
+    opacity 150ms ease;
+  z-index: 2;
+}
+
+.cc-floatingField.is-active .cc-floatingLabel,
+.cc-floatingField:focus-within .cc-floatingLabel,
+.cc-input--floating:not(:placeholder-shown) + .cc-floatingLabel,
+.cc-floatingLabel--active{
+  top: 0;
+  transform: translateY(-50%);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-primary);
+  letter-spacing: 0.02em;
+}
+
+/* =========================
+   Search floating
+========================= */
+
+.cc-floatingField--search{
+  width: 100%;
+}
+
+.cc-floatingField--search .cc-searchInput{
+  width: 100%;
+}
+
+.cc-floatingField--search .cc-searchInput__fieldWrap{
+  position: relative;
+}
+
+.cc-floatingField--search .cc-clearSearch--inside{
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 3;
+}
+
+/* =========================
+   Calendar floating
+========================= */
+
+.cc-floatingField--calendar{
+  min-width: 100%;
+}
+
+.cc-floatingField--calendar.is-active .cc-floatingLabel{
+  color: var(--color-primary);
+}
+
+/* =========================
+   Ajustes visuales inputs en floatingField
+========================= */
+
+.cc-floatingField .cc-input:hover,
+.cc-floatingField .cc-calTrigger:hover{
+  border-color: rgba(10, 37, 64, 0.28);
+}
+
+.cc-floatingField:focus-within .cc-input,
+.cc-floatingField:focus-within .cc-calTrigger,
+.cc-floatingField.is-open .cc-calTrigger{
+  border-color: rgba(0, 85, 187, 0.55);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+  background: #fafcff;
+}
+
+.cc-floatingField:focus-within .cc-floatingLabel{
+  color: var(--color-primary);
+}
+
+/* =========================
+   Fila clientes + exportar
+========================= */
+
+.cc-row-actions{
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 10px;
+  align-items: stretch;
+  justify-items: anchor-center;
+  width: 100%;
+}
+
+.cc-row-actions__btn{
+  width: fit-content;
+  justify-content: center;
+}
+
+.cc-row-actions__export{
+  width: 100%;
+  display: flex;
+}
+
+.cc-row-actions__export > *{
+  width: 100%;
+}
+
+.cc-row-actions__export .mov-btn,
+.cc-row-actions__export .cc-btn,
+.cc-row-actions__export button{
+  width: 100%;
+  justify-content: center;
+}
+
+.cc-row-actions:has(.cc-row-actions__export):not(:has([title="Volver"])){
+  grid-template-columns: 1fr 1fr;
+}
+
+#vents-comppr-wits{
+  min-width: 200px;
+  max-width: 350px;
+}

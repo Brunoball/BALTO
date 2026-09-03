@@ -1,0 +1,42 @@
+.balto-session-loading {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  display: grid;
+  place-items: center;
+  background: #fff;
+  color: #141414;
+  font-family: inherit;
+}
+.balto-session-loading__box {
+  display: flex;
+  min-width: 220px;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  padding: 28px;
+  text-align: center;
+}
+.balto-session-loading__gif {
+  display: block;
+  width: min(180px, 42vw);
+  height: auto;
+  object-fit: contain;
+}
+.balto-session-loading__spinner {
+  width: 46px;
+  height: 46px;
+  border: 4px solid rgba(0, 0, 0, 0.12);
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: balto-session-spin .8s linear infinite;
+}
+.balto-session-loading__text {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: .01em;
+}
+@keyframes balto-session-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .balto-session-loading__spinner { animation-duration: 1.8s; }
+}

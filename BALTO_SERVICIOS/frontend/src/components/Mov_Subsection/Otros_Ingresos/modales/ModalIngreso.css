@@ -1,0 +1,127 @@
+/*
+   Otros Ingresos
+   ---------------------------------------------------------
+   Puente mínimo para ajustes propios del modal.
+   La base común migrada usa clases globales gm-* desde:
+   Global/Global_css/GlobalsModalsV2.css
+*/
+
+.oi-modal {
+  --oi-focus: rgba(0, 85, 187, .10);
+}
+
+/* =========================================================
+   TABLA OTROS INGRESOS — usa base global gm-table-*
+   ---------------------------------------------------------
+   La estética base vive en GlobalsModalsV2.css.
+   Este archivo conserva solo columnas y ajustes propios.
+========================================================= */
+.oi-table .gm-table-head,
+.oi-table .gm-table-row {
+  grid-template-columns: minmax(210px, 2.4fr) 72px minmax(96px, 1fr) 80px minmax(96px, 1fr) minmax(110px, 1fr) 36px;
+}
+
+.oi-table .gm-table-th.right {
+  justify-content: flex-end;
+  text-align: right;
+}
+
+.oi-table #delete_cell {
+  padding-right: 8px;
+}
+
+.oi-stock-hint {
+  display: block;
+  margin-top: 4px;
+  padding-left: 2px;
+  color: var(--gm-muted, #667085);
+  font-size: 11px;
+  line-height: 1.25;
+}
+
+.oi-item-kind {
+  width: 100%;
+  min-height: 26px;
+  margin-bottom: 3px;
+  padding: 2px 24px 2px 7px;
+  border: 1px solid var(--gm-border, #d0d5dd);
+  border-radius: 6px;
+  background: var(--gm-bg-soft, #f8fafc);
+  color: var(--gm-text, #1d2939);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.oi-item-kind:focus {
+  border-color: var(--gm-accent, #0055bb);
+  outline: none;
+  box-shadow: 0 0 0 3px var(--oi-focus);
+}
+
+.oi-item-kind:disabled {
+  cursor: not-allowed;
+  opacity: .65;
+}
+
+html[data-theme="oscuro"] .oi-item-kind {
+  background: rgba(255, 255, 255, .06);
+  border-color: rgba(255, 255, 255, .14);
+  color: rgba(255, 255, 255, .92);
+}
+
+/* Buscador de cliente: mismo comportamiento visual que Nueva Venta. */
+.oi-cliente-wrap {
+  position: relative;
+  z-index: 20;
+  margin-bottom: 0;
+  overflow: visible;
+}
+
+.oi-cliente-wrap:focus-within {
+  z-index: 80;
+}
+
+.oi-cliente-wrap .fl-field {
+  position: relative;
+}
+
+.oi-cliente-wrap .fl-label {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  z-index: 2;
+  padding: 0 3px;
+  color: var(--mi-muted);
+  background: transparent;
+  font-size: 13px;
+  pointer-events: none;
+  transform: translateY(-50%);
+  transform-origin: left top;
+  transition: all .14s ease;
+}
+
+.oi-cliente-wrap .gm-input:focus + .fl-label,
+.oi-cliente-wrap .gm-input:not(:placeholder-shown) + .fl-label {
+  top: -7px;
+  color: var(--mi-primary-600);
+  background: var(--mi-bg);
+  font-size: 11px;
+  transform: none;
+}
+
+html[data-theme="oscuro"] .oi-cliente-wrap .fl-label {
+  color: rgba(210, 220, 235, .70);
+}
+
+html[data-theme="oscuro"] .oi-cliente-wrap .gm-input:focus + .fl-label,
+html[data-theme="oscuro"] .oi-cliente-wrap .gm-input:not(:placeholder-shown) + .fl-label {
+  color: rgba(140, 190, 255, .92);
+  background: rgba(6, 18, 28, .92);
+}
+
+.oi-stock-mode small {
+  color: var(--gm-muted, #667085);
+  font-weight: 400;
+}
