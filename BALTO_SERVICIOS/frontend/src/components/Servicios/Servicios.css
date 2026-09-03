@@ -1507,6 +1507,49 @@ body.dark .servicios-statusTabs .servicios-statusTab.is-active {
   scrollbar-gutter: stable;
 }
 
+/* El alta/edición de productos necesita una grilla horizontal real.
+   La variante global --small (460px) apilaba el contenido y generaba
+   scroll vertical aun en pantallas de escritorio. */
+.servicios-modal--stock.gm-modal-container {
+  width: min(820px, 96vw);
+  max-height: calc(100vh - 32px);
+}
+
+.servicios-modal--stock .servicios-modal__content.gm-modal-content {
+  scrollbar-gutter: auto;
+}
+
+.servicios-modal--stock .servicios-stock-field--codigo {
+  grid-column: 1 / span 3;
+  grid-row: 1;
+}
+
+.servicios-modal--stock .servicios-stock-field--nombre {
+  grid-column: 4 / span 4;
+  grid-row: 1;
+}
+
+.servicios-modal--stock .servicios-stock-field--categoria {
+  grid-column: 1 / span 3;
+  grid-row: 2;
+}
+
+.servicios-modal--stock .servicios-stock-field--unidad {
+  grid-column: 4 / span 4;
+  grid-row: 2;
+}
+
+.servicios-modal--stock .servicios-stock-description {
+  grid-column: 8 / -1;
+  grid-row: 1 / span 2;
+}
+
+.servicios-modal--stock .servicios-stock-description .servicios-textarea {
+  height: 98px;
+  min-height: 98px;
+  resize: none;
+}
+
 .servicios-modal__content::-webkit-scrollbar {
   width: 10px;
 }
@@ -1638,6 +1681,10 @@ body.dark .servicios-field__counter {
 }
 
 @media (max-width: 860px) {
+  .servicios-modal--stock.gm-modal-container {
+    width: min(720px, 96vw);
+  }
+
   .servicios-form-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -1654,9 +1701,37 @@ body.dark .servicios-field__counter {
     grid-column: 1 / -1;
   }
 
+  .servicios-modal--stock .servicios-stock-field--codigo,
+  .servicios-modal--stock .servicios-stock-field--nombre,
+  .servicios-modal--stock .servicios-stock-field--categoria,
+  .servicios-modal--stock .servicios-stock-field--unidad {
+    grid-column: span 1;
+    grid-row: auto;
+  }
+
+  .servicios-modal--stock .servicios-stock-description {
+    grid-column: 1 / -1;
+    grid-row: auto;
+  }
+
+  .servicios-modal--stock .servicios-stock-description .servicios-textarea {
+    height: 72px;
+    min-height: 72px;
+  }
+
 }
 
 @media (max-width: 640px) {
+  .servicios-modal--stock.gm-modal-container {
+    width: 100%;
+    max-height: calc(100vh - 24px);
+  }
+
+  .servicios-modal--stock .servicios-stock-description .servicios-textarea {
+    height: 84px;
+    min-height: 84px;
+  }
+
   .servicios-modal__content.gm-modal-content {
     gap: 12px;
     scrollbar-gutter: auto;
