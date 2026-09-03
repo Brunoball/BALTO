@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { loginGlobal } from "../../services/authApi";
-import { persistGlobalSession } from "../../auth/storage";
+import { clearGlobalSession, persistGlobalSession } from "../../auth/storage";
+import { redirectLoginToPendingLocalFrontend } from "../../auth/localDevReturn";
 import BASE_URL from "../../config/config";
 import Toast from "../Global/Toast";
 import ModalRecuperarContra from "./modales/ModalRecuperarContra";
@@ -175,6 +176,27 @@ export default function Inicio() {
         sistema,
       });
       persistRemember(user, remember);
+
+      // Si este login fue iniciado por BALTO_COMERCIO o BALTO_SERVICIOS
+      // ejecutándose en localhost, devolvemos la sesión directamente al
+      // frontend local. El build productivo de Hostinger NO se abre ni se usa.
+      try {
+        const retornoLocal = redirectLoginToPendingLocalFrontend({
+          sessionKey,
+          usuario: usuarioFinal,
+          sistema,
+        });
+
+        if (retornoLocal) return;
+      } catch (localRedirectError) {
+        clearGlobalSession();
+        mostrarToast(
+          "error",
+          localRedirectError?.message ||
+            "No se pudo volver al frontend local de BALTO."
+        );
+        return;
+      }
 
       // Mientras desarrollamos el frontend del LOGIN en localhost no saltamos
       // a Hostinger. Las carpetas BALTO_COMERCIO/BALTO_SERVICIOS pueden estar
