@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { loginGlobal } from "../../services/authApi";
 import { persistGlobalSession } from "../../auth/storage";
 import BASE_URL from "../../config/config";
+import logoBalto from "../../imagenes/Logo_Balto_Azul.png";
 import Toast from "../Global/Toast";
 import ModalRecuperarContra from "./modales/ModalRecuperarContra";
 import "./inicio.css";
@@ -213,16 +214,15 @@ export default function Inicio() {
   return (
     <div className="ini_page">
       <main className="ini_card" role="region" aria-label="Inicio de sesión">
-        <div className="ini_brand" aria-label="BALTO">
-          <div className="ini_brandMark">B</div>
-          <div>
-            <div className="ini_brandName">BALTO</div>
-            <div className="ini_brandSub">GESTIÓN EMPRESARIAL</div>
-          </div>
+        <div className="ini_brand">
+          <img
+            className="ini_brandLogo"
+            src={logoBalto}
+            alt="BALTO - Sistemas contables"
+          />
         </div>
 
         <h1 className="ini_title">INICIAR SESIÓN</h1>
-        <p className="ini_subtitle">Un único acceso para todos los sistemas BALTO.</p>
 
         <form
           className="ini_form"
@@ -230,10 +230,7 @@ export default function Inicio() {
           autoComplete="on"
           noValidate
         >
-          <label className="ini_label" htmlFor="balto-user">
-            Usuario
-          </label>
-          <div className="ini_field">
+          <div className="ini_field ini_fieldUser">
             <input
               id="balto-user"
               type="text"
@@ -247,9 +244,6 @@ export default function Inicio() {
             />
           </div>
 
-          <label className="ini_label" htmlFor="balto-pass">
-            Contraseña
-          </label>
           <div className="ini_field ini_fieldPass">
             <input
               id="balto-pass"
@@ -261,6 +255,7 @@ export default function Inicio() {
               className="ini_input ini_inputPass"
               autoComplete="current-password"
             />
+
             <button
               type="button"
               className="ini_passToggle"
@@ -268,7 +263,19 @@ export default function Inicio() {
               aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
               title={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
             >
-              {showPassword ? "OCULTAR" : "VER"}
+              {showPassword ? (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
+                  <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
+                  <path d="M14.12 14.12a3 3 0 1 1-4.24-4.24" />
+                  <path d="M1 1l22 22" />
+                </svg>
+              ) : (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+              )}
             </button>
           </div>
 
@@ -305,8 +312,6 @@ export default function Inicio() {
           </div>
         </form>
       </main>
-
-      <div className="ini_footer">BALTO · Acceso global</div>
 
       {showRecuperar && (
         <ModalRecuperarContra
