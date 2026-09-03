@@ -102,7 +102,7 @@ export default function ModalStock({
       onMouseDown={cerrarDesdeFondo}
     >
       <form
-        className="gm-modal-container gm-modal-container--small gm-modal-v2 servicios-modal servicios-modal--catalog"
+        className="gm-modal-container gm-modal-v2 servicios-modal servicios-modal--catalog servicios-modal--stock"
         onSubmit={submit}
         noValidate
         role="dialog"
@@ -125,7 +125,7 @@ export default function ModalStock({
             </div>
             <div className="gm-section-body">
               <div className="servicios-form-grid">
-          <label className="gm-field servicios-field--span-4">
+          <label className="gm-field servicios-field--span-3 servicios-stock-field--codigo">
             <input
               className="gm-input"
               maxLength={60}
@@ -137,7 +137,7 @@ export default function ModalStock({
             <span className="gm-label">Código</span>
           </label>
 
-          <label className="gm-field servicios-field--span-8">
+          <label className="gm-field servicios-field--span-4 servicios-stock-field--nombre">
             <input
               className="gm-input"
               required
@@ -151,7 +151,7 @@ export default function ModalStock({
             <span className="gm-label">Nombre</span>
           </label>
 
-          <label className="gm-field servicios-field--span-6">
+          <label className="gm-field servicios-field--span-3 servicios-stock-field--categoria">
             <select className="gm-input gm-select" value={form.id_categoria} onChange={handleCategoria} aria-label="Categoría">
               <option value="__ADD__">+ AGREGAR CATEGORÍA</option>
               <option value="">SIN CATEGORÍA</option>
@@ -162,7 +162,7 @@ export default function ModalStock({
             <span className="gm-label gm-label--up">Categoría</span>
           </label>
 
-          <label className="gm-field servicios-field--span-6">
+          <label className="gm-field servicios-field--span-4 servicios-stock-field--unidad">
             <select className="gm-input gm-select" required value={form.id_unidad} onChange={(e) => set("id_unidad", e.target.value)} aria-label="Unidad">
               <option value="">SELECCIONAR</option>
               {unidades
@@ -176,17 +176,17 @@ export default function ModalStock({
             <span className="gm-label gm-label--up">Unidad</span>
           </label>
 
-          <label className="gm-field servicios-field--wide">
+          <label className="gm-field servicios-stock-description">
             <textarea
               className="gm-input servicios-textarea"
-              rows={3}
+              rows={4}
               maxLength={1000}
               value={form.descripcion}
               onChange={(e) => set("descripcion", clampText(e.target.value, 1000))}
               placeholder=" "
-              aria-label="Descripción"
+              aria-label="Observaciones"
             />
-            <span className="gm-label">Descripción</span>
+            <span className="gm-label gm-label--up">Observaciones</span>
             <small className="servicios-field__counter">{form.descripcion.length}/1000</small>
           </label>
 

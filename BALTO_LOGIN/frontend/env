@@ -1,0 +1,13 @@
+# API del LOGIN GLOBAL / MASTER en producción
+REACT_APP_AUTH_API_BASE=https://balto.3devsnet.com/BALTO_LOGIN/api/routes
+
+# El LOGIN se muestra públicamente desde la raíz del dominio.
+REACT_APP_ROUTER_BASENAME=/
+
+# Destinos de los sistemas después del login
+REACT_APP_COMERCIO_URL=/BALTO_COMERCIO/
+REACT_APP_SERVICIOS_URL=/BALTO_SERVICIOS/
+
+REACT_APP_COOKIE_DOMAIN=
+
+REACT_APP_ALLOWED_APP_ORIGINS=https://balto.3devsnet.com
