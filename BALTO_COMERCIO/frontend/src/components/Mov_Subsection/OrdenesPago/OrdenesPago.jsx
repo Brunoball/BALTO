@@ -187,6 +187,11 @@ export default function OrdenesPago() {
   const [error, setError] = useState("");
 
   const [q, setQ] = useState("");
+  const qRef = useRef("");
+
+  useEffect(() => {
+    qRef.current = q;
+  }, [q]);
 
   const [hasMore, setHasMore] = useState(false);
   const [nextOffset, setNextOffset] = useState(null);
@@ -400,7 +405,7 @@ export default function OrdenesPago() {
         await ensureListsLoaded({ force: false, background: true });
       } catch {}
       if (!alive) return;
-      await loadRows({ from: dateRange?.from, to: dateRange?.to, q: "", offset: 0, append: false });
+      await loadRows({ from: dateRange?.from, to: dateRange?.to, q: qRef.current, offset: 0, append: false });
       didInitRef.current = true;
     })();
 

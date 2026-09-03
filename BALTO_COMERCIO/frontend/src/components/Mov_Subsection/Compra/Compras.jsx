@@ -517,6 +517,11 @@ export default function Compras() {
 
   const [showCalendario, setShowCalendario] = useState(false);
   const [q, setQ] = useState("");
+  const qRef = useRef("");
+
+  useEffect(() => {
+    qRef.current = q;
+  }, [q]);
 
   const [hasMore, setHasMore] = useState(false);
   const [nextOffset, setNextOffset] = useState(null);
@@ -859,11 +864,11 @@ export default function Compras() {
           to: new Date(now.getFullYear(), now.getMonth() + 1, 0),
         };
         setDateRange(init);
-        await loadRows({ dateRange: init, q: "", offset: 0, append: false });
+        await loadRows({ dateRange: init, q: qRef.current, offset: 0, append: false });
         return;
       }
 
-      await loadRows({ dateRange, q: "", offset: 0, append: false });
+      await loadRows({ dateRange, q: qRef.current, offset: 0, append: false });
     })();
 
     return () => {

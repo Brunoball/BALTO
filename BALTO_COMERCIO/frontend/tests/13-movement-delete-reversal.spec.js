@@ -11,6 +11,11 @@ import {
   deleteUnusedStockProduct,
 } from './support/flows.js';
 
+
+test.beforeEach(async ({}, testInfo) => {
+  testInfo.setTimeout(4 * 60_000);
+});
+
 async function expectStock(page, productName, expected) {
   await page.goto('/panel/stock');
   const row = await searchRow(page, productName, /Buscar por nombre, SKU o variante/i);

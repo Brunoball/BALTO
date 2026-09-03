@@ -298,6 +298,11 @@ export async function payPayableWithPortfolioCheque(page, productName, cheque) {
   await expect(debt).toBeVisible({ timeout: 20_000 });
   const checkbox = debt.locator('input[type="checkbox"]');
   if (!(await checkbox.isChecked())) await checkbox.check({ force: true });
+  await expect(checkbox, 'La deuda debe quedar seleccionada antes de cargar el cheque').toBeChecked({ timeout: 10_000 });
+  await expect(
+    dialog.locator('.gm-order-table-foot-stats').first(),
+    'El resumen del modal debe reflejar la deuda seleccionada antes de consultar cartera',
+  ).toContainText(/Seleccionadas\s+1/i, { timeout: 10_000 });
   await selectPortfolioCheque(dialog, cheque.numero, cheque.tipo);
 
   const responsePromise = responseForAction(page, 'ordenes_pago_confirmar_pago');

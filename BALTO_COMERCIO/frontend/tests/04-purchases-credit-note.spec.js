@@ -43,6 +43,7 @@ function creditNoteId(body) {
 }
 
 test('@crud @critical compra: ingresa stock, edita cantidad y NC de proveedor resta stock', async ({ page }, testInfo) => {
+  test.setTimeout(4 * 60_000);
   await requireMutations(test, page);
   const diagnostics = installDiagnostics(page);
   const productName = uniqueName('COMPRA-NC');

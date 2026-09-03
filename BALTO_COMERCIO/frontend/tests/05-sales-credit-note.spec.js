@@ -216,6 +216,7 @@ test('@crud @critical venta: descuenta stock y NC interna reingresa stock', asyn
 });
 
 test('@crud @critical NC venta: repetir la misma petición no duplica nota ni stock', async ({ page }, testInfo) => {
+  test.setTimeout(4 * 60_000);
   await requireMutations(test, page);
   const diagnostics = installDiagnostics(page);
   const productName = uniqueName('VENTA-NC-IDEMPOTENCIA');

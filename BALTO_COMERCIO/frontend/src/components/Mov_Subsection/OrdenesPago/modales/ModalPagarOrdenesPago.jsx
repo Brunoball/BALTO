@@ -764,6 +764,7 @@ export default function ModalPagarOrdenesPago({
   const [loadingMedios, setLoadingMedios] = useState(false);
 
   const [mediosFilas, setMediosFilas] = useState(() => [buildEmptyMedioPago()]);
+  const openCycleInitializedRef = useRef(false);
 
   const addMedioPago = useCallback(() => {
     setMediosFilas((p) => [...p, buildEmptyMedioPago()]);
@@ -824,7 +825,19 @@ export default function ModalPagarOrdenesPago({
   }, [showToast]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      openCycleInitializedRef.current = false;
+      return;
+    }
+
+    // El contexto de listas y el listado padre pueden refrescarse mientras el modal
+    // está abierto. Antes, cada cambio de referencia volvía a ejecutar este efecto y
+    // borraba la deuda seleccionada, el medio de pago y los cheques ya cargados.
+    // Inicializamos una sola vez por ciclo de apertura; el propio modal mantiene el
+    // estado vigente hasta cerrarse.
+    if (openCycleInitializedRef.current) return;
+    openCycleInitializedRef.current = true;
+
     setSelectedIds(new Set());
     setPagaTodo(false);
     setLoading(false);
