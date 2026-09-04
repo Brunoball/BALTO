@@ -72,6 +72,9 @@ const PRECIOS_MASIVOS_LOADING_THRESHOLD = 10;
 const STOCK_CHANGE_CHECK_MS = 2500;
 const OPTIMISTIC_PRODUCT_GRACE_MS = 20000;
 const VARIANT_MUTATION_GRACE_MS = 180000;
+const BARCODE_SCANNER_MAX_GAP_MS = 250;
+const BARCODE_SCANNER_IDLE_COMMIT_MS = 320;
+const BARCODE_SCANNER_MIN_LENGTH = 3;
 
 function renderStockChip(value) {
   const stockNum = Number(value || 0);
@@ -153,6 +156,21 @@ const Stock = () => {
   const [loadingVariantesPorProducto, setLoadingVariantesPorProducto] = useState({});
   const [errorVariantesPorProducto, setErrorVariantesPorProducto] = useState({});
 
+  const lectorBloqueadoPorModal = Boolean(
+    modalAbierto ||
+      modalEditarAbierto ||
+      modalAjustePreciosAbierto ||
+      modalReportesAbierto ||
+      productoHistorialPrecios ||
+      modalDarBajaProductoAbierto ||
+      modalEliminarAbierto ||
+      modalConfirmacionFinalEliminarAbierto ||
+      modalBajaVarianteAbierto ||
+      modalEliminarVarianteAbierto ||
+      modalConfirmacionFinalVarianteAbierto ||
+      cargaPreciosMasivos
+  );
+
   const refreshTimersRef = useRef([]);
   const imagenesTemporalesRef = useRef({});
   const imagenesConocidasPorProductoRef = useRef({});
@@ -163,6 +181,9 @@ const Stock = () => {
   const impactoEliminarVarianteRequestRef = useRef(0);
   const productosRequestRef = useRef(0);
   const categoriaFiltroDropdownRef = useRef(null);
+  const buscadorRef = useRef(null);
+  const lectorCapturaRef = useRef(null);
+  const lectorCodigoRef = useRef({ valor: "", ultimaTeclaAt: 0, timerId: null });
   const tablaScrollRef = useRef(null);
   const tablaScrollSnapshotRef = useRef({
     top: 0,
@@ -1542,6 +1563,196 @@ const Stock = () => {
     setPaginaActual(1);
   };
 
+  const aplicarCodigoEscaneado = useCallback((codigo) => {
+    const valor = String(codigo || "").trim();
+    if (valor.length < BARCODE_SCANNER_MIN_LENGTH) return;
+
+    descartarPosicionScrollTabla();
+    setBusqueda(valor);
+    // El lector confirma con Enter/Tab o por fin de ráfaga: consultamos
+    // inmediatamente y evitamos la espera reservada para la escritura manual.
+    setBusquedaConsulta(valor);
+    setCategoriaFiltro("");
+    setCategoriaDropdownAbierto(false);
+    setPaginaActual(1);
+
+    window.requestAnimationFrame(() => {
+      lectorCapturaRef.current?.focus({ preventScroll: true });
+    });
+  }, [descartarPosicionScrollTabla]);
+
+  useEffect(() => {
+    const limpiarBufferLector = () => {
+      const lector = lectorCodigoRef.current;
+      if (lector.timerId) window.clearTimeout(lector.timerId);
+      lector.valor = "";
+      lector.ultimaTeclaAt = 0;
+      lector.timerId = null;
+      if (lectorCapturaRef.current) lectorCapturaRef.current.value = "";
+    };
+
+    const confirmarBufferLector = () => {
+      const codigo = lectorCodigoRef.current.valor.trim();
+      limpiarBufferLector();
+      if (codigo.length >= BARCODE_SCANNER_MIN_LENGTH) {
+        aplicarCodigoEscaneado(codigo);
+      }
+    };
+
+    const handleLecturaCodigo = (event) => {
+      if (event.defaultPrevented || event.isComposing) return;
+      if (lectorBloqueadoPorModal) {
+        limpiarBufferLector();
+        return;
+      }
+      if (event.ctrlKey || event.altKey || event.metaKey) {
+        limpiarBufferLector();
+        return;
+      }
+
+      const target = event.target;
+      const esBuscador = target === buscadorRef.current;
+      const esCapturaLector = target === lectorCapturaRef.current;
+      const esCampoEditable = Boolean(
+        target &&
+          (target.tagName === "INPUT" ||
+            target.tagName === "TEXTAREA" ||
+            target.tagName === "SELECT" ||
+            target.isContentEditable)
+      );
+
+      // Dentro de otro campo editable no alteramos la búsqueda. En cualquier
+      // otra zona de Stock la lectura se captura sin exigir foco previo.
+      if (!esBuscador && !esCapturaLector && esCampoEditable) {
+        limpiarBufferLector();
+        return;
+      }
+
+      const lector = lectorCodigoRef.current;
+      const esFinLectura = event.key === "Enter" || event.key === "Tab";
+
+      if (esFinLectura) {
+        const codigo = lector.valor.trim();
+        if (codigo.length >= BARCODE_SCANNER_MIN_LENGTH) {
+          event.preventDefault();
+          aplicarCodigoEscaneado(codigo);
+        }
+        limpiarBufferLector();
+        return;
+      }
+
+      if (event.key.length !== 1) return;
+
+      const ahora = window.performance.now();
+      if (
+        lector.ultimaTeclaAt > 0 &&
+        ahora - lector.ultimaTeclaAt > BARCODE_SCANNER_MAX_GAP_MS
+      ) {
+        lector.valor = "";
+      }
+
+      lector.valor += event.key;
+      lector.ultimaTeclaAt = ahora;
+
+      if (lector.timerId) window.clearTimeout(lector.timerId);
+      lector.timerId = window.setTimeout(
+        confirmarBufferLector,
+        BARCODE_SCANNER_IDLE_COMMIT_MS
+      );
+    };
+
+    const handlePegadoCodigo = (event) => {
+      if (lectorBloqueadoPorModal) return;
+
+      const target = event.target;
+      const esBuscador = target === buscadorRef.current;
+      const esCapturaLector = target === lectorCapturaRef.current;
+      const esCampoEditable = Boolean(
+        target &&
+          (target.tagName === "INPUT" ||
+            target.tagName === "TEXTAREA" ||
+            target.tagName === "SELECT" ||
+            target.isContentEditable)
+      );
+      if (!esBuscador && !esCapturaLector && esCampoEditable) return;
+
+      const codigo = String(event.clipboardData?.getData("text") || "")
+        .replace(/[\r\n\t]/g, "")
+        .trim();
+
+      if (codigo.length < BARCODE_SCANNER_MIN_LENGTH) return;
+
+      event.preventDefault();
+      limpiarBufferLector();
+      aplicarCodigoEscaneado(codigo);
+    };
+
+    window.addEventListener("keydown", handleLecturaCodigo, true);
+    window.addEventListener("paste", handlePegadoCodigo, true);
+    return () => {
+      window.removeEventListener("keydown", handleLecturaCodigo, true);
+      window.removeEventListener("paste", handlePegadoCodigo, true);
+      limpiarBufferLector();
+    };
+  }, [aplicarCodigoEscaneado, lectorBloqueadoPorModal]);
+
+  useEffect(() => {
+    const capturaLector = lectorCapturaRef.current;
+    if (lectorBloqueadoPorModal) {
+      if (document.activeElement === capturaLector) capturaLector?.blur();
+      return undefined;
+    }
+
+    const timers = new Set();
+    const enfocarCapturaLector = (demora = 0) => {
+      const timerId = window.setTimeout(() => {
+        timers.delete(timerId);
+        const captura = lectorCapturaRef.current;
+        const activo = document.activeElement;
+        if (document.hidden || !captura) return;
+
+        // La búsqueda manual y cualquier otro formulario conservan su foco.
+        // El lector sólo usa este campo técnico cuando no se está escribiendo.
+        const activoEsEditable = Boolean(
+          activo &&
+            (activo.tagName === "INPUT" ||
+              activo.tagName === "TEXTAREA" ||
+              activo.tagName === "SELECT" ||
+              activo.isContentEditable)
+        );
+        if (activo !== captura && activoEsEditable) return;
+
+        captura.focus({ preventScroll: true });
+      }, demora);
+      timers.add(timerId);
+    };
+
+    // Al ingresar a Stock el lector queda listo, sin activar visualmente el buscador.
+    [0, 80, 250, 650].forEach(enfocarCapturaLector);
+
+    const handlePointerUp = (event) => {
+      if (event.target === buscadorRef.current || event.target?.closest?.(".cc-searchInput")) return;
+      if (event.target?.closest?.('[role="dialog"], [aria-modal="true"]')) return;
+      enfocarCapturaLector(0);
+    };
+    const handleWindowFocus = () => enfocarCapturaLector(40);
+    const handleVisibility = () => {
+      if (!document.hidden) enfocarCapturaLector(40);
+    };
+
+    document.addEventListener("pointerup", handlePointerUp, true);
+    window.addEventListener("focus", handleWindowFocus);
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    return () => {
+      document.removeEventListener("pointerup", handlePointerUp, true);
+      window.removeEventListener("focus", handleWindowFocus);
+      document.removeEventListener("visibilitychange", handleVisibility);
+      timers.forEach((timerId) => window.clearTimeout(timerId));
+      timers.clear();
+    };
+  }, [lectorBloqueadoPorModal]);
+
   const handleCategoriaFiltro = (e) => {
     seleccionarCategoriaFiltro(e.target.value);
   };
@@ -2514,6 +2725,16 @@ const Stock = () => {
   return (
     <>
       <div className="mov-page stock-page">
+        <input
+          ref={lectorCapturaRef}
+          className="stock-barcodeCaptureInput"
+          type="text"
+          tabIndex={-1}
+          aria-label="Captura del lector de códigos de barra"
+          autoComplete="off"
+          data-lpignore="true"
+        />
+
         {error && (
           <div className="mov-alert" role="alert">
             {error}
@@ -2543,10 +2764,11 @@ const Stock = () => {
                     <div className="cc-searchInput">
                       <div className="cc-searchInput__fieldWrap">
                         <input
+                          ref={buscadorRef}
                           className="cc-input cc-input--floating"
                           value={busqueda}
                           onChange={handleBusqueda}
-                          placeholder="Buscar por nombre, SKU o variante..."
+                          placeholder="Buscar por nombre, SKU, código de barra o variante..."
                         />
                         <span className="cc-floatingLabel">
                           <FontAwesomeIcon icon={faMagnifyingGlass} /> Búsqueda

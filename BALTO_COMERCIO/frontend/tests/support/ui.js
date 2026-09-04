@@ -454,7 +454,19 @@ export async function searchRow(page, query, placeholderPattern = /Buscar/i) {
   };
 
   const performSearch = async ({ force = false, timeout = 7_000 } = {}) => {
-    const search = page.getByPlaceholder(placeholderPattern).first();
+    let search = page.getByPlaceholder(placeholderPattern).first();
+
+    // El texto del placeholder de Stock cambió al incorporar código de barra.
+    // Los tests funcionales no deben romperse por un cambio de copy: en Stock
+    // resolvemos el buscador por su contenedor estable cuando el patrón histórico
+    // ya no coincide. En el resto de las pantallas conservamos el selector recibido.
+    if (
+      isStockPage &&
+      !(await search.isVisible({ timeout: 1_000 }).catch(() => false))
+    ) {
+      search = page.locator('.stock-page .cc-filter--search input').first();
+    }
+
     await expect(search).toBeVisible({ timeout: 5_000 });
 
     const inactive = await stockModeIsInactive();
@@ -504,7 +516,10 @@ export async function searchRow(page, query, placeholderPattern = /Buscar/i) {
     const wasInactive = await stockModeIsInactive();
     await page.reload({ waitUntil: 'domcontentloaded' });
 
-    const searchAfterReload = page.getByPlaceholder(placeholderPattern).first();
+    let searchAfterReload = page.getByPlaceholder(placeholderPattern).first();
+    if (!(await searchAfterReload.isVisible({ timeout: 1_000 }).catch(() => false))) {
+      searchAfterReload = page.locator('.stock-page .cc-filter--search input').first();
+    }
     await expect(searchAfterReload).toBeVisible({ timeout: 7_000 });
 
     if (wasInactive) {

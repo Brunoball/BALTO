@@ -65,6 +65,52 @@ function isRetryableTransportError(error) {
   );
 }
 
+async function loginWithRetry(request, user, password) {
+  const attempts = 4;
+  const retryableStatuses = new Set([408, 429, 500, 502, 503, 504]);
+  let lastError = null;
+
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      const response = await request.post(loginEndpoint(), {
+        data: {
+          nombre: user,
+          contrasena: password,
+        },
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+          // Hostinger puede cortar conexiones keep-alive antes de responder.
+          Connection: 'close',
+        },
+        timeout: 25_000,
+        failOnStatusCode: false,
+      });
+
+      // 400/401/403 son respuestas funcionales y deben fallar sin reintentos:
+      // nunca ocultamos credenciales inválidas detrás de una recuperación de red.
+      if (!retryableStatuses.has(response.status()) || attempt === attempts) {
+        return response;
+      }
+
+      lastError = new Error(
+        `BALTO_LOGIN respondió HTTP ${response.status()} ` +
+        `(intento ${attempt}/${attempts}).`,
+      );
+      await response.dispose().catch(() => null);
+    } catch (error) {
+      lastError = error;
+      if (!isRetryableTransportError(error) || attempt === attempts) {
+        throw error;
+      }
+    }
+
+    await sleep(600 * (2 ** (attempt - 1)));
+  }
+
+  throw lastError || new Error('No se pudo iniciar sesión en BALTO_LOGIN.');
+}
+
 async function validateCommerceSessionWithRetry(request, sessionKey) {
   const attempts = 4;
   const retryableStatuses = new Set([408, 429, 500, 502, 503, 504]);
@@ -110,22 +156,15 @@ async function validateCommerceSessionWithRetry(request, sessionKey) {
 }
 
 setup('autenticar administrador de Balto', async ({ page, request }) => {
+  setup.setTimeout(2 * 60_000);
+
   const user = String(ENV.user || process.env.PW_USER || '').trim();
   const password = String(ENV.password || process.env.PW_PASSWORD || '');
 
   expect(user, 'PW_USER es obligatorio para Playwright.').not.toBe('');
   expect(password, 'PW_PASSWORD es obligatorio para Playwright.').not.toBe('');
 
-  const loginResponse = await request.post(loginEndpoint(), {
-    data: {
-      nombre: user,
-      contrasena: password,
-    },
-    headers: {
-      Accept: 'application/json',
-      'Content-Type': 'application/json',
-    },
-  });
+  const loginResponse = await loginWithRetry(request, user, password);
 
   const loginText = await loginResponse.text();
   let loginData = {};

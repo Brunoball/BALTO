@@ -602,7 +602,6 @@ html[data-theme="oscuro"] .scat-prodCount { color: rgba(226, 232, 240, 0.75) !im
 /* ── Footer de tabla: paginación + acciones ── */
 .stock-tableFooter {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
   gap: 12px;
   margin-top: 8px;
@@ -614,7 +613,7 @@ html[data-theme="oscuro"] .scat-prodCount { color: rgba(226, 232, 240, 0.75) !im
 
 .stock-tableFooter > .prod-pagination {
   grid-column: 2;
-  justify-self: center;
+  justify-self: end;
 }
 
 .stock-tableFooter > .stock-tableActionsMobile {
@@ -2056,4 +2055,18 @@ html[data-theme="oscuro"] .stock-tableActions .stock-actionBtn--reportes {
   border-color: rgba(78, 161, 255, 0.34);
   color: #78b7ff;
   background: rgba(78, 161, 255, 0.10);
+}
+
+/* Campo técnico del lector: recibe el escaneo sin activar el buscador visible. */
+.stock-barcodeCaptureInput {
+  position: fixed;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+  overflow: hidden;
+  clip-path: inset(50%);
 }

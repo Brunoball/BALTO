@@ -27,6 +27,18 @@
   --t: 180ms ease;
 }
 
+/*
+  El login anterior heredaba esta regla desde Global_Section.css.
+  El login global debe conservarla de forma local para que el ancho declarado
+  incluya bordes y padding, aun cuando se renderiza fuera del frontend BALTO.
+*/
+.ini_page,
+.ini_page *,
+.ini_page *::before,
+.ini_page *::after {
+  box-sizing: border-box;
+}
+
 /* =======================
    BASE
 ======================= */
@@ -104,8 +116,9 @@ body {
 .ini_title {
   text-align: center;
   color: var(--balto-midnight);
+  font-family: "Inter", system-ui, sans-serif;
   font-weight: 800;
-  letter-spacing: 0.06em;
+  letter-spacing: .06em;
   font-size: 18px;
   margin: 8px 0 18px;
 }
@@ -330,8 +343,11 @@ body {
   height: 44px;
   border: 0;
   border-radius: 6px;
-  font-weight: 800;
-  letter-spacing: 0.05em;
+  font-family: "Inter", system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.04em;
   color: #fff;
   background: linear-gradient(180deg, var(--balto-action) 0%, #004AA3 100%);
   box-shadow: var(--shadow-soft);

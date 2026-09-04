@@ -129,8 +129,8 @@ async function assertGlobalDetail(page, query, expected) {
   await waitForBusyToFinish(page);
 
   // La grilla global actual no expone data-movement-id en sus filas.
-  // React renderiza filteredRows en el mismo orden recibido de movimientos_listar,
-  // así que usamos el índice del registro exacto devuelto por ESA misma respuesta.
+  // El conteo puede coincidir mientras React todavía muestra la búsqueda anterior,
+  // por eso además validamos tipo y monto antes de abrir el modal.
   const rows = page.locator('.mov-gridTable--row:visible:not(.mov-row--skeleton)');
   await expect(
     rows,
@@ -142,6 +142,42 @@ async function assertGlobalDetail(page, query, expected) {
     row,
     `La grilla debe renderizar en la posición ${exactIndex} el movimiento #${movementId} de ${expected.description}`,
   ).toBeVisible({ timeout: 30_000 });
+
+  const expectedType = String(
+    exactMovement?.tipo_label ??
+    exactMovement?.tipo_operacion_nombre ??
+    exactMovement?.tipo_operacion ??
+    exactMovement?.tipo_movimiento_general ??
+    exactMovement?.tipo_general ??
+    exactMovement?.operacion ??
+    '',
+  ).trim();
+  if (expectedType) {
+    await expect(
+      row.locator('[data-label="TIPO"]'),
+      `La grilla debe haber terminado de renderizar el movimiento #${movementId}`,
+    ).toHaveText(expectedType, { timeout: 30_000 });
+  }
+
+  const expectedTotal = Number(
+    exactMovement?.monto_total ??
+    exactMovement?.monto_total_final ??
+    exactMovement?.total ??
+    exactMovement?.importe_total ??
+    exactMovement?.monto ??
+    exactMovement?.importe,
+  );
+  if (Number.isFinite(expectedTotal)) {
+    await expect
+      .poll(
+        async () => parseDisplayedNumber(await row.locator('[data-label="MONTO"]').innerText()),
+        {
+          message: `La grilla debe mostrar el monto del movimiento #${movementId}`,
+          timeout: 30_000,
+        },
+      )
+      .toBeCloseTo(expectedTotal, 2);
+  }
 
   await openModuleDetail(row, expected, /Ver informaci.n completa del movimiento/i);
 }

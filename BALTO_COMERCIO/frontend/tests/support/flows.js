@@ -217,7 +217,9 @@ export async function deleteUnusedStockProduct(page, productName) {
   await page.reload({ waitUntil: 'domcontentloaded' });
   await waitForBusyToFinish(page);
 
-  const search = page.getByPlaceholder(/Buscar por nombre, SKU o variante/i).first();
+  // Selector estructural estable: el placeholder ahora también menciona código
+  // de barra y no debe convertir una eliminación correcta en un falso fallo.
+  const search = page.locator('.stock-page .cc-filter--search input').first();
   await expect(search).toBeVisible({ timeout: 20_000 });
   await search.fill(productName);
   await search.press('Enter');
