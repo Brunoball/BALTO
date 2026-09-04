@@ -34,6 +34,8 @@ const ROUTE_PREFETCH = {
     import("../../Configuracion/ConfiguracionDatosLegales/ConfiguracionDatosLegales"),
   "/panel/configuracion/saldos-iniciales": () =>
     import("../../Configuracion/ConfiguracionSaldosIniciales/ConfiguracionSaldosIniciales"),
+  "/panel/configuracion/listas-categorias": () =>
+    import("../../Configuracion/ConfiguracionListasCategorias/ConfiguracionListasCategorias"),
   "/panel/cheques": () =>
     import("../../Cheques/Cheques_Cartera/Cheques_Cartera"),
   "/panel/cheques/cartera": () =>
@@ -53,4 +55,3 @@ export function prefetchRoute(ruta) {
     if (fn) fn();
   } catch {}
 }
-

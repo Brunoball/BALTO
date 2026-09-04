@@ -21,6 +21,7 @@ import {
   faUsersGear,
   faFileInvoiceDollar,
   faWallet,
+  faListCheck,
 } from "@fortawesome/free-solid-svg-icons";
 
 const DEMO_ADVANCED_MESSAGE = DEMO_BLOCK_MESSAGE;
@@ -150,6 +151,24 @@ export default function Configuracion() {
         ),
       },
       {
+        id: "listas-categorias",
+        title: "Listas y categorías",
+        description: "Administrá detalles, unidades y categorías que se usan en Movimientos y Servicios.",
+        route: "/panel/configuracion/listas-categorias",
+        demoBlocked: esPlanDemo,
+        demoMessage: DEMO_ADVANCED_MESSAGE,
+        status: esPlanDemo
+          ? { text: "Bloqueado demo", type: "warning" }
+          : { text: "Administrable", type: "success" },
+        metaTop: "Datos configurables",
+        metaBottom: "Detalles · Unidades · Categorías",
+        icon: (
+          <div className="cfg-cardLogo cfg-cardLogo--icon">
+            <FontAwesomeIcon icon={faListCheck} />
+          </div>
+        ),
+      },
+      {
         id: "calendario",
         title: "Calendario global",
         description:
@@ -238,5 +257,4 @@ export default function Configuracion() {
     </>
   );
 }
-
 

@@ -1,0 +1,152 @@
+.cfg-listas-page {
+  width: 100%;
+  height: calc(100vh - 110px);
+  min-height: 0;
+  padding: 14px 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  color: var(--balto-text, #425466);
+}
+
+.cfg-listas-hero {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border: 1px solid #d9e1ea;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.cfg-listas-hero__icon {
+  width: 44px;
+  height: 44px;
+  border: 1px solid #e4eaf1;
+  border-radius: 12px;
+  background: #f3f6fa;
+  color: #53657a;
+  display: grid;
+  place-items: center;
+}
+
+.cfg-listas-eyebrow { font-size: 10px; font-weight: 700; color: #7b8794; text-transform: uppercase; letter-spacing: .06em; }
+.cfg-listas-hero h1 { margin: 2px 0 0; color: var(--balto-ink, #0a2540); font-size: 18px; }
+.cfg-listas-hero p { margin: 3px 0 0; color: #637286; font-size: 12px; }
+
+.cfg-listas-back,
+.cfg-listas-add {
+  min-height: 38px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1px solid #d9e1ea;
+  background: #fbfcfe;
+  color: #0a2540;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.cfg-listas-add { background: #0759c7; border-color: #0759c7; color: #fff; }
+.cfg-listas-back:hover { background: #f3f6fa; }
+.cfg-listas-add:hover { background: #064fac; }
+
+.cfg-listas-card {
+  flex: 1;
+  min-height: 0;
+  border: 1px solid #d9e1ea;
+  border-radius: 14px;
+  background: #fff;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.cfg-listas-toolbar {
+  padding: 12px;
+  border-bottom: 1px solid #e5ebf1;
+  display: grid;
+  grid-template-columns: auto minmax(190px, 1fr) auto auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.cfg-listas-tabs,
+.cfg-listas-status { display: inline-flex; border: 1px solid #d9e1ea; border-radius: 10px; padding: 3px; background: #f6f8fb; }
+.cfg-listas-tabs button,
+.cfg-listas-status button { border: 0; border-radius: 7px; padding: 7px 12px; background: transparent; color: #65758a; font-size: 12px; font-weight: 700; cursor: pointer; }
+.cfg-listas-tabs button.is-active,
+.cfg-listas-status button.is-active { background: #fff; color: #0759c7; box-shadow: 0 1px 4px rgba(15, 23, 42, .12); }
+
+.cfg-listas-search { height: 38px; min-width: 0; padding: 0 12px; border: 1px solid #d9e1ea; border-radius: 10px; display: flex; align-items: center; gap: 8px; color: #8794a5; }
+.cfg-listas-search input { width: 100%; min-width: 0; border: 0; outline: 0; background: transparent; color: #0a2540; font: inherit; font-size: 12px; }
+
+.cfg-listas-tableWrap { flex: 1; min-height: 0; overflow: auto; }
+.cfg-listas-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.cfg-listas-table th { position: sticky; top: 0; z-index: 1; padding: 10px 12px; background: #f6f8fb; color: #67778c; text-align: left; font-size: 10px; letter-spacing: .045em; text-transform: uppercase; border-bottom: 1px solid #dfe6ed; }
+.cfg-listas-table td { padding: 11px 12px; border-bottom: 1px solid #edf1f5; color: #425466; }
+.cfg-listas-table tr.is-inactive td { opacity: .68; background: #fafbfc; }
+.cfg-listas-table td strong { display: block; color: #0a2540; font-weight: 700; }
+.cfg-listas-table td small { display: block; margin-top: 2px; color: #8491a2; }
+.cfg-listas-table .is-right { text-align: right; }
+
+.cfg-listas-chip { display: inline-flex; padding: 4px 8px; border-radius: 999px; background: #edf1f5; color: #69788b; font-size: 10px; font-weight: 800; }
+.cfg-listas-chip.is-active { background: #e9f8ef; color: #168247; }
+.cfg-listas-actions { display: inline-flex; gap: 5px; }
+.cfg-listas-actions button { width: 31px; height: 31px; border: 1px solid #dce4ec; border-radius: 8px; background: #fff; color: #52657b; cursor: pointer; }
+.cfg-listas-actions button:hover { background: #f3f7fb; color: #0759c7; }
+.cfg-listas-actions button.is-danger:hover { background: #fff2f2; border-color: #f3c4c4; color: #c83232; }
+
+.cfg-listas-empty { min-height: 220px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; color: #8a98a9; }
+.cfg-listas-empty svg { font-size: 30px; opacity: .7; }
+.cfg-listas-table tr.is-skeleton td { padding: 16px 12px; }
+.cfg-listas-table tr.is-skeleton span { display: block; height: 11px; border-radius: 7px; background: linear-gradient(90deg, #edf1f5 25%, #f7f9fb 50%, #edf1f5 75%); background-size: 200% 100%; animation: cfg-listas-shimmer 1.2s infinite; }
+@keyframes cfg-listas-shimmer { to { background-position: -200% 0; } }
+
+body.dark-mode .cfg-listas-hero,
+body.dark-mode .cfg-listas-card { background: #101923; border-color: #293847; }
+body.dark-mode .cfg-listas-hero h1,
+body.dark-mode .cfg-listas-table td strong { color: #eef5fc; }
+body.dark-mode .cfg-listas-toolbar,
+body.dark-mode .cfg-listas-table td,
+body.dark-mode .cfg-listas-table th { border-color: #293847; }
+body.dark-mode .cfg-listas-table th,
+body.dark-mode .cfg-listas-tabs,
+body.dark-mode .cfg-listas-status { background: #16222e; }
+body.dark-mode .cfg-listas-tabs button.is-active,
+body.dark-mode .cfg-listas-status button.is-active,
+body.dark-mode .cfg-listas-actions button,
+body.dark-mode .cfg-listas-back { background: #1b2a38; border-color: #344657; color: #dce8f4; }
+body.dark-mode .cfg-listas-search { border-color: #344657; }
+body.dark-mode .cfg-listas-search input { color: #eef5fc; }
+
+@media (max-width: 980px) {
+  .cfg-listas-toolbar { grid-template-columns: 1fr 1fr; }
+  .cfg-listas-search { order: 3; }
+  .cfg-listas-add { order: 4; }
+}
+
+@media (max-width: 640px) {
+  .cfg-listas-page { height: auto; min-height: calc(100vh - 90px); padding: 10px; }
+  .cfg-listas-hero { grid-template-columns: 40px minmax(0, 1fr); }
+  .cfg-listas-back { grid-column: 1 / -1; }
+  .cfg-listas-toolbar { grid-template-columns: 1fr; }
+  .cfg-listas-search,
+  .cfg-listas-add { order: initial; width: 100%; }
+  .cfg-listas-tabs,
+  .cfg-listas-status { width: 100%; }
+  .cfg-listas-tabs button,
+  .cfg-listas-status button { flex: 1; }
+  .cfg-listas-table { min-width: 680px; }
+}
+
+
+/* Las categorías de Servicios agregan más pestañas; permitimos envolver sin romper el toolbar. */
+.cfg-listas-tabs { flex-wrap: wrap; }
+.cfg-listas-table td { vertical-align: middle; }
+.cfg-listas-table td:nth-child(2) { max-width: 380px; }

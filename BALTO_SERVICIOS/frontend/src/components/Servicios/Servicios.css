@@ -1269,6 +1269,90 @@ body.dark .servicios-btn--ghost {
   border-bottom: 1px solid var(--color-border);
 }
 
+/* V6 · materiales, trabajadores, unidades y stock unificado */
+.servicios-composition-grid--three {
+  grid-template-columns: repeat(3, minmax(300px, 1fr));
+}
+
+.servicios-checkRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 52px;
+  padding: 10px 12px;
+  border: 1px solid var(--mov-border, #dbe3ef);
+  border-radius: 10px;
+  background: var(--mov-surface-soft, #f8fafc);
+  cursor: pointer;
+}
+
+.servicios-checkRow input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--mov-primary, #2563eb);
+}
+
+.servicios-checkRow span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.servicios-checkRow small {
+  color: var(--mov-muted, #64748b);
+  font-size: 11px;
+}
+
+.servicios-stock-options {
+  margin-top: 14px;
+}
+
+.servicios-stock-summary,
+.servicios-cost-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--mov-primary, #2563eb) 8%, transparent);
+}
+
+.servicios-stock-summary strong,
+.servicios-cost-preview strong {
+  font-size: 22px;
+  color: var(--mov-primary, #2563eb);
+}
+
+.servicios-stock-summary small,
+.servicios-cost-preview small {
+  color: var(--mov-muted, #64748b);
+}
+
+.servicios-info-danger {
+  color: #991b1b;
+  border-color: #fecaca;
+  background: #fef2f2;
+}
+
+.servicios-chip--warning {
+  color: #92400e;
+  background: #fef3c7;
+  border-color: #fde68a;
+}
+
+.servicios-adjustBtn {
+  min-height: 32px;
+  padding: 6px 10px;
+  white-space: nowrap;
+}
+
+@media (max-width: 1180px) {
+  .servicios-composition-grid--three {
+    grid-template-columns: 1fr;
+  }
+}
+
 .servicios-inventoryTab {
   position: relative;
   appearance: none;
@@ -1519,11 +1603,6 @@ body.dark .servicios-statusTabs .servicios-statusTab.is-active {
   scrollbar-gutter: auto;
 }
 
-.servicios-modal--stock .servicios-stock-field--codigo {
-  grid-column: 1 / span 3;
-  grid-row: 1;
-}
-
 .servicios-modal--stock .servicios-stock-field--nombre {
   grid-column: 4 / span 4;
   grid-row: 1;
@@ -1701,7 +1780,6 @@ body.dark .servicios-field__counter {
     grid-column: 1 / -1;
   }
 
-  .servicios-modal--stock .servicios-stock-field--codigo,
   .servicios-modal--stock .servicios-stock-field--nombre,
   .servicios-modal--stock .servicios-stock-field--categoria,
   .servicios-modal--stock .servicios-stock-field--unidad {
@@ -1902,4 +1980,82 @@ body.dark .servicios-component-card {
   padding-bottom: 23px;
   resize: vertical;
   line-height: 1.4;
+}
+
+/* ========================================================================== */
+/* V1 simplificada: artículos únicos + historiales                             */
+/* ========================================================================== */
+.servicios-composition-grid--two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.servicios-actionsInline {
+  gap: 4px;
+  flex-wrap: nowrap;
+}
+
+.servicios-history-modal {
+  width: min(920px, calc(100vw - 32px));
+}
+
+.servicios-history-list {
+  display: grid;
+  gap: 10px;
+}
+
+.servicios-history-row {
+  display: grid;
+  grid-template-columns: minmax(170px, 1.25fr) repeat(3, minmax(120px, .8fr));
+  gap: 12px;
+  align-items: center;
+  padding: 14px 16px;
+  border: 1px solid var(--gm-border, rgba(22, 45, 78, .12));
+  border-radius: 12px;
+  background: var(--gm-surface, #fff);
+}
+
+.servicios-history-row > div {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.servicios-history-row span,
+.servicios-history-row small {
+  font-size: 11px;
+  opacity: .68;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.servicios-history-row strong {
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.servicios-history-row__date strong {
+  font-size: 14px;
+}
+
+.servicios-history-empty {
+  padding: 34px 20px;
+  text-align: center;
+  opacity: .72;
+}
+
+@media (max-width: 900px) {
+  .servicios-composition-grid--two {
+    grid-template-columns: 1fr;
+  }
+  .servicios-history-row {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .servicios-history-row {
+    grid-template-columns: 1fr;
+  }
 }

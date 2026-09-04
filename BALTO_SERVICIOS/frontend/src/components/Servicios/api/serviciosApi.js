@@ -3,7 +3,7 @@ import { singleFlightFetch } from "../../../utils/singleFlightFetch";
 
 export const SERVICIOS_API_URL = `${String(BASE_URL || "").replace(/\/+$/, "")}/api.php`;
 
-const CACHE_PREFIX = "balto_servicios_api_v2";
+const CACHE_PREFIX = "balto_servicios_api_v11_db15";
 const CACHE_TTL_MS = 45 * 1000;
 const memoryCache = new Map();
 let readGeneration = 0;
@@ -36,11 +36,9 @@ function cacheKey(url) {
 function readCache(url) {
   const key = cacheKey(url);
   const now = Date.now();
-
   const mem = memoryCache.get(key);
   if (mem && now - mem.savedAt <= CACHE_TTL_MS) return mem.data;
   if (mem) memoryCache.delete(key);
-
   try {
     const raw = sessionStorage.getItem(key);
     if (!raw) return null;
@@ -60,11 +58,7 @@ function writeCache(url, data) {
   const key = cacheKey(url);
   const payload = { savedAt: Date.now(), data };
   memoryCache.set(key, payload);
-  try {
-    sessionStorage.setItem(key, JSON.stringify(payload));
-  } catch {
-    // Si el navegador no permite almacenar el payload, queda el caché en memoria.
-  }
+  try { sessionStorage.setItem(key, JSON.stringify(payload)); } catch {}
 }
 
 export function clearServiciosApiCache() {
@@ -85,66 +79,59 @@ function invalidateReads() {
 async function parseResponse(res) {
   const text = await res.text();
   let data = null;
-  try {
-    data = text ? JSON.parse(text) : null;
-  } catch {
-    throw new Error("La API de Servicios devolvió una respuesta inválida.");
+  try { data = text ? JSON.parse(text) : null; }
+  catch { throw new Error("La API de Servicios devolvió una respuesta inválida."); }
+  if (!res.ok || data?.exito === false) {
+    const error = new Error(data?.mensaje || `Error HTTP ${res.status}`);
+    error.status = res.status;
+    throw error;
   }
-  if (!res.ok || data?.exito === false) throw new Error(data?.mensaje || `Error HTTP ${res.status}`);
   return data || {};
 }
 
 export async function serviciosGet(action, params = {}, options = {}) {
   const url = buildUrl(action, params);
   const force = options?.force === true;
-  const cacheable = action === "servicios_resumen" || String(action).endsWith("_listar");
-
+  const cacheable = action === "servicios_resumen" || action === "servicios_modulo_cargar" || String(action).endsWith("_listar");
   if (cacheable && !force) {
     const cached = readCache(url);
     if (cached) return cached;
   }
-
   const generationAtStart = readGeneration;
-  const res = await singleFlightFetch(url, {
-    method: "GET",
-    headers: authHeaders(false),
-    cache: "no-store",
-  });
+  const res = await singleFlightFetch(url, { method: "GET", headers: authHeaders(false), cache: "no-store" });
   const data = await parseResponse(res);
-
-  // Una escritura ocurrida mientras este GET estaba en vuelo invalida el
-  // resultado para caché. El caller actual puede usarlo, pero no queda guardado.
   if (cacheable && generationAtStart === readGeneration) writeCache(url, data);
   return data;
 }
 
 export async function serviciosPost(action, body = {}) {
-  // Invalida antes de escribir para que un GET anterior no quede reutilizable.
   invalidateReads();
-
-  const res = await singleFlightFetch(buildUrl(action), {
+  // Las escrituras NO se deduplican: dos POST con payload distinto nunca deben
+  // compartir una respuesta sólo por apuntar al mismo action.
+  const res = await fetch(buildUrl(action), {
     method: "POST",
     headers: authHeaders(true),
     body: JSON.stringify(body || {}),
+    cache: "no-store",
   });
   const data = await parseResponse(res);
-
-  // La escritura exitosa cambia el catálogo: cualquier lectura anterior deja
-  // de ser válida y la próxima carga irá al backend.
   invalidateReads();
   return data;
 }
 
 export const obtenerResumenServicios = () => serviciosGet("servicios_resumen");
-export const listarUnidadesServicios = () => serviciosGet("servicios_unidades_listar");
+
+export async function cargarModuloServicios({ seccion = "servicios", limit = 1000 } = {}) {
+  return serviciosGet("servicios_modulo_cargar", { seccion, limit });
+}
 
 // SERVICIOS
 export const listarCategoriasServicios = (params = {}) => serviciosGet("servicios_categorias_listar", params);
 export const crearCategoriaServicios = (body) => serviciosPost("servicios_categoria_crear", body);
 export const actualizarCategoriaServicios = (body) => serviciosPost("servicios_categoria_actualizar", body);
-export const darBajaCategoriaServicios = (id) => serviciosPost("servicios_categoria_dar_baja", { id_servicio_categoria: id });
-export const reactivarCategoriaServicios = (id) => serviciosPost("servicios_categoria_reactivar", { id_servicio_categoria: id });
-export const eliminarCategoriaServicios = (id) => serviciosPost("servicios_categoria_eliminar", { id_servicio_categoria: id });
+export const darBajaCategoriaServicios = (id) => serviciosPost("servicios_categoria_dar_baja", { id_categoria: id });
+export const reactivarCategoriaServicios = (id) => serviciosPost("servicios_categoria_reactivar", { id_categoria: id });
+export const eliminarCategoriaServicios = (id) => serviciosPost("servicios_categoria_eliminar", { id_categoria: id });
 export const listarCatalogoServicios = (params = {}) => serviciosGet("servicios_catalogo_listar", params);
 export const obtenerServicioServicios = (id) => serviciosGet("servicios_servicio_obtener", { id_servicio: id });
 export const crearServicioServicios = (body) => serviciosPost("servicios_servicio_crear", body);
@@ -152,14 +139,43 @@ export const actualizarServicioServicios = (body) => serviciosPost("servicios_se
 export const darBajaServicioServicios = (id) => serviciosPost("servicios_servicio_dar_baja", { id_servicio: id });
 export const reactivarServicioServicios = (id) => serviciosPost("servicios_servicio_reactivar", { id_servicio: id });
 export const eliminarServicioServicios = (id) => serviciosPost("servicios_servicio_eliminar", { id_servicio: id });
-export const guardarRecetaServicios = (id, receta) => serviciosPost("servicios_receta_guardar", { id_servicio: id, receta });
-export const guardarComposicionServicios = (id, insumos = [], productosStock = []) =>
-  serviciosPost("servicios_composicion_guardar", {
-    id_servicio: id,
-    composicion: { insumos, stock: productosStock },
-  });
+export const historialServicioServicios = (id) => serviciosGet("servicios_servicio_historial_precios", { id_servicio: id }, { force: true });
+export const guardarComposicionServicios = (id, articulos = [], trabajadores = []) =>
+  serviciosPost("servicios_composicion_guardar", { id_servicio: id, composicion: { articulos, trabajadores } });
 
-// INSUMOS: catálogo totalmente independiente de Stock.
+// ARTÍCULOS
+export const listarCategoriasArticulosServicios = (params = {}) => serviciosGet("servicios_articulos_categorias_listar", params);
+export const crearCategoriaArticuloServicios = (body) => serviciosPost("servicios_articulos_categoria_crear", body);
+export const actualizarCategoriaArticuloServicios = (body) => serviciosPost("servicios_articulos_categoria_actualizar", body);
+export const darBajaCategoriaArticuloServicios = (id) => serviciosPost("servicios_articulos_categoria_dar_baja", { id_categoria: id });
+export const reactivarCategoriaArticuloServicios = (id) => serviciosPost("servicios_articulos_categoria_reactivar", { id_categoria: id });
+export const eliminarCategoriaArticuloServicios = (id) => serviciosPost("servicios_articulos_categoria_eliminar", { id_categoria: id });
+export const listarArticulosServicios = (params = {}) => serviciosGet("servicios_articulos_listar", params);
+export const obtenerArticuloServicios = (id) => serviciosGet("servicios_articulo_obtener", { id_articulo: id });
+export const crearArticuloServicios = (body) => serviciosPost("servicios_articulo_crear", body);
+export const actualizarArticuloServicios = (body) => serviciosPost("servicios_articulo_actualizar", body);
+export const darBajaArticuloServicios = (id) => serviciosPost("servicios_articulo_dar_baja", { id_articulo: id });
+export const reactivarArticuloServicios = (id) => serviciosPost("servicios_articulo_reactivar", { id_articulo: id });
+export const eliminarArticuloServicios = (id) => serviciosPost("servicios_articulo_eliminar", { id_articulo: id });
+export const historialArticuloServicios = (id) => serviciosGet("servicios_articulo_historial_precios", { id_articulo: id }, { force: true });
+
+// MATERIALES (comparten servicio_articulos, filtrados por tipo=MATERIAL)
+export const listarCategoriasMaterialesServicios = (params = {}) => serviciosGet("servicios_materiales_categorias_listar", params);
+export const crearCategoriaMaterialServicios = (body) => serviciosPost("servicios_material_categoria_crear", body);
+export const actualizarCategoriaMaterialServicios = (body) => serviciosPost("servicios_material_categoria_actualizar", body);
+export const darBajaCategoriaMaterialServicios = (id) => serviciosPost("servicios_material_categoria_dar_baja", { id_categoria: id });
+export const reactivarCategoriaMaterialServicios = (id) => serviciosPost("servicios_material_categoria_reactivar", { id_categoria: id });
+export const eliminarCategoriaMaterialServicios = (id) => serviciosPost("servicios_material_categoria_eliminar", { id_categoria: id });
+export const listarMaterialesServicios = (params = {}) => serviciosGet("servicios_materiales_listar", params);
+export const obtenerMaterialServicios = (id) => serviciosGet("servicios_material_obtener", { id_articulo: id });
+export const crearMaterialServicios = (body) => serviciosPost("servicios_material_crear", body);
+export const actualizarMaterialServicios = (body) => serviciosPost("servicios_material_actualizar", body);
+export const darBajaMaterialServicios = (id) => serviciosPost("servicios_material_dar_baja", { id_articulo: id });
+export const reactivarMaterialServicios = (id) => serviciosPost("servicios_material_reactivar", { id_articulo: id });
+export const eliminarMaterialServicios = (id) => serviciosPost("servicios_material_eliminar", { id_articulo: id });
+export const historialMaterialServicios = (id) => serviciosGet("servicios_material_historial_precios", { id_articulo: id }, { force: true });
+
+// INSUMOS (comparten servicio_articulos, filtrados por tipo=INSUMO)
 export const listarCategoriasInsumosServicios = (params = {}) => serviciosGet("servicios_insumos_categorias_listar", params);
 export const crearCategoriaInsumoServicios = (body) => serviciosPost("servicios_insumo_categoria_crear", body);
 export const actualizarCategoriaInsumoServicios = (body) => serviciosPost("servicios_insumo_categoria_actualizar", body);
@@ -167,24 +183,36 @@ export const darBajaCategoriaInsumoServicios = (id) => serviciosPost("servicios_
 export const reactivarCategoriaInsumoServicios = (id) => serviciosPost("servicios_insumo_categoria_reactivar", { id_categoria: id });
 export const eliminarCategoriaInsumoServicios = (id) => serviciosPost("servicios_insumo_categoria_eliminar", { id_categoria: id });
 export const listarInsumosServicios = (params = {}) => serviciosGet("servicios_insumos_listar", params);
-export const obtenerInsumoServicios = (id) => serviciosGet("servicios_insumo_obtener", { id_insumo: id });
+export const obtenerInsumoServicios = (id) => serviciosGet("servicios_insumo_obtener", { id_articulo: id });
 export const crearInsumoServicios = (body) => serviciosPost("servicios_insumo_crear", body);
 export const actualizarInsumoServicios = (body) => serviciosPost("servicios_insumo_actualizar", body);
-export const darBajaInsumoServicios = (id) => serviciosPost("servicios_insumo_dar_baja", { id_insumo: id });
-export const reactivarInsumoServicios = (id) => serviciosPost("servicios_insumo_reactivar", { id_insumo: id });
-export const eliminarInsumoServicios = (id) => serviciosPost("servicios_insumo_eliminar", { id_insumo: id });
+export const darBajaInsumoServicios = (id) => serviciosPost("servicios_insumo_dar_baja", { id_articulo: id });
+export const reactivarInsumoServicios = (id) => serviciosPost("servicios_insumo_reactivar", { id_articulo: id });
+export const eliminarInsumoServicios = (id) => serviciosPost("servicios_insumo_eliminar", { id_articulo: id });
+export const historialInsumoServicios = (id) => serviciosGet("servicios_insumo_historial_precios", { id_articulo: id }, { force: true });
 
-// STOCK: catálogo propio. No comparte registros, IDs, categorías ni CRUD con Insumos.
-export const listarCategoriasStockServicios = (params = {}) => serviciosGet("servicios_stock_categorias_listar", params);
-export const crearCategoriaStockServicios = (body) => serviciosPost("servicios_stock_categoria_crear", body);
-export const actualizarCategoriaStockServicios = (body) => serviciosPost("servicios_stock_categoria_actualizar", body);
-export const darBajaCategoriaStockServicios = (id) => serviciosPost("servicios_stock_categoria_dar_baja", { id_stock_categoria: id });
-export const reactivarCategoriaStockServicios = (id) => serviciosPost("servicios_stock_categoria_reactivar", { id_stock_categoria: id });
-export const eliminarCategoriaStockServicios = (id) => serviciosPost("servicios_stock_categoria_eliminar", { id_stock_categoria: id });
+// STOCK CONSOLIDADO SOBRE servicio_articulos
+// No existe una tabla servicio_stock: esta vista reúne Materiales + Insumos.
 export const listarStockServicios = (params = {}) => serviciosGet("servicios_stock_listar", params);
-export const obtenerStockServicios = (id) => serviciosGet("servicios_stock_obtener", { id_stock: id });
-export const crearStockServicios = (body) => serviciosPost("servicios_stock_crear", body);
-export const actualizarStockServicios = (body) => serviciosPost("servicios_stock_actualizar", body);
-export const darBajaStockServicios = (id) => serviciosPost("servicios_stock_dar_baja", { id_stock: id });
-export const reactivarStockServicios = (id) => serviciosPost("servicios_stock_reactivar", { id_stock: id });
-export const eliminarStockServicios = (id) => serviciosPost("servicios_stock_eliminar", { id_stock: id });
+export const obtenerStockServicios = (id) => serviciosGet("servicios_stock_obtener", { id_articulo: id });
+export const ajustarStockServicios = (body) => serviciosPost("servicios_stock_ajustar", body);
+export const historialStockServicios = (id) => serviciosGet("servicios_stock_historial", { id_articulo: id }, { force: true });
+
+// TRABAJADORES
+export const listarTrabajadoresServicios = (params = {}) => serviciosGet("servicios_trabajadores_listar", params);
+export const obtenerTrabajadorServicios = (id) => serviciosGet("servicios_trabajador_obtener", { id_trabajador: id });
+export const crearTrabajadorServicios = (body) => serviciosPost("servicios_trabajador_crear", body);
+export const actualizarTrabajadorServicios = (body) => serviciosPost("servicios_trabajador_actualizar", body);
+export const darBajaTrabajadorServicios = (id) => serviciosPost("servicios_trabajador_dar_baja", { id_trabajador: id });
+export const reactivarTrabajadorServicios = (id) => serviciosPost("servicios_trabajador_reactivar", { id_trabajador: id });
+export const eliminarTrabajadorServicios = (id) => serviciosPost("servicios_trabajador_eliminar", { id_trabajador: id });
+export const historialTrabajadorServicios = (id) => serviciosGet("servicios_trabajador_historial_tarifas", { id_trabajador: id }, { force: true });
+
+// UNIDADES
+export const listarUnidadesServicios = (params = {}, options = {}) => serviciosGet("servicios_unidades_listar", params, options);
+export const crearUnidadServicios = (body) => serviciosPost("servicios_unidad_crear", body);
+export const actualizarUnidadServicios = (body) => serviciosPost("servicios_unidad_actualizar", body);
+export const darBajaUnidadServicios = (id) => serviciosPost("servicios_unidad_dar_baja", { id_unidad: id });
+export const reactivarUnidadServicios = (id) => serviciosPost("servicios_unidad_reactivar", { id_unidad: id });
+export const eliminarUnidadServicios = (id) => serviciosPost("servicios_unidad_eliminar", { id_unidad: id });
+

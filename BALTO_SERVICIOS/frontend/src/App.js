@@ -32,6 +32,7 @@ import ConfiguracionCalendario from "./components/Configuracion/ConfiguracionCal
 import ConfiguracionUsuarios from "./components/Configuracion/ConfiguracionUsuarios/ConfiguracionUsuarios";
 import ConfiguracionDatosLegales from "./components/Configuracion/ConfiguracionDatosLegales/ConfiguracionDatosLegales";
 import ConfiguracionSaldosIniciales from "./components/Configuracion/ConfiguracionSaldosIniciales/ConfiguracionSaldosIniciales";
+import ConfiguracionListasCategorias from "./components/Configuracion/ConfiguracionListasCategorias/ConfiguracionListasCategorias";
 
 /* Análisis financiero */
 import * as AnalisisFinancieroModule from "./components/Analisis_Financiero/Analisis_Financiero";
@@ -504,6 +505,19 @@ export default function App() {
           />
 
           <Route
+            path="configuracion/listas-categorias"
+            element={
+              <RutaModulo modulo="configuracion">
+                <RutaAdmin>
+                  <RutaNoDemoConfig>
+                    <ConfiguracionListasCategorias />
+                  </RutaNoDemoConfig>
+                </RutaAdmin>
+              </RutaModulo>
+            }
+          />
+
+          <Route
             path="configuracion/saldos-iniciales"
             element={
               <RutaModulo modulo="configuracion">
@@ -522,4 +536,3 @@ export default function App() {
     </Router>
   );
 }
-
