@@ -17,7 +17,6 @@ import GifCarga from "../Global/Gif_Carga";
 import Toast from "../Global/Toast.jsx";
 import "./dashboard.css";
 import "../Global/Global_css/Global_responsive.css";
-import { useListas } from "../../context/ListasContext";
 import useCountUp from "./hooks/useCountUp";
 import useDashboardDatos from "./hooks/useDashboardDatos";
 import {
@@ -210,7 +209,6 @@ function SideIndicators({ kpis }) {
 }
 
 export default function Dashboard() {
-  const { ensureListsLoaded } = useListas();
 
   const [toast, setToast] = useState(null);
 
@@ -220,8 +218,7 @@ export default function Dashboard() {
 
   const closeToast = useCallback(() => setToast(null), []);
 
-  const { loadingInicial, loadingDashboard, dashboard } = useDashboardDatos({
-    ensureListsLoaded,
+  const { loadingDashboard, dashboard } = useDashboardDatos({
     showToast,
   });
 
@@ -279,9 +276,7 @@ export default function Dashboard() {
 
   return (
     <>
-      {(loadingInicial || (loadingDashboard && !dashboard.series_diaria.length)) && (
-        <GifCarga />
-      )}
+      {loadingDashboard && !dashboard.series_diaria.length && <GifCarga visible />}
 
       {toast && (
         <Toast

@@ -232,11 +232,7 @@ function normalizeLists(lists) {
 function getAuthInfo() {
   const sessionKey =
     localStorage.getItem("session_key") ||
-    localStorage.getItem("sessionKey") ||
-    localStorage.getItem("x_session") ||
-    localStorage.getItem("X-Session") ||
     "";
-  const token = localStorage.getItem("token") || "";
   let idUsuario = 0;
 
   try {
@@ -245,7 +241,7 @@ function getAuthInfo() {
     if (Number.isFinite(Number(cand))) idUsuario = Number(cand);
   } catch {}
 
-  return { token, sessionKey, idUsuario };
+  return { sessionKey, idUsuario };
 }
 
 function nuevaVentaArcaStorageKey() {
@@ -336,11 +332,10 @@ async function parseJsonOrThrow(res) {
 }
 
 function buildAuthHeaders(isJson = true) {
-  const { token, sessionKey } = getAuthInfo();
+  const { sessionKey } = getAuthInfo();
   const headers = {};
   if (isJson) headers["Content-Type"] = "application/json";
   if (sessionKey) headers["X-Session"] = sessionKey;
-  else if (token) headers.Authorization = `Bearer ${token}`;
   return headers;
 }
 
@@ -1976,33 +1971,6 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
     [updateRow, showToast]
   );
 
-  const barcodePendingRef = useRef(null);
-
-  const handleBarcodeProductSelect = useCallback((producto) => {
-    const target = rows.find((row) =>
-      !Number(row?.id_stock_producto || 0) &&
-      !Number(row?.id_stock_variante || 0) &&
-      !String(row?.detalleText || "").trim()
-    );
-
-    if (target) {
-      handleSelectDetalle(producto, target.id);
-      showToast("exito", `Producto leído: ${getDetalleNombre(producto)}`, 1800);
-      return;
-    }
-
-    const nextRow = buildEmptyRow();
-    barcodePendingRef.current = { rowId: nextRow.id, producto };
-    setRows((prev) => [...prev, nextRow]);
-  }, [rows, handleSelectDetalle, showToast]);
-
-  useEffect(() => {
-    const pending = barcodePendingRef.current;
-    if (!pending || !rows.some((row) => row.id === pending.rowId)) return;
-    barcodePendingRef.current = null;
-    handleSelectDetalle(pending.producto, pending.rowId);
-    showToast("exito", `Producto leído: ${getDetalleNombre(pending.producto)}`, 1800);
-  }, [rows, handleSelectDetalle, showToast]);
 
   const handlePrecioTipoChange = useCallback(
     (rowId, selectedValue) => {

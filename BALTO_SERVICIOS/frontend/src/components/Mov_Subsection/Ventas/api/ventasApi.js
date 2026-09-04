@@ -1,17 +1,12 @@
+import { movSubsectionFetch } from "../../_shared/api/singleFlightFetch.js";
+
 /**
  * Capa HTTP de Ventas.
- * Mantiene el mismo contrato histórico de autenticación y parseo de la pantalla
- * principal, y expone el transporte crudo para los modales que tienen reglas
- * particulares de reintento/validación.
+ * Usa exclusivamente la sesión global MASTER mediante X-Session y expone el
+ * transporte crudo para los modales que tienen reglas particulares de reintento/validación.
  */
 export function getVentasAuthInfo() {
-  const token = (localStorage.getItem("token") || "").trim();
-  const sessionKey = (
-    localStorage.getItem("session_key") ||
-    localStorage.getItem("sessionKey") ||
-    localStorage.getItem("X-Session") ||
-    ""
-  ).trim();
+  const sessionKey = (localStorage.getItem("session_key") || "").trim();
 
   let idUsuario = 0;
   try {
@@ -20,22 +15,20 @@ export function getVentasAuthInfo() {
     if (Number.isFinite(Number(cand))) idUsuario = Number(cand);
   } catch {}
 
-  return { token, sessionKey, idUsuario };
+  return { sessionKey, idUsuario };
 }
 
 function buildHeadersGET() {
-  const { token, sessionKey } = getVentasAuthInfo();
+  const { sessionKey } = getVentasAuthInfo();
   const h = {};
   if (sessionKey) h["X-Session"] = sessionKey;
-  if (token) h.Authorization = `Bearer ${token}`;
   return h;
 }
 
 function buildHeadersPOST() {
-  const { token, sessionKey } = getVentasAuthInfo();
+  const { sessionKey } = getVentasAuthInfo();
   const h = { "Content-Type": "application/json" };
   if (sessionKey) h["X-Session"] = sessionKey;
-  if (token) h.Authorization = `Bearer ${token}`;
   return h;
 }
 
@@ -51,7 +44,7 @@ async function parseJsonOrThrow(res) {
 }
 
 export function ventasFetch(url, options = {}) {
-  return fetch(url, options);
+  return movSubsectionFetch(url, options);
 }
 
 export async function ventasApiGet(url) {

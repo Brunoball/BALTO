@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import "../Global_css/Global_Modals.css";
 import "../Global_css/Global_oscuro.css";
 import "../Global_css/GlobalsModalsV2.css";
+import { singleFlightFetch } from "../../../utils/singleFlightFetch";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -16,10 +17,8 @@ function safeText(v) {
 
 function buildHeadersGET() {
   const sessionKey = safeText(localStorage.getItem("session_key"));
-  const token = safeText(localStorage.getItem("token"));
   const h = {};
   if (sessionKey) h["X-Session"] = sessionKey;
-  if (token) h.Authorization = `Bearer ${token}`;
   return h;
 }
 
@@ -550,7 +549,7 @@ export default function ModalVerComprobante({
           fetchOptions.headers = buildHeadersGET();
         }
 
-        const res = await fetch(activeUrl, fetchOptions);
+        const res = await singleFlightFetch(activeUrl, fetchOptions);
 
         if (res.status === 401 || res.status === 403) {
           throw new Error("Sesión vencida o no autorizada para ver este comprobante.");

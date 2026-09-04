@@ -107,12 +107,8 @@ function normalizeSearchText(v) {
 
 
 function getAuthInfo() {
-  const token = localStorage.getItem("token") || "";
   const sessionKey =
     localStorage.getItem("session_key") ||
-    localStorage.getItem("sessionKey") ||
-    localStorage.getItem("X-Session") ||
-    localStorage.getItem("x_session") ||
     "";
 
   let idUsuario = 0;
@@ -128,7 +124,7 @@ function getAuthInfo() {
     if (Number.isFinite(Number(cand))) idUsuario = Number(cand);
   } catch {}
 
-  return { token, sessionKey, idUsuario };
+  return { sessionKey, idUsuario };
 }
 
 async function parseJsonOrThrow(res) {
@@ -152,10 +148,9 @@ async function parseJsonOrThrow(res) {
 }
 
 async function apiGetJson(url) {
-  const { token, sessionKey } = getAuthInfo();
+  const { sessionKey } = getAuthInfo();
   const headers = {};
   if (sessionKey) headers["X-Session"] = sessionKey;
-  if (token) headers.Authorization = `Bearer ${token}`;
 
   const res = await ordenesPagoFetch(url, { method: "GET", headers });
   return await parseJsonOrThrow(res);
@@ -539,21 +534,6 @@ export default function ModalEditarOrdenPago({
     setProductoArmed(false);
   };
 
-  const handleBarcodeProductSelect = useCallback((producto) => {
-    const idProducto = getProductoId(producto);
-    const idVariante = getProductoVarianteId(producto);
-    const nombre = getProductoDisplayNombre(producto) || getProductoNombre(producto) || "Producto";
-
-    setForm((prev) => ({
-      ...prev,
-      productoInput: nombre,
-      id_stock_producto: idProducto ? String(idProducto) : NULL_OPTION,
-      id_stock_variante: idVariante ? String(idVariante) : NULL_OPTION,
-    }));
-    setProductoFocus(false);
-    setProductoArmed(false);
-    showToast("exito", `Producto leído: ${nombre}`);
-  }, [showToast]);
 
   const handleProveedorInputChange = (e) => {
     const value = e.target.value;

@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import Toast from "../Toast.jsx";
 import ModalVerComprobante from "../Ver_Comprobantes/ModalVerComprobante.jsx";
 import BASE_URL from "../../../config/config";
+import { singleFlightFetch } from "../../../utils/singleFlightFetch";
 import "../Global_css/Global_Modals.css";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -48,20 +49,15 @@ function onlyDigits(v) {
 function getSessionKey() {
   return (
     localStorage.getItem("session_key") ||
-    localStorage.getItem("sessionKey") ||
-    localStorage.getItem("x_session") ||
-    localStorage.getItem("X-Session") ||
     ""
   ).trim();
 }
 
 function buildAuthHeaders(includeJson = false) {
   const session = getSessionKey();
-  const token = (localStorage.getItem("token") || "").trim();
   const headers = {};
   if (includeJson) headers["Content-Type"] = "application/json";
   if (session) headers["X-Session"] = session;
-  else if (token) headers["Authorization"] = `Bearer ${token}`;
   return headers;
 }
 
@@ -102,7 +98,7 @@ async function verificarNumeroChequeDefault({ numero_cheque, tipoCheque, initial
   }
 
   const url = `${BASE_URL}/api.php?action=mov_global_cheques_obtener&modo=verificar_numero&${params.toString()}`;
-  const res = await fetch(url, {
+  const res = await singleFlightFetch(url, {
     method: "GET",
     headers: buildAuthHeaders(false),
   });

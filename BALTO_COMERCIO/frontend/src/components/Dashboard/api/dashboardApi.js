@@ -4,16 +4,8 @@ import BASE_URL from "../../../config/config";
 // exactamente al mismo tiempo. No es caché: al terminar la petición se elimina.
 const dashboardInflight = new Map();
 
-function getSessionKey(usuario) {
-  return (
-    localStorage.getItem("session_key") ||
-    localStorage.getItem("sessionKey") ||
-    localStorage.getItem("x-session") ||
-    usuario?.session_key ||
-    usuario?.sessionKey ||
-    usuario?.token ||
-    ""
-  );
+function getSessionKey() {
+  return String(localStorage.getItem("session_key") || "").trim();
 }
 
 function getApiEndpoint() {
@@ -31,7 +23,7 @@ function buildApiUrl(action, params = {}) {
 }
 
 export async function obtenerDashboardResumen(usuario) {
-  const sessionKey = getSessionKey(usuario);
+  const sessionKey = getSessionKey();
   const headers = { Accept: "application/json" };
 
   if (sessionKey) headers["X-Session"] = sessionKey;

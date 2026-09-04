@@ -632,12 +632,8 @@ function buildSingleCuentaCorrienteOption(arrRaw) {
    Auth + API
 ========================= */
 function getAuthInfo() {
-  const token = localStorage.getItem("token") || "";
   const sessionKey =
     localStorage.getItem("session_key") ||
-    localStorage.getItem("sessionKey") ||
-    localStorage.getItem("x_session") ||
-    localStorage.getItem("X-Session") ||
     "";
   let idUsuario = 0;
   try {
@@ -645,7 +641,7 @@ function getAuthInfo() {
     const cand = u?.idUsuario ?? u?.id_usuario ?? u?.id ?? u?.user_id ?? 0;
     if (Number.isFinite(Number(cand))) idUsuario = Number(cand);
   } catch {}
-  return { token, sessionKey, idUsuario };
+  return { sessionKey, idUsuario };
 }
 async function parseJsonOrThrow(res) {
   const text = await res.text();
@@ -664,11 +660,10 @@ async function parseJsonOrThrow(res) {
   return data;
 }
 function buildAuthHeaders(isJson = true) {
-  const { token, sessionKey } = getAuthInfo();
+  const { sessionKey } = getAuthInfo();
   const headers = {};
   if (isJson) headers["Content-Type"] = "application/json";
   if (sessionKey) headers["X-Session"] = sessionKey;
-  if (token) headers.Authorization = `Bearer ${token}`;
   return headers;
 }
 async function apiGet(url) {

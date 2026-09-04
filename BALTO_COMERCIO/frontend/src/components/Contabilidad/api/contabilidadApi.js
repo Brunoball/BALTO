@@ -1,4 +1,5 @@
 import BASE_URL from "../../../config/config";
+import { singleFlightFetch } from "../../../utils/singleFlightFetch";
 
 const API_RELATIVE = "api.php";
 
@@ -16,23 +17,7 @@ function getApiEndpoint() {
 }
 
 function getSessionKey() {
-  let usuario = null;
-
-  try {
-    usuario = JSON.parse(localStorage.getItem("usuario") || "null");
-  } catch {
-    usuario = null;
-  }
-
-  return String(
-    localStorage.getItem("session_key") ||
-      localStorage.getItem("sessionKey") ||
-      localStorage.getItem("x-session") ||
-      usuario?.session_key ||
-      usuario?.sessionKey ||
-      usuario?.token ||
-      ""
-  ).trim();
+  return String(localStorage.getItem("session_key") || "").trim();
 }
 
 function buildApiUrl(action, params = {}) {
@@ -107,7 +92,7 @@ export async function fetchContabilidadJson(action, params = {}, aliases = []) {
     const url = buildApiUrl(currentAction, params);
 
     try {
-      const res = await fetch(url, {
+      const res = await singleFlightFetch(url, {
         method: "GET",
         headers: buildHeaders(),
         cache: "no-store",

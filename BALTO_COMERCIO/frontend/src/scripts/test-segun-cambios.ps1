@@ -26,12 +26,12 @@ if (-not $SinSmoke) { [void]$selected.Add('smoke') }
 foreach ($rawPath in $Archivos) {
   $path = ($rawPath -replace '\\', '/').ToLowerInvariant()
 
-  if ($path -match 'routes/api\.php|config/config|context/|components/global/|modules/global/') {
+  if ($path -match '(^|/)app\.js$|routes/api\.php|config/config|context/|components/global/|components/principal/|modules/global/') {
     [void]$selected.Add('interno')
     continue
   }
 
-  if ($path -match 'login|require_session|sesion|auth') { [void]$selected.Add('auth') }
+  if ($path -match 'login|require_session|sesion|session/|auth') { [void]$selected.Add('auth') }
   if ($path -match 'stock') {
     [void]$selected.Add('stock')
     [void]$selected.Add('movimientos')
@@ -59,7 +59,7 @@ if ($selected.Count -eq 0) { [void]$selected.Add('smoke') }
 if ($selected.Contains('interno')) {
   $orderedSelection = @('interno')
 } else {
-  $preferredOrder = @('smoke', 'auth', 'stock', 'movimientos', 'cuentas-corrientes', 'cheques', 'configuracion', 'documentos', 'navegacion')
+  $preferredOrder = @('smoke', 'auth', 'stock', 'movimientos', 'cuentas-corrientes', 'cheques', 'configuracion', 'documentos', 'seguridad', 'navegacion')
   $orderedSelection = @($preferredOrder | Where-Object { $selected.Contains($_) })
 }
 

@@ -631,12 +631,8 @@ function buildSingleCuentaCorrienteOption(arrRaw) {
    Auth + API
 ========================= */
 function getAuthInfo() {
-  const token = localStorage.getItem("token") || "";
   const sessionKey =
     localStorage.getItem("session_key") ||
-    localStorage.getItem("sessionKey") ||
-    localStorage.getItem("x_session") ||
-    localStorage.getItem("X-Session") ||
     "";
   let idUsuario = 0;
   try {
@@ -644,7 +640,7 @@ function getAuthInfo() {
     const cand = u?.idUsuario ?? u?.id_usuario ?? u?.id ?? u?.user_id ?? 0;
     if (Number.isFinite(Number(cand))) idUsuario = Number(cand);
   } catch {}
-  return { token, sessionKey, idUsuario };
+  return { sessionKey, idUsuario };
 }
 async function parseJsonOrThrow(res) {
   const text = await res.text();
@@ -663,11 +659,10 @@ async function parseJsonOrThrow(res) {
   return data;
 }
 function buildAuthHeaders(isJson = true) {
-  const { token, sessionKey } = getAuthInfo();
+  const { sessionKey } = getAuthInfo();
   const headers = {};
   if (isJson) headers["Content-Type"] = "application/json";
   if (sessionKey) headers["X-Session"] = sessionKey;
-  if (token) headers.Authorization = `Bearer ${token}`;
   return headers;
 }
 async function apiGet(url) {
@@ -1310,20 +1305,6 @@ export default function ModalEditarCompra({
     [localLists]
   );
 
-  const refreshBarcodeCatalog = useCallback(async () => {
-    const data = await fetchComprasListasFresh();
-    if (!data?.exito) return [];
-
-    const fresh = normalizeIncomingLists(data);
-    const detalles = Array.isArray(fresh.detalles) ? fresh.detalles : [];
-    setLocalLists((prev) => ({
-      ...SAFE_LISTS,
-      ...prev,
-      ...fresh,
-      detalles,
-    }));
-    return detalles;
-  }, []);
   const tiposVentaUI = useMemo(() => {
     if (Array.isArray(safeLists.tiposVenta) && safeLists.tiposVenta.length) return safeLists.tiposVenta;
     return [{ id: 1, nombre: "CONTADO" }, { id: 2, nombre: "CUENTA CORRIENTE" }];
@@ -1773,11 +1754,6 @@ export default function ModalEditarCompra({
     setDetalleFocus(false);
   }, []);
 
-  const handleBarcodeProductSelect = useCallback((producto) => {
-    handleSelectDetalle(producto);
-    const nombre = String(producto?.label ?? producto?.nombre ?? producto?.producto_nombre ?? "Producto").trim();
-    showToast("exito", `Producto leído: ${nombre}`, 1800);
-  }, [handleSelectDetalle, showToast]);
 
   const payload = useMemo(() => {
     const toNullableId = (v) => {

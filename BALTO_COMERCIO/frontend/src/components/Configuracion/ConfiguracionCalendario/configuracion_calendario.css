@@ -1,5 +1,5 @@
 /* =============================================
-   CONFIG CALENDARIO — ESTÉTICA TIENDA NUBE
+   CONFIG CALENDARIO
    ============================================= */
 
 .cal-page {
@@ -764,3 +764,4 @@ body.dark .cal-badge--info {
   color: rgba(140, 180, 255, 0.95);
   border-color: rgba(44, 90, 173, 0.35);
 }
+

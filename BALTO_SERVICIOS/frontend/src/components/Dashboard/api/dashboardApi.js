@@ -1,15 +1,11 @@
 import BASE_URL from "../../../config/config";
 
-function getSessionKey(usuario) {
-  return (
-    localStorage.getItem("session_key") ||
-    localStorage.getItem("sessionKey") ||
-    localStorage.getItem("x-session") ||
-    usuario?.session_key ||
-    usuario?.sessionKey ||
-    usuario?.token ||
-    ""
-  );
+// Evita trabajo duplicado si React o dos consumidores solicitan el mismo resumen
+// exactamente al mismo tiempo. No es caché: al terminar la petición se elimina.
+const dashboardInflight = new Map();
+
+function getSessionKey() {
+  return String(localStorage.getItem("session_key") || "").trim();
 }
 
 function getApiEndpoint() {
@@ -27,29 +23,47 @@ function buildApiUrl(action, params = {}) {
 }
 
 export async function obtenerDashboardResumen(usuario) {
-  const sessionKey = getSessionKey(usuario);
+  const sessionKey = getSessionKey();
   const headers = { Accept: "application/json" };
 
   if (sessionKey) headers["X-Session"] = sessionKey;
 
-  const res = await fetch(buildApiUrl("dashboard_resumen"), {
-    method: "GET",
-    headers,
-  });
+  const url = buildApiUrl("dashboard_resumen");
+  const requestKey = `${sessionKey}::${url}`;
 
-  const text = await res.text();
+  const existing = dashboardInflight.get(requestKey);
+  if (existing) return existing;
 
-  let json = null;
+  const request = (async () => {
+    const res = await fetch(url, {
+      method: "GET",
+      headers,
+    });
+
+    const text = await res.text();
+
+    let json = null;
+
+    try {
+      json = text ? JSON.parse(text) : null;
+    } catch {
+      throw new Error(text?.slice(0, 180) || "La API no devolvió JSON válido.");
+    }
+
+    if (!res.ok || json?.exito === false) {
+      throw new Error(json?.mensaje || `Error HTTP ${res.status}`);
+    }
+
+    return json;
+  })();
+
+  dashboardInflight.set(requestKey, request);
 
   try {
-    json = text ? JSON.parse(text) : null;
-  } catch {
-    throw new Error(text?.slice(0, 180) || "La API no devolvió JSON válido.");
+    return await request;
+  } finally {
+    if (dashboardInflight.get(requestKey) === request) {
+      dashboardInflight.delete(requestKey);
+    }
   }
-
-  if (!res.ok || json?.exito === false) {
-    throw new Error(json?.mensaje || `Error HTTP ${res.status}`);
-  }
-
-  return json;
 }

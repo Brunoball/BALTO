@@ -436,39 +436,32 @@ function sumTotalItems(items) {
   );
 }
 function getAuthInfo() {
-  const token = safeText(localStorage.getItem("token"));
   const sessionKey =
-    safeText(localStorage.getItem("session_key")) ||
-    safeText(localStorage.getItem("sessionKey")) ||
-    safeText(localStorage.getItem("X-Session")) ||
-    safeText(localStorage.getItem("x_session"));
+    safeText(localStorage.getItem("session_key"));
   let idUsuario = 0;
   try {
     const u = JSON.parse(localStorage.getItem("usuario") || "null");
     const cand = u?.idUsuarioMaster ?? u?.idUsuario ?? u?.id_usuario ?? u?.id ?? u?.user_id ?? 0;
     if (Number.isFinite(Number(cand))) idUsuario = Number(cand);
   } catch {}
-  return { token, sessionKey, idUsuario };
+  return { sessionKey, idUsuario };
 }
 function buildHeadersGET() {
-  const { token, sessionKey } = getAuthInfo();
+  const { sessionKey } = getAuthInfo();
   const h = {};
   if (sessionKey) h["X-Session"] = sessionKey;
-  if (token) h.Authorization = `Bearer ${token}`;
   return h;
 }
 function buildHeadersJSON() {
-  const { token, sessionKey } = getAuthInfo();
+  const { sessionKey } = getAuthInfo();
   const h = { "Content-Type": "application/json" };
   if (sessionKey) h["X-Session"] = sessionKey;
-  if (token) h.Authorization = `Bearer ${token}`;
   return h;
 }
 function buildHeadersFormData() {
-  const { token, sessionKey } = getAuthInfo();
+  const { sessionKey } = getAuthInfo();
   const h = {};
   if (sessionKey) h["X-Session"] = sessionKey;
-  if (token) h.Authorization = `Bearer ${token}`;
   return h;
 }
 async function parseJsonOrThrow(res) {

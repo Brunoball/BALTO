@@ -71,13 +71,9 @@ function todayISO() {
 function getAuthInfo() {
   const sessionKey = (
     localStorage.getItem("session_key") ||
-    localStorage.getItem("sessionKey") ||
-    localStorage.getItem("X-Session") ||
-    localStorage.getItem("x_session") ||
     ""
   ).trim();
 
-  const token = (localStorage.getItem("token") || "").trim();
 
   let idUsuario = 0;
   let idUsuarioMaster = 0;
@@ -97,15 +93,14 @@ function getAuthInfo() {
     }
   } catch {}
 
-  return { sessionKey, token, idUsuario, idUsuarioMaster };
+  return { sessionKey, idUsuario, idUsuarioMaster };
 }
 
 function buildAuthHeaders(includeJson = false) {
-  const { sessionKey, token } = getAuthInfo();
+  const { sessionKey } = getAuthInfo();
   const headers = {};
   if (includeJson) headers["Content-Type"] = "application/json";
   if (sessionKey) headers["X-Session"] = sessionKey;
-  if (token) headers["Authorization"] = `Bearer ${token}`;
   return headers;
 }
 

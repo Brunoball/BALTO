@@ -4,6 +4,7 @@ import {
   isSessionExpiredResponse,
   looksLikeUnauthorizedPayload,
 } from "../utils/principalUtils";
+import { singleFlightFetch } from "../../../utils/singleFlightFetch";
 
 const API_RELATIVE = "api.php";
 
@@ -43,7 +44,7 @@ export async function principalApiFetch(paramsObj, options = {}) {
 
   const url = buildApiUrl(paramsObj);
 
-  const res = await fetch(url, {
+  const res = await singleFlightFetch(url, {
     ...options,
     headers,
   });
@@ -104,7 +105,7 @@ export async function obtenerTenantLogo(tipo = "principal") {
   const sessionKey = getSessionKey();
   if (!sessionKey || isLocalApiBase()) return null;
 
-  const res = await fetch(buildApiUrl({ action: "tenant_logo_ver", tipo }), {
+  const res = await singleFlightFetch(buildApiUrl({ action: "tenant_logo_ver", tipo }), {
     method: "GET",
     headers: {
       "X-Session": sessionKey,

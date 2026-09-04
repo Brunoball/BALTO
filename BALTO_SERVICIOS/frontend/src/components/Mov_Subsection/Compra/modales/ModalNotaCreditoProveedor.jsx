@@ -94,11 +94,8 @@ function makeKey(id) {
 }
 
 function auth() {
-  const token = (localStorage.getItem("token") || "").trim();
   const sessionKey = (
     localStorage.getItem("session_key") ||
-    localStorage.getItem("sessionKey") ||
-    localStorage.getItem("X-Session") ||
     ""
   ).trim();
   let idUsuario = 0;
@@ -115,14 +112,13 @@ function auth() {
   } catch {
     // El backend admite id_usuario nulo.
   }
-  return { token, sessionKey, idUsuario };
+  return { sessionKey, idUsuario };
 }
 
 function headers(json = false) {
   const session = auth();
   const result = json ? { "Content-Type": "application/json" } : {};
   if (session.sessionKey) result["X-Session"] = session.sessionKey;
-  if (session.token) result.Authorization = `Bearer ${session.token}`;
   return result;
 }
 

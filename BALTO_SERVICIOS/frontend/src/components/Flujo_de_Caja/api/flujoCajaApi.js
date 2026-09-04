@@ -1,5 +1,6 @@
 import BASE_URL from "../../../config/config";
 import { formatDateISO } from "../utils/flujoCajaUtils";
+import { singleFlightFetch } from "../../../utils/singleFlightFetch";
 
 const API = `${String(BASE_URL || "").replace(/\/+$/, "")}/api.php`;
 
@@ -32,7 +33,7 @@ export async function obtenerResumenFlujoCaja(dateRange) {
   sp.set("fecha_desde", formatDateISO(dateRange.from));
   sp.set("fecha_hasta", formatDateISO(dateRange.to || dateRange.from));
 
-  const res = await fetch(`${API}?${sp.toString()}`, {
+  const res = await singleFlightFetch(`${API}?${sp.toString()}`, {
     method: "GET",
     headers: authHeaders(),
   });

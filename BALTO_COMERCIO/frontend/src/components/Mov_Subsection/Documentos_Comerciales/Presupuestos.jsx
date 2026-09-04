@@ -411,12 +411,8 @@ function downloadBlob(content, fileName, mimeType) {
 }
 
 function getAuthInfo() {
-  const token = (localStorage.getItem("token") || localStorage.getItem("auth_token") || "").trim();
   const sessionKey = (
     localStorage.getItem("session_key") ||
-    localStorage.getItem("sessionKey") ||
-    localStorage.getItem("x_session") ||
-    localStorage.getItem("X-Session") ||
     ""
   ).trim();
 
@@ -434,7 +430,7 @@ function getAuthInfo() {
     if (!idUsuarioMaster && idUsuario) idUsuarioMaster = idUsuario;
   } catch {}
 
-  return { token, sessionKey, idUsuario, idUsuarioMaster };
+  return { sessionKey, idUsuario, idUsuarioMaster };
 }
 
 function getAuditUserPayload() {
@@ -581,26 +577,23 @@ export default function Presupuestos() {
   const cacheRef = useRef(new Map());
 
   const buildHeadersGET = useCallback(() => {
-    const { token, sessionKey } = getAuthInfo();
+    const { sessionKey } = getAuthInfo();
     const h = {};
     if (sessionKey) h["X-Session"] = sessionKey;
-    if (token) h.Authorization = `Bearer ${token}`;
     return h;
   }, []);
 
   const buildHeadersPOST = useCallback(() => {
-    const { token, sessionKey } = getAuthInfo();
+    const { sessionKey } = getAuthInfo();
     const h = { "Content-Type": "application/json" };
     if (sessionKey) h["X-Session"] = sessionKey;
-    if (token) h.Authorization = `Bearer ${token}`;
     return h;
   }, []);
 
   const buildHeadersForm = useCallback(() => {
-    const { token, sessionKey } = getAuthInfo();
+    const { sessionKey } = getAuthInfo();
     const h = {};
     if (sessionKey) h["X-Session"] = sessionKey;
-    if (token) h.Authorization = `Bearer ${token}`;
     return h;
   }, []);
 

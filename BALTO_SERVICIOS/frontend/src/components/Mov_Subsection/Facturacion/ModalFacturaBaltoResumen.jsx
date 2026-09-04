@@ -135,13 +135,10 @@ function getAuthHeaders(extra = {}) {
   });
   const sessionKey = String(
     localStorage.getItem("session_key") ||
-      localStorage.getItem("sessionKey") ||
       ""
   ).trim();
   if (sessionKey) headers.set("X-Session", sessionKey);
 
-  const token = String(localStorage.getItem("token") || "").trim();
-  if (token) headers.set("Authorization", `Bearer ${token}`);
 
   return headers;
 }

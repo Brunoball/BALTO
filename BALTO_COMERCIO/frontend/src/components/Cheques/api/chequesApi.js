@@ -1,16 +1,10 @@
 import BASE_URL from "../../../config/config";
+import { singleFlightFetch } from "../../../utils/singleFlightFetch";
 
 const API_URL = `${String(BASE_URL || "").replace(/\/+$/, "")}/api.php`;
 
 function getAuthInfo() {
-  const token = (localStorage.getItem("token") || "").trim();
-  const sessionKey = (
-    localStorage.getItem("session_key") ||
-    localStorage.getItem("sessionKey") ||
-    localStorage.getItem("X-Session") ||
-    localStorage.getItem("x_session") ||
-    ""
-  ).trim();
+  const sessionKey = (localStorage.getItem("session_key") || "").trim();
 
   let idUsuario = 0;
   try {
@@ -28,15 +22,14 @@ function getAuthInfo() {
     }
   } catch {}
 
-  return { token, sessionKey, idUsuario };
+  return { sessionKey, idUsuario };
 }
 
 function getAuthHeaders(json = false) {
-  const { sessionKey, token } = getAuthInfo();
+  const { sessionKey } = getAuthInfo();
   const headers = {};
 
   if (sessionKey) headers["X-Session"] = sessionKey;
-  if (token) headers.Authorization = `Bearer ${token}`;
   if (json) headers["Content-Type"] = "application/json";
 
   return headers;
@@ -85,7 +78,7 @@ async function get(action, params = {}, options = {}) {
     search.set(key, String(value));
   });
 
-  const res = await fetch(`${API_URL}?${search.toString()}`, {
+  const res = await singleFlightFetch(`${API_URL}?${search.toString()}`, {
     method: "GET",
     headers: getAuthHeaders(),
   });
@@ -98,7 +91,7 @@ async function post(action, payload = {}, { auditUser = false, invalidMessage = 
   search.set("action", action);
 
   const body = auditUser ? buildAuditUserPayload(payload) : payload;
-  const res = await fetch(`${API_URL}?${search.toString()}`, {
+  const res = await singleFlightFetch(`${API_URL}?${search.toString()}`, {
     method: "POST",
     headers: getAuthHeaders(true),
     body: JSON.stringify(body),
@@ -115,14 +108,11 @@ export function construirUrlComprobante(action, idCheque) {
   const base = `${API_URL}?${search.toString()}`;
 
   try {
-    const { sessionKey, token } = getAuthInfo();
+    const { sessionKey } = getAuthInfo();
     const url = new URL(base, window.location.origin);
 
     if (sessionKey && !url.searchParams.has("session_key")) {
       url.searchParams.set("session_key", sessionKey);
-    }
-    if (token && !url.searchParams.has("token")) {
-      url.searchParams.set("token", token);
     }
 
     return url.toString();

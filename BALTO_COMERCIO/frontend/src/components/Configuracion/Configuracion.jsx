@@ -19,67 +19,42 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 
 import { useDateRange } from "../../context/DateRangeContext";
-import { DEMO_BLOCK_MESSAGE, isBaltoDemoMode } from "../../utils/demoMode";
+import {
+  DEMO_BLOCK_MESSAGE,
+  getBaltoUsuario,
+  isBaltoDemoMode,
+} from "../../utils/demoMode";
 
-const DEMO_ADVANCED_MESSAGE = "Funcionalidad disponible únicamente en planes avanzados.";
+const DEMO_ADVANCED_MESSAGE = DEMO_BLOCK_MESSAGE;
 
-function getUsuario() {
-  try {
-    return JSON.parse(localStorage.getItem("usuario")) || {};
-  } catch {
-    return {};
-  }
-}
-
-function StatusPill({ type = "pending", children }) {
-  return (
-    <span className={`cfg-status cfg-status--${type}`}>
-      {children}
-    </span>
-  );
+function StatusPill({ type = "neutral", children }) {
+  return <span className={`cfg-status cfg-status--${type}`}>{children}</span>;
 }
 
 function CardVisual({ children }) {
-  return (
-    <div className="cfg-cardLogoBox">
-      {children}
-    </div>
-  );
+  return <div className="cfg-cardLogoBox">{children}</div>;
 }
 
-// Ícono SVG para el calendario (no requiere imagen externa)
 function CalendarioIcon() {
   return (
-    <div
-      className="cfg-cardLogo cfg-cardLogo--icon"
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        width: "100%",
-        height: "100%",
-        fontSize: "2rem",
-        color: "var(--color-primary, #6366f1)",
-      }}
-    >
+    <div className="cfg-cardLogo cfg-cardLogo--icon">
       <FontAwesomeIcon icon={faCalendarDays} />
     </div>
   );
 }
 
-// ─── etiquetas legibles para cada modo ───────────────────────────────────────
-function labelModo(config) {
-  if (!config) return "Sin configurar";
-  if (config.modo === "dias_atras") {
-    const d = Number(config.dias_atras ?? 10);
-    return `Últimos ${d} día${d === 1 ? "" : "s"}`;
+function labelModo(config = {}) {
+  if (config?.modo === "dias_atras") {
+    const dias = Math.max(1, Number(config?.dias_atras || 10));
+    return `Últimos ${dias} días`;
   }
+
   return "Mes completo";
 }
 
 export default function Configuracion() {
   const navigate = useNavigate();
-  const usuario = useMemo(() => getUsuario(), []);
+  const usuario = useMemo(() => getBaltoUsuario() || {}, []);
   const tenantId =
     usuario?.idTenant ||
     usuario?.id_tenant ||
@@ -110,36 +85,42 @@ export default function Configuracion() {
   const { calendarConfig, configLoaded } = useDateRange();
 
   const cargarResumen = useCallback(async () => {
+    const tareas = [];
+
     if (tenantId) {
-      try {
-        const res = await apiFetch({
-          action: "tiendanube_status",
-          idTenant: tenantId,
-        });
-        const txt = await res.text();
-        const data = safeJsonParse(txt);
-        const c = data?.conexion || {};
-        setTiendanube({
-          connected: Boolean(c.connected),
-          webhooks_configured: Boolean(c.webhooks_configured),
-          store_id: c.store_id || "",
-        });
-      } catch {}
+      tareas.push(
+        apiFetch({ action: "tiendanube_status", idTenant: tenantId })
+          .then((res) => res.text())
+          .then((txt) => safeJsonParse(txt))
+          .then((data) => {
+            const c = data?.conexion || {};
+            setTiendanube({
+              connected: Boolean(c.connected),
+              webhooks_configured: Boolean(c.webhooks_configured),
+              store_id: c.store_id || "",
+            });
+          })
+          .catch(() => {})
+      );
     }
 
-    try {
-      const res = await apiFetch({ action: "config_facturacion_get" });
-      const txt = await res.text();
-      const data = safeJsonParse(txt);
-      const c = data?.config || {};
+    tareas.push(
+      apiFetch({ action: "config_facturacion_get" })
+        .then((res) => res.text())
+        .then((txt) => safeJsonParse(txt))
+        .then((data) => {
+          const c = data?.config || {};
+          setDatosLegales({
+            razon_social: c.razon_social || "",
+            nombre_fantasia: c.nombre_fantasia || "",
+            cuit: c.cuit || "",
+            condicion_iva: c.condicion_iva || "",
+          });
+        })
+        .catch(() => {})
+    );
 
-      setDatosLegales({
-        razon_social: c.razon_social || "",
-        nombre_fantasia: c.nombre_fantasia || "",
-        cuit: c.cuit || "",
-        condicion_iva: c.condicion_iva || "",
-      });
-    } catch {}
+    await Promise.allSettled(tareas);
   }, [tenantId]);
 
   useEffect(() => {

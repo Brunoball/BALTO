@@ -6,12 +6,10 @@ import {
   normalizePayload,
 } from "../utils/dashboardUtils";
 
-export default function useDashboardDatos({ ensureListsLoaded, showToast }) {
-  const [loadingInicial, setLoadingInicial] = useState(true);
+export default function useDashboardDatos({ showToast }) {
   const [loadingDashboard, setLoadingDashboard] = useState(true);
   const [dashboard, setDashboard] = useState(EMPTY_DASHBOARD);
 
-  const didWarmupRef = useRef(false);
   const mountedRef = useRef(false);
   const dashboardRequestSeqRef = useRef(0);
 
@@ -43,36 +41,6 @@ export default function useDashboardDatos({ ensureListsLoaded, showToast }) {
   }, [usuario, showToast]);
 
   useEffect(() => {
-    if (didWarmupRef.current) return;
-
-    didWarmupRef.current = true;
-
-    let alive = true;
-
-    const fallback = setTimeout(() => {
-      if (!alive) return;
-      setLoadingInicial(false);
-    }, 8000);
-
-    (async () => {
-      try {
-        await ensureListsLoaded({ force: true, background: true });
-      } catch {
-        // El provider ya maneja el error general de listas.
-      } finally {
-        if (!alive) return;
-        clearTimeout(fallback);
-        setLoadingInicial(false);
-      }
-    })();
-
-    return () => {
-      alive = false;
-      clearTimeout(fallback);
-    };
-  }, [ensureListsLoaded]);
-
-  useEffect(() => {
     mountedRef.current = true;
     fetchDashboard();
 
@@ -82,7 +50,6 @@ export default function useDashboardDatos({ ensureListsLoaded, showToast }) {
   }, [fetchDashboard]);
 
   return {
-    loadingInicial,
     loadingDashboard,
     dashboard,
     fetchDashboard,

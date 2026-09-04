@@ -1,5 +1,6 @@
 // src/utils/apiFetch.js
 import BASE_URL from "../config/config";
+import { singleFlightFetch } from "./singleFlightFetch";
 
 /**
  * Fetch centralizado:
@@ -35,7 +36,7 @@ export async function apiFetch(path, options = {}) {
   // sacamos params del options para no pasarlo al fetch nativo
   const { params, ...fetchOptions } = options;
 
-  const res = await fetch(`${BASE_URL}${finalPath}`, {
+  const res = await singleFlightFetch(`${BASE_URL}${finalPath}`, {
     ...fetchOptions,
     headers,
     credentials: "omit", // si algún día usás cookies, cambiás a "include"

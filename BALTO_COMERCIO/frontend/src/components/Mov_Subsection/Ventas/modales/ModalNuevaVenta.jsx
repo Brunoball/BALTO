@@ -233,11 +233,7 @@ function normalizeLists(lists) {
 function getAuthInfo() {
   const sessionKey =
     localStorage.getItem("session_key") ||
-    localStorage.getItem("sessionKey") ||
-    localStorage.getItem("x_session") ||
-    localStorage.getItem("X-Session") ||
     "";
-  const token = localStorage.getItem("token") || "";
   let idUsuario = 0;
 
   try {
@@ -246,7 +242,7 @@ function getAuthInfo() {
     if (Number.isFinite(Number(cand))) idUsuario = Number(cand);
   } catch {}
 
-  return { token, sessionKey, idUsuario };
+  return { sessionKey, idUsuario };
 }
 
 function nuevaVentaArcaStorageKey() {
@@ -337,11 +333,10 @@ async function parseJsonOrThrow(res) {
 }
 
 function buildAuthHeaders(isJson = true) {
-  const { token, sessionKey } = getAuthInfo();
+  const { sessionKey } = getAuthInfo();
   const headers = {};
   if (isJson) headers["Content-Type"] = "application/json";
   if (sessionKey) headers["X-Session"] = sessionKey;
-  else if (token) headers.Authorization = `Bearer ${token}`;
   return headers;
 }
 

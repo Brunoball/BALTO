@@ -33,57 +33,6 @@ export async function waitDialog(page, title) {
   return dialog;
 }
 
-
-function actionFromUrl(url) {
-  try {
-    return new URL(url).searchParams.get('action') || '';
-  } catch {
-    return '';
-  }
-}
-
-/**
- * Ejecuta una acción que abre/rehidrata un modal y espera las respuestas GET
- * que reconstruyen su estado. En suites largas Hostinger puede tardar >1 s y
- * React llega a pintar controles utilizables antes de aplicar esas respuestas;
- * interactuar en esa ventana hace que selección/medio de pago se vuelvan a 0.
- */
-export async function triggerAndWaitForHydration(page, trigger, actions, { timeout = 20_000 } = {}) {
-  const wanted = [...new Set((actions || []).filter(Boolean))];
-  const startedAt = Date.now();
-
-  const waits = wanted.map((action) =>
-    page.waitForResponse(
-      (response) => {
-        if (response.request().method() !== 'GET') return false;
-        if (actionFromUrl(response.url()) !== action) return false;
-
-        // Evita que una respuesta vieja, iniciada antes de abrir el modal,
-        // satisfaga la espera cuando la suite completa tiene requests en vuelo.
-        try {
-          const requestStart = Number(response.request().timing().startTime || 0);
-          if (requestStart && requestStart < startedAt) return false;
-        } catch {
-          // Si timing no estuviera disponible, el action exacto sigue siendo una
-          // señal suficientemente específica.
-        }
-        return true;
-      },
-      { timeout },
-    ),
-  );
-
-  await trigger();
-  const responses = await Promise.all(waits);
-  for (const response of responses) {
-    expect(
-      response.status(),
-      `La hidratación ${actionFromUrl(response.url())} respondió HTTP ${response.status()}`,
-    ).toBeLessThan(400);
-  }
-  return responses;
-}
-
 export async function closeDialog(dialog) {
   const cancel = dialog.getByRole('button', { name: /cancelar/i }).last();
   if (await cancel.isVisible().catch(() => false)) {
@@ -98,7 +47,6 @@ export async function closeDialog(dialog) {
     await expect(dialog).toBeHidden();
   }
 }
-
 
 export async function selectOptionValues(select) {
   await expect(select).toBeVisible();
@@ -133,6 +81,14 @@ async function waitAndSelectOption(select, findCandidate, errorMessage) {
 
     await select.selectOption(candidate.value, { timeout: 5_000 });
     await expect(select).toHaveValue(candidate.value, { timeout: 5_000 });
+
+    // Algunos formularios reconstruyen el <select> inmediatamente después del
+    // onChange. La comprobación anterior puede alcanzar al nodo viejo y dar un
+    // falso positivo. Esperamos un instante y verificamos de nuevo el locator
+    // (que resuelve el nodo React actual) antes de considerar estable la selección.
+    await select.page().waitForTimeout(180);
+    await expect(select).toHaveValue(candidate.value, { timeout: 2_500 });
+
     selected = candidate;
   }).toPass({
     timeout: 30_000,
@@ -158,20 +114,36 @@ export async function selectFirstNonEmpty(select, preferredPattern) {
 }
 
 export async function selectSafePaymentMethod(scope) {
-  const select = scope.locator('.gm-payment-row--method select').first();
-  return waitAndSelectOption(
-    select,
-    (options) => {
-      const usable = options.filter((option) => option.value && !option.disabled);
-      return (
-        usable.find((option) => /EFECTIVO|TRANSFERENCIA|BANCO|TARJETA/i.test(option.text) && !/CHEQ/i.test(option.text)) ||
-        usable.find((option) => !/CHEQ/i.test(option.text)) ||
-        usable[0] ||
-        null
-      );
-    },
-    'No hay medios de pago disponibles.',
-  );
+  let selected = null;
+
+  // En Recibos/OP el bloque de pagos se hidrata en paralelo y React puede
+  // reemplazar el selector justo después de elegir una opción. Reintentamos la
+  // selección completa y exigimos que permanezca estable sobre el nodo actual.
+  await expect(async () => {
+    const select = scope.locator('.gm-payment-row--method select').first();
+    selected = await waitAndSelectOption(
+      select,
+      (options) => {
+        const usable = options.filter((option) => option.value && !option.disabled);
+        return (
+          usable.find((option) => /EFECTIVO|TRANSFERENCIA|BANCO|TARJETA/i.test(option.text) && !/CHEQ/i.test(option.text)) ||
+          usable.find((option) => !/CHEQ/i.test(option.text)) ||
+          usable[0] ||
+          null
+        );
+      },
+      'No hay medios de pago disponibles.',
+    );
+
+    await scope.page().waitForTimeout(350);
+    const freshSelect = scope.locator('.gm-payment-row--method select').first();
+    await expect(freshSelect).toHaveValue(selected.value, { timeout: 3_000 });
+  }).toPass({
+    timeout: 30_000,
+    intervals: [200, 400, 800, 1_200],
+  });
+
+  return selected;
 }
 
 function moneyInputValue(value) {
@@ -416,35 +388,145 @@ export async function selectMovementMode(dialog, labelText, preferredPattern) {
 }
 
 export async function searchRow(page, query, placeholderPattern = /Buscar/i) {
-  const search = page.getByPlaceholder(placeholderPattern).first();
-  await expect(search).toBeVisible();
-  await search.fill(query);
-  await search.press('Enter');
+  const queryText = String(query ?? '').trim();
+  const isStockPage = /\/panel\/stock(?:[/?#]|$)/i.test(page.url());
+  const rows = () => page.locator('.mov-gridTable--row:visible:not(.mov-row--skeleton)');
 
-  // Stock y algunos listados disparan la consulta con debounce. Si se busca el
-  // loader inmediatamente, todavía no existe y Playwright puede devolver una fila
-  // skeleton (sin texto) como si fuera el resultado real.
-  await page.waitForTimeout(450);
-  await waitForBusyToFinish(page);
+  const assertNoBackendError = async () => {
+    const backendError = page.locator('body').getByText(
+      /SQLSTATE|Invalid parameter number|Error interno|Fatal error/i,
+    ).first();
+    await expect(backendError).toHaveCount(0);
+  };
 
-  // Algunos listados permiten buscar por datos internos del detalle (por ejemplo,
-  // el nombre de un producto), aunque la grilla solo muestre "1 PRODUCTO".
-  // Primero intentamos encontrar una fila que exponga el texto buscado y, si no
-  // aparece visualmente, usamos la primera fila devuelta por el filtro del backend.
-  const rows = page.locator('.mov-gridTable--row:visible:not(.mov-row--skeleton)');
-  const rowWithVisibleText = rows.filter({ hasText: query }).first();
+  const resolveVisibleRow = async (timeout = 7_000) => {
+    const currentRows = rows();
+    const rowWithVisibleText = currentRows.filter({ hasText: queryText }).first();
 
-  if (await rowWithVisibleText.isVisible({ timeout: 2_000 }).catch(() => false)) {
-    return rowWithVisibleText;
+    if (
+      queryText &&
+      await rowWithVisibleText.isVisible({ timeout: Math.min(2_500, timeout) }).catch(() => false)
+    ) {
+      return rowWithVisibleText;
+    }
+
+    // Algunos listados buscan por datos que no quedan impresos literalmente en
+    // la fila. En esos casos la primera fila del resultado filtrado es válida.
+    const firstFilteredRow = currentRows.first();
+    if (await firstFilteredRow.isVisible({ timeout }).catch(() => false)) {
+      return firstFilteredRow;
+    }
+
+    return null;
+  };
+
+  const stockModeIsInactive = async () => {
+    if (!isStockPage) return false;
+    return page
+      .getByRole('button', { name: /Ver activos/i })
+      .first()
+      .isVisible()
+      .catch(() => false);
+  };
+
+  const waitStockListResponse = (expectedInactive, expectedQuery = null, timeout = 7_000) => {
+    if (!isStockPage) return null;
+
+    return page.waitForResponse(
+      (response) => {
+        try {
+          if (response.request().method() !== 'GET') return false;
+          const url = new URL(response.url());
+          if (url.searchParams.get('action') !== 'stock_productos_listar') return false;
+          if (url.searchParams.get('activo') !== (expectedInactive ? '0' : '1')) return false;
+
+          if (expectedQuery !== null) {
+            return String(url.searchParams.get('buscar') || '').trim() === String(expectedQuery).trim();
+          }
+
+          return true;
+        } catch {
+          return false;
+        }
+      },
+      { timeout },
+    ).catch(() => null);
+  };
+
+  const performSearch = async ({ force = false, timeout = 7_000 } = {}) => {
+    const search = page.getByPlaceholder(placeholderPattern).first();
+    await expect(search).toBeVisible({ timeout: 5_000 });
+
+    const inactive = await stockModeIsInactive();
+    const currentValue = String(await search.inputValue().catch(() => '')).trim();
+    let responsePromise = null;
+
+    // Stock usa debounce + requestId para descartar respuestas viejas. No hay que
+    // reescribir el buscador en un bucle: cada escritura puede invalidar la
+    // respuesta que estaba por llegar. Sólo disparamos una consulta nueva cuando
+    // realmente cambió el valor (o en la recuperación explícita).
+    if (isStockPage && (force || currentValue !== queryText)) {
+      responsePromise = waitStockListResponse(inactive, queryText, timeout);
+    }
+
+    if (force || currentValue !== queryText) {
+      if (force && currentValue === queryText) {
+        await search.fill('');
+        await page.waitForTimeout(50);
+      }
+      await search.fill(queryText);
+      await search.press('Enter').catch(() => {});
+    }
+
+    if (responsePromise) {
+      const response = await responsePromise;
+      if (response && !response.ok()) {
+        throw new Error(`La búsqueda de Stock respondió HTTP ${response.status()}.`);
+      }
+    } else if (isStockPage) {
+      // Si el texto ya estaba escrito, el cambio Activos/Bajas es quien dispara
+      // el fetch. Dejamos que el debounce/request en curso se estabilice sin
+      // volver a tocar el input.
+      await page.waitForTimeout(450);
+    }
+
+    await waitForBusyToFinish(page);
+    await assertNoBackendError();
+    return resolveVisibleRow(timeout);
+  };
+
+  let row = await performSearch({ timeout: 6_000 });
+  if (row) return row;
+
+  if (isStockPage) {
+    // Recuperación única y consciente del modo. Un refresh limpia requests React
+    // viejas; si estábamos viendo bajas, restauramos ese estado antes de buscar.
+    const wasInactive = await stockModeIsInactive();
+    await page.reload({ waitUntil: 'domcontentloaded' });
+
+    const searchAfterReload = page.getByPlaceholder(placeholderPattern).first();
+    await expect(searchAfterReload).toBeVisible({ timeout: 7_000 });
+
+    if (wasInactive) {
+      const showInactive = page.getByRole('button', { name: /Ver dados de baja/i }).first();
+      await expect(showInactive).toBeVisible({ timeout: 5_000 });
+      const inactiveResponsePromise = waitStockListResponse(true, null, 7_000);
+      await showInactive.click();
+      const inactiveResponse = await inactiveResponsePromise;
+      if (inactiveResponse && !inactiveResponse.ok()) {
+        throw new Error(`El listado de productos dados de baja respondió HTTP ${inactiveResponse.status()}.`);
+      }
+      await expect(page.getByRole('button', { name: /Ver activos/i }).first()).toBeVisible({ timeout: 5_000 });
+    }
+
+    await waitForBusyToFinish(page);
+    row = await performSearch({ force: true, timeout: 7_000 });
+    if (row) return row;
   }
 
-  const backendError = page.locator('body').getByText(
-    /SQLSTATE|Invalid parameter number|Error interno|Fatal error/i,
-  ).first();
-  await expect(backendError).toHaveCount(0);
-
-  const firstFilteredRow = rows.first();
-  await expect(firstFilteredRow).toBeVisible({ timeout: 20_000 });
+  // Fallo real: no escondemos un backend vacío detrás de reintentos infinitos.
+  const firstFilteredRow = rows().first();
+  await expect(firstFilteredRow).toBeVisible({ timeout: 3_000 });
   return firstFilteredRow;
 }
 

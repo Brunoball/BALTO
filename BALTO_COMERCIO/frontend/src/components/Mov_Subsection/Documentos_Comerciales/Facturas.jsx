@@ -70,15 +70,11 @@ const SKELETON_ROWS = 6;
 
 function getAuthHeaders() {
   const headers = { Accept: "application/json" };
-  const token = String(localStorage.getItem("token") || "").trim();
   const sessionKey = String(
     localStorage.getItem("session_key") ||
-      localStorage.getItem("sessionKey") ||
-      localStorage.getItem("X-Session") ||
       ""
   ).trim();
 
-  if (token) headers.Authorization = `Bearer ${token}`;
   if (sessionKey) headers["X-Session"] = sessionKey;
   return headers;
 }

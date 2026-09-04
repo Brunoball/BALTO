@@ -848,12 +848,8 @@ function normalizeChequeTipoFromMedio(nombre) {
 function getAuthInfo() {
   const sessionKey =
     localStorage.getItem("session_key") ||
-    localStorage.getItem("sessionKey") ||
-    localStorage.getItem("x_session") ||
-    localStorage.getItem("X-Session") ||
     "";
 
-  const token = localStorage.getItem("token") || "";
 
   let idUsuario = 0;
   let idUsuarioMaster = 0;
@@ -869,7 +865,7 @@ function getAuthInfo() {
     if (!idUsuarioMaster && idUsuario) idUsuarioMaster = idUsuario;
   } catch {}
 
-  return { token, sessionKey, idUsuario, idUsuarioMaster };
+  return { sessionKey, idUsuario, idUsuarioMaster };
 }
 
 async function parseJsonOrThrow(res) {
@@ -889,11 +885,10 @@ async function parseJsonOrThrow(res) {
 }
 
 function buildAuthHeaders(isJson = true) {
-  const { token, sessionKey } = getAuthInfo();
+  const { sessionKey } = getAuthInfo();
   const headers = {};
   if (isJson) headers["Content-Type"] = "application/json";
   if (sessionKey) headers["X-Session"] = sessionKey;
-  if (token) headers.Authorization = `Bearer ${token}`;
   return headers;
 }
 
@@ -1723,8 +1718,8 @@ export default function ModalNuevaCompra({ open, lists, onClose, onToast, onSave
   const submit = useCallback(async () => {
     if (saving) return;
 
-    const { sessionKey, token, idUsuario, idUsuarioMaster } = getAuthInfo();
-    if (!sessionKey && !token) {
+    const { sessionKey, idUsuario, idUsuarioMaster } = getAuthInfo();
+    if (!sessionKey) {
       showToast("error", "No hay sesión activa.", 5200);
       return;
     }

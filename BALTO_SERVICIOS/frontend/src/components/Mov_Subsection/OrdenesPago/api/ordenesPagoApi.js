@@ -1,16 +1,11 @@
+import { movSubsectionFetch } from "../../_shared/api/singleFlightFetch.js";
+
 /**
  * Capa HTTP de Órdenes de Pago.
  * Centraliza autenticación, parseo JSON y transporte sin alterar los contratos existentes.
  */
 export function getAuthInfo() {
-  const token = (localStorage.getItem("token") || "").trim();
-  const sessionKey = (
-    localStorage.getItem("session_key") ||
-    localStorage.getItem("sessionKey") ||
-    localStorage.getItem("X-Session") ||
-    localStorage.getItem("x_session") ||
-    ""
-  ).trim();
+  const sessionKey = (localStorage.getItem("session_key") || "").trim();
 
   let idUsuario = 0;
   let idUsuarioMaster = 0;
@@ -26,22 +21,20 @@ export function getAuthInfo() {
       idUsuarioMaster = Number(candNormal);
     }
   } catch {}
-  return { token, sessionKey, idUsuario, idUsuarioMaster };
+  return { sessionKey, idUsuario, idUsuarioMaster };
 }
 
 export function buildHeadersGET() {
-  const { token, sessionKey } = getAuthInfo();
+  const { sessionKey } = getAuthInfo();
   const h = {};
   if (sessionKey) h["X-Session"] = sessionKey;
-  if (token) h["Authorization"] = `Bearer ${token}`;
   return h;
 }
 
 export function buildHeaders() {
-  const { token, sessionKey } = getAuthInfo();
+  const { sessionKey } = getAuthInfo();
   const h = { "Content-Type": "application/json" };
   if (sessionKey) h["X-Session"] = sessionKey;
-  if (token) h["Authorization"] = `Bearer ${token}`;
   return h;
 }
 
@@ -57,7 +50,7 @@ export async function parseJsonOrThrow(res) {
 }
 
 export function ordenesPagoFetch(url, options = {}) {
-  return fetch(url, options);
+  return movSubsectionFetch(url, options);
 }
 
 export async function apiGet(url) {

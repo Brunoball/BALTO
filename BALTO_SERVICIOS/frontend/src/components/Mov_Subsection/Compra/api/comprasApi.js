@@ -1,18 +1,13 @@
+import { movSubsectionFetch } from "../../_shared/api/singleFlightFetch.js";
+
 /**
  * Capa HTTP de Compras.
- * La pantalla principal usa estas funciones para conservar exactamente su
- * autenticación y parseo. Los modales usan comprasFetch porque tienen contratos
+ * La pantalla principal usa exclusivamente la sesión global mediante X-Session.
+ * Los modales usan comprasFetch porque tienen contratos
  * propios (multipart, no-store y validaciones específicas).
  */
 export function getComprasAuthInfo() {
-  const token = (localStorage.getItem("token") || "").trim();
-  const sessionKey = (
-    localStorage.getItem("session_key") ||
-    localStorage.getItem("sessionKey") ||
-    localStorage.getItem("X-Session") ||
-    localStorage.getItem("x_session") ||
-    ""
-  ).trim();
+  const sessionKey = (localStorage.getItem("session_key") || "").trim();
 
   let idUsuario = 0;
   let idUsuarioMaster = 0;
@@ -30,22 +25,20 @@ export function getComprasAuthInfo() {
     }
   } catch {}
 
-  return { token, sessionKey, idUsuario, idUsuarioMaster };
+  return { sessionKey, idUsuario, idUsuarioMaster };
 }
 
 function buildHeadersJSON() {
-  const { token, sessionKey } = getComprasAuthInfo();
+  const { sessionKey } = getComprasAuthInfo();
   const h = { "Content-Type": "application/json" };
   if (sessionKey) h["X-Session"] = sessionKey;
-  if (token) h.Authorization = `Bearer ${token}`;
   return h;
 }
 
 function buildHeadersGET() {
-  const { token, sessionKey } = getComprasAuthInfo();
+  const { sessionKey } = getComprasAuthInfo();
   const h = {};
   if (sessionKey) h["X-Session"] = sessionKey;
-  if (token) h.Authorization = `Bearer ${token}`;
   return h;
 }
 
@@ -61,7 +54,7 @@ async function parseJsonOrThrow(res) {
 }
 
 export function comprasFetch(url, options = {}) {
-  return fetch(url, options);
+  return movSubsectionFetch(url, options);
 }
 
 export async function comprasApiGet(url) {

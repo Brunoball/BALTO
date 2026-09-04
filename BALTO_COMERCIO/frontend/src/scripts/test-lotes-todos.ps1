@@ -7,12 +7,14 @@ param(
 
 $batches = Get-BaltoTestBatches
 $sequence = @(
-  'auth',
+  'smoke',
   'stock',
   'movimientos',
   'cuentas-corrientes',
   'cheques',
   'configuracion',
+  'documentos',
+  'seguridad',
   'navegacion'
 )
 

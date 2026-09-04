@@ -351,16 +351,15 @@ function buildIngresoFacturaDraft(payload, operationKey, context = {}) {
 }
 function getAuthInfo() {
   const sessionKey =
-    localStorage.getItem("session_key") || localStorage.getItem("sessionKey") ||
-    localStorage.getItem("x_session") || localStorage.getItem("X-Session") || "";
-  const token = localStorage.getItem("token") || "";
+    localStorage.getItem("session_key") ||
+    "";
   let idUsuario = 0;
   try {
     const u = JSON.parse(localStorage.getItem("usuario") || "null");
     const c = u?.idUsuarioMaster ?? u?.idUsuario ?? u?.id_usuario ?? u?.id ?? u?.user_id ?? 0;
     if (Number.isFinite(Number(c))) idUsuario = Number(c);
   } catch {}
-  return { sessionKey, token, idUsuario, idUsuarioMaster: idUsuario };
+  return { sessionKey, idUsuario, idUsuarioMaster: idUsuario };
 }
 
 function nuevoIngresoArcaStorageKey() {
@@ -399,11 +398,10 @@ function clearNuevoIngresoArcaKey(expectedKey = "") {
   } catch {}
 }
 function buildAuthHeaders(isJson = true) {
-  const { sessionKey, token } = getAuthInfo();
+  const { sessionKey } = getAuthInfo();
   const h = {};
   if (isJson) h["Content-Type"] = "application/json";
   if (sessionKey) h["X-Session"] = sessionKey;
-  if (token) h.Authorization = `Bearer ${token}`;
   return h;
 }
 async function parseJsonOrThrow(res) {
@@ -1424,10 +1422,9 @@ export default function ModalNuevoIngreso({
   const handleGuardarNuevaDescripcion = useCallback(
     async (nombreDescripcion) => {
       try {
-        const { sessionKey, token, idUsuario, idUsuarioMaster } = getAuthInfo();
+        const { sessionKey, idUsuario, idUsuarioMaster } = getAuthInfo();
         const headers = { "Content-Type": "application/json" };
         if (sessionKey) headers["X-Session"] = sessionKey;
-        if (token) headers.Authorization = `Bearer ${token}`;
         const response = await otrosIngresosFetch(API_DETALLES_CREAR, {
           method: "POST",
           headers,
@@ -1505,33 +1502,6 @@ export default function ModalNuevoIngreso({
     });
   }, [updateRow]);
 
-  const barcodePendingRef = useRef(null);
-
-  const handleBarcodeProductSelect = useCallback((producto) => {
-    const target = rows.find((row) =>
-      !Number(row?.id_stock_producto || 0) &&
-      !Number(row?.id_stock_variante || 0) &&
-      !String(row?.detalle || "").trim()
-    );
-
-    if (target) {
-      handleSelectProducto(producto, target.id);
-      showToast("exito", `Producto leído: ${getProductoNombre(producto)}`);
-      return;
-    }
-
-    const nextRow = buildEmptyRow("producto");
-    barcodePendingRef.current = { rowId: nextRow.id, producto };
-    setRows((prev) => [...prev, nextRow]);
-  }, [rows, handleSelectProducto, showToast]);
-
-  useEffect(() => {
-    const pending = barcodePendingRef.current;
-    if (!pending || !rows.some((row) => row.id === pending.rowId)) return;
-    barcodePendingRef.current = null;
-    handleSelectProducto(pending.producto, pending.rowId);
-    showToast("exito", `Producto leído: ${getProductoNombre(pending.producto)}`);
-  }, [rows, handleSelectProducto, showToast]);
 
   const handleCantidadChange = useCallback(
     (rowId, newCantidad) => {
@@ -1944,13 +1914,12 @@ export default function ModalNuevoIngreso({
     async ({ idCheque, cheque }) => {
       if (!idCheque || !(cheque?.archivo instanceof File)) return null;
       const fd = new FormData();
-      const { token, sessionKey } = getAuthInfo();
+      const { sessionKey } = getAuthInfo();
       fd.append("id_cheque", String(idCheque));
       fd.append("tipo", cheque.tipo === "echeq" || cheque.tipo_cheque === "echeq" ? "ECHEQ_IMAGEN" : "CHEQUE_IMAGEN");
       fd.append("archivo", cheque.archivo, cheque.archivo_nombre || cheque.archivo.name || "adjunto");
       const headers = {};
       if (sessionKey) headers["X-Session"] = sessionKey;
-      if (token) headers.Authorization = `Bearer ${token}`;
       return await parseJsonOrThrow(
         await otrosIngresosFetch(API_CHEQUES_ACTUALIZAR, { method: "POST", headers, body: fd })
       );

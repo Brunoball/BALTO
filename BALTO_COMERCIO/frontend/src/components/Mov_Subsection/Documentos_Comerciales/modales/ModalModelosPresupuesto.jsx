@@ -122,15 +122,10 @@ function normalizeLists(lists) {
 function buildHeaders(json = true) {
   const sessionKey =
     localStorage.getItem("session_key") ||
-    localStorage.getItem("sessionKey") ||
-    localStorage.getItem("x_session") ||
-    localStorage.getItem("X-Session") ||
     "";
-  const token = localStorage.getItem("token") || localStorage.getItem("auth_token") || "";
   const headers = {};
   if (json) headers["Content-Type"] = "application/json";
   if (sessionKey) headers["X-Session"] = sessionKey;
-  if (token) headers.Authorization = `Bearer ${token}`;
   return headers;
 }
 

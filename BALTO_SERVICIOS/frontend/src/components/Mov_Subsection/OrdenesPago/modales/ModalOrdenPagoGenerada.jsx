@@ -81,21 +81,7 @@ function extractBodyWithStyles(fullHtml) {
 }
 
 function getSessionKey() {
-  const keys = [
-    "session_key",
-    "SESSION_KEY",
-    "balto_session_key",
-    "BALTO_SESSION_KEY",
-    "x_session",
-    "X_SESSION",
-    "X-Session",
-    "x-session",
-  ];
-  for (const k of keys) {
-    const v = localStorage.getItem(k);
-    if (v && String(v).trim() !== "") return String(v).trim();
-  }
-  return "";
+  return String(localStorage.getItem("session_key") || "").trim();
 }
 
 function getApiPhpUrl() {

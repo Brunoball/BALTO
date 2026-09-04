@@ -157,22 +157,17 @@ function getAuthInfo() {
     usuario,
     idUsuario,
     idUsuarioMaster: idUsuarioMaster || idUsuario || 0,
-    token: localStorage.getItem("token") || localStorage.getItem("auth_token") || "",
     sessionKey:
       localStorage.getItem("session_key") ||
-      localStorage.getItem("sessionKey") ||
-      localStorage.getItem("x_session") ||
-      localStorage.getItem("X-Session") ||
       "",
   };
 }
 
 function buildAuthHeaders(isJson = true) {
-  const { token, sessionKey } = getAuthInfo();
+  const { sessionKey } = getAuthInfo();
   const headers = {};
   if (isJson) headers["Content-Type"] = "application/json";
   if (sessionKey) headers["X-Session"] = sessionKey;
-  if (token) headers.Authorization = `Bearer ${token}`;
   return headers;
 }
 

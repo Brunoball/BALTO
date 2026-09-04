@@ -34,13 +34,11 @@ function stockGetRequestKey(action, params = {}, strict = true) {
   canonical.sort();
 
   const sessionKey = (localStorage.getItem("session_key") || "").trim();
-  const token = (localStorage.getItem("token") || "").trim();
 
   return [
     stockReadGeneration,
     strict ? "strict" : "lenient",
     sessionKey,
-    token,
     String(action || ""),
     canonical.toString(),
   ].join("|");
@@ -48,10 +46,8 @@ function stockGetRequestKey(action, params = {}, strict = true) {
 
 export function buildHeadersGET() {
   const sessionKey = (localStorage.getItem("session_key") || "").trim();
-  const token = (localStorage.getItem("token") || "").trim();
   const headers = {};
   if (sessionKey) headers["X-Session"] = sessionKey;
-  if (token) headers.Authorization = `Bearer ${token}`;
   return headers;
 }
 
@@ -72,14 +68,10 @@ export function withSessionKey(url) {
 
   try {
     const sessionKey = (localStorage.getItem("session_key") || "").trim();
-    const token = (localStorage.getItem("token") || "").trim();
     const parsed = new URL(base, window.location.origin);
 
     if (sessionKey && !parsed.searchParams.has("session_key")) {
       parsed.searchParams.set("session_key", sessionKey);
-    }
-    if (token && !parsed.searchParams.has("token")) {
-      parsed.searchParams.set("token", token);
     }
 
     return parsed.toString();

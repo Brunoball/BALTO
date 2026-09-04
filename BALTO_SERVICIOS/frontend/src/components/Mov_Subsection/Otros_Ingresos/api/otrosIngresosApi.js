@@ -1,17 +1,12 @@
+import { movSubsectionFetch } from "../../_shared/api/singleFlightFetch.js";
+
 /**
  * Capa HTTP de Otros Ingresos.
- * Centraliza el transporte y conserva el contrato histórico de autenticación.
+ * Centraliza el transporte usando únicamente la sesión global X-Session.
  * Los modales mantienen sus validaciones particulares y usan el transporte crudo.
  */
 export function getOtrosIngresosAuthInfo() {
-  const token = (localStorage.getItem("token") || "").trim();
-  const sessionKey = (
-    localStorage.getItem("session_key") ||
-    localStorage.getItem("sessionKey") ||
-    localStorage.getItem("X-Session") ||
-    localStorage.getItem("x_session") ||
-    ""
-  ).trim();
+  const sessionKey = (localStorage.getItem("session_key") || "").trim();
 
   let idUsuario = 0;
   try {
@@ -20,9 +15,9 @@ export function getOtrosIngresosAuthInfo() {
     if (Number.isFinite(Number(cand))) idUsuario = Number(cand);
   } catch {}
 
-  return { token, sessionKey, idUsuario };
+  return { sessionKey, idUsuario };
 }
 
 export function otrosIngresosFetch(url, options = {}) {
-  return fetch(url, options);
+  return movSubsectionFetch(url, options);
 }

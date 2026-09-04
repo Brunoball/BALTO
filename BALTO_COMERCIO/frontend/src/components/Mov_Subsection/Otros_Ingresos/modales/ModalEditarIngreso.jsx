@@ -180,12 +180,8 @@ function getComprobanteDownloadUrl(idMovimiento) {
 
 // ─── Auth ──────────────────────────────────────────────────────────────────────
 function getAuthInfo() {
-  const token = safeText(localStorage.getItem("token"));
   const sessionKey =
-    safeText(localStorage.getItem("session_key")) ||
-    safeText(localStorage.getItem("sessionKey")) ||
-    safeText(localStorage.getItem("X-Session")) ||
-    safeText(localStorage.getItem("x_session"));
+    safeText(localStorage.getItem("session_key"));
   let idUsuario = 0;
   try {
     const u = JSON.parse(localStorage.getItem("usuario") || "null");
@@ -193,27 +189,24 @@ function getAuthInfo() {
       u?.idUsuarioMaster ?? u?.idUsuario ?? u?.id_usuario ?? u?.id ?? u?.user_id ?? 0;
     if (Number.isFinite(Number(cand))) idUsuario = Number(cand);
   } catch {}
-  return { token, sessionKey, idUsuario };
+  return { sessionKey, idUsuario };
 }
 function buildHeadersGET() {
-  const { token, sessionKey } = getAuthInfo();
+  const { sessionKey } = getAuthInfo();
   const h = {};
   if (sessionKey) h["X-Session"] = sessionKey;
-  if (token) h.Authorization = `Bearer ${token}`;
   return h;
 }
 function buildHeadersJSON() {
-  const { token, sessionKey } = getAuthInfo();
+  const { sessionKey } = getAuthInfo();
   const h = { "Content-Type": "application/json" };
   if (sessionKey) h["X-Session"] = sessionKey;
-  if (token) h.Authorization = `Bearer ${token}`;
   return h;
 }
 function buildHeadersFormData() {
-  const { token, sessionKey } = getAuthInfo();
+  const { sessionKey } = getAuthInfo();
   const h = {};
   if (sessionKey) h["X-Session"] = sessionKey;
-  if (token) h.Authorization = `Bearer ${token}`;
   return h;
 }
 async function parseJsonOrThrow(res) {
@@ -1392,10 +1385,9 @@ export default function ModalEditarIngreso({
   const handleGuardarNuevaDescripcion = useCallback(
     async (nombre) => {
       try {
-        const { token, sessionKey, idUsuario } = getAuthInfo();
+        const { sessionKey, idUsuario } = getAuthInfo();
         const headers = { "Content-Type": "application/json" };
         if (sessionKey) headers["X-Session"] = sessionKey;
-        if (token) headers.Authorization = `Bearer ${token}`;
         const res = await otrosIngresosFetch(`${API}?action=otros_ingresos_detalles_crear`, {
           method: "POST",
           headers,

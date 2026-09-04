@@ -15,8 +15,6 @@ function authScope() {
   try {
     const sessionKey = String(
       localStorage.getItem("session_key") ||
-        localStorage.getItem("sessionKey") ||
-        localStorage.getItem("X-Session") ||
         ""
     ).trim();
 

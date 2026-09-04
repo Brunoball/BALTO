@@ -789,15 +789,10 @@ function getAuditUserPayload() {
 function buildAuthHeaders(isJson = true) {
   const sessionKey =
     localStorage.getItem("session_key") ||
-    localStorage.getItem("sessionKey") ||
-    localStorage.getItem("x_session") ||
-    localStorage.getItem("X-Session") ||
     "";
-  const token = localStorage.getItem("token") || localStorage.getItem("auth_token") || "";
   const headers = {};
   if (isJson) headers["Content-Type"] = "application/json";
   if (sessionKey) headers["X-Session"] = sessionKey;
-  if (token) headers.Authorization = `Bearer ${token}`;
   return headers;
 }
 
@@ -1150,33 +1145,6 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
     }
   }, [onToast, presupuestoPersonalizado, updateRow]);
 
-  const barcodePendingRef = useRef(null);
-
-  const handleBarcodeProductSelect = useCallback((producto) => {
-    const target = rows.find((row) =>
-      !Number(row?.id_stock_producto || 0) &&
-      !Number(row?.id_stock_variante || 0) &&
-      !String(row?.detalleText || "").trim()
-    );
-
-    if (target) {
-      handleSelectDetalle(target.id, producto);
-      onToast?.("exito", `Producto leído: ${getDetalleNombre(producto)}`, 1800);
-      return;
-    }
-
-    const nextRow = buildEmptyRow();
-    barcodePendingRef.current = { rowId: nextRow.id, producto };
-    setRows((prev) => [...prev, nextRow]);
-  }, [rows, handleSelectDetalle, onToast]);
-
-  useEffect(() => {
-    const pending = barcodePendingRef.current;
-    if (!pending || !rows.some((row) => row.id === pending.rowId)) return;
-    barcodePendingRef.current = null;
-    handleSelectDetalle(pending.rowId, pending.producto);
-    onToast?.("exito", `Producto leído: ${getDetalleNombre(pending.producto)}`, 1800);
-  }, [rows, handleSelectDetalle, onToast]);
 
   const handleDetalleInputChange = useCallback((rowId, value) => {
     updateRow(rowId, {

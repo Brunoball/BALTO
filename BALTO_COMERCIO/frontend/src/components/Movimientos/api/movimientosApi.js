@@ -25,12 +25,7 @@ function getListSessionKey() {
 }
 
 function getCatalogAuthInfo() {
-  const token = localStorage.getItem("token") || "";
-  const sessionKey =
-    localStorage.getItem("session_key") ||
-    localStorage.getItem("sessionKey") ||
-    localStorage.getItem("X-Session") ||
-    "";
+  const sessionKey = localStorage.getItem("session_key") || "";
 
   let idUsuario = 0;
   try {
@@ -41,7 +36,7 @@ function getCatalogAuthInfo() {
     // Mantiene el comportamiento tolerante original.
   }
 
-  return { token, sessionKey, idUsuario };
+  return { sessionKey, idUsuario };
 }
 
 async function apiGet(params) {
@@ -92,10 +87,9 @@ export async function obtenerMovimientosLiveToken({ fechaDesde, fechaHasta, q = 
 }
 
 export async function crearCatalogoMovimiento({ catalogo, nombre }) {
-  const { token, sessionKey, idUsuario } = getCatalogAuthInfo();
+  const { sessionKey, idUsuario } = getCatalogAuthInfo();
   const headers = { "Content-Type": "application/json" };
   if (sessionKey) headers["X-Session"] = sessionKey;
-  if (token) headers.Authorization = `Bearer ${token}`;
 
   const res = await fetch(`${API}?action=catalogo_crear`, {
     method: "POST",

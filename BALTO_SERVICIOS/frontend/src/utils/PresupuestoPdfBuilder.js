@@ -240,7 +240,7 @@ function isLocalApiBase() {
 
 function getSessionKey() {
   try {
-    return String(localStorage.getItem("session_key") || localStorage.getItem("sessionKey") || "").trim();
+    return String(localStorage.getItem("session_key") || "").trim();
   } catch {
     return "";
   }

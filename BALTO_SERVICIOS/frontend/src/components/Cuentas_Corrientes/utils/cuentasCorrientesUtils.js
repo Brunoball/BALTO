@@ -73,7 +73,7 @@ export function withSessionKey(url) {
   if (!base) return "";
 
   try {
-    const { sessionKey, token } = getAuthInfo();
+    const { sessionKey } = getAuthInfo();
     const u = new URL(base, window.location.origin);
 
     const isSignedObjectUrl =
@@ -87,9 +87,6 @@ export function withSessionKey(url) {
       u.searchParams.set("session_key", sessionKey);
     }
 
-    if (token && !u.searchParams.has("token")) {
-      u.searchParams.set("token", token);
-    }
 
     return u.toString();
   } catch {

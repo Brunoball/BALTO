@@ -152,16 +152,11 @@ function buildEmptyMedio() {
 function buildAuthHeaders(includeJson = false) {
   const sessionKey = (
     localStorage.getItem("session_key") ||
-    localStorage.getItem("sessionKey") ||
-    localStorage.getItem("X-Session") ||
-    localStorage.getItem("x_session") ||
     ""
   ).trim();
-  const token = (localStorage.getItem("token") || "").trim();
   const headers = {};
   if (includeJson) headers["Content-Type"] = "application/json";
   if (sessionKey) headers["X-Session"] = sessionKey;
-  if (token) headers.Authorization = `Bearer ${token}`;
   return headers;
 }
 

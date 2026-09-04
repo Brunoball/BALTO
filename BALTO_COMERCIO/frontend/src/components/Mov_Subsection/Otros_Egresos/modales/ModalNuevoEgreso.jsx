@@ -263,25 +263,20 @@ function resolveClasificacionesConfig(arr = []) {
 function getAuthInfo() {
   const sessionKey =
     localStorage.getItem("session_key") ||
-    localStorage.getItem("sessionKey") ||
-    localStorage.getItem("x_session") ||
-    localStorage.getItem("X-Session") ||
     "";
-  const token = localStorage.getItem("token") || "";
   let idUsuario = 0;
   try {
     const u = JSON.parse(localStorage.getItem("usuario") || "null");
     const c = u?.idUsuarioMaster ?? u?.idUsuario ?? u?.id_usuario ?? u?.id ?? u?.user_id ?? 0;
     if (Number.isFinite(Number(c))) idUsuario = Number(c);
   } catch {}
-  return { sessionKey, token, idUsuario };
+  return { sessionKey, idUsuario };
 }
 function buildAuthHeaders(isJson = true) {
-  const { sessionKey, token } = getAuthInfo();
+  const { sessionKey } = getAuthInfo();
   const h = {};
   if (isJson) h["Content-Type"] = "application/json";
   if (sessionKey) h["X-Session"] = sessionKey;
-  if (token) h.Authorization = `Bearer ${token}`;
   return h;
 }
 async function parseJsonOrThrow(res) {
@@ -997,10 +992,9 @@ export default function ModalNuevoEgreso({
   const handleGuardarNuevaDescripcion = useCallback(
     async (nombreDescripcion) => {
       try {
-        const { sessionKey, token, idUsuario } = getAuthInfo();
+        const { sessionKey, idUsuario } = getAuthInfo();
         const h = { "Content-Type": "application/json" };
         if (sessionKey) h["X-Session"] = sessionKey;
-        if (token) h.Authorization = `Bearer ${token}`;
         const response = await otrosEgresosFetch(API_DETALLES_CREAR, {
           method: "POST",
           headers: h,

@@ -88,11 +88,9 @@ function getSessionKey() {
 
 function buildAuthHeaders(includeJson = false) {
   const session = getSessionKey();
-  const token = (localStorage.getItem("token") || "").trim();
   const headers = {};
   if (includeJson) headers["Content-Type"] = "application/json";
   if (session) headers["X-Session"] = session;
-  else if (token) headers["Authorization"] = `Bearer ${token}`;
   return headers;
 }
 
@@ -189,11 +187,7 @@ function isMedioPagoEcheq(mediosPagoList, idMedioPago) {
 function getAuthInfo() {
   const sessionKey =
     localStorage.getItem("session_key") ||
-    localStorage.getItem("sessionKey") ||
-    localStorage.getItem("x_session") ||
-    localStorage.getItem("X-Session") ||
     "";
-  const token = localStorage.getItem("token") || "";
   let idUsuario = 0;
   try {
     const u = JSON.parse(localStorage.getItem("usuario") || "null");
@@ -201,7 +195,7 @@ function getAuthInfo() {
       u?.idUsuarioMaster ?? u?.idUsuario ?? u?.id_usuario ?? u?.id ?? u?.user_id ?? 0;
     if (Number.isFinite(Number(cand))) idUsuario = Number(cand);
   } catch {}
-  return { token, sessionKey, idUsuario };
+  return { sessionKey, idUsuario };
 }
 
 async function parseJsonOrThrow(res) {

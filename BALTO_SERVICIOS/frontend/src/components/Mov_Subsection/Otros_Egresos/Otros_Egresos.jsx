@@ -747,18 +747,16 @@ export default function OtrosEgresos() {
   }, []);
 
   const buildHeadersGET = useCallback(() => {
-    const { token, sessionKey } = getOtrosEgresosAuthInfo();
+    const { sessionKey } = getOtrosEgresosAuthInfo();
     const h = {};
     if (sessionKey) h["X-Session"] = sessionKey;
-    if (token) h.Authorization = `Bearer ${token}`;
     return h;
   }, []);
 
   const buildHeadersPOST = useCallback(() => {
-    const { token, sessionKey } = getOtrosEgresosAuthInfo();
+    const { sessionKey } = getOtrosEgresosAuthInfo();
     const h = { "Content-Type": "application/json" };
     if (sessionKey) h["X-Session"] = sessionKey;
-    if (token) h.Authorization = `Bearer ${token}`;
     return h;
   }, []);
 

@@ -1,5 +1,6 @@
 import BASE_URL from "../../../config/config";
 import { formatDateISO } from "../utils/analisisFinancieroUtils";
+import { singleFlightFetch } from "../../../utils/singleFlightFetch";
 
 const API = `${BASE_URL}/api.php`;
 
@@ -36,7 +37,7 @@ export async function obtenerResumenAnalisisFinanciero(dateRange) {
   sp.set("fecha_desde", formatDateISO(dateRange.from));
   sp.set("fecha_hasta", formatDateISO(dateRange.to || dateRange.from));
 
-  const res = await fetch(`${API}?${sp.toString()}`, {
+  const res = await singleFlightFetch(`${API}?${sp.toString()}`, {
     method: "GET",
     headers: authHeaders(),
   });

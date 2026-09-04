@@ -2,7 +2,7 @@ const DEV_HOSTS = new Set(["localhost", "127.0.0.1"]);
 const DEV_PORT = "3000";
 const HANDOFF_PARAM = "balto_auth";
 const MAX_HANDOFF_AGE_MS = 20 * 60 * 1000;
-const BRIDGE_VERSION = "20260903_v11";
+const BRIDGE_VERSION = "20260903_v12";
 
 function isBrowser() {
   return typeof window !== "undefined" && typeof document !== "undefined";
@@ -71,7 +71,11 @@ function consumeHandoffFromFragment() {
 
     localStorage.setItem("session_key", sessionKey);
     localStorage.setItem("usuario", usuarioRaw);
-    localStorage.removeItem("token");
+
+    // Migra navegadores viejos: la única credencial operativa es session_key.
+    ["token", "auth_token", "sessionKey", "x_session", "X-Session", "x-session"].forEach(
+      (key) => localStorage.removeItem(key)
+    );
 
     cleanHandoffFragment();
     window.__BALTO_LOCAL_SESSION_BRIDGE__ = {
@@ -127,9 +131,8 @@ export function redirectToCentralAccessBridge() {
   if (!isLocalDevelopmentOrigin()) return false;
   if (window.__BALTO_LOCAL_SESSION_BRIDGE__?.status === "redirecting") return true;
 
-  // Desarrollo local: ir DIRECTO al Login Global. No pasar por
-  // /BALTO_SERVICIOS/dev-auth-start.html ni depender del build de Servicios
-  // publicado en Hostinger. El Login Global devuelve la sesión mediante
+  // Desarrollo local: ir DIRECTO al Login Global, sin intermediarios de
+  // autenticación dentro de BALTO_SERVICIOS. El Login Global devuelve la sesión mediante
   // #balto_auth=... al return_to local indicado abajo.
   const loginUrl = new URL(getGlobalLoginUrl());
   loginUrl.searchParams.set("balto_dev_return", buildLocalReturnUrl());

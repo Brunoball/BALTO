@@ -21,7 +21,6 @@ const PING_INTERVAL_MS = 2500;
 const PING_TIMEOUT_MS = 3500;
 const FAILS_TO_LOCK = 2;
 const SUCCESSES_TO_UNLOCK = 3;
-
 function buildPingUrl() {
   const base = String(BASE_URL || "").trim().replace(/\/+$/, "");
 

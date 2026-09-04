@@ -8,14 +8,7 @@ export const CC_API_URL = `${String(BASE_URL || "").replace(/\/+$/, "")}/api.php
 const inFlightGetRequests = new Map();
 
 export function getAuthInfo() {
-  const sessionKey = (
-    localStorage.getItem("session_key") ||
-    localStorage.getItem("sessionKey") ||
-    localStorage.getItem("X-Session") ||
-    ""
-  ).trim();
-
-  const token = (localStorage.getItem("token") || "").trim();
+  const sessionKey = (localStorage.getItem("session_key") || "").trim();
 
   let idUsuario = 0;
   try {
@@ -33,14 +26,13 @@ export function getAuthInfo() {
     }
   } catch {}
 
-  return { sessionKey, token, idUsuario };
+  return { sessionKey, idUsuario };
 }
 
 function buildHeadersGET() {
-  const { sessionKey, token } = getAuthInfo();
+  const { sessionKey } = getAuthInfo();
   const headers = {};
   if (sessionKey) headers["X-Session"] = sessionKey;
-  if (token) headers["Authorization"] = `Bearer ${token}`;
   return headers;
 }
 
@@ -101,8 +93,8 @@ async function parseJsonStrict(res) {
 
 
 function getRequestKey(url, mode) {
-  const { sessionKey, token } = getAuthInfo();
-  return `${mode}|${sessionKey}|${token}|${String(url)}`;
+  const { sessionKey } = getAuthInfo();
+  return `${mode}|${sessionKey}|${String(url)}`;
 }
 
 async function getDeduped(url, mode, parser) {

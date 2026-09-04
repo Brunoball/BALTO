@@ -128,20 +128,18 @@ function normalizeCbtesAsocNC(items, facturaOriginal = null) {
   return out;
 }
 function getAuthInfo() {
-  const token = (localStorage.getItem("token") || "").trim();
-  const sessionKey = (localStorage.getItem("session_key") || localStorage.getItem("sessionKey") || localStorage.getItem("X-Session") || "").trim();
+  const sessionKey = (localStorage.getItem("session_key") || "").trim();
   let idUsuario = 0;
   try {
     const u = JSON.parse(localStorage.getItem("usuario") || "null");
     idUsuario = Number(u?.idUsuarioMaster ?? u?.idUsuario ?? u?.id_usuario ?? u?.id ?? 0) || 0;
   } catch {}
-  return { token, sessionKey, idUsuario };
+  return { sessionKey, idUsuario };
 }
 function headers(json = false) {
-  const { token, sessionKey } = getAuthInfo();
+  const { sessionKey } = getAuthInfo();
   const h = json ? { "Content-Type": "application/json" } : {};
   if (sessionKey) h["X-Session"] = sessionKey;
-  if (token) h.Authorization = `Bearer ${token}`;
   return h;
 }
 async function parseJsonOrThrow(res) {

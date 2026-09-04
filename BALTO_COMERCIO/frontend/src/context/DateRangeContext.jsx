@@ -9,6 +9,7 @@ import React, {
 } from "react";
 import BASE_URL from "../config/config";
 
+import { singleFlightFetch } from "../utils/singleFlightFetch";
 // ─── helpers de fecha ────────────────────────────────────────────────────────
 
 function startOfDay(date) {
@@ -149,7 +150,6 @@ function getConfigSignature(config) {
 function getSessionKey() {
   return (
     localStorage.getItem("session_key") ||
-    localStorage.getItem("sessionKey") ||
     ""
   ).trim();
 }
@@ -275,7 +275,7 @@ export function DateRangeProvider({ children }) {
             tenantId
           )}`;
 
-        const res = await fetch(url, { method: "GET", headers });
+        const res = await singleFlightFetch(url, { method: "GET", headers });
         const data = await res.json().catch(() => null);
 
         if (!alive) return;

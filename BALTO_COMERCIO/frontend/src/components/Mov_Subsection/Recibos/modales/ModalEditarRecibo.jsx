@@ -115,12 +115,8 @@ function isDarkEnabled(darkProp) {
 }
 
 function getAuthInfo() {
-  const token = localStorage.getItem("token") || "";
   const sessionKey =
     localStorage.getItem("session_key") ||
-    localStorage.getItem("sessionKey") ||
-    localStorage.getItem("X-Session") ||
-    localStorage.getItem("x_session") ||
     "";
 
   let idUsuario = 0;
@@ -136,7 +132,7 @@ function getAuthInfo() {
     if (Number.isFinite(Number(cand))) idUsuario = Number(cand);
   } catch {}
 
-  return { token, sessionKey, idUsuario };
+  return { sessionKey, idUsuario };
 }
 
 async function parseJsonOrThrow(res) {
@@ -160,10 +156,9 @@ async function parseJsonOrThrow(res) {
 }
 
 async function apiGetJson(url) {
-  const { token, sessionKey } = getAuthInfo();
+  const { sessionKey } = getAuthInfo();
   const headers = {};
   if (sessionKey) headers["X-Session"] = sessionKey;
-  if (token) headers.Authorization = `Bearer ${token}`;
 
   const res = await recibosFetch(url, { method: "GET", headers });
   return await parseJsonOrThrow(res);

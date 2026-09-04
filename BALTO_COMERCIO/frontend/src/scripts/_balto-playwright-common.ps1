@@ -7,9 +7,13 @@ function Get-BaltoTestBatches {
       'tests/00-preflight.spec.js',
       'tests/01-auth.spec.js',
       'tests/11-global-guards.spec.js',
-      'tests/18-auth-actions.spec.js'
+      'tests/18-auth-actions.spec.js',
+      'tests/27-performance-safety.spec.js',
+      'tests/example.spec.js'
     )
     'navegacion' = @(
+      'tests/02-navigation-smoke.spec.js',
+      'tests/10-config-accounting.spec.js',
       'tests/23-internal-navigation-smoke.spec.js'
     )
     'auth' = @(
@@ -25,27 +29,37 @@ function Get-BaltoTestBatches {
       'tests/13-movement-delete-reversal.spec.js',
       'tests/14-details-and-cancel.spec.js',
       'tests/15-cheques-lifecycle.spec.js',
-      'tests/16-movement-details-integrity.spec.js'
+      'tests/16-movement-details-integrity.spec.js',
+      'tests/26-barcode-movements.spec.js'
     )
     'cuentas-corrientes' = @(
       'tests/08-current-accounts.spec.js',
-      'tests/19-current-account-entities.spec.js'
+      'tests/19-current-account-entities.spec.js',
+      'tests/24-initial-balances.spec.js'
     )
     'stock' = @(
       'tests/03-stock-crud.spec.js',
       'tests/20-stock-lifecycle.spec.js',
-      'tests/22-stock-variants-lifecycle.spec.js'
+      'tests/22-stock-variants-lifecycle.spec.js',
+      'tests/25-stock-barcodes.spec.js',
+      'tests/26-barcode-movements.spec.js'
     )
     'cheques' = @(
       'tests/09-cheques-smoke.spec.js',
-      'tests/15-cheques-lifecycle.spec.js'
+      'tests/15-cheques-lifecycle.spec.js',
+      'tests/24-initial-balances.spec.js'
     )
     'configuracion' = @(
-      'tests/21-configuration-actions.spec.js'
+      'tests/10-config-accounting.spec.js',
+      'tests/21-configuration-actions.spec.js',
+      'tests/24-initial-balances.spec.js'
     )
     'documentos' = @(
       'tests/06-budgets.spec.js',
       'tests/12-documents-readonly.spec.js'
+    )
+    'seguridad' = @(
+      'tests/17-other-income-fiscal.spec.js'
     )
     'lectura-interna' = @(
       'tests/23-internal-navigation-smoke.spec.js',
@@ -70,7 +84,18 @@ function Get-BaltoTestBatches {
       'tests/14-details-and-cancel.spec.js',
       'tests/15-cheques-lifecycle.spec.js',
       'tests/16-movement-details-integrity.spec.js',
-      'tests/17-other-income-fiscal.spec.js'
+      'tests/17-other-income-fiscal.spec.js',
+      'tests/18-auth-actions.spec.js',
+      'tests/19-current-account-entities.spec.js',
+      'tests/20-stock-lifecycle.spec.js',
+      'tests/21-configuration-actions.spec.js',
+      'tests/22-stock-variants-lifecycle.spec.js',
+      'tests/23-internal-navigation-smoke.spec.js',
+      'tests/24-initial-balances.spec.js',
+      'tests/25-stock-barcodes.spec.js',
+      'tests/26-barcode-movements.spec.js',
+      'tests/27-performance-safety.spec.js',
+      'tests/example.spec.js'
     )
   }
 }
@@ -87,7 +112,7 @@ function Get-UniqueOrderedItems([string[]]$Items) {
 function Get-BaltoInternalTests {
   $batches = Get-BaltoTestBatches
   $all = @()
-  foreach ($name in @('smoke', 'navegacion', 'movimientos', 'cuentas-corrientes', 'stock', 'cheques', 'configuracion')) {
+  foreach ($name in @('smoke', 'navegacion', 'movimientos', 'cuentas-corrientes', 'stock', 'cheques', 'configuracion', 'documentos', 'seguridad')) {
     $all += $batches[$name]
   }
   return Get-UniqueOrderedItems $all

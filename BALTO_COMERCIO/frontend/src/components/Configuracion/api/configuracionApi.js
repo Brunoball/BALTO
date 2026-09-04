@@ -1,4 +1,5 @@
 import BASE_URL from "../../../config/config";
+import { singleFlightFetch } from "../../../utils/singleFlightFetch";
 
 const API_RELATIVE = "api.php";
 
@@ -17,10 +18,8 @@ export function buildConfiguracionApiUrl(paramsObj = {}) {
   return url.toString();
 }
 
-export function getConfiguracionSessionKey({ includeLegacy = false } = {}) {
-  const primary = String(localStorage.getItem("session_key") || "").trim();
-  if (primary || !includeLegacy) return primary;
-  return String(localStorage.getItem("sessionKey") || "").trim();
+export function getConfiguracionSessionKey() {
+  return String(localStorage.getItem("session_key") || "").trim();
 }
 
 export function safeJsonParse(text) {
@@ -31,9 +30,9 @@ export function safeJsonParse(text) {
   }
 }
 
-function buildHeaders(options = {}, includeLegacySessionKey = false) {
+function buildHeaders(options = {}) {
   const headers = new Headers(options.headers || {});
-  const sessionKey = getConfiguracionSessionKey({ includeLegacy: includeLegacySessionKey });
+  const sessionKey = getConfiguracionSessionKey();
 
   if (sessionKey) headers.set("X-Session", sessionKey);
   if (options.body && !headers.has("Content-Type")) {
@@ -44,8 +43,8 @@ function buildHeaders(options = {}, includeLegacySessionKey = false) {
 }
 
 export async function apiFetch(paramsObj = {}, options = {}) {
-  const headers = buildHeaders(options, false);
-  return fetch(buildConfiguracionApiUrl(paramsObj), { ...options, headers });
+  const headers = buildHeaders(options);
+  return singleFlightFetch(buildConfiguracionApiUrl(paramsObj), { ...options, headers });
 }
 
 export async function apiFetchTiendaNube(paramsObj = {}, options = {}) {
@@ -55,7 +54,7 @@ export async function apiFetchTiendaNube(paramsObj = {}, options = {}) {
     ...fetchOptions
   } = options || {};
 
-  const headers = buildHeaders(fetchOptions, false);
+  const headers = buildHeaders(fetchOptions);
   const controller = timeoutMs > 0 ? new AbortController() : null;
   const externalSignal = fetchOptions.signal;
   let timeoutId = null;
@@ -70,7 +69,7 @@ export async function apiFetchTiendaNube(paramsObj = {}, options = {}) {
   }
 
   try {
-    const res = await fetch(buildConfiguracionApiUrl(paramsObj), {
+    const res = await singleFlightFetch(buildConfiguracionApiUrl(paramsObj), {
       ...fetchOptions,
       headers,
       signal: controller?.signal || externalSignal,
@@ -93,8 +92,8 @@ export async function apiFetchTiendaNube(paramsObj = {}, options = {}) {
 }
 
 export async function apiFetchJson(paramsObj = {}, options = {}) {
-  const headers = buildHeaders(options, true);
-  const res = await fetch(buildConfiguracionApiUrl(paramsObj), { ...options, headers });
+  const headers = buildHeaders(options);
+  const res = await singleFlightFetch(buildConfiguracionApiUrl(paramsObj), { ...options, headers });
   const text = await res.text();
 
   try {
@@ -105,8 +104,8 @@ export async function apiFetchJson(paramsObj = {}, options = {}) {
 }
 
 export async function apiFetchActionJson(action, options = {}) {
-  const headers = buildHeaders(options, false);
-  const res = await fetch(buildConfiguracionApiUrl({ action }), { ...options, headers });
+  const headers = buildHeaders(options);
+  const res = await singleFlightFetch(buildConfiguracionApiUrl({ action }), { ...options, headers });
   const text = await res.text();
 
   let data = null;
