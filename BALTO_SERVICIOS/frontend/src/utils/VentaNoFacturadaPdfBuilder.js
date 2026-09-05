@@ -506,17 +506,12 @@ function normalizeItems(data = {}) {
         cantidad * Number(precio || 0)
       );
 
-      const bonifPct = safeNumber(it?.bonif_pct ?? it?.bonifPct, 0);
-      const impBonif = safeNumber(it?.impBonif ?? it?.imp_bonif ?? it?.importe_bonificacion, 0);
-
       return {
         codigo: String(it?.codigo || idx + 1),
         descripcion,
         cantidad,
         unidad: sanitizePdfText(it?.unidad || "u"),
         precio: safeNumber(precio, 0),
-        bonifPct,
-        impBonif,
         subtotal: safeNumber(subtotal, 0),
       };
     })
@@ -533,8 +528,6 @@ function normalizeItems(data = {}) {
       cantidad: 1,
       unidad: "u",
       precio: total,
-      bonifPct: 0,
-      impBonif: 0,
       subtotal: total,
     },
   ];
@@ -697,13 +690,11 @@ function getFacturaTableColumns(doc) {
   const wCodigo = 50;
   const wCant = 70;
   const wUM = 50;
-  const wPU = 60;
-  const wBonif = 40;
-  const wImpBon = 80;
-  const wSubt = 52;
+  const wPU = 70;
+  const wSubt = 75;
   const wProd = Math.max(
     10,
-    innerW - (wCodigo + wCant + wUM + wPU + wBonif + wImpBon + wSubt)
+    innerW - (wCodigo + wCant + wUM + wPU + wSubt)
   );
 
   const x0 = left;
@@ -712,9 +703,7 @@ function getFacturaTableColumns(doc) {
   const x3 = x2 + wCant;
   const x4 = x3 + wUM;
   const x5 = x4 + wPU;
-  const x6 = x5 + wBonif;
-  const x7 = x6 + wImpBon;
-  const x8 = right;
+  const x6 = right;
 
   return {
     x0,
@@ -724,8 +713,6 @@ function getFacturaTableColumns(doc) {
     x4,
     x5,
     x6,
-    x7,
-    x8,
     padL: 8,
     padR: 8,
   };
@@ -747,9 +734,7 @@ function drawTableHeader(doc, y) {
   text(doc, "Cantidad", c.x3 - c.padR, y + 15, { align: "right" });
   text(doc, "U. Medida", c.x4 - c.padR, y + 15, { align: "right" });
   text(doc, "Precio Unit.", c.x5 - c.padR, y + 15, { align: "right" });
-  text(doc, "% Bonif", c.x6 - c.padR, y + 15, { align: "right" });
-  text(doc, "Imp. Bonif.", c.x7 - c.padR, y + 15, { align: "right" });
-  text(doc, "Subtotal", c.x8 - c.padR, y + 15, { align: "right" });
+  text(doc, "Subtotal", c.x6 - c.padR, y + 15, { align: "right" });
 
   return {
     nextY: y + headerRowH + 16,
@@ -785,13 +770,7 @@ function drawTableRow(doc, item, idx, cols, y, maxBodyY) {
   text(doc, moneyEs(item.precio || 0), cols.x5 - cols.padR, y, {
     align: "right",
   });
-  text(doc, numEs(item.bonifPct || 0, 2), cols.x6 - cols.padR, y, {
-    align: "right",
-  });
-  text(doc, moneyEs(item.impBonif || 0), cols.x7 - cols.padR, y, {
-    align: "right",
-  });
-  text(doc, moneyEs(item.subtotal || 0), cols.x8 - cols.padR, y, {
+  text(doc, moneyEs(item.subtotal || 0), cols.x6 - cols.padR, y, {
     align: "right",
   });
 

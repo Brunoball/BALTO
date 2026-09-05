@@ -35,8 +35,8 @@ function round2(v) {
   return Math.round(safeNumber(v) * 100) / 100;
 }
 
-function round3(v) {
-  return Math.round(safeNumber(v) * 1000) / 1000;
+function roundQuantity(v) {
+  return Math.round(safeNumber(v) * 1000000) / 1000000;
 }
 
 function moneyARS(v) {
@@ -167,6 +167,26 @@ function getArr(x) {
   return Array.isArray(x) ? x : [];
 }
 
+function getServicioId(x) {
+  const cand = x?.id_servicio ?? x?.idServicio ?? x?.servicio_id ?? x?.id ?? 0;
+  const n = Number(cand);
+  return Number.isFinite(n) && n > 0 ? n : 0;
+}
+
+function getServicioNombre(x) {
+  return String(x?.servicio_nombre ?? x?.nombre ?? x?.descripcion ?? "").trim();
+}
+
+function getCatalogPrecio(x) {
+  const n = Number(x?.precio_venta ?? x?.precio ?? 0);
+  return Number.isFinite(n) && n >= 0 ? n : 0;
+}
+
+function getCatalogIva(x) {
+  const n = Number(x?.iva_pct ?? x?.ivaPct ?? 0);
+  return Number.isFinite(n) && n >= 0 ? n : 0;
+}
+
 function getProductoId(x) {
   const cand =
     x?.id_stock_producto ??
@@ -282,18 +302,28 @@ function normalizeLists(lists) {
   const l = src.listas && typeof src.listas === "object" ? src.listas : src;
 
   const productos =
-    Array.isArray(l.productos) && l.productos.length
+    Array.isArray(l.articulos_stock) && l.articulos_stock.length
+      ? l.articulos_stock
+      : Array.isArray(l.articulosStock) && l.articulosStock.length
+      ? l.articulosStock
+      : Array.isArray(l.productos) && l.productos.length
       ? l.productos
       : Array.isArray(l.stockProductos) && l.stockProductos.length
       ? l.stockProductos
       : Array.isArray(l.stock_productos) && l.stock_productos.length
       ? l.stock_productos
-      : Array.isArray(l.detalles)
-      ? l.detalles
+      : [];
+
+  const servicios =
+    Array.isArray(l.servicios_movimiento) && l.servicios_movimiento.length
+      ? l.servicios_movimiento
+      : Array.isArray(l.serviciosMovimiento) && l.serviciosMovimiento.length
+      ? l.serviciosMovimiento
       : [];
 
   return {
     productos,
+    servicios,
     clientes: Array.isArray(l.clientes) ? l.clientes : [],
   };
 }
@@ -333,6 +363,7 @@ export default function ModalEditarRecibo({
     const normalized = normalizeLists(data);
     setLocalLists((prev) => ({
       productos: normalized.productos?.length ? normalized.productos : prev.productos,
+      servicios: normalized.servicios?.length ? normalized.servicios : prev.servicios,
       clientes: normalized.clientes?.length ? normalized.clientes : prev.clientes,
     }));
   }, [API_LISTS]);
@@ -342,6 +373,8 @@ export default function ModalEditarRecibo({
     periodoMMYYYY: "",
     id_cliente: NULL_OPTION,
     clienteTxt: "",
+    tipo_item: "ARTICULO",
+    id_servicio: NULL_OPTION,
     id_stock_producto: NULL_OPTION,
     id_stock_variante: NULL_OPTION,
     productoTxt: "",
@@ -356,6 +389,8 @@ export default function ModalEditarRecibo({
     periodo: "",
     id_cliente: NULL_OPTION,
     clienteInput: "",
+    tipo_item: "ARTICULO",
+    id_servicio: NULL_OPTION,
     id_stock_producto: NULL_OPTION,
     id_stock_variante: NULL_OPTION,
     productoInput: "",
@@ -386,36 +421,29 @@ export default function ModalEditarRecibo({
     const perAuto = periodoFromISODate(fecha);
 
     const idCliente = r.id_cliente ?? r.cliente_id ?? r.idCliente ?? NULL_OPTION;
-    const idProd =
-      item?.id_stock_producto ??
-      item?.idStockProducto ??
-      item?.stock_producto_id ??
-      r.id_stock_producto ??
-      r.idStockProducto ??
-      r.stock_producto_id ??
-      NULL_OPTION;
-    const idVar =
-      item?.id_stock_variante ??
-      item?.idStockVariante ??
-      item?.stock_variante_id ??
-      r.id_stock_variante ??
-      r.idStockVariante ??
-      r.stock_variante_id ??
-      NULL_OPTION;
+    const idServicio =
+      item?.id_servicio ?? item?.idServicio ?? item?.servicio_id ??
+      r.id_servicio ?? r.idServicio ?? r.servicio_id ?? NULL_OPTION;
+    const tipoItem = Number(idServicio || 0) > 0 ? "SERVICIO" : "ARTICULO";
+    const idProd = tipoItem === "ARTICULO"
+      ? (item?.id_articulo ?? item?.idArticulo ?? item?.id_stock_producto ?? item?.idStockProducto ?? item?.stock_producto_id ??
+         r.id_articulo ?? r.idArticulo ?? r.id_stock_producto ?? r.idStockProducto ?? r.stock_producto_id ?? NULL_OPTION)
+      : NULL_OPTION;
+    const idVar = NULL_OPTION;
 
     const cliNameFromList = nameById(localLists.clientes, idCliente, getClienteId, getClienteNombre);
-    const productoNameFromList = nameById(localLists.productos, idProd, getProductoId, getProductoNombre);
+    const catalogNameFromList = tipoItem === "SERVICIO"
+      ? nameById(localLists.servicios, idServicio, getServicioId, getServicioNombre)
+      : nameById(localLists.productos, idProd, getProductoId, getProductoNombre);
 
     const clienteFallback = String(r.cliente ?? r.cliente_nombre ?? "").trim();
     const productoFallback =
+      (tipoItem === "SERVICIO" ? String(item?.servicio_nombre ?? r.servicio_nombre ?? "").trim() : "") ||
+      String(item?.descripcion ?? item?.detalle ?? "").trim() ||
       getProductoNombre(item) ||
-      String(r.producto_nombre ?? r.stock_producto_nombre ?? r.detalle_original ?? "").split("|")[0].trim() ||
+      String(r.articulo_nombre ?? r.producto_nombre ?? r.stock_producto_nombre ?? r.detalle_original ?? "").split("|")[0].trim() ||
       String(r.detalle ?? r.descripcion ?? "").replace(/^\s*\d+(?:[.,]\d+)?\s*x\s*/i, "").trim();
-    const varianteFallback = getProductoVarianteNombre(item) || getProductoVarianteNombre(r);
-    const productoBaseTxt = (productoNameFromList || productoFallback || "").trim();
-    const productoTxt = varianteFallback && productoBaseTxt
-      ? `${productoBaseTxt} - ${varianteFallback}`
-      : productoBaseTxt;
+    const productoTxt = (catalogNameFromList || productoFallback || "").trim();
 
     const cantidad = Math.max(0, safeNumber(item?.cantidad ?? r.cantidad ?? 1)) || 1;
     const precio = Math.max(0, safeNumber(item?.precio ?? r.precio ?? (safeNumber(r.monto_total ?? r.total) / cantidad)));
@@ -426,10 +454,12 @@ export default function ModalEditarRecibo({
       periodoMMYYYY: perRow || perDef || perAuto || "",
       id_cliente: String(idCliente ?? NULL_OPTION),
       clienteTxt: (cliNameFromList || clienteFallback || "").trim(),
-      id_stock_producto: String(idProd ?? NULL_OPTION),
-      id_stock_variante: String(idVar ?? NULL_OPTION),
+      tipo_item: tipoItem,
+      id_servicio: tipoItem === "SERVICIO" ? String(idServicio ?? NULL_OPTION) : NULL_OPTION,
+      id_stock_producto: tipoItem === "ARTICULO" ? String(idProd ?? NULL_OPTION) : NULL_OPTION,
+      id_stock_variante: NULL_OPTION,
       productoTxt,
-      cantidad: round3(cantidad),
+      cantidad: roundQuantity(cantidad),
       precio: round2(precio),
       iva_pct: round2(ivaPct),
     };
@@ -446,8 +476,10 @@ export default function ModalEditarRecibo({
       periodo: defaultsRef.current.periodoMMYYYY,
       id_cliente: defaultsRef.current.id_cliente,
       clienteInput: defaultsRef.current.clienteTxt,
+      tipo_item: defaultsRef.current.tipo_item,
+      id_servicio: defaultsRef.current.id_servicio,
       id_stock_producto: defaultsRef.current.id_stock_producto,
-      id_stock_variante: defaultsRef.current.id_stock_variante,
+      id_stock_variante: NULL_OPTION,
       productoInput: defaultsRef.current.productoTxt,
       cantidad: String(defaultsRef.current.cantidad || 1),
       precio: defaultsRef.current.precio ? String(defaultsRef.current.precio) : "",
@@ -483,11 +515,13 @@ export default function ModalEditarRecibo({
   );
 
   const filteredProductos = useMemo(() => {
-    const all = getArr(localLists.productos);
+    const esServicio = form.tipo_item === "SERVICIO";
+    const all = getArr(esServicio ? localLists.servicios : localLists.productos);
+    const getNombre = esServicio ? getServicioNombre : getProductoNombre;
     const q = normalizeSearchText(form.productoInput);
     if (!productoFocus || !productoArmed || q.length < 1) return [];
-    return all.filter((p) => normalizeSearchText(getProductoNombre(p)).includes(q)).slice(0, 25);
-  }, [localLists.productos, form.productoInput, productoFocus, productoArmed]);
+    return all.filter((p) => normalizeSearchText(getNombre(p)).includes(q)).slice(0, 25);
+  }, [localLists.productos, localLists.servicios, form.tipo_item, form.productoInput, productoFocus, productoArmed]);
 
   const filteredClientes = useMemo(() => {
     const all = getArr(localLists.clientes);
@@ -499,8 +533,11 @@ export default function ModalEditarRecibo({
   const findExactProducto = useCallback((value) => {
     const q = normalizeSearchText(value);
     if (!q) return null;
-    return getArr(localLists.productos).find((p) => normalizeSearchText(getProductoNombre(p)) === q) || null;
-  }, [localLists.productos]);
+    const esServicio = form.tipo_item === "SERVICIO";
+    const all = getArr(esServicio ? localLists.servicios : localLists.productos);
+    const getNombre = esServicio ? getServicioNombre : getProductoNombre;
+    return all.find((p) => normalizeSearchText(getNombre(p)) === q) || null;
+  }, [localLists.productos, localLists.servicios, form.tipo_item]);
 
   const findExactCliente = useCallback((value) => {
     const q = normalizeSearchText(value);
@@ -511,26 +548,48 @@ export default function ModalEditarRecibo({
   const handleProductoInputChange = (e) => {
     const value = e.target.value;
     const exact = findExactProducto(value);
+    const esServicio = form.tipo_item === "SERVICIO";
     setProductoArmed(true);
     setForm((p) => ({
       ...p,
       productoInput: value,
-      id_stock_producto: exact ? String(getProductoId(exact)) : NULL_OPTION,
+      id_servicio: esServicio && exact ? String(getServicioId(exact)) : NULL_OPTION,
+      id_stock_producto: !esServicio && exact ? String(getProductoId(exact)) : NULL_OPTION,
       id_stock_variante: NULL_OPTION,
     }));
   };
 
   const handleSelectProducto = (prod) => {
-    const nombre = getProductoNombre(prod);
-    const id = getProductoId(prod);
+    const esServicio = form.tipo_item === "SERVICIO";
+    const nombre = esServicio ? getServicioNombre(prod) : getProductoNombre(prod);
+    const id = esServicio ? getServicioId(prod) : getProductoId(prod);
+    const precioCatalogo = getCatalogPrecio(prod);
+    const ivaCatalogo = getCatalogIva(prod);
     setForm((p) => ({
       ...p,
       productoInput: nombre,
-      id_stock_producto: String(id || NULL_OPTION),
+      id_servicio: esServicio ? String(id || NULL_OPTION) : NULL_OPTION,
+      id_stock_producto: esServicio ? NULL_OPTION : String(id || NULL_OPTION),
       id_stock_variante: NULL_OPTION,
+      precio: precioCatalogo > 0 ? String(round2(precioCatalogo)) : p.precio,
+      iva_pct: String(round2(ivaCatalogo)),
     }));
     setProductoFocus(false);
     setProductoArmed(false);
+  };
+
+  const handleTipoItemChange = (e) => {
+    const tipo = e.target.value === "SERVICIO" ? "SERVICIO" : "ARTICULO";
+    setProductoFocus(false);
+    setProductoArmed(false);
+    setForm((p) => ({
+      ...p,
+      tipo_item: tipo,
+      id_servicio: NULL_OPTION,
+      id_stock_producto: NULL_OPTION,
+      id_stock_variante: NULL_OPTION,
+      productoInput: "",
+    }));
   };
 
 
@@ -594,35 +653,27 @@ export default function ModalEditarRecibo({
       }
       if (!clienteId) throw new Error("Seleccioná un cliente válido de la lista.");
 
-      let productoId = form.id_stock_producto && form.id_stock_producto !== NULL_OPTION ? Number(form.id_stock_producto) : null;
-      if (!productoId) {
-        const exactProducto = findExactProducto(form.productoInput);
-        productoId = exactProducto ? getProductoId(exactProducto) : null;
-      }
+      const esServicio = form.tipo_item === "SERVICIO";
+      let servicioId = esServicio && form.id_servicio && form.id_servicio !== NULL_OPTION ? Number(form.id_servicio) : null;
+      let productoId = !esServicio && form.id_stock_producto && form.id_stock_producto !== NULL_OPTION ? Number(form.id_stock_producto) : null;
+
+      const exactCatalogo = findExactProducto(form.productoInput);
+      if (esServicio && !servicioId) servicioId = exactCatalogo ? getServicioId(exactCatalogo) : null;
+      if (!esServicio && !productoId) productoId = exactCatalogo ? getProductoId(exactCatalogo) : null;
 
       const textoActual = normalizeSearchText(defaultsRef.current.productoTxt);
       const textoNuevo = normalizeSearchText(form.productoInput);
-      if (!productoId && textoNuevo && textoNuevo === textoActual) {
-        productoId = Number(defaultsRef.current.id_stock_producto || 0) || null;
+      if (textoNuevo && textoNuevo === textoActual && form.tipo_item === defaultsRef.current.tipo_item) {
+        if (esServicio && !servicioId) servicioId = Number(defaultsRef.current.id_servicio || 0) || null;
+        if (!esServicio && !productoId) productoId = Number(defaultsRef.current.id_stock_producto || 0) || null;
       }
 
-      if (!productoId) throw new Error("Seleccioná un producto válido de stock. No se guarda como detalle para evitar cambiar el producto equivocado.");
+      if (esServicio && !servicioId) throw new Error("Seleccioná un servicio válido del catálogo.");
+      if (!esServicio && !productoId) throw new Error("Seleccioná un artículo válido de stock.");
 
-      let varianteId = form.id_stock_variante && form.id_stock_variante !== NULL_OPTION
-        ? Number(form.id_stock_variante)
-        : null;
-      if (!(varianteId > 0)) varianteId = null;
+      const varianteId = null;
 
-      // Si el usuario no tocó el producto, preservamos la variante original.
-      // Si escribió/seleccionó manualmente otro producto, el handler ya la limpia.
-      if (!varianteId &&
-          Number(productoId) === Number(defaultsRef.current.id_stock_producto || 0) &&
-          normalizeSearchText(form.productoInput) === normalizeSearchText(defaultsRef.current.productoTxt)) {
-        const originalVariant = Number(defaultsRef.current.id_stock_variante || 0);
-        if (originalVariant > 0) varianteId = originalVariant;
-      }
-
-      const cantidad = round3(Math.max(0, safeNumber(form.cantidad)));
+      const cantidad = roundQuantity(Math.max(0, safeNumber(form.cantidad)));
       const precio = round2(Math.max(0, safeNumber(form.precio)));
       const ivaPct = round2(Math.max(0, safeNumber(form.iva_pct)));
       if (!(cantidad > 0)) throw new Error("La cantidad debe ser mayor a 0.");
@@ -633,9 +684,13 @@ export default function ModalEditarRecibo({
       const perAPI = perUI ? periodoToYYYYMM(perUI) : "";
 
       const item = {
-        id_stock_producto: Number(productoId),
-        id_stock_variante: varianteId,
+        tipo_item: esServicio ? "SERVICIO" : "ARTICULO",
+        id_servicio: esServicio ? Number(servicioId) : null,
+        id_articulo: esServicio ? null : Number(productoId),
+        id_stock_producto: esServicio ? null : Number(productoId),
+        id_stock_variante: null,
         id_detalle: null,
+        descripcion: String(form.productoInput || "").trim(),
         cantidad,
         precio,
         iva_pct: ivaPct,
@@ -650,10 +705,14 @@ export default function ModalEditarRecibo({
         periodo: perAPI,
         id_cliente: Number(clienteId),
         cliente: String(form.clienteInput || "").trim(),
-        id_stock_producto: Number(productoId),
-        id_stock_variante: varianteId,
+        tipo_item: esServicio ? "SERVICIO" : "ARTICULO",
+        id_servicio: esServicio ? Number(servicioId) : null,
+        id_articulo: esServicio ? null : Number(productoId),
+        id_stock_producto: esServicio ? null : Number(productoId),
+        id_stock_variante: null,
         id_detalle: null,
         producto: String(form.productoInput || "").trim(),
+        descripcion: String(form.productoInput || "").trim(),
         cantidad,
         precio,
         iva_pct: ivaPct,
@@ -662,6 +721,7 @@ export default function ModalEditarRecibo({
         total: t.total,
         monto_total: t.total,
         items: [item],
+        editar_primer_item: true,
       };
 
       await onSave?.(payloadFinal);
@@ -691,7 +751,7 @@ export default function ModalEditarRecibo({
             <div className="gm-modal-head-left">
               <h2 className="gm-modal-title">Editar recibo</h2>
               <p className="gm-modal-subtitle">
-                Modificá la venta de cuenta corriente: fecha, cliente, producto, cantidad y precio.
+                Modificá la venta de cuenta corriente: fecha, cliente, servicio o stock, cantidad y precio.
               </p>
             </div>
 
@@ -711,8 +771,15 @@ export default function ModalEditarRecibo({
               <section className="gm-movement-main rec-edit-main">
                 <form onSubmit={submit} className="rec-edit-form">
                   <div className="gm-section">
-                    <div className="gm-section-head"><div className="gm-section-dot" /><span>Producto</span></div>
+                    <div className="gm-section-head"><div className="gm-section-dot" /><span>Servicio / Stock</span></div>
                     <div className="gm-section-body">
+                      <div className="gm-field" style={{ marginBottom: 12 }}>
+                        <select className="gm-input" value={form.tipo_item} onChange={handleTipoItemChange} disabled={saving}>
+                          <option value="SERVICIO">Servicio</option>
+                          <option value="ARTICULO">Stock / material / insumo</option>
+                        </select>
+                        <label className="gm-label">Tipo de ítem</label>
+                      </div>
                       <div className="rec-edit-rel">
                         <div className="gm-field">
                           <input
@@ -725,17 +792,18 @@ export default function ModalEditarRecibo({
                             disabled={saving}
                             autoComplete="off"
                           />
-                          <label className="gm-label">Producto de stock</label>
+                          <label className="gm-label">{form.tipo_item === "SERVICIO" ? "Servicio" : "Artículo de stock"}</label>
                         </div>
 
                         {!!filteredProductos.length && (
                           <div className="rec-edit-autocomplete">
                             {filteredProductos.map((prod) => {
-                              const id = getProductoId(prod);
-                              const nombre = getProductoNombre(prod);
+                              const esServicio = form.tipo_item === "SERVICIO";
+                              const id = esServicio ? getServicioId(prod) : getProductoId(prod);
+                              const nombre = esServicio ? getServicioNombre(prod) : getProductoNombre(prod);
                               return (
                                 <button
-                                  key={`prod-${id}-${nombre}`}
+                                  key={`${form.tipo_item}-${id}-${nombre}`}
                                   type="button"
                                   className="rec-edit-autocomplete__item"
                                   onMouseDown={(e) => e.preventDefault()}
@@ -759,7 +827,7 @@ export default function ModalEditarRecibo({
                           <input
                             className="gm-input"
                             type="number"
-                            step="0.001"
+                            step="0.000001"
                             min="0"
                             placeholder=" "
                             value={form.cantidad}
@@ -881,7 +949,7 @@ export default function ModalEditarRecibo({
                     <div className="gm-info-box">
                       <div className="rec-edit-summary-row"><FontAwesomeIcon icon={faCalendarDays} /><span><b>Fecha:</b> {form.fecha || "--"}</span></div>
                       <div className="rec-edit-summary-row"><FontAwesomeIcon icon={faUser} /><span><b>Cliente:</b> {resumen.cliente}</span></div>
-                      <div className="rec-edit-summary-row"><FontAwesomeIcon icon={faBoxOpen} /><span><b>Producto:</b> {resumen.producto}</span></div>
+                      <div className="rec-edit-summary-row"><FontAwesomeIcon icon={faBoxOpen} /><span><b>{form.tipo_item === "SERVICIO" ? "Servicio" : "Stock"}:</b> {resumen.producto}</span></div>
                       <div className="rec-edit-summary-row"><FontAwesomeIcon icon={faReceipt} /><span><b>Cantidad:</b> {resumen.cantidad || "--"}</span></div>
                       <div className="rec-edit-summary-row"><FontAwesomeIcon icon={faDollarSign} /><span><b>Total:</b> {moneyARS(resumen.total)}</span></div>
                     </div>

@@ -626,7 +626,7 @@ function getDetalleId(d) {
   return Number.isFinite(n) && n > 0 ? n : null;
 }
 function getStockProductoId(d) {
-  const c = d?.id_stock_producto ?? d?.idStockProducto ?? d?.stock_producto_id ?? d?.id_producto ?? d?.idProducto ?? getDetalleId(d);
+  const c = d?.id_articulo ?? d?.idArticulo ?? d?.articulo_id ?? d?.id_stock_producto ?? d?.idStockProducto ?? d?.stock_producto_id ?? d?.id_producto ?? d?.idProducto ?? null;
   const n = Number(c);
   return Number.isFinite(n) && n > 0 ? n : null;
 }
@@ -720,6 +720,8 @@ function getStockDisponible(detalle) {
 function buildEmptyRow() {
   return {
     id: uid(),
+    tipo_item: "ARTICULO",
+    id_articulo: NULL_OPTION,
     id_detalle: NULL_OPTION,
     id_stock_producto: NULL_OPTION,
     id_stock_variante: NULL_OPTION,
@@ -1318,7 +1320,9 @@ export default function ModalNuevaCompra({ open, lists, onClose, onToast, onSave
       const stockDisponible = getStockDisponible(detalle);
 
       updateRow(rowId, {
-        id_detalle: idStockProducto ? String(idStockProducto) : NULL_OPTION,
+        tipo_item: "ARTICULO",
+        id_articulo: idStockProducto ? String(idStockProducto) : NULL_OPTION,
+        id_detalle: NULL_OPTION,
         id_stock_producto: idStockProducto ? String(idStockProducto) : NULL_OPTION,
         id_stock_variante: idStockVariante ? String(idStockVariante) : NULL_OPTION,
         detalleText: getDetalleNombre(detalle),
@@ -1756,7 +1760,7 @@ export default function ModalNuevaCompra({ open, lists, onClose, onToast, onSave
           id_detalle: stockId,
           id_stock_producto: stockId,
           id_stock_variante: Number.isFinite(varianteId) && varianteId > 0 ? varianteId : null,
-          cantidad: Math.round(Number(r.cantidad) * 100) / 100,
+          cantidad: Math.round(Number(r.cantidad) * 1000000) / 1000000,
           precio: Math.round(Number(r.precio) * 100) / 100,
           iva_pct: Math.round(Number(r.ivaPct) * 100) / 100,
           subtotal: Math.round(Number(r.subtotal) * 100) / 100,
@@ -1887,6 +1891,7 @@ export default function ModalNuevaCompra({ open, lists, onClose, onToast, onSave
                             onChange={(val) =>
                               updateRow(r.id, {
                                 detalleText: val,
+                                id_articulo: NULL_OPTION,
                                 id_detalle: NULL_OPTION,
                                 id_stock_producto: NULL_OPTION,
                                 id_stock_variante: NULL_OPTION,
@@ -1896,12 +1901,14 @@ export default function ModalNuevaCompra({ open, lists, onClose, onToast, onSave
                             }
                             onSelect={(d) => handleSelectDetalle(d, r.id)}
                             options={detallesList}
-                            placeholder="Escribí o buscá un producto…"
+                            placeholder="Buscá un material o insumo…"
                             disabled={saving || addUI.open}
                             showAllOnFocus={false}
                             maxItems={18}
                             allowOutOfStock
-                            emptyMessage="Sin productos activos"
+                            catalogKind="stock"
+                            showKindToggle={false}
+                            emptyMessage="Sin artículos activos"
                             inputClassName="gm-cell-input"
                           />
                         </div>
@@ -1911,7 +1918,7 @@ export default function ModalNuevaCompra({ open, lists, onClose, onToast, onSave
                             className="gm-cell-input gm-cell-input--center"
                             type="number"
                             min="0"
-                            step="1"
+                            step="0.000001"
                             value={r.cantidad}
                             onChange={(e) =>
                               handleCantidadChange(r.id, e.target.value === "" ? "" : Number(e.target.value))

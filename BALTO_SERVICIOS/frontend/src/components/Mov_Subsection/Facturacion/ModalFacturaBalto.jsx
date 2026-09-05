@@ -173,7 +173,6 @@ function buildInitialItem() {
     descripcion: "",
     cantidad: "1",
     precio_unitario: "",
-    bonif_pct: "0",
     subtotal: 0,
   };
 }
@@ -259,7 +258,6 @@ export default function ModalFacturaBalto({
             descripcion: safeStr(item?.descripcion ?? item?.detalle ?? item?.concepto),
             cantidad: Number(item?.cantidad || 0),
             precio_unitario: Number(item?.precio_unitario ?? item?.precio ?? 0),
-            bonif_pct: Number(item?.bonif_pct || 0),
             subtotal: Number(item?.subtotal ?? item?.total ?? 0),
           }))
           .filter((item) => item.descripcion && item.cantidad > 0 && item.precio_unitario > 0)

@@ -46,8 +46,8 @@ function safeNumber(v) {
 function round2(n) {
   return Math.round((Number(n || 0) + Number.EPSILON) * 100) / 100;
 }
-function round3(n) {
-  return Math.round((Number(n || 0) + Number.EPSILON) * 1000) / 1000;
+function roundQuantity(n) {
+  return Math.round((Number(n || 0) + Number.EPSILON) * 1000000) / 1000000;
 }
 function safeText(v) {
   return String(v ?? "").trim();
@@ -384,7 +384,7 @@ function normalizeChequeData(src = {}) {
   };
 }
 function makeItem(it = {}) {
-  const cantidad = round3(it?.cantidad ?? 1);
+  const cantidad = roundQuantity(it?.cantidad ?? 1);
   const precio = round2(it?.precio ?? it?.total ?? 0);
   const iva_pct = round2(it?.iva_pct ?? 0);
   const calc = calcItemTotals(cantidad, precio, iva_pct);
@@ -1237,7 +1237,7 @@ export default function ModalEditarEgreso({
       items: prev.items.map((it) => {
         if (it.uid !== uid) return it;
         const next = { ...it, ...patch };
-        const cantidad = round3(safeNumber(next.cantidad));
+        const cantidad = roundQuantity(safeNumber(next.cantidad));
         const precio = round2(safeNumber(next.precio));
         const iva_pct = round2(safeNumber(next.iva_pct));
         const calc = calcItemTotals(cantidad, precio, iva_pct);
@@ -1552,7 +1552,7 @@ export default function ModalEditarEgreso({
           .map((it) => {
             const id_detalle = Number(it.id_detalle || 0);
             const detalle = upperSafeText(it.detalle);
-            const cantidad = round3(safeNumber(it.cantidad));
+            const cantidad = roundQuantity(safeNumber(it.cantidad));
             const precio = round2(safeNumber(it.precio));
             const iva_pct = round2(safeNumber(it.iva_pct));
             const calc = calcItemTotals(cantidad, precio, iva_pct);

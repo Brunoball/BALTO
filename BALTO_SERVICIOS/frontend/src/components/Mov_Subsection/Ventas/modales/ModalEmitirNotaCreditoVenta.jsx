@@ -18,8 +18,6 @@ import { DEMO_BLOCK_MESSAGE, isBaltoDemoMode } from "../../../../utils/demoMode"
 
 const MOTIVOS = [
   ["DEVOLUCION_MERCADERIA", "DEVOLUCIÓN DE MERCADERÍA"],
-  ["DESCUENTO", "DESCUENTO"],
-  ["BONIFICACION", "BONIFICACIÓN"],
   ["ANULACION_TOTAL", "ANULACIÓN TOTAL"],
   ["DIFERENCIA_PRECIO", "DIFERENCIA DE PRECIO"],
   ["OTRO", "OTRO AJUSTE"],
@@ -32,7 +30,7 @@ const IVA_OPTIONS = [
   { label: "27 %", value: 27 },
 ];
 
-const MOTIVOS_AJUSTE_SIN_STOCK = ["DESCUENTO", "BONIFICACION", "DIFERENCIA_PRECIO", "OTRO"];
+const MOTIVOS_AJUSTE_SIN_STOCK = ["DIFERENCIA_PRECIO", "OTRO"];
 
 function todayISO() {
   const d = new Date();
@@ -229,7 +227,7 @@ export default function ModalEmitirNotaCreditoVenta({
   const [observaciones, setObservaciones] = useState("");
   const [importeAjuste, setImporteAjuste] = useState("");
   const [ivaAjuste, setIvaAjuste] = useState("0");
-  const [descripcionAjuste, setDescripcionAjuste] = useState("DESCUENTO / BONIFICACIÓN");
+  const [descripcionAjuste, setDescripcionAjuste] = useState("AJUSTE DE NOTA DE CRÉDITO");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [openResumen, setOpenResumen] = useState(false);
@@ -257,8 +255,11 @@ export default function ModalEmitirNotaCreditoVenta({
         totalOriginal: Number(it.total || 0),
         iva_pct: Number(it.iva_pct || 0),
         cantidad: esEliminacionTotal && Number(it.cantidad_disponible || 0) > 0 ? String(Number(it.cantidad_disponible || 0)) : "",
-        tiene_stock: Number(it.id_stock_producto || 0) > 0 || Number(it.id_stock_variante || 0) > 0,
-        afecta_stock: Number(it.id_stock_producto || 0) > 0 || Number(it.id_stock_variante || 0) > 0,
+        // BALTO Servicios: un renglón mueve stock si es un artículo directo o
+        // si es un servicio cuya receta histórica consumió artículos.
+        tiene_stock:
+          Number(it.id_articulo || it.id_stock_producto || 0) > 0 ||
+          (Number(it.id_servicio || 0) > 0 && Number(it.mueve_stock || it.servicio_mueve_stock || 0) === 1),
       }));
       setItems(itemsContexto);
       if (esEliminacionTotal) setMotivo("ANULACION_TOTAL");
@@ -272,7 +273,7 @@ export default function ModalEmitirNotaCreditoVenta({
     if (!open) return;
     idempotencyRef.current = getOrCreateNotaCreditoKey(row?.id_movimiento, modo, actionScope);
     setContexto(null); setItems([]); setMotivo(esEliminacionTotal ? "ANULACION_TOTAL" : "DEVOLUCION_MERCADERIA"); setObservaciones("");
-    setImporteAjuste(""); setIvaAjuste("0"); setDescripcionAjuste("DESCUENTO / BONIFICACIÓN");
+    setImporteAjuste(""); setIvaAjuste("0"); setDescripcionAjuste("AJUSTE DE NOTA DE CRÉDITO");
     setError(""); setOpenResumen(false); cargarContexto();
   }, [open, row?.id_movimiento, cargarContexto, esEliminacionTotal, modo, actionScope]);
 
@@ -291,21 +292,18 @@ export default function ModalEmitirNotaCreditoVenta({
       setItems((prev) => prev.map((it) => ({
         ...it,
         cantidad: it.disponible > 0 ? String(it.disponible) : "",
-        afecta_stock: Boolean(it.tiene_stock),
       })));
       setImporteAjuste("");
     } else if (esAjusteSinStock) {
-      setItems((prev) => prev.map((it) => ({ ...it, cantidad: "", afecta_stock: false })));
+      setItems((prev) => prev.map((it) => ({ ...it, cantidad: "" })));
       const labels = {
-        DESCUENTO: "DESCUENTO",
-        BONIFICACION: "BONIFICACIÓN",
         DIFERENCIA_PRECIO: "DIFERENCIA DE PRECIO",
         OTRO: "OTRO AJUSTE",
       };
-      setDescripcionAjuste(labels[motivo] || "DESCUENTO / BONIFICACIÓN");
+      setDescripcionAjuste(labels[motivo] || "AJUSTE DE NOTA DE CRÉDITO");
     } else {
       setImporteAjuste("");
-      setItems((prev) => prev.map((it) => ({ ...it, afecta_stock: Boolean(it.tiene_stock) })));
+      
     }
   }, [motivo, esAjusteSinStock]);
 
@@ -337,7 +335,7 @@ export default function ModalEmitirNotaCreditoVenta({
   );
   const excede = totalSeleccionado - totalDisponible > 0.05;
   const coincideTotalEliminacion = !esEliminacionTotal || Math.abs(totalSeleccionado - totalDisponible) <= 0.05;
-  const puedeContinuar = totalSeleccionado > 0 && !excede && coincideTotalEliminacion && asociacionFiscalValida && itemsSeleccionados.every((it) => it.cantidad <= it.disponible + 0.0001);
+  const puedeContinuar = totalSeleccionado > 0 && !excede && coincideTotalEliminacion && asociacionFiscalValida && itemsSeleccionados.every((it) => it.cantidad <= it.disponible + 0.0000005);
 
   const payloadBase = useCallback(() => ({
     id_movimiento_origen: Number(row?.id_movimiento),
@@ -350,10 +348,10 @@ export default function ModalEmitirNotaCreditoVenta({
     eliminar_movimiento_total: esEliminacionTotal ? 1 : 0,
     items: esAjusteSinStock || (esEliminacionTotal && itemsSeleccionados.length === 0)
       ? []
-      : itemsSeleccionados.map((it) => ({ id_item_origen: it.id_item_origen, cantidad: it.cantidad, afecta_stock: Boolean(it.afecta_stock) })),
+      : itemsSeleccionados.map((it) => ({ id_item_origen: it.id_item_origen, cantidad: it.cantidad })),
     importe_ajuste: esAjusteSinStock || (esEliminacionTotal && itemsSeleccionados.length === 0) ? ajuste : 0,
     iva_pct_ajuste: Math.max(0, numberValue(ivaAjuste)),
-    descripcion_ajuste: esEliminacionTotal ? "ANULACIÓN TOTAL" : (descripcionAjuste || "DESCUENTO / BONIFICACIÓN"),
+    descripcion_ajuste: esEliminacionTotal ? "ANULACIÓN TOTAL" : (descripcionAjuste || "AJUSTE DE NOTA DE CRÉDITO"),
   }), [row, modalidad, motivo, observaciones, esAjusteSinStock, esEliminacionTotal, itemsSeleccionados, ajuste, ivaAjuste, descripcionAjuste]);
 
   const itemsFactura = useMemo(() => {
@@ -365,7 +363,7 @@ export default function ModalEmitirNotaCreditoVenta({
     if (ajuste > 0) {
       const pct = Math.max(0, numberValue(ivaAjuste));
       const subtotal = pct > 0 ? Number((ajuste / (1 + pct / 100)).toFixed(2)) : ajuste;
-      out.push({ codigo: "AJ", descripcion: esEliminacionTotal ? "ANULACIÓN TOTAL" : (descripcionAjuste || "DESCUENTO / BONIFICACIÓN"), cantidad: 1, precio: subtotal, precio_unitario: subtotal, subtotal, iva_pct: pct, iva_monto: Number((ajuste - subtotal).toFixed(2)), total: ajuste });
+      out.push({ codigo: "AJ", descripcion: esEliminacionTotal ? "ANULACIÓN TOTAL" : (descripcionAjuste || "AJUSTE DE NOTA DE CRÉDITO"), cantidad: 1, precio: subtotal, precio_unitario: subtotal, subtotal, iva_pct: pct, iva_monto: Number((ajuste - subtotal).toFixed(2)), total: ajuste });
     }
     return out;
   }, [itemsSeleccionados, ajuste, ivaAjuste, descripcionAjuste, esEliminacionTotal]);
@@ -510,7 +508,7 @@ export default function ModalEmitirNotaCreditoVenta({
     }
     if (!puedeContinuar) {
       if (esEliminacionTotal && !coincideTotalEliminacion) return setError(`No se pudo calcular exactamente el saldo total pendiente del ${entityLabel}.`);
-      return setError(excede ? "El importe supera el saldo disponible." : "Seleccioná ítems o ingresá un descuento.");
+      return setError(excede ? "El importe supera el saldo disponible." : "Seleccioná ítems o ingresá un importe de ajuste.");
     }
     if (modalidad === "ARCA") setOpenResumen(true); else crearInterna();
   };
@@ -768,7 +766,7 @@ export default function ModalEmitirNotaCreditoVenta({
                           <div className="gm-table-th" role="columnheader">Producto</div>
                           <div className="gm-table-th" role="columnheader">Disponible</div>
                           <div className="gm-table-th" role="columnheader">Devuelve / acredita</div>
-                          <div className="gm-table-th" role="columnheader">Reingresa stock</div>
+                          <div className="gm-table-th" role="columnheader">Stock</div>
                           <div className="gm-table-th" role="columnheader">Importe</div>
                         </div>
                         <div className="gm-table-body">
@@ -776,8 +774,6 @@ export default function ModalEmitirNotaCreditoVenta({
                             const seleccionado = itemsSeleccionados.find(
                               (selectedItem) => selectedItem.id_item_origen === item.id_item_origen
                             );
-                            const stockDisabled = loading || !numberValue(item.cantidad) || !item.tiene_stock;
-
                             return (
                               <div className="gm-table-row" role="row" key={item.id_item_origen}>
                                 <div className="gm-table-cell gm-table-cell--detail" role="cell" title={item.descripcion}>
@@ -792,7 +788,7 @@ export default function ModalEmitirNotaCreditoVenta({
                                     type="number"
                                     min="0"
                                     max={item.disponible}
-                                    step="0.01"
+                                    step="0.000001"
                                     value={item.cantidad}
                                     disabled={loading}
                                     aria-label={`Cantidad a acreditar de ${item.descripcion}`}
@@ -809,20 +805,7 @@ export default function ModalEmitirNotaCreditoVenta({
                                   />
                                 </div>
                                 <div className="gm-table-cell gm-table-cell--center" role="cell">
-                                  <label className={`gm-inline-check${stockDisabled ? " is-disabled" : ""}`}>
-                                    <input
-                                      type="checkbox"
-                                      checked={Boolean(item.afecta_stock && item.tiene_stock)}
-                                      disabled={stockDisabled}
-                                      aria-label={`Reingresar ${item.descripcion} al stock`}
-                                      onChange={(e) => setItems((currentItems) => currentItems.map(
-                                        (currentItem, currentIndex) => currentIndex === index
-                                          ? { ...currentItem, afecta_stock: item.tiene_stock && e.target.checked }
-                                          : currentItem
-                                      ))}
-                                    />
-                                    <span className="gm-inline-check__box" aria-hidden="true" />
-                                  </label>
+                                  {item.tiene_stock ? "Automático" : "No aplica"}
                                 </div>
                                 <div className="gm-table-cell gm-table-cell--right gm-table-cell--total" role="cell">
                                   {money(seleccionado?.total || 0)}
@@ -840,7 +823,7 @@ export default function ModalEmitirNotaCreditoVenta({
                   <section className="gm-section">
                     <div className="gm-section-head">
                       <div className="gm-section-dot" />
-                      <span>Descuento o ajuste sin stock</span>
+                      <span>Ajuste de importe sin stock</span>
                     </div>
                     <div className="gm-section-body">
                       <div className="ncv-form-grid ncv-form-grid--adjustment">

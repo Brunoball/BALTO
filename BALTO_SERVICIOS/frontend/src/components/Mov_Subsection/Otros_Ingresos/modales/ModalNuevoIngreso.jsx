@@ -240,8 +240,13 @@ function mergeConfigsFacturacionList(...lists) {
   });
   return out;
 }
+function getServicioId(d) {
+  const c = d?.id_servicio ?? d?.idServicio ?? d?.servicio_id ?? null;
+  const n = Number(c);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
 function getStockProductoId(d) {
-  const c = d?.id_stock_producto ?? d?.idStockProducto ?? d?.stock_producto_id ?? d?.id_producto ?? d?.idProducto ?? null;
+  const c = d?.id_articulo ?? d?.idArticulo ?? d?.articulo_id ?? d?.id_stock_producto ?? d?.idStockProducto ?? d?.stock_producto_id ?? d?.id_producto ?? d?.idProducto ?? null;
   const n = Number(c);
   return Number.isFinite(n) && n > 0 ? n : null;
 }
@@ -467,12 +472,17 @@ function normalizeLists(lists) {
     "detallesIngreso",
   ]);
 
+  const servicios =
+    pick("servicios_movimiento").length ? pick("servicios_movimiento") :
+    pick("serviciosMovimiento").length ? pick("serviciosMovimiento") : [];
+
   const productos =
-    pick("detalles").length ? pick("detalles") :
+    pick("articulos_stock").length ? pick("articulos_stock") :
+    pick("articulosStock").length ? pick("articulosStock") :
     pick("stock_productos").length ? pick("stock_productos") :
     pick("productos_stock").length ? pick("productos_stock") : [];
 
-  return { clientes: pick("clientes"), medios_pago, detalles, productos };
+  return { clientes: pick("clientes"), medios_pago, detalles, servicios, productos };
 }
 
 // ─── Detección de cheque desde medio de pago ───────────────────────────────────
@@ -488,10 +498,13 @@ function detectChequeTipo(nombre) {
 function buildEmptyRow(tipoItem = "servicio") {
   return {
     id: uid(),
-    tipo_item: tipoItem,
+    tipo_item: ["servicio", "producto", "detalle"].includes(tipoItem) ? tipoItem : "servicio",
+    id_servicio: NULL_OPTION,
+    id_articulo: NULL_OPTION,
     id_detalle: NULL_OPTION,
     id_stock_producto: NULL_OPTION,
     id_stock_variante: NULL_OPTION,
+    mueve_stock: 0,
     detalle: "",
     cantidad: 1,
     precio: 0,
@@ -513,9 +526,11 @@ function buildRowsFromInitialData(data) {
 
   const source = rawItems.length ? rawItems : [src];
   const rows = source.map((it) => {
+    const idServicio = getServicioId(it);
     const idStockProducto = getStockProductoId(it);
     const idStockVariante = getStockVarianteId(it);
-    const esProducto = Boolean(idStockProducto || idStockVariante);
+    const tipoDb = normalizeText(it?.tipo_item_db ?? it?.tipo_item ?? "");
+    const tipoInicial = idServicio || tipoDb === "servicio" ? "servicio" : (idStockProducto || idStockVariante || tipoDb === "articulo" || tipoDb === "producto" ? "producto" : "detalle");
     const cantidad = Number(it?.cantidad ?? 1) || 1;
     const precio = Number(it?.precio ?? it?.importe ?? 0) || 0;
     const ivaPct = Number(it?.iva_pct ?? it?.ivaPct ?? 0) || 0;
@@ -526,9 +541,12 @@ function buildRowsFromInitialData(data) {
       [producto, variante].filter(Boolean).join(" - ")
     );
     return {
-      ...buildEmptyRow(esProducto ? "producto" : "servicio"),
+      ...buildEmptyRow(tipoInicial),
+      id_servicio: idServicio ? String(idServicio) : NULL_OPTION,
+      id_articulo: idStockProducto ? String(idStockProducto) : NULL_OPTION,
       id_detalle: Number(it?.id_detalle || 0) > 0 ? String(Number(it.id_detalle)) : NULL_OPTION,
       id_stock_producto: idStockProducto ? String(idStockProducto) : NULL_OPTION,
+      mueve_stock: Number(it?.mueve_stock ?? 0) ? 1 : 0,
       id_stock_variante: idStockVariante ? String(idStockVariante) : NULL_OPTION,
       detalle: descripcion || [producto, variante].filter(Boolean).join(" - "),
       cantidad,
@@ -537,7 +555,7 @@ function buildRowsFromInitialData(data) {
       stock_disponible: getStockDisponible(it),
       sinStock: false,
     };
-  }).filter((r) => safeStr(r.detalle) || Number(r.id_detalle) > 0 || Number(r.id_stock_producto) > 0 || r.precio > 0);
+  }).filter((r) => safeStr(r.detalle) || Number(r.id_servicio) > 0 || Number(r.id_articulo) > 0 || Number(r.id_detalle) > 0 || Number(r.id_stock_producto) > 0 || r.precio > 0);
 
   return rows.length ? rows : [buildEmptyRow("servicio")];
 }
@@ -1051,6 +1069,10 @@ export default function ModalNuevoIngreso({
     () => (Array.isArray(localLists.detalles) ? localLists.detalles : []),
     [localLists.detalles]
   );
+  const serviciosList = useMemo(
+    () => (Array.isArray(localLists.servicios) ? localLists.servicios : []),
+    [localLists.servicios]
+  );
   const productosList = useMemo(
     () => (Array.isArray(localLists.productos) ? localLists.productos : []),
     [localLists.productos]
@@ -1366,7 +1388,7 @@ export default function ModalNuevoIngreso({
   );
   const addRow = useCallback(
     (tipoItem = "servicio") =>
-      setRows((p) => [...p, buildEmptyRow(tipoItem === "producto" ? "producto" : "servicio")]),
+      setRows((p) => [...p, buildEmptyRow(["servicio", "producto", "detalle"].includes(tipoItem) ? tipoItem : "servicio")]),
     []
   );
   const removeRow = useCallback(
@@ -1380,11 +1402,14 @@ export default function ModalNuevoIngreso({
 
   const handleTipoItemChange = useCallback(
     (id, tipoItem) => {
-      const tipo = tipoItem === "producto" ? "producto" : "servicio";
+      const tipo = ["servicio", "producto", "detalle"].includes(tipoItem) ? tipoItem : "servicio";
       updateRow(id, {
         tipo_item: tipo,
+        id_servicio: NULL_OPTION,
+        id_articulo: NULL_OPTION,
         id_detalle: NULL_OPTION,
         id_stock_producto: NULL_OPTION,
+        mueve_stock: 0,
         id_stock_variante: NULL_OPTION,
         detalle: "",
         cantidad: 1,
@@ -1435,9 +1460,12 @@ export default function ModalNuevoIngreso({
         if (data.exito && detalleCreado) {
           const precio = safeNumber(detalleCreado?.precio || 0);
           updateRow(currentRowIdForNewDesc, {
-            tipo_item: "servicio",
+            tipo_item: "detalle",
+            id_servicio: NULL_OPTION,
+            id_articulo: NULL_OPTION,
             id_detalle: String(detalleCreado.id_detalle || detalleCreado.id || ""),
             id_stock_producto: NULL_OPTION,
+            mueve_stock: 0,
             id_stock_variante: NULL_OPTION,
             detalle: detalleCreado.nombre || nombreDescripcion,
             precio,
@@ -1465,9 +1493,12 @@ export default function ModalNuevoIngreso({
       }
       const precio = safeNumber(item?.precio || 0);
       updateRow(rowId, {
-        tipo_item: "servicio",
+        tipo_item: "detalle",
+        id_servicio: NULL_OPTION,
+        id_articulo: NULL_OPTION,
         id_detalle: String(getDetalleId(item) ?? ""),
         id_stock_producto: NULL_OPTION,
+        mueve_stock: 0,
         id_stock_variante: NULL_OPTION,
         detalle: optionLabel(item),
         precio,
@@ -1479,20 +1510,41 @@ export default function ModalNuevoIngreso({
     [updateRow, showToast, handleCrearNuevaDescripcion]
   );
 
+  const handleSelectServicio = useCallback((servicio, rowId) => {
+    const idServicio = getServicioId(servicio);
+    const stockDisponible = getStockDisponible(servicio);
+    const nombre = getProductoNombre(servicio);
+    updateRow(rowId, {
+      tipo_item: "servicio",
+      id_servicio: idServicio ? String(idServicio) : NULL_OPTION,
+      id_articulo: NULL_OPTION,
+      id_detalle: NULL_OPTION,
+      id_stock_producto: NULL_OPTION,
+      id_stock_variante: NULL_OPTION,
+      mueve_stock: Number(servicio?.mueve_stock ?? 0) ? 1 : 0,
+      detalle: nombre,
+      precio: getPrecioVenta(servicio),
+      stock_disponible: stockDisponible,
+      sinStock: stockDisponible !== null && stockDisponible <= 0,
+      cantidad: stockDisponible !== null && stockDisponible <= 0 ? "" : 1,
+    });
+  }, [updateRow]);
+
   const handleSelectProducto = useCallback((producto, rowId) => {
     // Las listas globales exponen el producto base como `id`; una selección de
     // variante ya trae `id_stock_producto`. Se acepta el alias sólo dentro del
     // selector de stock para no confundirlo con el id de un detalle/servicio.
-    const idStockProducto = getStockProductoId(producto) || (
-      Number(producto?.id || 0) > 0 ? Number(producto.id) : null
-    );
+    const idStockProducto = getStockProductoId(producto);
     const idStockVariante = getStockVarianteId(producto);
     const stockDisponible = getStockDisponible(producto);
     const nombre = getProductoNombre(producto);
     updateRow(rowId, {
       tipo_item: "producto",
+      id_servicio: NULL_OPTION,
+      id_articulo: idStockProducto ? String(idStockProducto) : NULL_OPTION,
       id_detalle: NULL_OPTION,
       id_stock_producto: idStockProducto ? String(idStockProducto) : NULL_OPTION,
+      mueve_stock: 1,
       id_stock_variante: idStockVariante ? String(idStockVariante) : NULL_OPTION,
       detalle: nombre,
       precio: getPrecioVenta(producto),
@@ -1669,6 +1721,8 @@ export default function ModalNuevoIngreso({
     rowsCalc.forEach((r, i) => {
       const touched =
         safeStr(r.detalle) !== "" ||
+        String(r.id_servicio || "").trim() !== "" ||
+        String(r.id_articulo || "").trim() !== "" ||
         String(r.id_detalle || "").trim() !== "" ||
         String(r.id_stock_producto || "").trim() !== "" ||
         String(r.id_stock_variante || "").trim() !== "" ||
@@ -1677,12 +1731,15 @@ export default function ModalNuevoIngreso({
       if (!touched) return;
       const issues = [];
       if (!safeStr(r.detalle)) issues.push("falta la descripción");
-      if (r.tipo_item === "producto" && !(Number(r.id_stock_producto || 0) > 0)) {
-        issues.push("falta seleccionar un producto");
+      if (r.tipo_item === "servicio" && !(Number(r.id_servicio || 0) > 0)) {
+        issues.push("falta seleccionar un servicio");
+      }
+      if (r.tipo_item === "producto" && !(Number(r.id_articulo || r.id_stock_producto || 0) > 0)) {
+        issues.push("falta seleccionar stock");
       }
       if (!(safeNumber(r.cantidad) > 0)) issues.push("la cantidad debe ser > 0");
       if (
-        r.tipo_item === "producto" &&
+        r.tipo_item !== "detalle" &&
         r.stock_disponible !== null &&
         safeNumber(r.cantidad) > Number(r.stock_disponible) + 0.0001
       ) {
@@ -1695,7 +1752,7 @@ export default function ModalNuevoIngreso({
     const usable = rowsCalc.filter(
       (r) =>
         safeStr(r.detalle) !== "" &&
-        (r.tipo_item !== "producto" || Number(r.id_stock_producto || 0) > 0) &&
+        ((r.tipo_item === "servicio" && Number(r.id_servicio || 0) > 0) || (r.tipo_item === "producto" && Number(r.id_articulo || r.id_stock_producto || 0) > 0) || r.tipo_item === "detalle") &&
         safeNumber(r.cantidad) > 0 &&
         safeNumber(r.precio) > 0 &&
         safeNumber(r.total) > 0
@@ -1721,7 +1778,7 @@ export default function ModalNuevoIngreso({
     const usableRows = rowsCalc.filter(
       (r) =>
         safeStr(r.detalle) !== "" &&
-        (r.tipo_item !== "producto" || Number(r.id_stock_producto || 0) > 0) &&
+        ((r.tipo_item === "servicio" && Number(r.id_servicio || 0) > 0) || (r.tipo_item === "producto" && Number(r.id_articulo || r.id_stock_producto || 0) > 0) || r.tipo_item === "detalle") &&
         safeNumber(r.cantidad) > 0 &&
         safeNumber(r.precio) > 0 &&
         safeNumber(r.total) > 0
@@ -1783,11 +1840,13 @@ export default function ModalNuevoIngreso({
       total_general: safeNumber(totalFinal),
       items: usableRows.map((x, idx) => ({
         orden: idx + 1,
-        tipo_item: x.tipo_item === "producto" ? "producto" : "servicio",
-        mueve_stock: x.tipo_item === "producto" ? 1 : 0,
-        id_detalle: x.tipo_item === "producto" ? null : (Number(x.id_detalle || 0) || null),
-        id_stock_producto: x.tipo_item === "producto" ? (Number(x.id_stock_producto || 0) || null) : null,
-        id_stock_variante: x.tipo_item === "producto" ? (Number(x.id_stock_variante || 0) || null) : null,
+        tipo_item: x.tipo_item === "servicio" ? "SERVICIO" : (x.tipo_item === "producto" ? "ARTICULO" : "DETALLE"),
+        mueve_stock: x.tipo_item === "producto" ? 1 : Number(x.mueve_stock || 0),
+        id_servicio: x.tipo_item === "servicio" ? (Number(x.id_servicio || 0) || null) : null,
+        id_articulo: x.tipo_item === "producto" ? (Number(x.id_articulo || x.id_stock_producto || 0) || null) : null,
+        id_detalle: x.tipo_item === "detalle" ? (Number(x.id_detalle || 0) || null) : null,
+        id_stock_producto: x.tipo_item === "producto" ? (Number(x.id_articulo || x.id_stock_producto || 0) || null) : null,
+        id_stock_variante: null,
         detalle: safeStr(x.detalle),
         descripcion: safeStr(x.detalle),
         concepto: safeStr(x.detalle),
@@ -2310,7 +2369,7 @@ export default function ModalNuevoIngreso({
               <section className="gm-movement-main gm-table gm-table--movement oi-table">
                 <div className={`gm-table-head${hasScroll ? " gm-table-head--body-scroll" : ""}`}>
                   <div className="gm-table-th" style={{ paddingLeft: 10 }}>
-                    Tipo / detalle o producto
+                    Tipo / servicio, stock o detalle
                   </div>
                   <div className="gm-table-th">Cant.</div>
                   <div className="gm-table-th right">Importe</div>
@@ -2333,20 +2392,37 @@ export default function ModalNuevoIngreso({
                         <div className="gm-table-cell gm-table-cell--detail">
                           <select
                             className="oi-item-kind"
-                            value={r.tipo_item === "producto" ? "producto" : "servicio"}
+                            value={["servicio", "producto", "detalle"].includes(r.tipo_item) ? r.tipo_item : "servicio"}
                             onChange={(e) => handleTipoItemChange(r.id, e.target.value)}
                             disabled={saving}
                             aria-label={`Tipo de ítem fila ${rowIndex + 1}`}
                           >
-                            <option value="servicio">Detalle / servicio (sin stock)</option>
-                            <option value="producto">Producto (mueve stock)</option>
+                            <option value="servicio">Servicio del catálogo</option>
+                            <option value="producto">Stock / material / insumo</option>
+                            <option value="detalle">Detalle manual</option>
                           </select>
-                          {r.tipo_item === "producto" ? (
+                          {r.tipo_item === "servicio" ? (
+                            <ProductStockAutocomplete
+                              value={r.detalle}
+                              onChange={(val) => updateRow(r.id, { detalle: val, id_servicio: NULL_OPTION, mueve_stock: 0, precio: 0, stock_disponible: null, sinStock: false })}
+                              onSelect={(item) => handleSelectServicio(item, r.id)}
+                              options={serviciosList}
+                              catalogKind="service"
+                              showKindToggle={false}
+                              placeholder="Buscá un servicio…"
+                              disabled={saving}
+                              showAllOnFocus={true}
+                              maxItems={18}
+                              inputClassName="gm-cell-input"
+                              emptyMessage="No hay servicios disponibles"
+                            />
+                          ) : r.tipo_item === "producto" ? (
                             <ProductStockAutocomplete
                               value={r.detalle}
                               onChange={(val) =>
                                 updateRow(r.id, {
                                   detalle: val,
+                                  id_articulo: NULL_OPTION,
                                   id_detalle: NULL_OPTION,
                                   id_stock_producto: NULL_OPTION,
                                   id_stock_variante: NULL_OPTION,
@@ -2357,12 +2433,14 @@ export default function ModalNuevoIngreso({
                               }
                               onSelect={(item) => handleSelectProducto(item, r.id)}
                               options={productosList}
-                              placeholder="Escribí o buscá un producto…"
+                              catalogKind="stock"
+                              showKindToggle={false}
+                              placeholder="Buscá stock…"
                               disabled={saving}
                               showAllOnFocus={true}
                               maxItems={18}
                               inputClassName="gm-cell-input"
-                              emptyMessage="No hay productos con stock"
+                              emptyMessage="No hay artículos con stock"
                             />
                           ) : (
                             <GlobalAutocomplete
@@ -2370,6 +2448,8 @@ export default function ModalNuevoIngreso({
                               onChange={(val) =>
                                 updateRow(r.id, {
                                   detalle: val,
+                                  id_servicio: NULL_OPTION,
+                                  id_articulo: NULL_OPTION,
                                   id_detalle: NULL_OPTION,
                                   id_stock_producto: NULL_OPTION,
                                   id_stock_variante: NULL_OPTION,
@@ -2388,7 +2468,7 @@ export default function ModalNuevoIngreso({
                               inputClassName="gm-cell-input"
                             />
                           )}
-                          {r.tipo_item === "producto" && r.stock_disponible !== null && (
+                          {r.tipo_item !== "detalle" && r.stock_disponible !== null && (
                             <small className="oi-stock-hint">Stock disponible: {r.stock_disponible}</small>
                           )}
                         </div>
@@ -2398,8 +2478,8 @@ export default function ModalNuevoIngreso({
                             className="gm-cell-input gm-cell-input--center"
                             type="number"
                             min="0.01"
-                            max={r.tipo_item === "producto" && r.stock_disponible !== null ? r.stock_disponible : undefined}
-                            step="0.01"
+                            max={r.tipo_item !== "detalle" && r.stock_disponible !== null ? r.stock_disponible : undefined}
+                            step="0.000001"
                             value={r.cantidad}
                             onChange={(e) =>
                               handleCantidadChange(
@@ -2407,7 +2487,7 @@ export default function ModalNuevoIngreso({
                                 e.target.value === "" ? "" : Number(e.target.value)
                               )
                             }
-                            disabled={saving || Boolean(r.tipo_item === "producto" && r.sinStock)}
+                            disabled={saving || Boolean(r.tipo_item !== "detalle" && r.sinStock)}
                             placeholder=""
                             title=""
                             style={{ width: "100%" }}

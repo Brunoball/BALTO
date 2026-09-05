@@ -110,6 +110,8 @@ function composeProductoVariante(productName, variantName) {
 function getItemDetalleText(item) {
   const raw = item && typeof item === "object" ? item : {};
   const producto = firstFilled(
+    raw.servicio_nombre,
+    raw.articulo_nombre,
     raw.stock_producto_nombre,
     raw.producto_base_nombre,
     raw.producto_nombre,
@@ -163,7 +165,13 @@ function getCantidadProductos(row) {
   const match = resumen.match(/^(\d+)\s+PRODUCTO(S)?$/);
   if (match) return Number(match[1]);
 
-  const tieneProducto = safeStr(row?.id_stock_producto || row?.idStockProducto || row?.producto_nombre || row?.stock_producto_nombre);
+  const tieneProducto = safeStr(
+    row?.id_servicio || row?.idServicio ||
+    row?.id_articulo || row?.idArticulo ||
+    row?.id_stock_producto || row?.idStockProducto ||
+    row?.servicio_nombre || row?.articulo_nombre ||
+    row?.producto_nombre || row?.stock_producto_nombre
+  );
   if (tieneProducto) return 1;
 
   if (resumenOriginal && !isResumenProductosText(resumenOriginal) && resumenOriginal !== "Producto / Servicio") return 1;
@@ -183,6 +191,8 @@ export function getDetalleMovimiento(row) {
     row?.detalle_original ||
       row?.descripcion_original ||
       row?.concepto_original ||
+      row?.servicio_nombre ||
+      row?.articulo_nombre ||
       row?.producto_nombre ||
       row?.stock_producto_nombre
   );

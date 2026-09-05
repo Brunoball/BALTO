@@ -16,9 +16,36 @@ function safeStr(v) {
 }
 
 
-function getProductId(p) {
-  const n = Number(p?.id_stock_producto ?? p?.idStockProducto ?? p?.stock_producto_id ?? p?.id_producto ?? p?.id ?? 0);
+function positiveId(v) {
+  const n = Number(v ?? 0);
   return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+function getServiceId(p) {
+  return positiveId(p?.id_servicio ?? p?.idServicio ?? p?.servicio_id);
+}
+
+function getProductId(p) {
+  // En BALTO Servicios "producto" es un artículo de servicio_articulos.
+  // No usamos p.id como fallback porque servicio y artículo pueden compartir número.
+  return positiveId(
+    p?.id_articulo ?? p?.idArticulo ?? p?.articulo_id ??
+    p?.id_stock_producto ?? p?.idStockProducto ?? p?.stock_producto_id ?? p?.id_producto
+  );
+}
+
+function getItemKind(p) {
+  const declared = safeStr(p?.item_kind || p?.tipo_item || p?.tipoItem).toLowerCase();
+  if (getServiceId(p) || declared === "servicio" || declared === "service") return "service";
+  if (getProductId(p) || ["articulo", "stock", "producto", "material", "insumo"].includes(declared)) return "stock";
+  return "other";
+}
+
+function getCatalogKey(p) {
+  const kind = getItemKind(p);
+  if (kind === "service") return `s:${getServiceId(p) || safeStr(p?.nombre)}`;
+  if (kind === "stock") return `a:${getProductId(p) || safeStr(p?.nombre)}`;
+  return `o:${positiveId(p?.id) || safeStr(p?.nombre)}`;
 }
 
 function getVariantId(v) {
@@ -55,6 +82,16 @@ function hasPositiveStock(x) {
 
 function filterAvailableProduct(product, allowOutOfStock = false) {
   if (!product) return null;
+  const kind = getItemKind(product);
+
+  // Un servicio sin receta no tiene límite de stock calculable (null) y sigue
+  // siendo vendible. Si usa insumos, el backend informa cuántos servicios pueden
+  // realizarse con el stock actual y allí sí respetamos el 0.
+  if (kind === "service") {
+    const stock = getStock(product);
+    if (!allowOutOfStock && stock !== null && stock <= 0) return null;
+    return { ...product, variantes: [], tiene_variantes: 0 };
+  }
 
   const activeVariants = Array.isArray(product?.variantes)
     ? product.variantes.filter((v) => Number(v?.activo ?? 1) !== 0)
@@ -126,14 +163,18 @@ export default function ProductStockAutocomplete({
   onChange,
   onSelect,
   options = [],
-  placeholder = "Escribí o buscá un producto…",
+  placeholder = "Escribí o buscá…",
   disabled = false,
   showAllOnFocus = false,
   maxItems = 18,
   className = "",
   inputClassName = "",
-  emptyMessage = "Sin productos",
+  emptyMessage = "Sin resultados",
   allowOutOfStock = false,
+  catalogKind = "all", // all | service | stock
+  defaultKind = "service",
+  showKindToggle = true,
+  onKindChange,
   name,
   id,
 }) {
@@ -145,11 +186,32 @@ export default function ProductStockAutocomplete({
   const [activeKey, setActiveKey] = useState("");
   const [expanded, setExpanded] = useState(() => new Set());
   const [listPos, setListPos] = useState(null);
+  const [kindMode, setKindMode] = useState(defaultKind === "stock" ? "stock" : "service");
 
+  const optionKinds = useMemo(() => {
+    const arr = Array.isArray(options) ? options : [];
+    return {
+      service: arr.some((p) => getItemKind(p) === "service"),
+      stock: arr.some((p) => getItemKind(p) === "stock"),
+    };
+  }, [options]);
+
+  useEffect(() => {
+    if (catalogKind !== "all") return;
+    if (kindMode === "service" && !optionKinds.service && optionKinds.stock) setKindMode("stock");
+    if (kindMode === "stock" && !optionKinds.stock && optionKinds.service) setKindMode("service");
+  }, [catalogKind, kindMode, optionKinds]);
+
+  const effectiveKind = catalogKind === "all" ? kindMode : catalogKind;
   const availableOptions = useMemo(() => {
     const arr = Array.isArray(options) ? options : [];
-    return arr.map((p) => filterAvailableProduct(p, allowOutOfStock)).filter(Boolean);
-  }, [options, allowOutOfStock]);
+    return arr
+      .filter((p) => effectiveKind === "all" || getItemKind(p) === effectiveKind)
+      .map((p) => filterAvailableProduct(p, allowOutOfStock))
+      .filter(Boolean);
+  }, [options, allowOutOfStock, effectiveKind]);
+
+  const canToggleKind = catalogKind === "all" && showKindToggle && optionKinds.service && optionKinds.stock;
 
   const q = normalizeText(value);
 
@@ -161,14 +223,14 @@ export default function ProductStockAutocomplete({
   const visibleKeys = useMemo(() => {
     const keys = [];
     filteredProducts.forEach((p) => {
-      const pKey = `p:${getProductId(p) || getProductName(p)}`;
+      const pKey = getCatalogKey(p);
       keys.push(pKey);
       const variants = Array.isArray(p?.variantes) ? p.variantes : [];
       const variantsMatch = q ? variants.filter((v) => normalizeText([getVariantName(v), v?.sku, getProductName(p)].filter(Boolean).join(" ")).includes(q)) : variants;
       const productMatches = !q || normalizeText([getProductName(p), p?.sku].filter(Boolean).join(" ")).includes(q);
       const shouldOpen = expanded.has(pKey) || (q && variantsMatch.length > 0 && !productMatches);
       if (shouldOpen) {
-        variantsMatch.forEach((v) => keys.push(`v:${getProductId(p)}:${getVariantId(v) || getVariantName(v)}`));
+        variantsMatch.forEach((v) => keys.push(`${getCatalogKey(p)}:v:${getVariantId(v) || getVariantName(v)}`));
       }
     });
     return keys;
@@ -246,7 +308,7 @@ export default function ProductStockAutocomplete({
   }, [value]);
 
   const toggleProduct = useCallback((product) => {
-    const pKey = `p:${getProductId(product) || getProductName(product)}`;
+    const pKey = getCatalogKey(product);
     setExpanded((prev) => {
       const next = new Set(prev);
       if (next.has(pKey)) next.delete(pKey);
@@ -256,7 +318,7 @@ export default function ProductStockAutocomplete({
   }, []);
 
   const selectProduct = useCallback((product) => {
-    const variants = Array.isArray(product?.variantes)
+    const variants = getItemKind(product) === "stock" && Array.isArray(product?.variantes)
       ? product.variantes.filter((v) => Number(v?.activo ?? 1) !== 0 && (allowOutOfStock || hasPositiveStock(v)))
       : [];
     if (variants.length > 0) {
@@ -275,14 +337,14 @@ export default function ProductStockAutocomplete({
   const selectActive = useCallback(() => {
     if (!safeActiveKey) return;
     for (const p of filteredProducts) {
-      const pKey = `p:${getProductId(p) || getProductName(p)}`;
+      const pKey = getCatalogKey(p);
       if (pKey === safeActiveKey) {
         selectProduct(p);
         return;
       }
       const variants = Array.isArray(p?.variantes) ? p.variantes : [];
       for (const v of variants) {
-        const vKey = `v:${getProductId(p)}:${getVariantId(v) || getVariantName(v)}`;
+        const vKey = `${getCatalogKey(p)}:v:${getVariantId(v) || getVariantName(v)}`;
         if (vKey === safeActiveKey) {
           selectVariant(p, v);
           return;
@@ -342,7 +404,7 @@ export default function ProductStockAutocomplete({
       onMouseDown={(e) => e.preventDefault()}
     >
       {filteredProducts.length > 0 ? filteredProducts.map((product) => {
-        const pKey = `p:${getProductId(product) || getProductName(product)}`;
+        const pKey = getCatalogKey(product);
         const variants = Array.isArray(product?.variantes)
           ? product.variantes.filter((v) => Number(v?.activo ?? 1) !== 0 && (allowOutOfStock || hasPositiveStock(v)))
           : [];
@@ -364,6 +426,11 @@ export default function ProductStockAutocomplete({
             >
               <span className="psa-item-main">
                 <span className="psa-label">{getProductName(product)}</span>
+                <span className="psa-meta">
+                  {getItemKind(product) === "service"
+                    ? `Servicio${Number(product?.cantidad_componentes || 0) > 0 ? ` · ${Number(product.cantidad_componentes)} insumo(s)` : ""}`
+                    : `Stock${getStock(product) !== null ? `: ${getStock(product)}` : ""}`}
+                </span>
               </span>
               {variants.length ? <span className="psa-arrow">{isExpanded ? "▾" : "▸"}</span> : null}
             </button>
@@ -371,7 +438,7 @@ export default function ProductStockAutocomplete({
             {renderedVariants.length > 0 ? (
               <div className="psa-children">
                 {renderedVariants.map((variant) => {
-                  const vKey = `v:${getProductId(product)}:${getVariantId(variant) || getVariantName(variant)}`;
+                  const vKey = `${getCatalogKey(product)}:v:${getVariantId(variant) || getVariantName(variant)}`;
                   return (
                     <button
                       type="button"
@@ -400,6 +467,37 @@ export default function ProductStockAutocomplete({
 
   return (
     <div ref={wrapRef} className={["psa-wrap", className].filter(Boolean).join(" ")}>
+      <div className="psa-control-line">
+        {canToggleKind ? (
+          <div className="psa-kind-toggle" role="group" aria-label="Tipo de ítem">
+            <button
+              type="button"
+              className={kindMode === "service" ? "is-active" : ""}
+              disabled={disabled}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => {
+                if (kindMode === "service") return;
+                setKindMode("service");
+                onChange?.("");
+                onKindChange?.("service");
+                closeList();
+              }}
+            >Servicio</button>
+            <button
+              type="button"
+              className={kindMode === "stock" ? "is-active" : ""}
+              disabled={disabled}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => {
+                if (kindMode === "stock") return;
+                setKindMode("stock");
+                onChange?.("");
+                onKindChange?.("stock");
+                closeList();
+              }}
+            >Stock</button>
+          </div>
+        ) : null}
       <input
         ref={inputRef}
         id={id}
@@ -426,6 +524,7 @@ export default function ProductStockAutocomplete({
           setActiveKey("");
         }}
       />
+      </div>
       {dropdown}
     </div>
   );

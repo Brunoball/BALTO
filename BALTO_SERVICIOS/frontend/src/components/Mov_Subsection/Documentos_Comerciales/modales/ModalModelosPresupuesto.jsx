@@ -49,8 +49,12 @@ function moneyARS(v) {
   }
 }
 
+function getServicioId(d) {
+  const n = Number(d?.id_servicio ?? d?.idServicio ?? d?.servicio_id ?? 0);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
 function getStockProductoId(d) {
-  const n = Number(d?.id_stock_producto ?? d?.idStockProducto ?? d?.id_producto ?? d?.id ?? 0);
+  const n = Number(d?.id_articulo ?? d?.idArticulo ?? d?.articulo_id ?? d?.id_stock_producto ?? d?.idStockProducto ?? d?.id_producto ?? 0);
   return Number.isFinite(n) && n > 0 ? n : null;
 }
 
@@ -87,6 +91,9 @@ function getPrecio(d) {
 function emptyRow() {
   return {
     localId: uid(),
+    tipo_item: "MANUAL",
+    id_servicio: null,
+    id_articulo: null,
     id_detalle: null,
     id_stock_producto: null,
     id_stock_variante: null,
@@ -101,9 +108,12 @@ function emptyRow() {
 function rowFromItem(item) {
   return {
     localId: uid(),
+    tipo_item: String(item?.tipo_item || item?.tipo_item_db || "MANUAL").toUpperCase(),
+    id_servicio: Number(item?.id_servicio || 0) || null,
+    id_articulo: Number(item?.id_articulo || item?.id_stock_producto || 0) || null,
     id_detalle: Number(item?.id_detalle || 0) || null,
-    id_stock_producto: Number(item?.id_stock_producto || 0) || null,
-    id_stock_variante: Number(item?.id_stock_variante || 0) || null,
+    id_stock_producto: Number(item?.id_articulo || item?.id_stock_producto || 0) || null,
+    id_stock_variante: null,
     descripcion: upperStr(item?.descripcion || item?.detalle || item?.nombre),
     codigo: upperStr(item?.codigo || item?.sku),
     cantidad: safeNumber(item?.cantidad) || 1,
@@ -115,7 +125,11 @@ function rowFromItem(item) {
 function normalizeLists(lists) {
   const src = lists && typeof lists === "object" ? lists : {};
   const data = src.listas && typeof src.listas === "object" ? src.listas : src;
-  return Array.isArray(data.detalles) ? data.detalles : Array.isArray(data.productos) ? data.productos : [];
+  const pick = (k) => (Array.isArray(data?.[k]) ? data[k] : []);
+  const servicios = pick("servicios_movimiento").length ? pick("servicios_movimiento") : pick("serviciosMovimiento");
+  const articulos = pick("articulos_stock_todos").length ? pick("articulos_stock_todos") : (pick("articulos_stock").length ? pick("articulos_stock") : pick("stock_productos"));
+  const catalogoCompleto = [...servicios, ...articulos];
+  return catalogoCompleto.length ? catalogoCompleto : (Array.isArray(data.detalles) ? data.detalles : Array.isArray(data.productos) ? data.productos : []);
 }
 
 function buildHeaders(json = true) {
@@ -249,10 +263,15 @@ export default function ModalModelosPresupuesto({ open, lists, onClose, onToast,
   }, []);
 
   const selectStock = useCallback((localId, option) => {
+    const idServicio = getServicioId(option);
+    const idArticulo = getStockProductoId(option);
     updateRow(localId, {
+      tipo_item: idServicio ? "SERVICIO" : "ARTICULO",
+      id_servicio: idServicio,
+      id_articulo: idArticulo,
       id_detalle: null,
-      id_stock_producto: getStockProductoId(option),
-      id_stock_variante: getStockVarianteId(option),
+      id_stock_producto: idArticulo,
+      id_stock_variante: null,
       descripcion: getNombre(option),
       codigo: getCodigo(option),
       precio: getPrecio(option),
@@ -270,9 +289,12 @@ export default function ModalModelosPresupuesto({ open, lists, onClose, onToast,
         const subtotal = cantidad * precio;
         const ivaMonto = subtotal * ivaPct / 100;
         return {
+          tipo_item: r.id_servicio ? "SERVICIO" : (r.id_articulo || r.id_stock_producto ? "ARTICULO" : (r.id_detalle ? "DETALLE" : "MANUAL")),
+          id_servicio: r.id_servicio || null,
+          id_articulo: r.id_articulo || r.id_stock_producto || null,
           id_detalle: r.id_detalle || null,
-          id_stock_producto: r.id_stock_producto || null,
-          id_stock_variante: r.id_stock_variante || null,
+          id_stock_producto: r.id_articulo || r.id_stock_producto || null,
+          id_stock_variante: null,
           descripcion: upperStr(r.descripcion),
           detalle: upperStr(r.descripcion),
           codigo: upperStr(r.codigo),
@@ -562,12 +584,13 @@ export default function ModalModelosPresupuesto({ open, lists, onClose, onToast,
                         <div className="gm-table-cell gm-table-cell--detail">
                           <ProductStockAutocomplete
                             value={row.descripcion}
-                            onChange={(value) => updateRow(row.localId, { descripcion: upperInput(value), id_detalle: null, id_stock_producto: null, id_stock_variante: null, codigo: "" })}
+                            onChange={(value) => updateRow(row.localId, { descripcion: upperInput(value), tipo_item: "MANUAL", id_servicio: null, id_articulo: null, id_detalle: null, id_stock_producto: null, id_stock_variante: null, codigo: "" })}
                             onSelect={(option) => selectStock(row.localId, option)}
                             options={stockOptions}
-                            allowOutOfStock={form.es_personalizado}
+                            defaultKind={row.id_articulo || row.id_stock_producto ? "stock" : "service"}
+                            allowOutOfStock={true}
                             showAllOnFocus={true}
-                            placeholder="Buscar en stock o escribir manualmente…"
+                            placeholder="Buscar servicio/stock o escribir manualmente…"
                             emptyMessage="Sin coincidencias. Podés dejar el texto escrito."
                             disabled={saving}
                             inputClassName="gm-cell-input"
@@ -578,7 +601,7 @@ export default function ModalModelosPresupuesto({ open, lists, onClose, onToast,
                             className="gm-cell-input gm-cell-input--center"
                             type="number"
                             min="0.01"
-                            step="0.01"
+                            step="0.000001"
                             value={row.cantidad}
                             onChange={(e) => updateRow(row.localId, { cantidad: e.target.value })}
                             disabled={saving}

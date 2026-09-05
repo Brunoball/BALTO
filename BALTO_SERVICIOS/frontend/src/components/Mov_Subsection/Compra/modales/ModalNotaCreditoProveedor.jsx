@@ -28,8 +28,6 @@ import {
 const MOTIVOS = [
   ["DEVOLUCION_MERCADERIA", "DEVOLUCIÓN DE MERCADERÍA AL PROVEEDOR"],
   ["ANULACION_TOTAL", "ANULACIÓN TOTAL DE LA COMPRA"],
-  ["DESCUENTO", "DESCUENTO DEL PROVEEDOR"],
-  ["BONIFICACION", "BONIFICACIÓN DEL PROVEEDOR"],
   ["DIFERENCIA_PRECIO", "DIFERENCIA DE PRECIO"],
   ["OTRO", "OTRO AJUSTE"],
 ];
@@ -42,8 +40,6 @@ const IVA_OPTIONS = [
 ];
 
 const MOTIVOS_AJUSTE_SIN_STOCK = new Set([
-  "DESCUENTO",
-  "BONIFICACION",
   "DIFERENCIA_PRECIO",
   "OTRO",
 ]);
@@ -162,7 +158,7 @@ export default function ModalNotaCreditoProveedor({
   const [ajuste, setAjuste] = useState("");
   const [ivaAjuste, setIvaAjuste] = useState("0");
   const [descripcionAjuste, setDescripcionAjuste] = useState(
-    "DESCUENTO / BONIFICACIÓN",
+    "AJUSTE DE NOTA DE CRÉDITO",
   );
   const [archivo, setArchivo] = useState(null);
   const [openPreview, setOpenPreview] = useState(false);
@@ -237,7 +233,7 @@ export default function ModalNotaCreditoProveedor({
     setFecha(todayISO());
     setAjuste("");
     setIvaAjuste("0");
-    setDescripcionAjuste("DESCUENTO / BONIFICACIÓN");
+    setDescripcionAjuste("AJUSTE DE NOTA DE CRÉDITO");
     setArchivo(null);
     setOpenPreview(false);
     if (fileRef.current) fileRef.current.value = "";
@@ -275,12 +271,10 @@ export default function ModalNotaCreditoProveedor({
         previous.map((item) => ({ ...item, cantidad: "" })),
       );
       const descriptions = {
-        DESCUENTO: "DESCUENTO DEL PROVEEDOR",
-        BONIFICACION: "BONIFICACIÓN DEL PROVEEDOR",
         DIFERENCIA_PRECIO: "DIFERENCIA DE PRECIO",
         OTRO: "OTRO AJUSTE",
       };
-      setDescripcionAjuste(descriptions[motivo] || "DESCUENTO / BONIFICACIÓN");
+      setDescripcionAjuste(descriptions[motivo] || "AJUSTE DE NOTA DE CRÉDITO");
       return;
     }
 
@@ -374,12 +368,10 @@ export default function ModalNotaCreditoProveedor({
         items: selected.map((item) => ({
           id_item_origen: item.id_item_origen,
           cantidad: item.cantidad,
-          // En una devolución de compra, el producto sale del stock siempre.
-          afecta_stock: true,
         })),
         importe_ajuste: ajusteN,
         iva_pct_ajuste: Math.max(0, num(ivaAjuste)),
-        descripcion_ajuste: descripcionAjuste || "DESCUENTO / BONIFICACIÓN",
+        descripcion_ajuste: descripcionAjuste || "AJUSTE DE NOTA DE CRÉDITO",
       };
 
       const response = await comprasFetch(`${API}?action=compras_nota_credito_crear`, {
@@ -747,7 +739,7 @@ export default function ModalNotaCreditoProveedor({
                                     type="number"
                                     min="0"
                                     max={item.disponible}
-                                    step="0.001"
+                                    step="0.000001"
                                     value={item.cantidad}
                                     disabled={
                                       esAnulacionTotal || item.disponible <= 0

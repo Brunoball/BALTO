@@ -281,6 +281,8 @@ function composeProductoVariante(productName, variantName) {
 function getItemDetalleText(item) {
   const raw = item && typeof item === "object" ? item : {};
   const producto = firstFilled(
+    raw.servicio_nombre,
+    raw.articulo_nombre,
     raw.stock_producto_nombre,
     raw.producto_base_nombre,
     raw.producto_nombre,
@@ -323,7 +325,15 @@ function getCantidadProductosPresupuesto(row) {
   const match = detalle.toUpperCase().match(/^(\d+)\s+PRODUCTO(S)?$/);
   if (match) return Number(match[1]);
 
-  const tieneProducto = safeStr(row?.id_stock_producto || row?.stock_producto_nombre || row?.producto_nombre);
+  const tieneProducto = safeStr(
+    row?.id_servicio ||
+    row?.id_articulo ||
+    row?.id_stock_producto ||
+    row?.servicio_nombre ||
+    row?.articulo_nombre ||
+    row?.stock_producto_nombre ||
+    row?.producto_nombre
+  );
   if (tieneProducto) return 1;
 
   return 0;
@@ -350,21 +360,28 @@ function normalizePresupuestoItemForModal(it, idx = 0, idMovimiento = null) {
   const raw = it && typeof it === "object" ? it : {};
   const nombre =
     safeStr(raw.descripcion) ||
+    safeStr(raw.servicio_nombre) ||
+    safeStr(raw.articulo_nombre) ||
     safeStr(raw.detalle) ||
     safeStr(raw.detalle_nombre) ||
     safeStr(raw.producto_nombre) ||
     safeStr(raw.stock_producto_nombre) ||
     safeStr(raw.nombre) ||
-    "Producto / Servicio";
+    "Servicio / Stock";
 
   return {
     ...raw,
     id_item: raw.id_item ?? raw.id ?? idx + 1,
     id_movimiento: raw.id_movimiento ?? idMovimiento ?? null,
+    tipo_item: raw.tipo_item ?? raw.tipo_item_db ?? (raw.id_servicio ? "SERVICIO" : (raw.id_articulo || raw.id_stock_producto ? "ARTICULO" : "MANUAL")),
     id_detalle: raw.id_detalle ?? null,
-    id_stock_producto: raw.id_stock_producto ?? null,
+    id_servicio: raw.id_servicio ?? null,
+    id_articulo: raw.id_articulo ?? raw.id_stock_producto ?? null,
+    id_stock_producto: raw.id_stock_producto ?? raw.id_articulo ?? null,
+    servicio_nombre: safeStr(raw.servicio_nombre || ""),
+    articulo_nombre: safeStr(raw.articulo_nombre || raw.stock_producto_nombre || raw.producto_nombre || ""),
     producto_nombre: nombre,
-    stock_producto_nombre: safeStr(raw.stock_producto_nombre || raw.producto_nombre || ""),
+    stock_producto_nombre: safeStr(raw.stock_producto_nombre || raw.articulo_nombre || raw.producto_nombre || ""),
     detalle_nombre: safeStr(raw.detalle_nombre || raw.descripcion || raw.detalle || nombre),
     descripcion: safeStr(raw.descripcion || raw.detalle || nombre),
     cantidad: Number(raw.cantidad ?? 0) || 0,
@@ -511,16 +528,17 @@ function buildItemsFacturacionFromPresupuesto(items) {
     .filter((it) => Number(it?.total ?? 0) > 0 || Number(it?.cantidad ?? 0) > 0)
     .map((it, idx) => ({
       id: it?.id_item ?? it?.id ?? idx + 1,
+      tipo_item: safeStr(it?.tipo_item_db || it?.tipo_item || (it?.id_servicio ? "SERVICIO" : (it?.id_articulo || it?.id_stock_producto ? "ARTICULO" : "MANUAL"))).toUpperCase(),
       id_detalle: null,
-      id_stock_producto: Number(it?.id_stock_producto || 0) || null,
+      id_servicio: Number(it?.id_servicio || 0) || null,
+      id_articulo: Number(it?.id_articulo || it?.id_stock_producto || 0) || null,
+      id_stock_producto: Number(it?.id_articulo || it?.id_stock_producto || 0) || null,
       codigo: safeStr(it?.codigo || it?.sku || idx + 1),
-      descripcion: safeStr(it?.descripcion || it?.detalle || it?.detalle_nombre || it?.producto_nombre || it?.nombre || "Producto / Servicio"),
+      descripcion: safeStr(it?.descripcion || it?.servicio_nombre || it?.articulo_nombre || it?.detalle || it?.detalle_nombre || it?.producto_nombre || it?.nombre || "Servicio / Stock"),
       cantidad: Number(it?.cantidad || 0),
       unidad: "u",
       precio_unitario: Number(it?.precio ?? it?.precio_unitario ?? 0),
       precio: Number(it?.precio ?? it?.precio_unitario ?? 0),
-      bonif_pct: 0,
-      impBonif: 0,
       subtotal: Number(it?.subtotal ?? 0),
       ars: Number(it?.total ?? 0),
       iva_pct: Number(it?.iva_pct ?? 0),

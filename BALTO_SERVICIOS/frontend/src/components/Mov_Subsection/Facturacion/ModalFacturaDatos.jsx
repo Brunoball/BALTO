@@ -49,7 +49,6 @@ function buildItem() {
     descripcion: "",
     cantidad: "1",
     precio_unitario: "",
-    bonif_pct: "0",
     subtotal: 0,
   };
 }
@@ -57,10 +56,7 @@ function buildItem() {
 function calcSubtotal(item) {
   const cantidad = toNumber(item?.cantidad);
   const precio = toNumber(item?.precio_unitario);
-  const bonif = toNumber(item?.bonif_pct);
-  const bruto = cantidad * precio;
-  const descuento = bruto * (bonif / 100);
-  const subtotal = bruto - descuento;
+  const subtotal = cantidad * precio;
   return Number.isFinite(subtotal) ? subtotal : 0;
 }
 
@@ -108,7 +104,6 @@ export default function ModalFacturaDatos({
           descripcion: safeStr(it?.descripcion),
           cantidad: String(it?.cantidad ?? "1"),
           precio_unitario: String(it?.precio_unitario ?? it?.precio ?? ""),
-          bonif_pct: String(it?.bonif_pct ?? "0"),
           subtotal: Number(it?.subtotal || 0),
         }))
       );
@@ -144,7 +139,7 @@ export default function ModalFacturaDatos({
           ? {
               ...it,
               [field]:
-                field === "cantidad" || field === "precio_unitario" || field === "bonif_pct"
+                field === "cantidad" || field === "precio_unitario"
                   ? String(value).replace(/[^\d.,-]/g, "")
                   : value,
             }
@@ -209,9 +204,6 @@ export default function ModalFacturaDatos({
       if (toNumber(it.precio_unitario) <= 0) {
         return { ok: false, msg: "El precio unitario debe ser mayor que 0." };
       }
-      if (toNumber(it.bonif_pct) < 0) {
-        return { ok: false, msg: "La bonificación no puede ser negativa." };
-      }
     }
 
     if (total <= 0) {
@@ -228,11 +220,6 @@ export default function ModalFacturaDatos({
         unidad: "u",
         precio_unitario: toNumber(it.precio_unitario),
         precio: toNumber(it.precio_unitario),
-        bonif_pct: toNumber(it.bonif_pct),
-        impBonif:
-          toNumber(it.cantidad) *
-          toNumber(it.precio_unitario) *
-          (toNumber(it.bonif_pct) / 100),
         subtotal: Number(it.subtotal || 0),
         ars: Number(it.subtotal || 0),
       })),
@@ -436,7 +423,6 @@ export default function ModalFacturaDatos({
                       <th style={thStyle}>Descripción</th>
                       <th style={thStyle}>Cantidad</th>
                       <th style={thStyle}>Precio Unit.</th>
-                      <th style={thStyle}>Bonif. %</th>
                       <th style={thStyle}>Subtotal</th>
                       <th style={thStyle}>Acción</th>
                     </tr>
@@ -467,15 +453,6 @@ export default function ModalFacturaDatos({
                             className="fl-input"
                             value={it.precio_unitario}
                             onChange={(e) => updateItem(it.id, "precio_unitario", e.target.value)}
-                            inputMode="decimal"
-                          />
-                        </td>
-
-                        <td style={tdStyle}>
-                          <input
-                            className="fl-input"
-                            value={it.bonif_pct}
-                            onChange={(e) => updateItem(it.id, "bonif_pct", e.target.value)}
                             inputMode="decimal"
                           />
                         </td>

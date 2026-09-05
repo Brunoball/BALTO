@@ -1029,7 +1029,7 @@ function buildFormFromRowCompra(row, fixedLocal) {
     id_detalle: getProductoIdFromCompra(r),
     id_stock_variante: getVarianteIdFromCompra(r),
     monto_total: Math.max(0, Math.round(monto_total * 100) / 100),
-    cantidad: Math.max(0, Math.round(cantidad * 1000) / 1000),
+    cantidad: Math.max(0, Math.round(cantidad * 1000000) / 1000000),
     precio: Math.max(0, Math.round(precio * 100) / 100),
     iva_pct: Math.max(0, Math.round(iva_pct * 100) / 100),
     subtotal: Math.max(0, Math.round(subtotal * 100) / 100),
@@ -1801,7 +1801,7 @@ export default function ModalEditarCompra({
       id_detalle: toNullableId(form.id_detalle),
       id_stock_producto: toNullableId(form.id_detalle),
       id_stock_variante: toNullableId(form.id_stock_variante),
-      cantidad: Math.round(cantidad * 1000) / 1000,
+      cantidad: Math.round(cantidad * 1000000) / 1000000,
       precio: Math.round(precio * 100) / 100,
       iva_pct: Math.round(iva_pct * 100) / 100,
       subtotal: t.subtotal,
@@ -2206,7 +2206,7 @@ export default function ModalEditarCompra({
                         className="gm-cell-input gm-cell-input--center"
                         type="number"
                         min="0.001"
-                        step="0.001"
+                        step="0.000001"
                         value={form.cantidad}
                         onChange={(e) => onCantidadChange(e.target.value)}
                         disabled={saving}

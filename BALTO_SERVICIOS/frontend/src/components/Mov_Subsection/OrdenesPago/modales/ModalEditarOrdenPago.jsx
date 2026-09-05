@@ -35,8 +35,8 @@ function round2(v) {
   return Math.round(safeNumber(v) * 100) / 100;
 }
 
-function round3(v) {
-  return Math.round(safeNumber(v) * 1000) / 1000;
+function roundQuantity(v) {
+  return Math.round(safeNumber(v) * 1000000) / 1000000;
 }
 
 function moneyARS(v) {
@@ -430,7 +430,7 @@ export default function ModalEditarOrdenPago({
       id_stock_producto: String(idProd ?? NULL_OPTION),
       id_stock_variante: String(idVar ?? NULL_OPTION),
       productoTxt,
-      cantidad: round3(cantidad),
+      cantidad: roundQuantity(cantidad),
       precio: round2(precio),
       iva_pct: round2(ivaPct),
     };
@@ -623,7 +623,7 @@ export default function ModalEditarOrdenPago({
         if (originalVariant > 0) varianteId = originalVariant;
       }
 
-      const cantidad = round3(Math.max(0, safeNumber(form.cantidad)));
+      const cantidad = roundQuantity(Math.max(0, safeNumber(form.cantidad)));
       const precio = round2(Math.max(0, safeNumber(form.precio)));
       const ivaPct = round2(Math.max(0, safeNumber(form.iva_pct)));
       if (!(cantidad > 0)) throw new Error("La cantidad debe ser mayor a 0.");
@@ -760,7 +760,7 @@ export default function ModalEditarOrdenPago({
                           <input
                             className="gm-input"
                             type="number"
-                            step="0.001"
+                            step="0.000001"
                             min="0"
                             placeholder=" "
                             value={form.cantidad}

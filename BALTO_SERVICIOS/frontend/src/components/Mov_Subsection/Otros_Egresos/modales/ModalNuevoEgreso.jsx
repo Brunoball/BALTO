@@ -1368,8 +1368,8 @@ export default function ModalNuevoEgreso({
                           <input
                             className="gm-cell-input gm-cell-input--center"
                             type="number"
-                            min="1"
-                            step="1"
+                            min="0.000001"
+                            step="0.000001"
                             value={r.cantidad}
                             onChange={(e) => handleCantidadChange(r.id, e.target.value === "" ? "" : Number(e.target.value))}
                             disabled={saving}

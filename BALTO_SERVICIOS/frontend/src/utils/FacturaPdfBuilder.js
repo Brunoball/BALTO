@@ -40,14 +40,6 @@ function s(v) {
   return v == null ? "" : String(v);
 }
 
-function safeJsonParse(text) {
-  try {
-    return JSON.parse(text);
-  } catch {
-    return null;
-  }
-}
-
 function padLeft(v, len) {
   return s(v).padStart(len, "0");
 }
@@ -55,14 +47,6 @@ function padLeft(v, len) {
 function isYMD8(v) {
   const str = String(v || "");
   return str.length === 8 && /^\d{8}$/.test(str);
-}
-
-function isoToYmd(iso) {
-  const str = String(iso || "").trim();
-  if (!str) return "";
-  const m = str.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (!m) return "";
-  return `${m[1]}${m[2]}${m[3]}`;
 }
 
 function ymdToHuman(ymd) {
@@ -185,21 +169,6 @@ function wrapByWidth(doc, str, maxW) {
   return lines;
 }
 
-function normalizeList(value) {
-  if (!Array.isArray(value)) return [];
-  return value
-    .map((it) => {
-      if (typeof it === "string") return it;
-      if (it && typeof it === "object") {
-        const code = it.Code || it.code || "";
-        const msg = it.Msg || it.msg || "";
-        return `${code ? `[${code}] ` : ""}${msg}`.trim();
-      }
-      return "";
-    })
-    .filter(Boolean);
-}
-
 function computeItems(fact, data, totalArs) {
   const total = safeNumber(
     totalArs,
@@ -244,8 +213,6 @@ function computeItems(fact, data, totalArs) {
         cantidad: safeNumber(it?.cantidad, 1),
         unidad: sanitizePdfText(it?.unidad || "serv."),
         precio: safeNumber(it?.precio_unitario ?? it?.precio, valueArs),
-        bonifPct: safeNumber(it?.bonif_pct, 0),
-        impBonif: safeNumber(it?.impBonif, 0),
         subtotal: safeNumber(it?.subtotal ?? it?.total, valueArs),
       };
     })
@@ -275,8 +242,6 @@ function computeItems(fact, data, totalArs) {
       cantidad: 1,
       unidad: "serv.",
       precio: total,
-      bonifPct: 0,
-      impBonif: 0,
       subtotal: total,
     },
   ];
@@ -939,13 +904,11 @@ async function drawPage(doc, pageName, ctx) {
   const wCodigo = 50;
   const wCant = 70;
   const wUM = 50;
-  const wPU = 60;
-  const wBonif = 40;
-  const wImpBon = 80;
-  const wSubt = 52;
+  const wPU = 70;
+  const wSubt = 75;
   const wProd = Math.max(
     10,
-    innerW - (wCodigo + wCant + wUM + wPU + wBonif + wImpBon + wSubt)
+    innerW - (wCodigo + wCant + wUM + wPU + wSubt)
   );
 
   const x0 = left;
@@ -954,9 +917,7 @@ async function drawPage(doc, pageName, ctx) {
   const x3 = x2 + wCant;
   const x4 = x3 + wUM;
   const x5 = x4 + wPU;
-  const x6 = x5 + wBonif;
-  const x7 = x6 + wImpBon;
-  const x8 = right;
+  const x6 = right;
 
   const padL = 8;
   const padR = 8;
@@ -967,9 +928,7 @@ async function drawPage(doc, pageName, ctx) {
   text(doc, "Cantidad", x3 - padR, tblY + 15, { align: "right" });
   text(doc, "U. Medida", x4 - padR, tblY + 15, { align: "right" });
   text(doc, "Precio Unit.", x5 - padR, tblY + 15, { align: "right" });
-  text(doc, "% Bonif", x6 - padR, tblY + 15, { align: "right" });
-  text(doc, "Imp. Bonif.", x7 - padR, tblY + 15, { align: "right" });
-  text(doc, "Subtotal", x8 - padR, tblY + 15, { align: "right" });
+  text(doc, "Subtotal", x6 - padR, tblY + 15, { align: "right" });
 
   const totalReal = safeNumber(
     fact?.imp_total ?? fact?.importe ?? data?.monto ?? data?.importe ?? 0,
@@ -1003,9 +962,7 @@ async function drawPage(doc, pageName, ctx) {
     text(doc, numEs(it.cantidad ?? 1, 2), x3 - padR, y, { align: "right" });
     text(doc, s(it.unidad || "serv."), x4 - padR, y, { align: "right" });
     text(doc, moneyEs(it.precio || 0), x5 - padR, y, { align: "right" });
-    text(doc, numEs(it.bonifPct || 0, 2), x6 - padR, y, { align: "right" });
-    text(doc, moneyEs(it.impBonif || 0), x7 - padR, y, { align: "right" });
-    text(doc, moneyEs(it.subtotal || 0), x8 - padR, y, { align: "right" });
+    text(doc, moneyEs(it.subtotal || 0), x6 - padR, y, { align: "right" });
 
     y += blockH + 4;
   }
@@ -1071,7 +1028,7 @@ export async function saveBaltoInvoicePdf({
 
   const safe = (x) =>
     sanitizePdfText(String(x || ""))
-      .replace(/[^\w\-]+/g, "_")
+      .replace(/[^\w-]+/g, "_")
       .slice(0, 60);
 
   const pv = String(fact?.pto_vta ?? FIX.pto_vta_fijo).padStart(5, "0");

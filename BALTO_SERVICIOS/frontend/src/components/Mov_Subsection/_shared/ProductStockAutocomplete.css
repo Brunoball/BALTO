@@ -125,3 +125,64 @@
 .mi-modal--dark .psa-variant {
   border-left-color: rgba(255,255,255,.16);
 }
+
+
+.psa-control-line {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+  width: 100%;
+}
+
+.psa-control-line .psa-input {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.psa-kind-toggle {
+  display: inline-flex;
+  flex: 0 0 auto;
+  padding: 2px;
+  border: 1px solid var(--nv-border-md, rgba(15,23,42,.16));
+  border-radius: 8px;
+  background: rgba(15,23,42,.035);
+}
+
+.psa-kind-toggle button {
+  border: 0;
+  border-radius: 6px;
+  padding: 0 7px;
+  min-height: 28px;
+  background: transparent;
+  color: var(--nv-muted, #64748b);
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.psa-kind-toggle button.is-active {
+  background: var(--nv-bg, #fff);
+  color: var(--nv-text, #0A2540);
+  box-shadow: 0 1px 4px rgba(15,23,42,.12);
+}
+
+.psa-kind-toggle button:disabled {
+  cursor: not-allowed;
+  opacity: .6;
+}
+
+.mi-modal--dark .psa-kind-toggle {
+  border-color: rgba(255,255,255,.16);
+  background: rgba(255,255,255,.05);
+}
+
+.mi-modal--dark .psa-kind-toggle button {
+  color: rgba(255,255,255,.62);
+}
+
+.mi-modal--dark .psa-kind-toggle button.is-active {
+  background: rgba(255,255,255,.12);
+  color: rgba(255,255,255,.9);
+  box-shadow: none;
+}

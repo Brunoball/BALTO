@@ -92,7 +92,7 @@ async function parseResponse(res) {
 export async function serviciosGet(action, params = {}, options = {}) {
   const url = buildUrl(action, params);
   const force = options?.force === true;
-  const cacheable = action === "servicios_resumen" || action === "servicios_modulo_cargar" || String(action).endsWith("_listar");
+  const cacheable = /_(categorias|unidades)_listar$/.test(String(action));
   if (cacheable && !force) {
     const cached = readCache(url);
     if (cached) return cached;
@@ -116,6 +116,7 @@ export async function serviciosPost(action, body = {}) {
   });
   const data = await parseResponse(res);
   invalidateReads();
+  window.dispatchEvent(new Event("balto:listas-updated"));
   return data;
 }
 

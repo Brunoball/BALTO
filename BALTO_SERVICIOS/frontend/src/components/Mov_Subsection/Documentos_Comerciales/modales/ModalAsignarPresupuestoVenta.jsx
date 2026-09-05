@@ -288,8 +288,6 @@ function normalizeItem(it, i = 0) {
     unidad: safeStr(it?.unidad || "u"),
     precio_unitario: precio,
     precio,
-    bonif_pct: 0,
-    impBonif: 0,
     subtotal,
     ars: total,
     iva_pct: ivaPct,
