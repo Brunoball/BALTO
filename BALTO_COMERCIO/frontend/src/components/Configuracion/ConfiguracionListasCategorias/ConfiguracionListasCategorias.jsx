@@ -18,6 +18,7 @@ import "../../Global/Global_css/GlobalsModalsV2.css";
 import "./ConfiguracionListasCategorias.css";
 import Toast from "../../Global/Toast";
 import ModalEliminar from "../../Global/Modales/ModalEliminar";
+import useTableScrollGutter from "../../Global/useTableScrollGutter";
 import * as configuracionApi from "../api/configuracionApi";
 import ModalDetalleLista from "./ModalDetalleLista";
 import ModalCategoriaStock from "./ModalCategoriaStock";
@@ -48,6 +49,7 @@ function notifyListsUpdated() {
 
 export default function ConfiguracionListasCategorias() {
   const navigate = useNavigate();
+  const [rowsScrollRef, hasRowsScroll] = useTableScrollGutter();
   const [tab, setTab] = useState("detalles");
   const [estado, setEstado] = useState("1");
   const [buscar, setBuscar] = useState("");
@@ -276,7 +278,7 @@ export default function ConfiguracionListasCategorias() {
           <h1>Listas y categorías</h1>
           <p>Administrá desde un solo lugar los detalles de Movimientos y las categorías que utiliza Stock.</p>
         </div>
-        <button type="button" className="cfg-listas-back" onClick={() => navigate("/panel/configuracion")}>
+        <button type="button" className="mov-btn mov-btn--primary" onClick={() => navigate("/panel/configuracion")}>
           <FontAwesomeIcon icon={faArrowLeft} /> Volver
         </button>
       </header>
@@ -308,45 +310,57 @@ export default function ConfiguracionListasCategorias() {
         </div>
 
         <div className="cfg-listas-tableWrap">
-          <table className="cfg-listas-table">
-            <thead>
-              <tr>
-                <th>Nombre</th>
-                {isCategory && <th>Descripción</th>}
-                {isCategory && <th>Productos</th>}
-                {isCategory && <th>Subcategorías</th>}
-                {!isCategory && <th>Usos históricos</th>}
-                <th>Estado</th>
-                <th className="is-right">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? Array.from({ length: 6 }).map((_, index) => (
-                <tr key={index} className="is-skeleton"><td colSpan={isCategory ? 6 : 4}><span /></td></tr>
-              )) : rows.map((row) => (
-                <tr key={rowId(tab, row)} className={Number(row.activo) === 1 ? "" : "is-inactive"}>
-                  <td>
-                    <strong>{row.nombre}</strong>
-                    <small>{isCategory ? (row.categoria_padre_nombre ? `Subcategoría de ${row.categoria_padre_nombre}` : "Categoría principal") : "Detalle de ingresos / egresos"}</small>
-                  </td>
-                  {isCategory && <td>{row.descripcion || "—"}</td>}
-                  {isCategory && <td>{Number(row.cantidad_productos || 0).toLocaleString("es-AR")}</td>}
-                  {isCategory && <td>{Number(row.cantidad_hijas || 0).toLocaleString("es-AR")}</td>}
-                  {!isCategory && <td>{Number(row.cantidad_usos || 0).toLocaleString("es-AR")}</td>}
-                  <td><span className={`cfg-listas-chip ${Number(row.activo) === 1 ? "is-active" : ""}`}>{Number(row.activo) === 1 ? "ACTIVO" : "BAJA"}</span></td>
-                  <td className="is-right">
-                    <div className="cfg-listas-actions">
-                      <button type="button" title="Editar" onClick={() => setModal({ kind: tab, item: row })}><FontAwesomeIcon icon={faPenToSquare} /></button>
-                      <button type="button" title={Number(row.activo) === 1 ? "Dar de baja" : "Reactivar"} onClick={() => setStatusModal({ kind: tab, item: row })}><FontAwesomeIcon icon={Number(row.activo) === 1 ? faBan : faRotateLeft} /></button>
-                      <button type="button" className="is-danger" title="Eliminar" onClick={() => setDeleteModal({ kind: tab, item: row })}><FontAwesomeIcon icon={faTrashCan} /></button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div
+            className={`cfg-listas-grid ${isCategory ? "is-category" : "is-detail"}`}
+            role="table"
+            aria-label={isCategory ? "Categorías de stock" : "Detalles de movimientos"}
+            aria-busy={loading}
+          >
+            <div className={`cfg-listas-gridHead ${hasRowsScroll ? "has-y-scroll" : ""}`} role="rowgroup">
+              <div className="cfg-listas-gridRow" role="row">
+                <div className="cfg-listas-gridCell cfg-listas-gridCell--head" role="columnheader">Nombre</div>
+                {isCategory && <div className="cfg-listas-gridCell cfg-listas-gridCell--head" role="columnheader">Descripción</div>}
+                {isCategory && <div className="cfg-listas-gridCell cfg-listas-gridCell--head is-center" role="columnheader">Productos</div>}
+                {isCategory && <div className="cfg-listas-gridCell cfg-listas-gridCell--head is-center" role="columnheader">Subcategorías</div>}
+                {!isCategory && <div className="cfg-listas-gridCell cfg-listas-gridCell--head is-center" role="columnheader">Usos históricos</div>}
+                <div className="cfg-listas-gridCell cfg-listas-gridCell--head is-center" role="columnheader">Estado</div>
+                <div className="cfg-listas-gridCell cfg-listas-gridCell--head is-center" role="columnheader">Acciones</div>
+              </div>
+            </div>
 
-          {!loading && rows.length === 0 && <div className="cfg-listas-empty"><FontAwesomeIcon icon={faBoxOpen} /><span>No hay registros para los filtros actuales.</span></div>}
+            <div className="cfg-listas-gridBodyScroll" ref={rowsScrollRef}>
+              <div className="cfg-listas-gridBody" role="rowgroup">
+                {loading ? Array.from({ length: 6 }).map((_, index) => (
+                  <div key={index} className="cfg-listas-gridRow is-skeleton" role="row">
+                    <div className="cfg-listas-gridCell cfg-listas-gridCell--skeleton" role="cell" aria-colspan={isCategory ? 6 : 4}><span /></div>
+                  </div>
+                )) : rows.map((row) => (
+                  <div key={rowId(tab, row)} className={`cfg-listas-gridRow ${Number(row.activo) === 1 ? "" : "is-inactive"}`} role="row">
+                    <div className="cfg-listas-gridCell cfg-listas-gridCell--name" role="cell">
+                      <strong>{row.nombre}</strong>
+                      <small>{isCategory ? (row.categoria_padre_nombre ? `Subcategoría de ${row.categoria_padre_nombre}` : "Categoría principal") : "Detalle de ingresos / egresos"}</small>
+                    </div>
+                    {isCategory && <div className="cfg-listas-gridCell cfg-listas-gridCell--description" role="cell">{row.descripcion || "—"}</div>}
+                    {isCategory && <div className="cfg-listas-gridCell is-center" role="cell">{Number(row.cantidad_productos || 0).toLocaleString("es-AR")}</div>}
+                    {isCategory && <div className="cfg-listas-gridCell is-center" role="cell">{Number(row.cantidad_hijas || 0).toLocaleString("es-AR")}</div>}
+                    {!isCategory && <div className="cfg-listas-gridCell is-center" role="cell">{Number(row.cantidad_usos || 0).toLocaleString("es-AR")}</div>}
+                    <div className="cfg-listas-gridCell is-center" role="cell">
+                      <span className={`cfg-listas-chip ${Number(row.activo) === 1 ? "is-active" : ""}`}>{Number(row.activo) === 1 ? "ACTIVO" : "BAJA"}</span>
+                    </div>
+                    <div className="cfg-listas-gridCell is-center" role="cell">
+                      <div className="cfg-listas-actions">
+                        <button type="button" title="Editar" onClick={() => setModal({ kind: tab, item: row })}><FontAwesomeIcon icon={faPenToSquare} /></button>
+                        <button type="button" title={Number(row.activo) === 1 ? "Dar de baja" : "Reactivar"} onClick={() => setStatusModal({ kind: tab, item: row })}><FontAwesomeIcon icon={Number(row.activo) === 1 ? faBan : faRotateLeft} /></button>
+                        <button type="button" className="is-danger" title="Eliminar" onClick={() => setDeleteModal({ kind: tab, item: row })}><FontAwesomeIcon icon={faTrashCan} /></button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {!loading && rows.length === 0 && <div className="cfg-listas-empty"><FontAwesomeIcon icon={faBoxOpen} /><span>No hay registros para los filtros actuales.</span></div>}
+            </div>
+          </div>
         </div>
       </section>
 

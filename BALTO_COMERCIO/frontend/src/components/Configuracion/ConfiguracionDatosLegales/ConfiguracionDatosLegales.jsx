@@ -389,7 +389,7 @@ export default function ConfiguracionDatosLegales() {
 
         <div className="cfg-legal-hero__side">
           <button
-            className="cfg-legal-btn cfg-legal-btn--primary"
+            className="mov-btn mov-btn--primary"
             type="button"
             onClick={() => navigate("/panel/configuracion")}
             disabled={saving}
