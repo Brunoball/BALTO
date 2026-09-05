@@ -126,6 +126,16 @@ export async function createStockProductFixture(page, product) {
   expect(name, 'El fixture de Stock necesita nombre').not.toBe('');
   expect(sku, 'El fixture de Stock necesita SKU').not.toBe('');
 
+  const categoryIds = Array.from(new Set(
+    (Array.isArray(product?.categoryIds) ? product.categoryIds : [])
+      .map((value) => Number(value))
+      .filter((value) => Number.isInteger(value) && value > 0),
+  ));
+  const primaryCategoryId = Number(product?.primaryCategoryId || categoryIds[0] || 0);
+  if (primaryCategoryId > 0 && !categoryIds.includes(primaryCategoryId)) {
+    categoryIds.unshift(primaryCategoryId);
+  }
+
   const payload = {
     nombre: name,
     sku,
@@ -138,11 +148,13 @@ export async function createStockProductFixture(page, product) {
     margen_promo_valor: '',
     stock: integer(product?.stock, 0),
     descripcion: 'PLAYWRIGHT E2E',
-    categorias_ids: '[]',
+    categorias_ids: JSON.stringify(categoryIds),
+    id_categoria_stock: primaryCategoryId > 0 ? String(primaryCategoryId) : '',
     variantes: '[]',
     tipos_precio: '[]',
     diferir_sync: '1',
     origen_sync: 'playwright_e2e',
+    ...(ENV.skipTiendaNube ? { skip_tiendanube_sync: '1' } : {}),
   };
 
   const response = await page.request.post(endpoint('stock_productos_crear'), {

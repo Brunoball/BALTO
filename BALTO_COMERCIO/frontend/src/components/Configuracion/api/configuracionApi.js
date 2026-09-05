@@ -119,3 +119,33 @@ export async function apiFetchActionJson(action, options = {}) {
 
   return data;
 }
+
+async function configuracionGet(action, params = {}) {
+  const res = await apiFetch({ action, ...params }, { method: "GET" });
+  const text = await res.text();
+  const data = safeJsonParse(text);
+  if (!res.ok || !data?.exito) throw new Error(data?.mensaje || `Error HTTP ${res.status}`);
+  return data;
+}
+
+async function configuracionPost(action, body = {}) {
+  const res = await apiFetch({ action }, { method: "POST", body: JSON.stringify(body || {}) });
+  const text = await res.text();
+  const data = safeJsonParse(text);
+  if (!res.ok || !data?.exito) throw new Error(data?.mensaje || `Error HTTP ${res.status}`);
+  return data;
+}
+
+export function listarResumenListasCategoriasConfiguracion(params = {}) {
+  return configuracionGet("config_listas_categorias_resumen_listar", params);
+}
+export function crearDetalleConfiguracion(body) { return configuracionPost("config_listas_categorias_detalle_crear", body); }
+export function actualizarDetalleConfiguracion(body) { return configuracionPost("config_listas_categorias_detalle_actualizar", body); }
+export function darBajaDetalleConfiguracion(id) { return configuracionPost("config_listas_categorias_detalle_dar_baja", { id_detalle: id }); }
+export function reactivarDetalleConfiguracion(id) { return configuracionPost("config_listas_categorias_detalle_reactivar", { id_detalle: id }); }
+export function eliminarDetalleConfiguracion(id) { return configuracionPost("config_listas_categorias_detalle_eliminar", { id_detalle: id }); }
+export function crearCategoriaStockConfiguracion(body) { return configuracionPost("config_listas_categorias_stock_categoria_crear", body); }
+export function actualizarCategoriaStockConfiguracion(body) { return configuracionPost("config_listas_categorias_stock_categoria_actualizar", body); }
+export function darBajaCategoriaStockConfiguracion(id) { return configuracionPost("config_listas_categorias_stock_categoria_dar_baja", { id_stock_categoria: id }); }
+export function reactivarCategoriaStockConfiguracion(id) { return configuracionPost("config_listas_categorias_stock_categoria_reactivar", { id_stock_categoria: id }); }
+export function eliminarCategoriaStockConfiguracion(id) { return configuracionPost("config_listas_categorias_stock_categoria_eliminar", { id_stock_categoria: id }); }

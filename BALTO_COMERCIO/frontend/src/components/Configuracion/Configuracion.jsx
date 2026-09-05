@@ -1,6 +1,6 @@
 // src/components/Configuracion/configuracion.jsx
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 import logoTiendaNube from "../../imagenes/logo_tienda_nube.png";
 import "./configuracion.css";
@@ -8,6 +8,7 @@ import "../Global/Global_css/Global_oscuro.css";
 import Toast from "../Global/Toast";
 import { apiFetch, safeJsonParse } from "./api/configuracionApi";
 import useConfiguracionToast from "./hooks/useConfiguracionToast";
+import ConfiguracionListasCategorias from "./ConfiguracionListasCategorias/ConfiguracionListasCategorias";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -16,6 +17,7 @@ import {
   faUsersGear,
   faFileInvoiceDollar,
   faWallet,
+  faListCheck,
 } from "@fortawesome/free-solid-svg-icons";
 
 import { useDateRange } from "../../context/DateRangeContext";
@@ -52,7 +54,7 @@ function labelModo(config = {}) {
   return "Mes completo";
 }
 
-export default function Configuracion() {
+function ConfiguracionInicio() {
   const navigate = useNavigate();
   const usuario = useMemo(() => getBaltoUsuario() || {}, []);
   const tenantId =
@@ -221,6 +223,22 @@ export default function Configuracion() {
         ),
       },
       {
+        id: "listas-categorias",
+        title: "Listas y categorías",
+        description: "Administrá detalles de movimientos y categorías de stock desde un solo lugar.",
+        route: "/panel/configuracion?seccion=listas-categorias",
+        demoBlocked: esPlanDemo,
+        demoMessage: DEMO_ADVANCED_MESSAGE,
+        status: esPlanDemo ? { text: "Bloqueado demo", type: "warning" } : { text: "Administrable", type: "success" },
+        metaTop: "Datos configurables",
+        metaBottom: "Detalles · Categorías de stock",
+        icon: (
+          <div className="cfg-cardLogo cfg-cardLogo--icon">
+            <FontAwesomeIcon icon={faListCheck} />
+          </div>
+        ),
+      },
+      {
         id: "calendario",
         title: "Calendario global",
         description:
@@ -308,4 +326,12 @@ export default function Configuracion() {
       </section>
     </>
   );
+}
+
+
+export default function Configuracion() {
+  const location = useLocation();
+  const seccion = new URLSearchParams(location.search).get("seccion");
+  if (seccion === "listas-categorias") return <ConfiguracionListasCategorias />;
+  return <ConfiguracionInicio />;
 }

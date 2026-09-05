@@ -78,6 +78,12 @@ async function openModuleDetail(row, expected, title = /Ver información complet
 
 async function assertGlobalDetail(page, query, expected) {
   await page.goto('/panel/movimientos');
+
+  // Movimientos puede hidratar primero desde caché y, al mismo tiempo, dejar en vuelo
+  // el listado inicial sin búsqueda. Si escribimos antes de que termine, esa respuesta
+  // vieja puede llegar después del filtro y reemplazar momentáneamente la grilla.
+  // Esperamos una ventana real sin requests antes de disparar la búsqueda exacta.
+  await page.waitForLoadState('networkidle', { timeout: 15_000 }).catch(() => {});
   await waitForBusyToFinish(page);
 
   // Regex ASCII para evitar problemas de encoding en Windows/PowerShell.
@@ -128,21 +134,6 @@ async function assertGlobalDetail(page, query, expected) {
 
   await waitForBusyToFinish(page);
 
-  // La grilla global actual no expone data-movement-id en sus filas.
-  // El conteo puede coincidir mientras React todavía muestra la búsqueda anterior,
-  // por eso además validamos tipo y monto antes de abrir el modal.
-  const rows = page.locator('.mov-gridTable--row:visible:not(.mov-row--skeleton)');
-  await expect(
-    rows,
-    `La grilla debe renderizar los ${returned.length} movimientos devueltos por el backend`,
-  ).toHaveCount(returned.length, { timeout: 30_000 });
-
-  const row = rows.nth(exactIndex);
-  await expect(
-    row,
-    `La grilla debe renderizar en la posición ${exactIndex} el movimiento #${movementId} de ${expected.description}`,
-  ).toBeVisible({ timeout: 30_000 });
-
   const expectedType = String(
     exactMovement?.tipo_label ??
     exactMovement?.tipo_operacion_nombre ??
@@ -152,13 +143,6 @@ async function assertGlobalDetail(page, query, expected) {
     exactMovement?.operacion ??
     '',
   ).trim();
-  if (expectedType) {
-    await expect(
-      row.locator('[data-label="TIPO"]'),
-      `La grilla debe haber terminado de renderizar el movimiento #${movementId}`,
-    ).toHaveText(expectedType, { timeout: 30_000 });
-  }
-
   const expectedTotal = Number(
     exactMovement?.monto_total ??
     exactMovement?.monto_total_final ??
@@ -167,6 +151,52 @@ async function assertGlobalDetail(page, query, expected) {
     exactMovement?.monto ??
     exactMovement?.importe,
   );
+
+  // La grilla global no expone data-movement-id. No usamos nth(exactIndex): durante
+  // una actualización en vivo React puede reemplazar esa fila justo mientras Playwright
+  // hace click y el auto-retry terminaría actuando sobre otra fila. Construimos un
+  // locator por identidad visible (tipo + monto + tercero cuando existe), de modo que
+  // aunque el nodo se desmonte, el retry sólo pueda resolver el movimiento esperado.
+  const rows = page.locator('.mov-gridTable--row:visible:not(.mov-row--skeleton)');
+  await expect(
+    rows,
+    `La grilla debe renderizar los ${returned.length} movimientos devueltos por el backend`,
+  ).toHaveCount(returned.length, { timeout: 30_000 });
+
+  let row = rows;
+  if (expectedType) {
+    row = row.filter({
+      has: page.locator('[data-label="TIPO"]').filter({ hasText: expectedType }),
+    });
+  }
+  if (Number.isFinite(expectedTotal)) {
+    const moneyFragment = expectedTotal.toLocaleString('es-AR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+    row = row.filter({
+      has: page.locator('[data-label="MONTO"]').filter({ hasText: moneyFragment }),
+    });
+  }
+  if (expected.thirdParty) {
+    row = row.filter({
+      has: page.locator('[data-label="CLIENTE/PROVEEDOR"]').filter({ hasText: expected.thirdParty }),
+    });
+  }
+  row = row.first();
+
+  await expect(
+    row,
+    `La grilla debe renderizar el movimiento #${movementId} de ${expected.description}`,
+  ).toBeVisible({ timeout: 30_000 });
+
+  if (expectedType) {
+    await expect(
+      row.locator('[data-label="TIPO"]'),
+      `La grilla debe haber terminado de renderizar el movimiento #${movementId}`,
+    ).toHaveText(expectedType, { timeout: 30_000 });
+  }
+
   if (Number.isFinite(expectedTotal)) {
     await expect
       .poll(

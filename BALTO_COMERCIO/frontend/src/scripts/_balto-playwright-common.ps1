@@ -42,7 +42,8 @@ function Get-BaltoTestBatches {
       'tests/20-stock-lifecycle.spec.js',
       'tests/22-stock-variants-lifecycle.spec.js',
       'tests/25-stock-barcodes.spec.js',
-      'tests/26-barcode-movements.spec.js'
+      'tests/26-barcode-movements.spec.js',
+      'tests/29-configuration-lists-categories.spec.js'
     )
     'cheques' = @(
       'tests/09-cheques-smoke.spec.js',
@@ -52,7 +53,8 @@ function Get-BaltoTestBatches {
     'configuracion' = @(
       'tests/10-config-accounting.spec.js',
       'tests/21-configuration-actions.spec.js',
-      'tests/24-initial-balances.spec.js'
+      'tests/24-initial-balances.spec.js',
+      'tests/29-configuration-lists-categories.spec.js'
     )
     'documentos' = @(
       'tests/06-budgets.spec.js',
@@ -95,6 +97,7 @@ function Get-BaltoTestBatches {
       'tests/25-stock-barcodes.spec.js',
       'tests/26-barcode-movements.spec.js',
       'tests/27-performance-safety.spec.js',
+      'tests/29-configuration-lists-categories.spec.js',
       'tests/example.spec.js'
     )
   }
