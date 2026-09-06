@@ -3,6 +3,8 @@ import { createPortal } from "react-dom";
 import BuscadorSelector from "../components/BuscadorSelector";
 import { clampText, decimalText, integerText, money } from "../utils/serviciosFormUtils";
 import useServiciosGlobalModal from "./useServiciosGlobalModal";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faBriefcase, faCircleInfo, faDollarSign, faLayerGroup } from "@fortawesome/free-solid-svg-icons";
 
 const EMPTY = {
   nombre: "",
@@ -27,7 +29,7 @@ function ArticulosCard({ rows, setRows, catalog }) {
   };
 
   return (
-    <article className="gm-section servicios-component-card">
+    <article className="gm-section servicios-component-card servicios-component-card--materials">
       <div className="gm-section-head servicios-component-card__title">
         <div>
           <h4>Materiales e insumos</h4>
@@ -107,7 +109,7 @@ function TrabajadoresCard({ rows, setRows, catalog }) {
   };
 
   return (
-    <article className="gm-section servicios-component-card">
+    <article className="gm-section servicios-component-card servicios-component-card--labor">
       <div className="gm-section-head servicios-component-card__title">
         <div>
           <h4>Mano de obra</h4>
@@ -244,6 +246,17 @@ export default function ModalServicio({
     };
   }, [articleRows, workerRows, articulos, trabajadores, form.costo_base]);
 
+  const saleSummary = useMemo(() => {
+    const netPrice = Number(form.precio_venta || 0);
+    const profit = netPrice - cost.total;
+
+    return {
+      price: netPrice,
+      profit,
+      margin: netPrice > 0 ? (profit / netPrice) * 100 : 0,
+    };
+  }, [cost.total, form.precio_venta]);
+
   if (!open) return null;
 
   const set = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
@@ -283,88 +296,111 @@ export default function ModalServicio({
     <div ref={overlayRef} className="gm-modal-overlay" data-servicios-modal-overlay="true" onMouseDown={cerrarDesdeFondo}>
       <form className="gm-modal-container gm-modal-v2 servicios-modal servicios-modal--service" onSubmit={submit} role="dialog" aria-modal="true">
         <header className="gm-modal-header">
+          <div className="gm-modal-head-icon"><FontAwesomeIcon icon={faBriefcase} /></div>
           <div className="gm-modal-head-left">
             <h2 className="gm-modal-title">{item ? "Editar servicio" : "Agregar servicio"}</h2>
-            <p className="gm-modal-subtitle">Composición, mano de obra y otros costos en una sola ficha.</p>
+            <p className="gm-modal-subtitle">Definí la información, los costos y los recursos desde una sola ficha.</p>
           </div>
-          <button type="button" className="gm-modal-close" onClick={onClose} disabled={saving}>✕</button>
+          <button type="button" className="gm-modal-close" onClick={onClose} disabled={saving} aria-label="Cerrar">✕</button>
         </header>
 
-        <div className="gm-modal-content servicios-modal__content">
-          <section className="gm-section servicios-form-section">
-            <div className="gm-section-head"><span className="gm-section-dot" /><span>Datos del servicio</span></div>
-            <div className="gm-section-body">
-              <div className="servicios-form-grid">
-                <label className="gm-field servicios-field--span-12">
-                  <input className="gm-input" autoFocus maxLength={150} value={form.nombre} onChange={(e) => set("nombre", clampText(e.target.value, 150))} placeholder=" " />
-                  <span className="gm-label">Nombre</span>
-                </label>
-
-                <label className="gm-field servicios-field--span-4">
-                  <select className="gm-input gm-select" value={form.id_categoria} onChange={categoria}>
-                    <option value="__ADD__">+ AGREGAR CATEGORÍA</option>
-                    <option value="">SIN CATEGORÍA</option>
-                    {categorias.filter((c) => Number(c.activo) === 1).map((c) => (
-                      <option key={c.id_categoria} value={c.id_categoria}>{c.nombre}</option>
-                    ))}
-                  </select>
-                  <span className="gm-label gm-label--up">Categoría</span>
-                </label>
-
-                <label className="gm-field servicios-field--span-4">
-                  <select className="gm-input gm-select" value={form.id_unidad_cobro} onChange={(e) => set("id_unidad_cobro", e.target.value)}>
-                    <option value="">SELECCIONAR UNIDAD</option>
-                    {unidades.filter((u) => Number(u.activo) === 1).map((u) => (
-                      <option key={u.id_unidad} value={u.id_unidad}>{u.nombre} ({u.simbolo})</option>
-                    ))}
-                  </select>
-                  <span className="gm-label gm-label--up">Unidad de cobro</span>
-                </label>
-
-                <label className="gm-field servicios-field--span-4">
-                  <input
-                    className="gm-input"
-                    inputMode="numeric"
-                    value={form.duracion_estimada_minutos}
-                    onChange={(e) => set("duracion_estimada_minutos", integerText(e.target.value, 7))}
-                    placeholder=" "
-                  />
-                  <span className="gm-label">Duración estimada (min)</span>
-                </label>
-
-                <label className="gm-field servicios-field--wide">
-                  <textarea className="gm-input servicios-textarea" rows={3} maxLength={1000} value={form.descripcion} onChange={(e) => set("descripcion", clampText(e.target.value, 1000))} placeholder=" " />
-                  <span className="gm-label">Descripción</span>
-                </label>
+        <div className="gm-modal-content servicios-modal__content servicios-service-content">
+          <div className="servicios-service-overview">
+            <section className="gm-section servicios-form-section servicios-service-panel servicios-service-panel--identity">
+              <div className="gm-section-head servicios-service-sectionHead">
+                <span className="servicios-service-sectionIcon"><FontAwesomeIcon icon={faCircleInfo} /></span>
+                <span className="servicios-service-sectionCopy"><strong>Información principal</strong><small>Los datos que identifican y describen el servicio.</small></span>
               </div>
-            </div>
-          </section>
+              <div className="gm-section-body servicios-service-panelBody">
+                <div className="servicios-form-grid">
+                  <label className="gm-field servicios-field--span-12 servicios-service-nameField">
+                    <input className="gm-input" autoFocus maxLength={150} value={form.nombre} onChange={(e) => set("nombre", clampText(e.target.value, 150))} placeholder=" " />
+                    <span className="gm-label">Nombre del servicio</span>
+                  </label>
 
-          <section className="gm-section servicios-form-section">
-            <div className="gm-section-head"><span className="gm-section-dot" /><span>Valores</span></div>
-            <div className="gm-section-body">
-              <div className="servicios-form-grid">
-                <label className="gm-field servicios-field--span-4">
-                  <input className="gm-input" inputMode="decimal" value={form.costo_base} onChange={(e) => set("costo_base", decimalText(e.target.value, 6))} placeholder=" " />
-                  <span className="gm-label">Otros costos</span>
-                </label>
-                <label className="gm-field servicios-field--span-4">
-                  <input className="gm-input" inputMode="decimal" value={form.precio_venta} onChange={(e) => set("precio_venta", decimalText(e.target.value, 2))} placeholder=" " />
-                  <span className="gm-label">Precio de venta</span>
-                </label>
-                <label className="gm-field servicios-field--span-4">
-                  <select className="gm-input gm-select" value={form.iva_pct} onChange={(e) => set("iva_pct", e.target.value)}>
-                    {["0", "10.5", "21", "27"].map((v) => <option key={v} value={v}>{v} %</option>)}
-                  </select>
-                  <span className="gm-label gm-label--up">IVA</span>
-                </label>
+                  <label className="gm-field servicios-field--span-4">
+                    <select className="gm-input gm-select" value={form.id_categoria} onChange={categoria}>
+                      <option value="__ADD__">+ AGREGAR CATEGORÍA</option>
+                      <option value="">SIN CATEGORÍA</option>
+                      {categorias.filter((c) => Number(c.activo) === 1).map((c) => (
+                        <option key={c.id_categoria} value={c.id_categoria}>{c.nombre}</option>
+                      ))}
+                    </select>
+                    <span className="gm-label gm-label--up">Categoría</span>
+                  </label>
+
+                  <label className="gm-field servicios-field--span-4">
+                    <select className="gm-input gm-select" value={form.id_unidad_cobro} onChange={(e) => set("id_unidad_cobro", e.target.value)}>
+                      <option value="">SELECCIONAR UNIDAD</option>
+                      {unidades.filter((u) => Number(u.activo) === 1).map((u) => (
+                        <option key={u.id_unidad} value={u.id_unidad}>{u.nombre} ({u.simbolo})</option>
+                      ))}
+                    </select>
+                    <span className="gm-label gm-label--up">Unidad de cobro</span>
+                  </label>
+
+                  <label className="gm-field servicios-field--span-4">
+                    <input
+                      className="gm-input"
+                      inputMode="numeric"
+                      value={form.duracion_estimada_minutos}
+                      onChange={(e) => set("duracion_estimada_minutos", integerText(e.target.value, 7))}
+                      placeholder=" "
+                    />
+                    <span className="gm-label">Duración estimada (min)</span>
+                  </label>
+
+                  <label className="gm-field servicios-field--wide servicios-service-descriptionField">
+                    <textarea className="gm-input servicios-textarea" rows={3} maxLength={1000} value={form.descripcion} onChange={(e) => set("descripcion", clampText(e.target.value, 1000))} placeholder=" " />
+                    <span className="gm-label">Descripción u observaciones</span>
+                    <small className="servicios-field__counter">{form.descripcion.length}/1000</small>
+                  </label>
+                </div>
               </div>
-            </div>
-          </section>
+            </section>
 
-          <section className="gm-section servicios-composition">
-            <div className="gm-section-head servicios-composition__head">
-              <div className="servicios-composition__heading"><span className="gm-section-dot" /><span>Composición del servicio</span></div>
+            <section className="gm-section servicios-form-section servicios-service-panel servicios-service-panel--pricing">
+              <div className="gm-section-head servicios-service-sectionHead">
+                <span className="servicios-service-sectionIcon"><FontAwesomeIcon icon={faDollarSign} /></span>
+                <span className="servicios-service-sectionCopy"><strong>Precio y rentabilidad</strong><small>El costo se recalcula según la composición.</small></span>
+              </div>
+              <div className="gm-section-body servicios-service-panelBody">
+                <div className="servicios-form-grid servicios-service-priceFields">
+                  <label className="gm-field servicios-field--span-6">
+                    <input className="gm-input" inputMode="decimal" value={form.costo_base} onChange={(e) => set("costo_base", decimalText(e.target.value, 6))} placeholder=" " />
+                    <span className="gm-label">Otros costos</span>
+                  </label>
+                  <label className="gm-field servicios-field--span-6">
+                    <input className="gm-input" inputMode="decimal" value={form.precio_venta} onChange={(e) => set("precio_venta", decimalText(e.target.value, 2))} placeholder=" " />
+                    <span className="gm-label">Precio de venta</span>
+                  </label>
+                  <label className="gm-field servicios-field--span-12">
+                    <select className="gm-input gm-select" value={form.iva_pct} onChange={(e) => set("iva_pct", e.target.value)}>
+                      {["0", "10.5", "21", "27"].map((v) => <option key={v} value={v}>{v} %</option>)}
+                    </select>
+                    <span className="gm-label gm-label--up">IVA aplicado</span>
+                  </label>
+                </div>
+
+                <div className="servicios-service-financialSummary">
+                  <div><span>Costo calculado</span><strong>{money(cost.total)}</strong></div>
+                  <div><span>Precio de venta</span><strong>{money(saleSummary.price)}</strong></div>
+                  <div className={saleSummary.profit < 0 ? "is-negative" : "is-positive"}>
+                    <span>Resultado estimado</span>
+                    <strong>{money(saleSummary.profit)}</strong>
+                    <small>{saleSummary.margin.toLocaleString("es-AR", { maximumFractionDigits: 1 })}% de margen</small>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+
+          <section className="gm-section servicios-composition servicios-service-panel servicios-service-panel--composition">
+            <div className="gm-section-head servicios-composition__head servicios-service-sectionHead">
+              <div className="servicios-composition__heading">
+                <span className="servicios-service-sectionIcon"><FontAwesomeIcon icon={faLayerGroup} /></span>
+                <span className="servicios-service-sectionCopy"><strong>Composición del servicio</strong><small>Agregá los recursos necesarios y ajustá sus cantidades u horas.</small></span>
+              </div>
               <div className="servicios-composition__cost"><span>Costo automático</span><strong>{money(cost.total)}</strong></div>
             </div>
 
@@ -378,7 +414,7 @@ export default function ModalServicio({
                 <span>Materiales / Insumos: <strong>{money(cost.articulos)}</strong></span>
                 <span>Mano de obra: <strong>{money(cost.manoObra)}</strong></span>
                 <span>Otros costos: <strong>{money(cost.otros)}</strong></span>
-                <span>Total costo: <strong>{money(cost.total)}</strong></span>
+                <span className="servicios-composition__grandTotal">Total costo: <strong>{money(cost.total)}</strong></span>
               </div>
             </div>
           </section>
@@ -386,7 +422,7 @@ export default function ModalServicio({
 
         <footer className="gm-modal-footer gm-view-footer-actions">
           <button type="button" className="gm-action-btn gm-action-btn--cancel" onClick={onClose} disabled={saving}>Cancelar</button>
-          <button type="submit" className="gm-action-btn gm-action-btn--save" disabled={saving}>{saving ? "Guardando..." : "Guardar servicio"}</button>
+          <button type="submit" className="gm-action-btn gm-action-btn--save" disabled={saving}>{saving ? "Guardando..." : item ? "Guardar cambios" : "Crear servicio"}</button>
         </footer>
       </form>
     </div>,

@@ -38,6 +38,7 @@ const META = {
 
 const RESOURCE_TABS = new Set(["materiales", "insumos"]);
 const INVENTORY_TABS = new Set(["materiales", "insumos", "stock"]);
+const RESPONSIVE_FOOTER_TABS = new Set(["servicios", "materiales", "insumos"]);
 const idFor = (tab, row) => tab === "servicios" ? row.id_servicio : tab === "trabajadores" ? row.id_trabajador : row.id_articulo;
 const categoryTabs = new Set(["servicios", "materiales", "insumos"]);
 const textMatch = (value, q) => upper(value).includes(q);
@@ -312,16 +313,16 @@ export default function Servicios() {
 
   const columns = useMemo(() => {
     if (tab === "servicios") return [
-      { k: "nombre", l: "Servicio" }, { k: "categoria", l: "Categoría" }, { k: "unidad", l: "Unidad" }, { k: "composicion", l: "Composición" }, { k: "costo", l: "Costo", right: true }, { k: "precio", l: "Precio", right: true }, { k: "estado", l: "Estado" }, { k: "acciones", l: "Acciones" },
+      { k: "nombre", l: "Servicio" }, { k: "categoria", l: "Categoría", center: true }, { k: "unidad", l: "Unidad", center: true }, { k: "composicion", l: "Composición" }, { k: "costo", l: "Costo", right: true }, { k: "precio", l: "Precio", right: true }, { k: "acciones", l: "Acciones", center: true },
     ];
     if (tab === "trabajadores") return [
-      { k: "nombre", l: "Trabajador" }, { k: "rol", l: "Rol" }, { k: "modalidad", l: "Modalidad" }, { k: "tarifa", l: "Tarifa" }, { k: "hora", l: "Costo/h", right: true }, { k: "servicios", l: "Servicios", right: true }, { k: "estado", l: "Estado" }, { k: "acciones", l: "Acciones" },
+      { k: "nombre", l: "Trabajador" }, { k: "rol", l: "Rol" }, { k: "modalidad", l: "Modalidad" }, { k: "tarifa", l: "Tarifa" }, { k: "hora", l: "Costo/h", right: true }, { k: "servicios", l: "Servicios", right: true }, { k: "acciones", l: "Acciones", center: true },
     ];
     if (tab === "stock") return [
-      { k: "nombre", l: "Artículo" }, { k: "tipo", l: "Tipo" }, { k: "categoria", l: "Categoría" }, { k: "unidad", l: "Unidad" }, { k: "stock", l: "Stock", right: true }, { k: "costo", l: "Costo", right: true }, { k: "estado", l: "Estado" }, { k: "acciones", l: "Acciones" },
+      { k: "nombre", l: "Artículo" }, { k: "tipo", l: "Tipo" }, { k: "categoria", l: "Categoría", center: true }, { k: "unidad", l: "Unidad", center: true }, { k: "stock", l: "Stock", right: true }, { k: "costo", l: "Costo", right: true }, { k: "acciones", l: "Acciones", center: true },
     ];
     return [
-      { k: "nombre", l: tab === "materiales" ? "Material" : "Insumo" }, { k: "categoria", l: "Categoría" }, { k: "unidad", l: "Unidad" }, { k: "stock", l: "Stock", right: true }, { k: "costo", l: "Costo", right: true }, { k: "precio", l: "Precio", right: true }, { k: "estado", l: "Estado" }, { k: "acciones", l: "Acciones" },
+      { k: "nombre", l: tab === "materiales" ? "Material" : "Insumo" }, { k: "categoria", l: "Categoría", center: true }, { k: "unidad", l: "Unidad", center: true }, { k: "stock", l: "Stock", right: true }, { k: "costo", l: "Costo", right: true }, { k: "precio", l: "Precio", right: true }, { k: "acciones", l: "Acciones", center: true },
     ];
   }, [tab]);
 
@@ -382,7 +383,7 @@ export default function Servicios() {
         <div className="mov-card__head">
           <div className="mov-card__headLeft">
             <div className="title-mov servicios-titleBlock">
-              <div className="servicios-titleBlock__copy"><div className="mov-card__title">{inventoryMode ? "Inventario de servicios" : "Servicios"}</div><div className="mov-card__hint">Mostrando <b>{rows.length}</b> registro(s)</div></div>
+              <div className="servicios-titleBlock__copy"><div className="mov-card__title">{inventoryMode ? "Inventario de servicios" : "Servicios"}</div></div>
               <div className="servicios-inventoryTabs" role="tablist">{tabs.map((key) => <button key={key} type="button" className={`servicios-inventoryTab ${tab === key ? "is-active" : ""}`} onClick={() => setTab(key)}>{META[key].title}</button>)}</div>
             </div>
             <div className="mov-headFilters servicios-headFilters">
@@ -391,17 +392,36 @@ export default function Servicios() {
               <div className="mov-tabs servicios-statusTabs">{STATUS_TABS.map((status) => <button key={status.value} type="button" className={`mov-tab servicios-statusTab ${currentFilter.estado === status.value ? "is-active" : ""}`} onClick={() => updateFilter("estado", status.value)}>{status.label}</button>)}</div>
             </div>
           </div>
-          <div className="mov-card__actions servicios-headActions"><BotonExportar label="Exportar" opciones={exportOptions} disabled={loading || rows.length === 0} />{categoryTabs.has(tab) && <button type="button" className="mov-btn mov-btn--ghost" onClick={() => setCategoryModal(true)}><FontAwesomeIcon icon={faTags} /> Categorías</button>}{META[tab].add && <button type="button" className="mov-btn mov-btn--primary" onClick={openNew}><FontAwesomeIcon icon={faPlus} /> {META[tab].add}</button>}</div>
+          <div className="mov-card__actions servicios-headActions">
+            {RESPONSIVE_FOOTER_TABS.has(tab) ? (
+              <div className="servicios-headSecondary">
+                <BotonExportar label="Exportar" opciones={exportOptions} disabled={loading || rows.length === 0} />
+                <button type="button" className="mov-btn mov-btn--ghost servicios-categoriesBtn" onClick={() => setCategoryModal(true)}><FontAwesomeIcon icon={faTags} /> Categorías</button>
+              </div>
+            ) : (
+              <BotonExportar label="Exportar" opciones={exportOptions} disabled={loading || rows.length === 0} />
+            )}
+            {META[tab].add && <button type="button" className="mov-btn mov-btn--primary servicios-addBtn" onClick={openNew}><FontAwesomeIcon icon={faPlus} /> {META[tab].add}</button>}
+          </div>
         </div>
 
-        <div className={`mov-gridTable mov-gridTable--head ${hasTableScroll ? "has-y-scroll" : ""}`} style={{ gridTemplateColumns: gridCols }}>{columns.map((column) => <div key={column.k} className={`mov-gridCell mov-gridCell--head ${column.right ? "is-right" : ""}`}>{column.l}</div>)}</div>
+        <div className={`mov-gridTable mov-gridTable--head ${hasTableScroll ? "has-y-scroll" : ""}`} style={{ gridTemplateColumns: gridCols }}>{columns.map((column) => <div key={column.k} className={`mov-gridCell mov-gridCell--head ${column.right ? "is-right" : ""} ${column.center ? "is-center" : ""} ${column.k === "acciones" ? "mov-gridCell--actions" : ""}`}>{column.l}</div>)}</div>
         <div className="mov-tableWrap servicios-tableWrap" ref={tableWrapRef}>
           <div className="mov-gridBody mov-gridBody--relative">
             {loading ? Array.from({ length: 8 }).map((_, i) => <div key={i} className="mov-gridTable mov-gridTable--row mov-row--skeleton" style={{ gridTemplateColumns: gridCols }}>{columns.map((column) => <div key={column.k} className="mov-gridCell"><span className="mov-skeletonBar" /></div>)}</div>) : rows.length ? rows.map((row) => {
               const display = values(row);
-              return <div key={`${tab}-${idFor(tab, row)}`} className={`mov-gridTable mov-gridTable--row ${Number(row.activo) === 1 ? "" : "servicios-row--inactive"}`} style={{ gridTemplateColumns: gridCols }}>{columns.map((column) => <div key={column.k} className={`mov-gridCell ${column.right ? "is-right" : ""} ${column.k === "acciones" ? "mov-gridCell--actions" : ""}`}>{column.k === "acciones" ? renderActions(row) : column.k === "estado" ? <span className={`mov-chip ${Number(row.activo) === 1 ? "mov-chip--ok" : "mov-chip--neutral"}`}>{Number(row.activo) === 1 ? "ACTIVO" : "BAJA"}</span> : <span className="mov-ellipsissss">{display[column.k] ?? "—"}</span>}</div>)}</div>;
+              return <div key={`${tab}-${idFor(tab, row)}`} className={`mov-gridTable mov-gridTable--row ${Number(row.activo) === 1 ? "" : "servicios-row--inactive"}`} style={{ gridTemplateColumns: gridCols }}>{columns.map((column) => <div key={column.k} className={`mov-gridCell ${column.right ? "is-right" : ""} ${column.center ? "is-center" : ""} ${column.k === "acciones" ? "mov-gridCell--actions" : ""}`}>{column.k === "acciones" ? renderActions(row) : <span className="mov-ellipsissss">{display[column.k] ?? "—"}</span>}</div>)}</div>;
             }) : <div className="cc-emptyState servicios-emptyState"><FontAwesomeIcon icon={faBoxOpen} className="cc-emptyIcon" /><div className="cc-emptyText">No hay registros para los filtros actuales.</div></div>}
           </div>
+        </div>
+        <div className="servicios-tableFooter">
+          <div className="mov-card__hint servicios-resultsCount">Mostrando <b>{rows.length}</b> registro(s)</div>
+          {RESPONSIVE_FOOTER_TABS.has(tab) && (
+            <div className="servicios-bottomActions" aria-label="Acciones de la tabla">
+              <BotonExportar label="Exportar" opciones={exportOptions} disabled={loading || rows.length === 0} />
+              <button type="button" className="mov-btn mov-btn--ghost servicios-categoriesBtn" onClick={() => setCategoryModal(true)}><FontAwesomeIcon icon={faTags} /> Categorías</button>
+            </div>
+          )}
         </div>
       </section>
 

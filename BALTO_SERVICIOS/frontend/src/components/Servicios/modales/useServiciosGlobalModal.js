@@ -60,9 +60,13 @@ export default function useServiciosGlobalModal({ open, busy = false, onClose })
   }, [busy, onClose, open]);
 
   const cerrarDesdeFondo = (event) => {
-    if (busy || event.target !== event.currentTarget) return;
-    if (!esOverlaySuperior(overlayRef.current)) return;
-    onClose?.();
+    if (event.target !== event.currentTarget) return;
+
+    // El comportamiento global de BALTO exige una decisión explícita:
+    // los modales se cierran con Esc, la cruz o sus botones, nunca al
+    // hacer clic accidentalmente sobre el fondo.
+    event.preventDefault();
+    event.stopPropagation();
   };
 
   return { overlayRef, cerrarDesdeFondo };

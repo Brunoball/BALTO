@@ -761,7 +761,7 @@ body.dark .db-pill {
 .db {
   gap: 10px;
   height: 100%;
-  max-height: calc(100vh - 104px);
+  max-height: calc(100vh - 118px);
   overflow: hidden;
 }
 

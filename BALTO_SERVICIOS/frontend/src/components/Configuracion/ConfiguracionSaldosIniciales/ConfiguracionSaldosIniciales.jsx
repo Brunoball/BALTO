@@ -19,6 +19,7 @@ import { todayISO } from "../utils/configuracionUtils";
 import ModalEliminar from "../../Global/Modales/ModalEliminar";
 import "../../Global/Global_css/GlobalsModalsV2.css";
 import "./ConfiguracionSaldosIniciales.css";
+import "./ConfiguracionSaldosInicialesVolver.css";
 
 
 function parseMoney(value) {
@@ -369,14 +370,15 @@ export default function ConfiguracionSaldosIniciales() {
       {toast && <Toast key={toast.key} tipo={toast.tipo} mensaje={toast.mensaje} duracion={toast.duracion} onClose={() => setToast(null)} />}
       <section className="cfg-si-page">
         <header className="cfg-si-hero">
-          <button className="cfg-si-iconBtn" type="button" onClick={() => navigate("/panel/configuracion")} title="Volver a Configuración">
-            <FontAwesomeIcon icon={faArrowLeft} />
-          </button>
           <div className="cfg-si-heroText">
             <span className="cfg-si-eyebrow">Puesta en marcha</span>
             <h1>Saldos iniciales</h1>
             <p>Registrá la situación existente antes de comenzar a operar en Balto. Estos valores no generan ventas, compras, ingresos ni egresos ficticios.</p>
           </div>
+          <button className="mov-btn mov-btn--primary" type="button" onClick={() => navigate("/panel/configuracion")}>
+            <FontAwesomeIcon icon={faArrowLeft} />
+            Volver
+          </button>
         </header>
 
         <div className="cfg-si-tabs" role="tablist">
