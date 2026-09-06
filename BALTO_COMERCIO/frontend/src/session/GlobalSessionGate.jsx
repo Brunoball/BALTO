@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useState } from "react";
-import BaltoCargaGif from "../imagenes/Balto_Carga.gif";
 import {
   clearClientSession,
   getSessionKey,
@@ -122,19 +121,68 @@ export default function GlobalSessionGate({ children }) {
         minHeight: "100vh",
         display: "grid",
         placeItems: "center",
-        background: "#fff",
+        background: "#f4f7fb",
         fontFamily: "sans-serif",
       }}
     >
-      <div style={{ textAlign: "center", padding: 24 }}>
-        <img
-          src={BaltoCargaGif}
-          alt=""
-          aria-hidden="true"
-          style={{ display: "block", width: "min(180px, 42vw)", height: "auto", margin: "0 auto 14px" }}
+      <div
+        aria-hidden="true"
+        style={{
+          width: "min(920px, calc(100vw - 48px))",
+          display: "grid",
+          gap: 18,
+        }}
+      >
+        <div
+          style={{
+            height: 54,
+            borderRadius: 12,
+            background: "linear-gradient(90deg, #e8edf3 25%, #f5f7fa 50%, #e8edf3 75%)",
+            backgroundSize: "200% 100%",
+            animation: "baltoSessionSkeleton 1.25s ease-in-out infinite",
+          }}
         />
-        <div style={{ fontWeight: 600 }}>Abriendo BALTO Comercio…</div>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+            gap: 14,
+          }}
+        >
+          {[0, 1, 2, 3].map((item) => (
+            <div
+              key={item}
+              style={{
+                height: 108,
+                borderRadius: 14,
+                background: "linear-gradient(90deg, #e8edf3 25%, #f5f7fa 50%, #e8edf3 75%)",
+                backgroundSize: "200% 100%",
+                animation: "baltoSessionSkeleton 1.25s ease-in-out infinite",
+              }}
+            />
+          ))}
+        </div>
+        <div
+          style={{
+            height: 330,
+            borderRadius: 14,
+            background: "linear-gradient(90deg, #e8edf3 25%, #f5f7fa 50%, #e8edf3 75%)",
+            backgroundSize: "200% 100%",
+            animation: "baltoSessionSkeleton 1.25s ease-in-out infinite",
+          }}
+        />
       </div>
+      <style>{`
+        @keyframes baltoSessionSkeleton {
+          0% { background-position: 200% 0; }
+          100% { background-position: -200% 0; }
+        }
+        @media (max-width: 720px) {
+          [aria-busy="true"] > [aria-hidden="true"] > div:nth-child(2) {
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }

@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useState } from "react";
-import BaltoCargaGif from "../imagenes/Balto_Carga.gif";
 import {
   clearClientSession,
   getSessionKey,
@@ -118,22 +117,59 @@ export default function GlobalSessionGate({ children }) {
       role="status"
       aria-live="polite"
       aria-busy="true"
+      aria-label="Cargando BALTO Servicios"
       style={{
         minHeight: "100vh",
-        display: "grid",
-        placeItems: "center",
-        background: "#fff",
+        padding: "24px",
+        background: "#f4f7fb",
         fontFamily: "sans-serif",
+        boxSizing: "border-box",
       }}
     >
-      <div style={{ textAlign: "center", padding: 24 }}>
-        <img
-          src={BaltoCargaGif}
-          alt=""
-          aria-hidden="true"
-          style={{ display: "block", width: "min(180px, 42vw)", height: "auto", margin: "0 auto 14px" }}
+      <div
+        style={{
+          width: "min(1180px, 100%)",
+          margin: "0 auto",
+          display: "grid",
+          gap: 18,
+        }}
+      >
+        <div
+          style={{
+            width: "min(320px, 46%)",
+            height: 34,
+            borderRadius: 10,
+            background: "#e5eaf0",
+          }}
         />
-        <div style={{ fontWeight: 600 }}>Abriendo BALTO Servicios…</div>
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))",
+            gap: 14,
+          }}
+        >
+          {[0, 1, 2, 3].map((item) => (
+            <div
+              key={item}
+              style={{
+                height: 112,
+                borderRadius: 14,
+                background: "#e5eaf0",
+              }}
+            />
+          ))}
+        </div>
+
+        <div
+          style={{
+            height: "min(420px, 48vh)",
+            minHeight: 250,
+            borderRadius: 14,
+            background: "#e5eaf0",
+          }}
+        />
       </div>
     </div>
   );

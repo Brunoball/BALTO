@@ -13,7 +13,6 @@ import {
   faArrowTrendUp,
 } from "@fortawesome/free-solid-svg-icons";
 
-import GifCarga from "../Global/Gif_Carga";
 import Toast from "../Global/Toast.jsx";
 import "./dashboard.css";
 import "../Global/Global_css/Global_responsive.css";
@@ -37,6 +36,58 @@ function AnimatedValue({
   const animatedValue = useCountUp(value, { duration });
 
   return <Tag className={className}>{formatter(animatedValue)}</Tag>;
+}
+
+
+function SkeletonBlock({ className = "" }) {
+  return <span className={`db-skeleton ${className}`} aria-hidden="true" />;
+}
+
+function DashboardChartSkeleton() {
+  const heights = [42, 68, 52, 91, 64, 112, 84, 124, 78, 102, 70, 96];
+
+  return (
+    <div className="db-chart db-chart--skeleton" aria-hidden="true">
+      <div
+        className="db-chart__plot db-chart__plot--skeleton"
+        style={{ gridTemplateColumns: `repeat(${heights.length}, minmax(30px, 1fr))`, minWidth: 456 }}
+      >
+        {heights.map((height, index) => (
+          <div className="db-chart__item" key={index}>
+            <span
+              className="db-skeleton db-chart__skeleton-bar"
+              style={{ height: `${height}px` }}
+            />
+            <SkeletonBlock className="db-chart__skeleton-label" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function DashboardIndicatorsSkeleton() {
+  return (
+    <div className="db-ind-wrapper db-ind-wrapper--skeleton" aria-hidden="true">
+      <div className="db-ind-resultado db-ind-skeleton-card db-ind-skeleton-card--wide">
+        <SkeletonBlock className="db-ind-skeleton-icon" />
+        <div className="db-ind-skeleton-body">
+          <SkeletonBlock className="db-ind-skeleton-label" />
+          <SkeletonBlock className="db-ind-skeleton-value db-ind-skeleton-value--wide" />
+        </div>
+      </div>
+
+      {[0, 1, 2, 3].map((item) => (
+        <div className="db-ind-item db-ind-skeleton-card" key={item}>
+          <SkeletonBlock className="db-ind-skeleton-icon" />
+          <div className="db-ind-skeleton-body">
+            <SkeletonBlock className="db-ind-skeleton-label" />
+            <SkeletonBlock className="db-ind-skeleton-value" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 function DashboardBarChart({ rows }) {
@@ -276,8 +327,6 @@ export default function Dashboard() {
 
   return (
     <>
-      {loadingDashboard && !dashboard.series_diaria.length && <GifCarga visible />}
-
       {toast && (
         <Toast
           tipo={toast.tipo}
@@ -308,30 +357,50 @@ export default function Dashboard() {
             >
               <FontAwesomeIcon icon={faChartLine} />
               <span>Mes actual</span>
-              <strong>{mesActualLabel}</strong>
+              {loadingDashboard ? (
+                <SkeletonBlock className="db-period-skeleton" />
+              ) : (
+                <strong>{mesActualLabel}</strong>
+              )}
             </div>
           </div>
         </header>
 
         <section className="db-kpi-grid">
           {topCards.map((card) => (
-            <article className={`db-kpi db-kpi--${card.tone}`} key={card.key}>
-              <div className="db-kpi__icon" aria-hidden="true">
-                <FontAwesomeIcon icon={card.icon} />
-              </div>
+            <article
+              className={`db-kpi db-kpi--${card.tone}${loadingDashboard ? " db-kpi--loading" : ""}`}
+              key={card.key}
+            >
+              {loadingDashboard ? (
+                <>
+                  <SkeletonBlock className="db-kpi__skeleton-icon" />
+                  <div className="db-kpi__body db-kpi__body--skeleton" aria-hidden="true">
+                    <SkeletonBlock className="db-kpi__skeleton-label" />
+                    <SkeletonBlock className="db-kpi__skeleton-value" />
+                    <SkeletonBlock className="db-kpi__skeleton-detail" />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="db-kpi__icon" aria-hidden="true">
+                    <FontAwesomeIcon icon={card.icon} />
+                  </div>
 
-              <div className="db-kpi__body">
-                <span className="db-kpi__label">{card.label}</span>
+                  <div className="db-kpi__body">
+                    <span className="db-kpi__label">{card.label}</span>
 
-                <AnimatedValue
-                  as="strong"
-                  className={`db-kpi__value ${card.valueClass}`}
-                  value={card.value}
-                  formatter={card.formatter}
-                />
+                    <AnimatedValue
+                      as="strong"
+                      className={`db-kpi__value ${card.valueClass}`}
+                      value={card.value}
+                      formatter={card.formatter}
+                    />
 
-                <span className="db-kpi__detail">{card.detail}</span>
-              </div>
+                    <span className="db-kpi__detail">{card.detail}</span>
+                  </div>
+                </>
+              )}
             </article>
           ))}
         </section>
@@ -360,7 +429,11 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <DashboardBarChart rows={dashboard.series_diaria} />
+            {loadingDashboard ? (
+              <DashboardChartSkeleton />
+            ) : (
+              <DashboardBarChart rows={dashboard.series_diaria} />
+            )}
           </article>
 
           <aside className="db-panel db-panel--side">
@@ -371,7 +444,11 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <SideIndicators kpis={kpis} />
+            {loadingDashboard ? (
+              <DashboardIndicatorsSkeleton />
+            ) : (
+              <SideIndicators kpis={kpis} />
+            )}
           </aside>
         </section>
 

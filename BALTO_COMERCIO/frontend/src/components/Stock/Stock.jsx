@@ -8,7 +8,6 @@ import ModalReportesStock from "./modales/ModalReportesStock";
 import ModalDarBajaStock from "./modales/ModalDarBajaStock";
 import ModalEliminarStock from "./modales/ModalEliminarStock";
 import Toast from "../Global/Toast";
-import BaltoCargaGif from "../../imagenes/Balto_Carga.gif";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faPlus,
@@ -3482,9 +3481,6 @@ const Stock = () => {
         createPortal(
           <div className="stock-priceLoadingOverlay" role="status" aria-live="polite">
             <div className="stock-priceLoadingModal">
-              <div className="stock-priceLoadingModal__icon">
-                <img src={BaltoCargaGif} alt="Balto cargando" className="stock-priceLoadingModal__gif" />
-              </div>
               <div className="stock-priceLoadingModal__content">
                 <h3>
                   {cargaPreciosMasivos.tiendaNubeActiva === true

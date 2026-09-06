@@ -3175,3 +3175,178 @@ body.dark .servicios-article-stockNotice > svg {
 @media (max-width: 640px) {
   .servicios-adjust-modal .servicios-history-summaryGrid { grid-template-columns: 1fr; }
 }
+
+/* =========================================================
+   V8 · CABECERA DE INVENTARIO EN UNA SOLA FILA
+   - Las pestañas siempre muestran Materiales / Insumos / Stock completos.
+   - Al abrir el sidebar no baja ningún control en escritorio.
+   - El buscador es el control que más cede ancho.
+   - El apilado queda reservado para <= 720px.
+========================================================= */
+.servicios-mainCard {
+  container-type: inline-size;
+  container-name: servicios-main;
+}
+
+@media (min-width: 721px) {
+  .servicios-mainCard > .mov-card__head {
+    display: flex;
+    align-items: flex-end;
+    flex-wrap: nowrap !important;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .servicios-mainCard > .mov-card__head > .mov-card__headLeft {
+    display: flex !important;
+    flex: 1 1 auto;
+    flex-direction: row !important;
+    align-items: flex-end;
+    flex-wrap: nowrap !important;
+    gap: 8px;
+    width: auto !important;
+    min-width: 0;
+  }
+
+  /* El bloque toma exactamente el ancho que necesitan las pestañas. */
+  .servicios-mainCard .servicios-titleBlock {
+    display: flex;
+    flex: 0 0 max-content !important;
+    flex-direction: column;
+    align-items: flex-start;
+    width: max-content !important;
+    min-width: max-content !important;
+    max-width: none !important;
+  }
+
+  .servicios-mainCard .servicios-inventoryTabs {
+    display: inline-flex;
+    flex-wrap: nowrap;
+    width: max-content !important;
+    min-width: max-content !important;
+    max-width: none !important;
+    white-space: nowrap;
+  }
+
+  .servicios-mainCard .servicios-inventoryTab {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  .servicios-mainCard .servicios-headFilters {
+    display: flex !important;
+    flex: 1 1 0;
+    flex-direction: row !important;
+    align-items: flex-end;
+    justify-content: flex-end;
+    flex-wrap: nowrap !important;
+    gap: 7px;
+    width: auto !important;
+    min-width: 0;
+    max-width: none;
+    overflow: visible;
+  }
+
+  /* Principal punto de compresión cuando el sidebar quita espacio. */
+  .servicios-mainCard .servicios-searchFilter {
+    flex: 1 1 270px !important;
+    width: auto !important;
+    min-width: 105px !important;
+    max-width: 330px !important;
+  }
+
+  .servicios-mainCard .servicios-searchFilter .cc-floatingField,
+  .servicios-mainCard .servicios-searchFilter .cc-searchInput,
+  .servicios-mainCard .servicios-searchFilter .cc-searchInput__fieldWrap,
+  .servicios-mainCard .servicios-searchInput {
+    width: 100%;
+    min-width: 0 !important;
+  }
+
+  /* Categoría también puede ceder algo, pero menos que la búsqueda. */
+  .servicios-mainCard .servicios-filterCompact {
+    flex: 0 1 145px !important;
+    width: auto !important;
+    min-width: 105px !important;
+    max-width: 150px !important;
+  }
+
+  .servicios-mainCard .servicios-statusTabs.mov-tabs {
+    flex: 0 0 auto !important;
+    width: max-content !important;
+    min-width: max-content !important;
+    max-width: none !important;
+    flex-wrap: nowrap !important;
+    overflow: visible;
+  }
+
+  .servicios-mainCard > .mov-card__head > .servicios-headActions {
+    display: flex !important;
+    flex: 0 0 auto !important;
+    align-items: center;
+    flex-wrap: nowrap !important;
+    width: auto !important;
+    min-width: 0;
+    max-width: none;
+    margin: 0;
+  }
+}
+
+/* Con el sidebar abierto y poco ancho, seguimos en una sola fila:
+   se compactan búsqueda, categoría, gaps y pestañas de estado. */
+@container servicios-main (max-width: 1080px) and (min-width: 721px) {
+  .servicios-mainCard > .mov-card__head,
+  .servicios-mainCard > .mov-card__head > .mov-card__headLeft,
+  .servicios-mainCard .servicios-headFilters {
+    flex-wrap: nowrap !important;
+  }
+
+  .servicios-mainCard > .mov-card__head,
+  .servicios-mainCard > .mov-card__head > .mov-card__headLeft {
+    gap: 6px;
+  }
+
+  .servicios-mainCard .servicios-headFilters {
+    gap: 5px;
+  }
+
+  .servicios-mainCard .servicios-searchFilter {
+    flex-basis: 210px !important;
+    min-width: 90px !important;
+  }
+
+  .servicios-mainCard .servicios-filterCompact {
+    flex-basis: 125px !important;
+    min-width: 96px !important;
+    max-width: 135px !important;
+  }
+
+  .servicios-mainCard .servicios-statusTabs.mov-tabs {
+    gap: 3px;
+    padding: 4px;
+  }
+
+  .servicios-mainCard .servicios-statusTabs .servicios-statusTab.mov-tab {
+    padding-inline: 8px;
+    font-size: 11px;
+  }
+}
+
+@container servicios-main (max-width: 900px) and (min-width: 721px) {
+  .servicios-mainCard .servicios-searchFilter {
+    flex-basis: 150px !important;
+    min-width: 72px !important;
+  }
+
+  .servicios-mainCard .servicios-filterCompact {
+    flex-basis: 105px !important;
+    min-width: 84px !important;
+    max-width: 115px !important;
+  }
+
+  .servicios-mainCard .servicios-statusTabs .servicios-statusTab.mov-tab {
+    padding-inline: 6px;
+    font-size: 10px;
+  }
+}
+

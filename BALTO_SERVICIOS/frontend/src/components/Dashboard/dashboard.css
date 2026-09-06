@@ -946,3 +946,192 @@ body.dark .db-panel {
   border-radius: 999px;
 }
 
+
+/* =========================================================
+   DASHBOARD — SKELETON DE CARGA
+========================================================= */
+
+.db-skeleton {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(10, 37, 64, 0.08);
+}
+
+.db-skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.72),
+    transparent
+  );
+  animation: dbSkeletonShimmer 1.2s ease-in-out infinite;
+}
+
+@keyframes dbSkeletonShimmer {
+  100% { transform: translateX(100%); }
+}
+
+.db-period-skeleton {
+  width: 64px;
+  height: 12px;
+  background: rgba(255, 255, 255, 0.24);
+}
+
+.db-period-skeleton::after {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.52),
+    transparent
+  );
+}
+
+.db-kpi--loading {
+  pointer-events: none;
+}
+
+.db-kpi--loading:hover {
+  transform: none;
+  box-shadow: var(--db-shadow-md);
+}
+
+.db-kpi__skeleton-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  margin-bottom: 12px;
+  flex: 0 0 auto;
+}
+
+.db-kpi__body--skeleton {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.db-kpi__skeleton-label {
+  width: min(132px, 72%);
+  height: 11px;
+  margin-bottom: 9px;
+}
+
+.db-kpi__skeleton-value {
+  width: min(166px, 86%);
+  height: 25px;
+  margin-bottom: 9px;
+  border-radius: 8px;
+}
+
+.db-kpi__skeleton-detail {
+  width: min(116px, 64%);
+  height: 10px;
+}
+
+.db-chart--skeleton {
+  overflow: hidden;
+}
+
+.db-chart__plot--skeleton {
+  overflow: hidden;
+}
+
+.db-chart__plot--skeleton .db-chart__item {
+  justify-content: flex-end;
+}
+
+.db-chart__skeleton-bar {
+  width: min(34px, 88%);
+  min-height: 28px;
+  border-radius: 7px 7px 0 0;
+  flex: 0 0 auto;
+}
+
+.db-chart__skeleton-label {
+  width: 24px;
+  height: 9px;
+  margin-top: 8px;
+}
+
+.db-ind-wrapper--skeleton {
+  overflow: hidden;
+}
+
+.db-ind-skeleton-card {
+  pointer-events: none;
+}
+
+.db-ind-skeleton-card:hover {
+  transform: none;
+}
+
+.db-ind-skeleton-card--wide {
+  background: linear-gradient(135deg, var(--db-surface), var(--db-bg));
+  border-color: rgba(10, 37, 64, 0.08);
+}
+
+.db-ind-skeleton-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  flex: 0 0 auto;
+}
+
+.db-ind-skeleton-body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+}
+
+.db-ind-skeleton-label {
+  width: 72%;
+  max-width: 112px;
+  height: 9px;
+}
+
+.db-ind-skeleton-value {
+  width: 84%;
+  max-width: 126px;
+  height: 14px;
+  border-radius: 7px;
+}
+
+.db-ind-skeleton-value--wide {
+  width: min(170px, 82%);
+  max-width: none;
+  height: 17px;
+}
+
+html[data-theme="oscuro"] .db-skeleton,
+body.dark .db-skeleton {
+  background: rgba(226, 232, 240, 0.11);
+}
+
+html[data-theme="oscuro"] .db-skeleton::after,
+body.dark .db-skeleton::after {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(226, 232, 240, 0.12),
+    transparent
+  );
+}
+
+html[data-theme="oscuro"] .db-ind-skeleton-card--wide,
+body.dark .db-ind-skeleton-card--wide {
+  background: linear-gradient(135deg, rgba(11, 30, 51, 0.92), rgba(7, 22, 36, 0.92));
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .db-skeleton::after {
+    animation: none;
+  }
+}

@@ -5,7 +5,6 @@
 .cal-page {
   width: 100%;
   overflow: hidden;
-  height: calc(100vh - 110px);
   padding: 14px 16px 18px;
   color: var(--balto-text, #425466);
   display: flex;

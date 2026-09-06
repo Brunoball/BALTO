@@ -946,3 +946,148 @@ body.dark .db-panel {
   border-radius: 999px;
 }
 
+
+/* =========================================================
+   DASHBOARD — Skeleton de carga integrado
+   Mantiene la estructura visible mientras llegan los datos.
+========================================================= */
+.db-skeleton {
+  display: block;
+  position: relative;
+  overflow: hidden;
+  background: rgba(148, 163, 184, 0.20);
+  border-radius: 8px;
+}
+
+.db-skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.62),
+    transparent
+  );
+  animation: db-skeleton-shimmer 1.25s ease-in-out infinite;
+}
+
+@keyframes db-skeleton-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.db-kpi--skeleton {
+  pointer-events: none;
+}
+
+.db-skeleton--icon {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  border-radius: 12px;
+}
+
+.db-skeleton--small-icon {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  border-radius: 10px;
+}
+
+.db-skeleton--label {
+  width: 52%;
+  max-width: 132px;
+  height: 10px;
+}
+
+.db-skeleton--value {
+  width: 72%;
+  max-width: 185px;
+  height: 22px;
+  margin-top: 8px;
+}
+
+.db-skeleton--detail {
+  width: 64%;
+  max-width: 150px;
+  height: 9px;
+  margin-top: 8px;
+}
+
+.db-skeleton--period {
+  width: 78px;
+  height: 13px;
+  border-radius: 6px;
+}
+
+.db-chart-skeleton {
+  min-height: 178px;
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  padding: 14px 10px 4px;
+}
+
+.db-chart-skeleton__item {
+  flex: 1 1 0;
+  min-width: 18px;
+  height: 150px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+}
+
+.db-chart-skeleton__bar {
+  width: min(22px, 72%);
+  min-height: 28px;
+  border-radius: 7px 7px 3px 3px;
+}
+
+.db-chart-skeleton__label {
+  width: 24px;
+  height: 7px;
+  border-radius: 4px;
+}
+
+.db-ind-wrapper--skeleton {
+  pointer-events: none;
+}
+
+.db-ind-skeleton-card {
+  align-items: center;
+}
+
+.db-skeleton--side-value {
+  width: 78%;
+  max-width: 145px;
+  height: 17px;
+  margin-top: 7px;
+}
+
+.db-skeleton--side-value-short {
+  width: 62%;
+}
+
+html[data-theme="oscuro"] .db-skeleton {
+  background: rgba(148, 163, 184, 0.14);
+}
+
+html[data-theme="oscuro"] .db-skeleton::after {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.10),
+    transparent
+  );
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .db-skeleton::after {
+    animation: none;
+  }
+}

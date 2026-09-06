@@ -316,17 +316,22 @@ export default function Servicios() {
       { k: "nombre", l: "Servicio" }, { k: "categoria", l: "Categoría", center: true }, { k: "unidad", l: "Unidad", center: true }, { k: "composicion", l: "Composición" }, { k: "costo", l: "Costo", right: true }, { k: "precio", l: "Precio", right: true }, { k: "acciones", l: "Acciones", center: true },
     ];
     if (tab === "trabajadores") return [
-      { k: "nombre", l: "Trabajador" }, { k: "rol", l: "Rol" }, { k: "modalidad", l: "Modalidad" }, { k: "tarifa", l: "Tarifa" }, { k: "hora", l: "Costo/h", right: true }, { k: "servicios", l: "Servicios", right: true }, { k: "acciones", l: "Acciones", center: true },
+      { k: "nombre", l: "Trabajador" }, { k: "rol", l: "Rol", center: true }, { k: "modalidad", l: "Modalidad", center: true }, { k: "tarifa", l: "Tarifa" }, { k: "hora", l: "Costo/h", right: true }, { k: "servicios", l: "Servicios", center: true }, { k: "acciones", l: "Acciones", center: true },
     ];
     if (tab === "stock") return [
-      { k: "nombre", l: "Artículo" }, { k: "tipo", l: "Tipo" }, { k: "categoria", l: "Categoría", center: true }, { k: "unidad", l: "Unidad", center: true }, { k: "stock", l: "Stock", right: true }, { k: "costo", l: "Costo", right: true }, { k: "acciones", l: "Acciones", center: true },
+      { k: "nombre", l: "Artículo" }, { k: "tipo", l: "Tipo", center: true }, { k: "categoria", l: "Categoría", center: true }, { k: "unidad", l: "Unidad", center: true }, { k: "stock", l: "Stock", right: true }, { k: "costo", l: "Costo", right: true }, { k: "acciones", l: "Acciones", center: true },
     ];
     return [
       { k: "nombre", l: tab === "materiales" ? "Material" : "Insumo" }, { k: "categoria", l: "Categoría", center: true }, { k: "unidad", l: "Unidad", center: true }, { k: "stock", l: "Stock", right: true }, { k: "costo", l: "Costo", right: true }, { k: "precio", l: "Precio", right: true }, { k: "acciones", l: "Acciones", center: true },
     ];
   }, [tab]);
 
-  const gridCols = `minmax(190px,1.35fr) ${columns.slice(1).map((column) => column.k === "acciones" ? "150px" : "minmax(100px,.8fr)").join(" ")}`;
+  const gridCols = columns.map((column, index) => {
+    if (index === 0) return "minmax(190px,1.35fr)";
+    if (column.k === "acciones") return "150px";
+    if (column.k === "unidad") return "82px";
+    return "minmax(100px,.8fr)";
+  }).join(" ");
   const values = (row) => ({
     nombre: <span className="servicios-nameCell"><strong>{row.nombre}</strong><small>{row.descripcion || (tab === "trabajadores" ? row.rol : "") || "SIN DESCRIPCIÓN"}</small></span>,
     tipo: row.tipo === "MATERIAL" ? "MATERIAL" : row.tipo === "INSUMO" ? "INSUMO" : "—",

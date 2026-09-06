@@ -158,23 +158,123 @@
 .cfg-listas-gridCell--skeleton span { display: block; width: 100%; height: 11px; border-radius: 7px; background: linear-gradient(90deg, #edf1f5 25%, #f7f9fb 50%, #edf1f5 75%); background-size: 200% 100%; animation: cfg-listas-shimmer 1.2s infinite; }
 @keyframes cfg-listas-shimmer { to { background-position: -200% 0; } }
 
-body.dark-mode .cfg-listas-hero,
-body.dark-mode .cfg-listas-card { background: #101923; border-color: #293847; }
-body.dark-mode .cfg-listas-hero h1,
-body.dark-mode .cfg-listas-gridCell--name strong { color: #eef5fc; }
-body.dark-mode .cfg-listas-toolbar,
-body.dark-mode .cfg-listas-gridCell { border-color: #293847; }
-body.dark-mode .cfg-listas-gridCell--head,
-body.dark-mode .cfg-listas-tabs,
-body.dark-mode .cfg-listas-status { background: #16222e; }
-body.dark-mode .cfg-listas-gridBody .cfg-listas-gridRow:hover .cfg-listas-gridCell { background: #152331; }
-body.dark-mode .cfg-listas-gridBody .cfg-listas-gridRow.is-inactive .cfg-listas-gridCell { background: #121d28; }
-body.dark-mode .cfg-listas-gridBody .cfg-listas-gridRow.is-inactive:hover .cfg-listas-gridCell { background: #182735; }
-body.dark-mode .cfg-listas-tabs button.is-active,
-body.dark-mode .cfg-listas-status button.is-active,
-body.dark-mode .cfg-listas-actions button { background: #1b2a38; border-color: #344657; color: #dce8f4; }
-body.dark-mode .cfg-listas-search { border-color: #344657; }
-body.dark-mode .cfg-listas-search input { color: #eef5fc; }
+html[data-theme="oscuro"] .cfg-listas-page {
+  color: var(--color-text, #e6edf5);
+}
+
+html[data-theme="oscuro"] .cfg-listas-hero,
+html[data-theme="oscuro"] .cfg-listas-card {
+  background: var(--color-surface, #0f2336);
+  border-color: var(--color-border, rgba(255,255,255,.10));
+}
+
+html[data-theme="oscuro"] .cfg-listas-hero__icon {
+  background: var(--color-surface-alt, #132b42);
+  border-color: var(--color-border, rgba(255,255,255,.10));
+  color: var(--color-text-muted, rgba(210,220,235,.70));
+}
+
+html[data-theme="oscuro"] .cfg-listas-eyebrow,
+html[data-theme="oscuro"] .cfg-listas-hero p,
+html[data-theme="oscuro"] .cfg-listas-gridCell--name small,
+html[data-theme="oscuro"] .cfg-listas-empty {
+  color: var(--color-text-muted, rgba(210,220,235,.70));
+}
+
+html[data-theme="oscuro"] .cfg-listas-hero h1,
+html[data-theme="oscuro"] .cfg-listas-gridCell--name strong {
+  color: var(--color-text, rgba(255,255,255,.92));
+}
+
+html[data-theme="oscuro"] .cfg-listas-toolbar,
+html[data-theme="oscuro"] .cfg-listas-gridCell {
+  border-color: var(--color-border, rgba(255,255,255,.10));
+}
+
+html[data-theme="oscuro"] .cfg-listas-tabs,
+html[data-theme="oscuro"] .cfg-listas-status,
+html[data-theme="oscuro"] .cfg-listas-gridCell--head {
+  background: var(--color-surface-alt, #132b42);
+  border-color: var(--color-border, rgba(255,255,255,.10));
+}
+
+html[data-theme="oscuro"] .cfg-listas-tabs button,
+html[data-theme="oscuro"] .cfg-listas-status button,
+html[data-theme="oscuro"] .cfg-listas-gridCell,
+html[data-theme="oscuro"] .cfg-listas-gridCell--head {
+  color: var(--color-text-muted, rgba(210,220,235,.70));
+}
+
+html[data-theme="oscuro"] .cfg-listas-tabs button.is-active,
+html[data-theme="oscuro"] .cfg-listas-status button.is-active {
+  background: color-mix(in srgb, var(--color-primary, #4ea1ff) 14%, var(--color-surface, #0f2336));
+  color: var(--color-primary, #4ea1ff);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, .28);
+}
+
+html[data-theme="oscuro"] .cfg-listas-search {
+  background: var(--color-surface-alt, #132b42);
+  border-color: var(--color-border-strong, rgba(255,255,255,.16));
+  color: var(--color-placeholder, rgba(255,255,255,.38));
+}
+
+html[data-theme="oscuro"] .cfg-listas-search input {
+  color: var(--color-text, rgba(255,255,255,.92));
+}
+
+html[data-theme="oscuro"] .cfg-listas-search input::placeholder {
+  color: var(--color-placeholder, rgba(255,255,255,.38));
+}
+
+html[data-theme="oscuro"] .cfg-listas-gridBody .cfg-listas-gridRow:hover .cfg-listas-gridCell {
+  background: color-mix(in srgb, var(--color-primary, #4ea1ff) 7%, var(--color-surface, #0f2336));
+}
+
+html[data-theme="oscuro"] .cfg-listas-gridBody .cfg-listas-gridRow.is-inactive .cfg-listas-gridCell {
+  background: color-mix(in srgb, var(--color-surface-alt, #132b42) 72%, var(--color-bg, #06121c));
+}
+
+html[data-theme="oscuro"] .cfg-listas-gridBody .cfg-listas-gridRow.is-inactive:hover .cfg-listas-gridCell {
+  background: color-mix(in srgb, var(--color-primary, #4ea1ff) 8%, var(--color-surface-alt, #132b42));
+}
+
+html[data-theme="oscuro"] .cfg-listas-chip {
+  background: var(--color-surface-muted, rgba(255,255,255,.06));
+  color: var(--color-text-muted, rgba(210,220,235,.70));
+}
+
+html[data-theme="oscuro"] .cfg-listas-chip.is-active {
+  background: var(--color-success-soft, rgba(34,197,94,.18));
+  color: var(--color-success, #74e0a3);
+}
+
+html[data-theme="oscuro"] .cfg-listas-actions button {
+  background: var(--color-surface-alt, #132b42);
+  border-color: var(--color-border-strong, rgba(255,255,255,.16));
+  color: var(--color-text-muted, rgba(210,220,235,.70));
+}
+
+html[data-theme="oscuro"] .cfg-listas-actions button:hover {
+  background: var(--color-primary-soft, rgba(78,161,255,.14));
+  border-color: color-mix(in srgb, var(--color-primary, #4ea1ff) 35%, transparent);
+  color: var(--color-primary, #4ea1ff);
+}
+
+html[data-theme="oscuro"] .cfg-listas-actions button.is-danger:hover {
+  background: var(--color-danger-soft, rgba(239,68,68,.20));
+  border-color: color-mix(in srgb, var(--color-danger, #ff8b92) 35%, transparent);
+  color: var(--color-danger, #ff8b92);
+}
+
+html[data-theme="oscuro"] .cfg-listas-gridCell--skeleton span {
+  background: linear-gradient(
+    90deg,
+    var(--color-surface-alt, #132b42) 25%,
+    color-mix(in srgb, var(--color-surface-alt, #132b42) 72%, white 8%) 50%,
+    var(--color-surface-alt, #132b42) 75%
+  );
+  background-size: 200% 100%;
+}
 
 @media (max-width: 980px) {
   .cfg-listas-toolbar { grid-template-columns: 1fr 1fr; }

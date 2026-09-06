@@ -1,6 +1,5 @@
 .cfg-legal-page {
   width: 100%;
-  height: calc(100vh - 110px);
   overflow: hidden;
   padding: 16px;
   color: var(--balto-text, #425466);

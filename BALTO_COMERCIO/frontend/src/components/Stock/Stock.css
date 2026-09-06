@@ -1954,26 +1954,6 @@ html[data-theme="oscuro"] .mov-gridCell .prod-productCell > .prod-variantBadge--
   text-align: center;
 }
 
-.stock-priceLoadingModal__icon {
-  width: 124px;
-  height: 124px;
-  margin-bottom: 18px;
-  border-radius: 28px;
-  display: grid;
-  place-items: center;
-  flex: 0 0 auto;
-  color: var(--nv-action, #0055BB);
-  background: rgba(0, 85, 187, 0.07);
-  box-shadow: inset 0 0 0 1px rgba(0, 85, 187, 0.07);
-}
-
-.stock-priceLoadingModal__gif {
-  width: 108px;
-  height: 108px;
-  object-fit: contain;
-  display: block;
-}
-
 .stock-priceLoadingModal__content {
   width: 100%;
 }
@@ -2008,7 +1988,7 @@ html[data-theme="oscuro"] .mov-gridCell .prod-productCell > .prod-variantBadge--
   line-height: 1.45;
 }
 
-html[data-theme="oscuro"] .stock-priceLoadingModal__icon,
+
 html[data-theme="oscuro"] .stock-priceLoadingModal__content small {
   background: rgba(78, 161, 255, 0.12);
 }
@@ -2016,16 +1996,6 @@ html[data-theme="oscuro"] .stock-priceLoadingModal__content small {
 @media (max-width: 520px) {
   .stock-priceLoadingModal {
     padding: 26px 20px 24px;
-  }
-
-  .stock-priceLoadingModal__icon {
-    width: 112px;
-    height: 112px;
-  }
-
-  .stock-priceLoadingModal__gif {
-    width: 98px;
-    height: 98px;
   }
 
   .stock-priceLoadingModal__content h3 {
