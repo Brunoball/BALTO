@@ -10,8 +10,8 @@ const EMPTY = {
   id_categoria: "",
   id_unidad: "",
   descripcion: "",
-  stock_actual: "0",
-  costo_unitario: "0",
+  stock_actual: "",
+  costo_unitario: "",
   precio_venta: "",
   iva_pct: "0",
 };
@@ -26,8 +26,8 @@ export default function ModalArticulo({ open, item, tipo = "INSUMO", entidad = "
       id_categoria: item?.id_categoria ? String(item.id_categoria) : "",
       id_unidad: item?.id_unidad ? String(item.id_unidad) : "",
       descripcion: item?.descripcion || "",
-      stock_actual: String(item?.stock_actual ?? "0"),
-      costo_unitario: String(item?.costo_unitario ?? "0"),
+      stock_actual: item ? String(item.stock_actual ?? "") : "",
+      costo_unitario: item ? String(item.costo_unitario ?? "") : "",
       precio_venta: item?.precio_venta == null ? "" : String(item.precio_venta),
       iva_pct: String(item?.iva_pct ?? "0"),
     });
@@ -45,11 +45,12 @@ export default function ModalArticulo({ open, item, tipo = "INSUMO", entidad = "
     if (!item && Number(form.stock_actual || 0) < 0) return onToast?.("error", "El stock inicial no puede ser negativo.", 4200);
     await onSave({
       ...form,
+      costo_unitario: form.costo_unitario === "" ? "0" : form.costo_unitario,
       tipo,
       id_articulo: item?.id_articulo,
       id_categoria: form.id_categoria || null,
       precio_venta: form.precio_venta === "" ? null : form.precio_venta,
-      stock_actual: item ? item.stock_actual : form.stock_actual,
+      stock_actual: item ? item.stock_actual : (form.stock_actual === "" ? "0" : form.stock_actual),
     });
   };
 
@@ -100,8 +101,8 @@ export default function ModalArticulo({ open, item, tipo = "INSUMO", entidad = "
               </div>
               <div className="gm-section-body servicios-service-panelBody">
                 <div className="servicios-form-grid servicios-article-valueFields">
-                  <label className="gm-field servicios-field--span-6"><input className="gm-input" inputMode="decimal" disabled={Boolean(item)} value={form.stock_actual} onChange={(e) => set("stock_actual", decimalText(e.target.value, 6))} placeholder=" " /><span className="gm-label">{item ? "Stock actual" : "Stock inicial"}</span></label>
-                  <label className="gm-field servicios-field--span-6"><input className="gm-input" inputMode="decimal" value={form.costo_unitario} onChange={(e) => set("costo_unitario", decimalText(e.target.value, 6))} placeholder=" " /><span className="gm-label">Costo unitario</span></label>
+                  <label className="gm-field servicios-field--span-6"><input className="gm-input" inputMode="decimal" disabled={Boolean(item)} value={form.stock_actual} onChange={(e) => set("stock_actual", decimalText(e.target.value, 6))} placeholder="0" /><span className="gm-label gm-label--up">{item ? "Stock actual" : "Stock inicial"}</span></label>
+                  <label className="gm-field servicios-field--span-6"><input className="gm-input" inputMode="decimal" value={form.costo_unitario} onChange={(e) => set("costo_unitario", decimalText(e.target.value, 6))} placeholder="0" /><span className="gm-label gm-label--up">Costo unitario</span></label>
                   <label className="gm-field servicios-field--span-6"><input className="gm-input" inputMode="decimal" value={form.precio_venta} onChange={(e) => set("precio_venta", decimalText(e.target.value, 2))} placeholder=" " /><span className="gm-label">Precio de venta (opcional)</span></label>
                   <label className="gm-field servicios-field--span-6"><select className="gm-input gm-select" value={form.iva_pct} onChange={(e) => set("iva_pct", e.target.value)}>{["0", "10.5", "21", "27"].map((v) => <option key={v} value={v}>{v} %</option>)}</select><span className="gm-label gm-label--up">IVA aplicado</span></label>
                 </div>

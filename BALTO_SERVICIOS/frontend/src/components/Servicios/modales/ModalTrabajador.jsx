@@ -19,7 +19,7 @@ const EMPTY = {
   rol: "",
   tipo_trabajador: "EMPLEADO",
   modalidad_pago: "HORA",
-  monto_periodo: "0",
+  monto_periodo: "",
   horas_periodo: "1",
   notas: "",
 };
@@ -36,7 +36,7 @@ export default function ModalTrabajador({ open, item, saving, onClose, onSave, o
       rol: item?.rol || "",
       tipo_trabajador: item?.tipo_trabajador || "EMPLEADO",
       modalidad_pago: item?.modalidad_pago || "HORA",
-      monto_periodo: String(item?.monto_periodo ?? item?.costo_hora ?? "0"),
+      monto_periodo: item ? String(item.monto_periodo ?? item.costo_hora ?? "") : "",
       horas_periodo: String(item?.horas_periodo ?? "1"),
       notas: item?.notas || "",
     });
@@ -71,6 +71,7 @@ export default function ModalTrabajador({ open, item, saving, onClose, onSave, o
 
     await onSave({
       ...form,
+      monto_periodo: form.monto_periodo === "" ? "0" : form.monto_periodo,
       id_trabajador: item?.id_trabajador,
     });
   };
@@ -142,8 +143,8 @@ export default function ModalTrabajador({ open, item, saving, onClose, onSave, o
                   </label>
 
                   <label className="gm-field servicios-field--span-6">
-                    <input className="gm-input" inputMode="decimal" value={form.monto_periodo} onChange={(e) => set("monto_periodo", decimalText(e.target.value, 2))} placeholder=" " />
-                    <span className="gm-label">Monto del período</span>
+                    <input className="gm-input" inputMode="decimal" value={form.monto_periodo} onChange={(e) => set("monto_periodo", decimalText(e.target.value, 2))} placeholder="0" />
+                    <span className="gm-label gm-label--up">Monto del período</span>
                   </label>
 
                   <label className="gm-field servicios-field--span-6">

@@ -1040,10 +1040,17 @@ body.dark .servicios-statusTabs .servicios-statusTab {
 }
 
 html[data-theme="oscuro"] .servicios-statusTabs .servicios-statusTab:hover,
-body.dark .servicios-statusTabs .servicios-statusTab:hover,
+body.dark .servicios-statusTabs .servicios-statusTab:hover {
+  background: rgba(59, 130, 246, .10);
+  color: #78b7ff;
+}
+
 html[data-theme="oscuro"] .servicios-statusTabs .servicios-statusTab.is-active,
 body.dark .servicios-statusTabs .servicios-statusTab.is-active {
-  color: #78b7ff;
+  background: rgba(59, 130, 246, .18);
+  border-color: rgba(96, 165, 250, .34);
+  color: #93c5fd;
+  box-shadow: none;
 }
 
 html[data-theme="oscuro"] .servicios-tableFooter,
@@ -1177,10 +1184,35 @@ body.dark .servicios-headSecondary .servicios-categoriesBtn {
   overflow: visible;
 }
 
+/* Modal de categorías: la tabla ocupa solo el espacio disponible.
+   El aviso inferior permanece en el flujo y nunca se superpone a las filas. */
+.servicios-categories-modal__content.gm-modal-content {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.servicios-categories-modal__table.mov-page {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
 .servicios-category-tableWrap.mov-tableWrap {
   width: 100%;
-  min-height: min(320px, 42vh) !important;
-  max-height: min(480px, 52vh) !important;
+  flex: 1 1 auto;
+  height: auto;
+  min-height: 0 !important;
+  max-height: none !important;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.servicios-categories-modal__content > .gm-info-box {
+  position: static;
+  flex: 0 0 auto;
+  margin-top: 10px;
 }
 
 .servicios-category-tableWrap .mov-gridBody--relative {
@@ -1307,10 +1339,6 @@ body.dark .servicios-field__counter {
     grid-column: 1;
   }
 
-  .servicios-category-tableWrap.mov-tableWrap {
-    min-height: min(360px, 48vh) !important;
-    max-height: min(460px, 56vh) !important;
-  }
 
   .servicios-category-detail small {
     overflow: visible;
@@ -2592,4 +2620,19 @@ body.dark .servicios-article-stockNotice > svg {
 }
 @media (max-width: 640px) {
   .servicios-adjust-modal .servicios-history-summaryGrid { grid-template-columns: 1fr; }
+}
+
+/* Modal de categorías: el encabezado conserva el alto normal de las tablas.
+   Solo el body cede espacio y scrollea dentro del modal. */
+.servicios-categories-modal__table > .mov-gridTable--head {
+  flex: 0 0 44px;
+  height: 44px;
+  min-height: 44px;
+}
+
+.servicios-categories-modal__table > .mov-gridTable--head .mov-gridCell--head {
+  height: 44px;
+  min-height: 44px;
+  padding-top: 11px;
+  padding-bottom: 11px;
 }

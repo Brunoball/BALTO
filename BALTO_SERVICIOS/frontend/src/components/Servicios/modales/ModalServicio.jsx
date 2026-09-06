@@ -11,9 +11,9 @@ const EMPTY = {
   id_categoria: "",
   id_unidad_cobro: "",
   descripcion: "",
-  costo_base: "0",
+  costo_base: "",
   duracion_estimada_minutos: "",
-  precio_venta: "0",
+  precio_venta: "",
   iva_pct: "0",
 };
 
@@ -202,9 +202,9 @@ export default function ModalServicio({
       id_categoria: item?.id_categoria ? String(item.id_categoria) : "",
       id_unidad_cobro: item?.id_unidad_cobro ? String(item.id_unidad_cobro) : String(defaultUnit),
       descripcion: item?.descripcion || "",
-      costo_base: String(item?.costo_base ?? "0"),
+      costo_base: item ? String(item.costo_base ?? "") : "",
       duracion_estimada_minutos: item?.duracion_estimada_minutos == null ? "" : String(item.duracion_estimada_minutos),
-      precio_venta: String(item?.precio_venta ?? "0"),
+      precio_venta: item ? String(item.precio_venta ?? "") : "",
       iva_pct: String(item?.iva_pct ?? "0"),
     });
 
@@ -267,13 +267,15 @@ export default function ModalServicio({
     if (!form.nombre.trim()) return onToast?.("error", "Completá el nombre del servicio.", 4200);
     if (!form.id_unidad_cobro) return onToast?.("error", "Seleccioná una unidad de cobro.", 4200);
     if (Number(form.costo_base || 0) < 0) return onToast?.("error", "Otros costos no puede ser negativo.", 4200);
-    if (form.precio_venta === "" || Number(form.precio_venta) < 0) return onToast?.("error", "Indicá un precio de venta válido.", 4200);
+    if (Number(form.precio_venta || 0) < 0) return onToast?.("error", "Indicá un precio de venta válido.", 4200);
     if (articleRows.some((r) => Number(r.cantidad) <= 0) || workerRows.some((r) => Number(r.horas_estimadas) <= 0)) {
       return onToast?.("error", "Todas las cantidades y horas deben ser mayores a cero.", 4200);
     }
 
     await onSave({
       ...form,
+      costo_base: form.costo_base === "" ? "0" : form.costo_base,
+      precio_venta: form.precio_venta === "" ? "0" : form.precio_venta,
       id_servicio: item?.id_servicio,
       id_categoria: form.id_categoria || null,
       duracion_estimada_minutos: form.duracion_estimada_minutos || null,
@@ -367,12 +369,12 @@ export default function ModalServicio({
               <div className="gm-section-body servicios-service-panelBody">
                 <div className="servicios-form-grid servicios-service-priceFields">
                   <label className="gm-field servicios-field--span-6">
-                    <input className="gm-input" inputMode="decimal" value={form.costo_base} onChange={(e) => set("costo_base", decimalText(e.target.value, 6))} placeholder=" " />
-                    <span className="gm-label">Otros costos</span>
+                    <input className="gm-input" inputMode="decimal" value={form.costo_base} onChange={(e) => set("costo_base", decimalText(e.target.value, 6))} placeholder="0" />
+                    <span className="gm-label gm-label--up">Otros costos</span>
                   </label>
                   <label className="gm-field servicios-field--span-6">
-                    <input className="gm-input" inputMode="decimal" value={form.precio_venta} onChange={(e) => set("precio_venta", decimalText(e.target.value, 2))} placeholder=" " />
-                    <span className="gm-label">Precio de venta</span>
+                    <input className="gm-input" inputMode="decimal" value={form.precio_venta} onChange={(e) => set("precio_venta", decimalText(e.target.value, 2))} placeholder="0" />
+                    <span className="gm-label gm-label--up">Precio de venta</span>
                   </label>
                   <label className="gm-field servicios-field--span-12">
                     <select className="gm-input gm-select" value={form.iva_pct} onChange={(e) => set("iva_pct", e.target.value)}>

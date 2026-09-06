@@ -51,7 +51,7 @@ export default function ModalCategorias({
           <button type="button" className="gm-modal-close" onClick={onClose} disabled={saving} aria-label="Cerrar">✕</button>
         </header>
 
-        <div className="gm-modal-content servicios-modal__content">
+        <div className="gm-modal-content servicios-modal__content servicios-categories-modal__content">
           <div className="gm-view-footer-actions">
             <button
               type="button"
@@ -63,7 +63,7 @@ export default function ModalCategorias({
             </button>
           </div>
 
-          <div className="mov-page" role="table" aria-label={titulo}>
+          <div className="mov-page servicios-categories-modal__table" role="table" aria-label={titulo}>
             <div
               className={`mov-gridTable mov-gridTable--head ${hasTableScroll ? "has-y-scroll" : ""}`}
               style={{ gridTemplateColumns: CATEGORY_GRID_COLUMNS }}
