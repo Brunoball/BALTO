@@ -411,6 +411,12 @@ export default function Servicios() {
         trabajadores: "trabajador",
       })[statusModal.kind] || "registro";
   const statusActionLabel = statusIsActive ? "Dar de baja" : "Reactivar";
+  const statusUsageCount = Number(statusModal.item?.cantidad_servicios || 0);
+  const statusWarning = statusIsActive
+    ? (!statusModal.category && RESOURCE_TABS.has(statusModal.kind) && statusUsageCount > 0
+        ? `Este ${statusLabel} forma parte de ${statusUsageCount} ${statusUsageCount === 1 ? "servicio" : "servicios"}. La baja no borra ni modifica esas composiciones ni el historial: dejará de poder elegirse como artículo directo, pero los servicios que ya lo incluyen conservarán su receta y podrán seguir consumiendo su stock existente.`
+        : "El registro dejará de estar disponible para nuevas selecciones, pero conservará sus relaciones e historial.")
+    : "El registro volverá a estar disponible para nuevas selecciones.";
 
   return (
     <section className="mov-page servicios-page">
@@ -549,9 +555,7 @@ export default function Servicios() {
         onConfirm={confirmStatusChange}
         title={`${statusActionLabel} ${statusLabel}`}
         message={`¿Seguro que querés ${statusIsActive ? "dar de baja" : "reactivar"} ${statusModal.category ? "la" : "el"} ${statusLabel} "${statusModal.item?.nombre || "seleccionado"}"?`}
-        warning={statusIsActive
-          ? "El registro dejará de estar disponible para nuevas selecciones, pero conservará sus relaciones e historial."
-          : "El registro volverá a estar disponible para nuevas selecciones."}
+        warning={statusWarning}
         loadingMessage={statusIsActive ? "Dando de baja…" : "Reactivando…"}
         successMessage={statusIsActive ? "Registro dado de baja correctamente." : "Registro reactivado correctamente."}
         errorMessage="No se pudo cambiar el estado del registro."

@@ -63,6 +63,13 @@ const emptyLists = {
   cuentas_corrientes: [],
   detalles: [],
   detalles_ingresos: [],
+  detalles_compras: [],
+  detalles_todos: [],
+  servicios_movimiento: [],
+  articulos_stock: [],
+  articulos_stock_todos: [],
+  stock_productos: [],
+  productos_stock: [],
   medios_pago: [],
   proveedores: [],
   tipos_movimiento: [],
@@ -76,6 +83,21 @@ function normalizeLists(raw) {
   const src = raw?.listas && typeof raw.listas === "object" ? raw.listas : raw;
   const getArr = (k) => (Array.isArray(src?.[k]) ? src[k] : []);
   const periodosUI = (getArr("periodos") || []).map(periodoToMMYYYY);
+  const firstArray = (...keys) => {
+    for (const key of keys) {
+      const value = getArr(key);
+      if (value.length) return value;
+    }
+    for (const key of keys) {
+      if (Array.isArray(src?.[key])) return src[key];
+    }
+    return [];
+  };
+
+  const serviciosMovimiento = firstArray("servicios_movimiento", "serviciosMovimiento");
+  const articulosStock = firstArray("articulos_stock", "articulosStock", "stock_productos", "productos_stock");
+  const articulosStockTodos = firstArray("articulos_stock_todos", "articulosStockTodos", "detalles_compras", "detallesCompras", "detalles_todos", "detallesTodos");
+  const detallesCompras = firstArray("detalles_compras", "detallesCompras", "detalles_todos", "detallesTodos", "articulos_stock_todos", "articulosStockTodos");
 
   return {
     periodos: periodosUI,
@@ -83,7 +105,14 @@ function normalizeLists(raw) {
     clientes: getArr("clientes"),
     cuentas_corrientes: getArr("cuentas_corrientes"),
     detalles: getArr("detalles"),
-    detalles_ingresos: getArr("detalles_ingresos"),
+    detalles_ingresos: firstArray("detalles_ingresos", "detallesIngresos", "detalles_ingreso", "detallesIngreso"),
+    detalles_compras: detallesCompras,
+    detalles_todos: detallesCompras,
+    servicios_movimiento: serviciosMovimiento,
+    articulos_stock: articulosStock,
+    articulos_stock_todos: articulosStockTodos,
+    stock_productos: articulosStock,
+    productos_stock: articulosStock,
     medios_pago: getArr("medios_pago"),
     proveedores: getArr("proveedores"),
     tipos_movimiento: getArr("tipos_movimiento"),

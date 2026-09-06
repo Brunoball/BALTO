@@ -118,8 +118,6 @@ export const ENV = Object.freeze({
   startCommand: String(process.env.PW_START_COMMAND || 'npm start').trim(),
 
   cleanup: bool(process.env.PW_CLEANUP, true),
-  skipTiendaNube: bool(process.env.PW_SKIP_TIENDA_NUBE, true),
-
   timeoutMs: integer(process.env.PW_TIMEOUT_MS, 60_000),
   expectTimeoutMs: integer(process.env.PW_EXPECT_TIMEOUT_MS, 15_000),
   slowMoMs: integer(process.env.PW_SLOW_MO_MS, 0),

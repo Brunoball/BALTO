@@ -1,4 +1,12 @@
 import { expect } from '@playwright/test';
+import { authenticatedApi, expectApiSuccess } from './api.js';
+import {
+  createServiceArticleFixture,
+  deleteServiceArticleFixture,
+  findServiceInventoryRow,
+  getServiceArticleByName,
+  updateServiceArticleFixture,
+} from './services.js';
 import {
   clickSaveAndWait,
   completeRemainingAmount,
@@ -39,214 +47,115 @@ function isOtherIncomeCreditOperation(request, operation) {
 }
 
 export async function createStockProduct(page, product) {
-  await page.goto('/panel/stock');
-  await waitForBusyToFinish(page);
-  await page.getByRole('button', { name: /Agregar producto/i }).first().click();
+  const row = await createServiceArticleFixture(page, {
+    type: product.type || 'MATERIAL',
+    name: product.name,
+    description: product.description || (product.sku ? `REF ${product.sku}` : undefined),
+    stock: product.stock,
+    cost: product.cost,
+    price: product.price,
+    ivaPct: product.ivaPct,
+    categoryId: product.categoryId,
+    idUnit: product.idUnit,
+  });
 
-  const dialog = await waitDialog(page, 'Productos');
-  await dialog.locator('input[name="nombre"]').fill(product.name);
-  await dialog.locator('input[name="sku"]').fill(product.sku);
-  await dialog.locator('input[name="stock"]').fill(String(product.stock ?? 10));
-  await dialog.locator('input[name="precio_costo"]').fill(String(product.cost ?? 100));
-  await dialog.locator('input[name="precio_costo"]').blur();
-  await dialog.locator('input[name="precio"]').fill(String(product.price ?? 150));
-  await dialog.locator('input[name="precio"]').blur();
-
-  // El modal puede cerrarse mientras la grilla todavía está terminando su
-  // refresco optimista. Esperamos la confirmación real del alta y volvemos a
-  // cargar Stock antes de buscar por SKU (más corto y estrictamente único).
-  const createResponsePromise = page.waitForResponse(
-    (response) =>
-      response.request().method() === 'POST' &&
-      new URL(response.url()).searchParams.get('action') === 'stock_productos_crear',
-    { timeout: 120_000 },
-  );
-  const saveButton = dialog.getByRole('button', { name: /Guardar producto/i }).last();
-  await expect(saveButton).toBeEnabled();
-  await saveButton.click();
-
-  const createResponse = await createResponsePromise;
-  const createBody = await createResponse.json().catch(() => ({}));
-  expect(
-    createResponse.status(),
-    `El alta de ${product.name} respondió HTTP ${createResponse.status()}: ${JSON.stringify(createBody)}`,
-  ).toBeLessThan(400);
-  expect(
-    createBody?.exito !== false && createBody?.success !== false,
-    createBody?.mensaje || createBody?.message || `No se pudo crear ${product.name}`,
-  ).toBeTruthy();
-  await expect(dialog).toBeHidden({ timeout: 120_000 });
-
-  await page.goto('/panel/stock');
-  await waitForBusyToFinish(page);
-  const row = await searchRow(page, product.sku, /Buscar por nombre, SKU o variante/i);
-  await expect(row).toContainText(product.name);
-  await expect(row).toContainText(product.sku);
+  // Conservamos este helper porque lo consumen muchas suites históricas. Desde
+  // BALTO Servicios crea un artículo real de servicio_articulos y no un producto
+  // del viejo módulo Stock de Comercio.
+  expect(Number(row?.id_articulo || 0), `El alta de ${product.name} debe devolver id_articulo`).toBeGreaterThan(0);
   return row;
 }
 
 export async function editStockProduct(page, productName, updates) {
-  const row = await searchRow(page, productName, /Buscar por nombre, SKU o variante/i);
-  await row.getByTitle('Editar').click();
-  const dialog = await waitDialog(page, 'Editar producto');
-
-  if (updates.name) await dialog.locator('input[name="nombre"]').fill(updates.name);
-  if (updates.stock !== undefined) await dialog.locator('input[name="stock"]').fill(String(updates.stock));
-  if (updates.price !== undefined) {
-    await dialog.locator('input[name="precio"]').fill(String(updates.price));
-    await dialog.locator('input[name="precio"]').blur();
-  }
-
-  const updateResponsePromise = page.waitForResponse(
-    (response) =>
-      response.request().method() === 'POST' &&
-      new URL(response.url()).searchParams.get('action') === 'stock_productos_actualizar',
-    { timeout: 120_000 },
-  );
-  await clickSaveAndWait(dialog, /Guardar cambios/i, { timeout: 90_000 });
-
-  const updateResponse = await updateResponsePromise;
-  const updateBody = await updateResponse.json().catch(() => ({}));
-  expect(
-    updateResponse.status(),
-    `La edición de ${productName} respondió HTTP ${updateResponse.status()}: ${JSON.stringify(updateBody)}`,
-  ).toBeLessThan(400);
-  expect(
-    updateBody?.exito !== false && updateBody?.success !== false,
-    updateBody?.mensaje || updateBody?.message || `No se pudo editar ${productName}`,
-  ).toBeTruthy();
-
-  // La búsqueda inmediata puede competir con el refresco automático que dispara
-  // el modal de Stock y dejar la grilla mostrando skeletons pese a que la API ya
-  // devolvió el producto editado. Recargar después de confirmar la respuesta
-  // elimina esa carrera y verifica el estado persistido, no el estado optimista.
-  await page.reload({ waitUntil: 'domcontentloaded' });
-  await waitForBusyToFinish(page);
-  return searchRow(page, updates.name || productName, /Buscar por nombre, SKU o variante/i);
+  await updateServiceArticleFixture(page, productName, {
+    name: updates.name,
+    cost: updates.cost,
+    price: updates.price,
+    ivaPct: updates.ivaPct,
+    categoryId: updates.categoryId,
+    idUnit: updates.idUnit,
+  });
+  return findServiceInventoryRow(page, updates.name || productName, 'stock');
 }
 
-function requestAction(request) {
-  const actionFromUrl = new URL(request.url()).searchParams.get('action');
-  if (actionFromUrl) return actionFromUrl;
-
-  try {
-    const body = request.postDataJSON();
-    if (body && typeof body.action === 'string') return body.action;
-  } catch {
-    // Puede ser application/x-www-form-urlencoded o multipart/form-data.
-  }
-
-  const rawBody = request.postData() || '';
-  const match = rawBody.match(/(?:^|[&\r\n])action(?:=|%3D)([^&\r\n]+)/i);
-  return match ? decodeURIComponent(match[1].replace(/\+/g, ' ')) : '';
-}
 
 export async function deleteUnusedStockProduct(page, productName) {
-  // Cada prueba crea un producto temporal y lo elimina al final. El modal de
-  // confirmación se cierra apenas comienza el request, no cuando termina el
-  // DELETE en la base. Esperar solo el cierre del modal generaba una carrera:
-  // la prueba buscaba el producto mientras la eliminación todavía seguía en curso.
-  await page.goto('/panel/stock');
-  await waitForBusyToFinish(page);
+  // En Servicios un artículo que ya quedó referenciado históricamente puede no
+  // borrarse físicamente. En ese caso el comportamiento correcto es darlo de baja;
+  // el cleanup E2E del backend se ocupa después de los datos PW-*.
+  return deleteServiceArticleFixture(page, productName, { tolerateHistoricalUse: true });
+}
 
-  const row = await searchRow(page, productName, /Buscar por nombre, SKU o variante/i);
-  const productId = Number(await row.getAttribute('data-stock-product-id'));
-  expect(productId, `La fila de ${productName} debe exponer su ID real`).toBeGreaterThan(0);
+export async function createPurchaseFixtureViaApi(page, data, options = {}) {
+  const article = await getServiceArticleByName(page, data.productName, { activo: 'todos' });
+  expect(article, `Debe existir ${data.productName} antes de crear la compra fixture`).toBeTruthy();
 
-  const deleteButton = row.getByTitle('Eliminar producto definitivamente');
-  await expect(deleteButton, `Debe existir la acción de eliminar para ${productName}`).toBeVisible({ timeout: 20_000 });
-  await deleteButton.click();
+  const listsResult = await authenticatedApi(page, 'global_obtener_listas', {
+    query: { contexto: 'compras', include_sin_stock: 1, _: Date.now() },
+  });
+  const listsBody = expectApiSuccess(listsResult, 'No se pudieron obtener las listas de Compras');
+  const lists = listsBody?.listas && typeof listsBody.listas === 'object' ? listsBody.listas : listsBody;
+  const providers = Array.isArray(lists?.proveedores) ? lists.proveedores : [];
+  const saleTypes = Array.isArray(lists?.tipos_venta) ? lists.tipos_venta : [];
 
-  const first = await waitDialog(page, 'Eliminar producto definitivamente');
-  const continueButton = first.getByRole('button', { name: /Eliminar/i }).last();
-  await expect(continueButton).toBeEnabled({ timeout: 20_000 });
-  await continueButton.click();
+  const requestedProvider = String(data.providerName || data.providerSearch || '').trim().toLocaleUpperCase('es-AR');
+  const provider = (requestedProvider
+    ? providers.find((row) => String(row?.nombre || '').trim().toLocaleUpperCase('es-AR') === requestedProvider)
+    : null) || providers.find((row) => Number(row?.activo ?? 1) !== 0);
+  expect(provider, 'Debe existir al menos un proveedor activo para crear la compra fixture').toBeTruthy();
 
-  const finalDialog = await waitDialog(page, 'Confirmación final');
-  const confirmButton = finalDialog.getByRole('button', { name: /Sí, eliminar para siempre/i }).last();
-  await expect(confirmButton).toBeEnabled({ timeout: 20_000 });
-
-  const deleteResponsePromise = page.waitForResponse(
-    (response) => {
-      const request = response.request();
-      if (request.method() !== 'POST') return false;
-      return [
-        'stock_producto_eliminar_permanente',
-        'stock_productos_eliminar_permanente',
-      ].includes(requestAction(request));
-    },
-    { timeout: 120_000 },
-  );
-
-  await confirmButton.click();
-  await expect(finalDialog).toBeHidden({ timeout: 20_000 });
-
-  const deleteResponse = await deleteResponsePromise;
-  expect(
-    deleteResponse.ok(),
-    `La eliminación definitiva de ${productName} respondió HTTP ${deleteResponse.status()}`,
-  ).toBeTruthy();
-
-  const deletePayload = await deleteResponse.json().catch(() => null);
-  expect(
-    deletePayload?.exito === true || deletePayload?.success === true,
-    deletePayload?.mensaje || `El backend no confirmó la eliminación definitiva de ${productName}`,
-  ).toBeTruthy();
-
-  const deleteData = deletePayload?.data || deletePayload || {};
-  const deletedProductId = Number(
-    deletePayload?.id_stock_producto ?? deleteData?.id_stock_producto ?? 0,
+  const desiredMode = options.mode === 'CONTADO' ? /CONTADO/i : /CUENTA\s*CORRIENTE/i;
+  const saleType = saleTypes.find((row) =>
+    Number(row?.activo ?? 1) !== 0 && desiredMode.test(String(row?.nombre || '')),
   );
   expect(
-    deletedProductId,
-    `El backend debe confirmar el ID eliminado de ${productName}`,
-  ).toBe(productId);
-  expect(
-    deletePayload?.eliminado_permanente === true || deleteData?.eliminado_permanente === true,
-    `El backend respondió, pero no confirmó la eliminación permanente de ${productName}`,
+    saleType,
+    `Debe existir la forma de compra ${options.mode === 'CONTADO' ? 'CONTADO' : 'CUENTA CORRIENTE'}`,
   ).toBeTruthy();
 
-  const deleteDb = deletePayload?.db || deleteData?.db || {};
-  expect(
-    Number(deleteDb?.producto_eliminado ?? 0),
-    `La transacción no informó la eliminación física de ${productName}`,
-  ).toBe(1);
+  const idProveedor = Number(provider.id_proveedor || provider.id || 0);
+  const idTipoVenta = Number(saleType.id_tipo_venta || saleType.id || 0);
+  const idArticulo = Number(article.id_articulo || 0);
+  const quantity = Number(data.quantity ?? 2);
+  const price = Number(data.price ?? 100);
+  const ivaPct = Number(data.ivaPct ?? article.iva_pct ?? 21);
+  const today = new Date().toISOString().slice(0, 10);
 
-  // La respuesta anterior confirma que la transacción terminó. Una recarga evita
-  // validar contra la fila React que estaba renderizada antes del COMMIT.
-  await page.reload({ waitUntil: 'domcontentloaded' });
-  await waitForBusyToFinish(page);
+  const body = expectApiSuccess(
+    await authenticatedApi(page, 'compras_crear_batch', {
+      method: 'POST',
+      body: {
+        fecha: today,
+        id_tipo_venta: idTipoVenta,
+        id_proveedor: idProveedor,
+        items: [{
+          fecha: today,
+          id_tipo_venta: idTipoVenta,
+          id_proveedor: idProveedor,
+          id_articulo: idArticulo,
+          id_stock_producto: idArticulo,
+          cantidad: quantity,
+          precio: price,
+          iva_pct: ivaPct,
+        }],
+        medios_pago: Array.isArray(options.payments) ? options.payments : [],
+      },
+    }),
+    `No se pudo crear la compra fixture de ${data.productName}`,
+  );
 
-  const search = page.getByPlaceholder(/Buscar por nombre, SKU o variante/i).first();
-  await expect(search).toBeVisible({ timeout: 20_000 });
-  await search.fill(productName);
-  await search.press('Enter');
-  await page.waitForTimeout(450);
-  await waitForBusyToFinish(page);
-
-  await expect(
-    page.locator(`.mov-gridTable--row:visible:not(.mov-row--skeleton)[data-stock-product-id="${productId}"]`),
-    `El producto ${productName} no debe seguir visible después de la eliminación confirmada por el backend`,
-  ).toHaveCount(0, { timeout: 30_000 });
+  data.providerName = String(provider.nombre || '').trim();
+  return body;
 }
 
 export async function createPurchase(page, data) {
+  // Los flujos que prueban NC, CC, reversión o detalles necesitan una compra
+  // válida como precondición. La creación UI se prueba de forma aislada en
+  // 28-purchase-ui-health.spec.js para que un único bug del modal no derribe
+  // todas las suites dependientes.
+  await createPurchaseFixtureViaApi(page, data);
   await page.goto('/panel/compras');
   await waitForBusyToFinish(page);
-  await page.getByTitle('Crear nueva compra').click();
-  const dialog = await waitDialog(page, 'Nueva Compra');
-
-  await fillMovementRow(dialog, {
-    productName: data.productName,
-    quantity: data.quantity ?? 2,
-    price: data.price ?? 100,
-  });
-  const requestedProvider = String(data.providerName || data.providerSearch || '').trim();
-  data.providerName = await selectFirstAutocomplete(dialog, 'Proveedor', requestedProvider);
-  const mode = await selectMovementMode(dialog, 'Forma de compra', /CUENTA\s*CORRIENTE/i);
-  if (/CONTADO/i.test(mode.text)) await fillPayment(dialog);
-
-  await clickSaveAndWait(dialog, /Guardar compra/i, { timeout: 60_000 });
   return searchRow(page, data.productName, /Buscar por descripción, proveedor/i);
 }
 
@@ -323,7 +232,7 @@ export async function configurePurchaseCreditNote(dialog, options = {}) {
   await expect(motiveSelect).toBeVisible();
   await motiveSelect.selectOption(motive);
 
-  if (['DESCUENTO', 'BONIFICACION', 'DIFERENCIA_PRECIO', 'OTRO'].includes(motive)) {
+  if (['DIFERENCIA_PRECIO', 'OTRO'].includes(motive)) {
     const amount = dialog
       .locator('.gm-field')
       .filter({ hasText: /Importe final/i })
@@ -380,6 +289,7 @@ export async function createSale(page, data) {
   const dialog = await waitDialog(page, 'Nueva Venta');
 
   await fillMovementRow(dialog, {
+    serviceName: data.serviceName,
     productName: data.productName,
     quantity: data.quantity ?? 2,
     price: data.price ?? 150,
@@ -393,7 +303,7 @@ export async function createSale(page, data) {
   if (/CONTADO/i.test(selected.text)) await fillPayment(dialog);
 
   await clickSaveAndWait(dialog, /Guardar venta/i, { timeout: 60_000 });
-  return searchRow(page, data.productName, /Buscar por descripción, cliente/i);
+  return searchRow(page, data.serviceName || data.productName, /Buscar por descripción, cliente/i);
 }
 
 export async function openSaleCreditNote(page, productName) {
@@ -415,7 +325,7 @@ export async function configureSaleCreditNote(dialog, options = {}) {
   await expect(motiveSelect).toBeVisible();
   await motiveSelect.selectOption(motive);
 
-  if (['DESCUENTO', 'BONIFICACION', 'DIFERENCIA_PRECIO', 'OTRO'].includes(motive)) {
+  if (['DIFERENCIA_PRECIO', 'OTRO'].includes(motive)) {
     const amount = dialog
       .locator('.gm-field')
       .filter({ hasText: /Importe total/i })
@@ -673,18 +583,34 @@ export async function createCatalogDescription(dialog, description) {
   let row;
   let input;
 
-  // En una suite larga el servidor de desarrollo puede recargar la SPA justo
-  // después de abrir el modal. El input que Playwright ya había resuelto queda
-  // detached y el modal desaparece, aunque Balto y su API sigan funcionando.
-  // Reabrimos una sola vez únicamente cuando comprobamos esa navegación; los
-  // errores normales del formulario continúan fallando sin ser ocultados.
-  for (let attempt = 0; attempt < 2; attempt += 1) {
+  // Otros Ingresos ahora tiene tres tipos de fila. La descripción global sólo
+  // existe en "Detalle manual"; Servicio/Stock usan ProductStockAutocomplete.
+  // Otros Egresos conserva directamente el GlobalAutocomplete de descripción.
+  const prepareDescriptionInput = async () => {
     row = activeDialog.locator('.gm-table-body .gm-table-row').first();
-    input = row.locator('input[placeholder*="descripción" i]').first();
+    await expect(row).toBeVisible({ timeout: 15_000 });
 
+    const typeSelect = row.locator('select[aria-label^="Tipo de ítem fila"]').first();
+    if (await typeSelect.isVisible({ timeout: 500 }).catch(() => false)) {
+      await typeSelect.selectOption('detalle');
+      await expect(typeSelect).toHaveValue('detalle');
+    }
+
+    input = row
+      .locator([
+        'input[placeholder*="descripción" i]',
+        'input[placeholder*="detalle" i]',
+      ].join(','))
+      .first();
+    await expect(input).toBeVisible({ timeout: 15_000 });
+    await input.click({ timeout: 15_000 });
+  };
+
+  // En una suite larga el servidor de desarrollo puede recargar la SPA justo
+  // después de abrir el modal. Reabrimos una sola vez sólo si el modal desaparece.
+  for (let attempt = 0; attempt < 2; attempt += 1) {
     try {
-      await expect(input).toBeVisible({ timeout: 15_000 });
-      await input.click({ timeout: 15_000 });
+      await prepareDescriptionInput();
       break;
     } catch (error) {
       const path = new URL(page.url()).pathname.toLowerCase();
@@ -706,14 +632,17 @@ export async function createCatalogDescription(dialog, description) {
     }
   }
 
-  const add = page.locator('#ga-portal-list .ga-item').filter({ hasText: /Agregar nueva descripción/i }).first();
-  await expect(add).toBeVisible();
+  const add = page
+    .locator('#ga-portal-list .ga-item')
+    .filter({ hasText: /Agregar nueva descripción/i })
+    .first();
+  await expect(add).toBeVisible({ timeout: 15_000 });
   await add.click();
 
   const mini = await waitDialog(page, 'Nueva descripción');
   await mini.locator('#nueva-descripcion-input').fill(description);
   await clickSaveAndWait(mini, /^Guardar$/i, { timeout: 30_000 });
-  await expect(input).toHaveValue(new RegExp(description, 'i'));
+  await expect(input).toHaveValue(new RegExp(description, 'i'), { timeout: 10_000 });
   return row;
 }
 
@@ -730,8 +659,15 @@ export async function createOtherIncome(page, data) {
   let row;
   if (data.freeText) {
     row = dialog.locator('.gm-table-body .gm-table-row').first();
-    const input = row.locator('input[placeholder*="descripción" i]').first();
-    await expect(input).toBeVisible();
+    const typeSelect = row.locator('select[aria-label^="Tipo de ítem fila"]').first();
+    if (await typeSelect.isVisible({ timeout: 500 }).catch(() => false)) {
+      await typeSelect.selectOption('detalle');
+      await expect(typeSelect).toHaveValue('detalle');
+    }
+    const input = row
+      .locator('input[placeholder*="descripción" i], input[placeholder*="detalle" i]')
+      .first();
+    await expect(input).toBeVisible({ timeout: 15_000 });
     await input.fill(data.description);
   } else {
     row = await createCatalogDescription(dialog, data.description);
@@ -1031,7 +967,7 @@ export async function configureOtherIncomeCreditNote(dialog, options = {}) {
   await motiveSelect.selectOption(motive);
   await expect(motiveSelect).toHaveValue(motive);
 
-  if (['DESCUENTO', 'BONIFICACION', 'DIFERENCIA_PRECIO', 'OTRO'].includes(motive)) {
+  if (['DIFERENCIA_PRECIO', 'OTRO'].includes(motive)) {
     const adjustment = dialog.locator('.ncv-form-grid--adjustment').first();
     await expect(adjustment).toBeVisible({ timeout: 20_000 });
 

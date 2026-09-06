@@ -1,7 +1,7 @@
 import { test, expect } from './support/test.js';
 import { uniqueName, uniqueSku } from './support/data.js';
 import { installDiagnostics, assertNoCriticalErrors } from './support/diagnostics.js';
-import { requireMutations, searchRow } from './support/ui.js';
+import { requireMutations } from './support/ui.js';
 import {
   createStockProduct,
   createPurchase,
@@ -10,6 +10,7 @@ import {
   deleteSale,
   deleteUnusedStockProduct,
 } from './support/flows.js';
+import { expectServiceStock } from './support/services.js';
 
 
 test.beforeEach(async ({}, testInfo) => {
@@ -17,9 +18,7 @@ test.beforeEach(async ({}, testInfo) => {
 });
 
 async function expectStock(page, productName, expected) {
-  await page.goto('/panel/stock');
-  const row = await searchRow(page, productName, /Buscar por nombre, SKU o variante/i);
-  await expect(row.locator('[role="cell"]').nth(2)).toContainText(String(expected));
+  return expectServiceStock(page, productName, expected);
 }
 
 test('@crud @critical eliminar compra revierte exactamente el ingreso de stock', async ({ page }, testInfo) => {
@@ -42,7 +41,7 @@ test('@crud @critical eliminar compra revierte exactamente el ingreso de stock',
   await expectStock(page, productName, 10);
   await deleteUnusedStockProduct(page, productName);
 
-  await assertNoCriticalErrors(diagnostics, testInfo, { allowConsole: [/Tienda Nube/i, /imagen/i] });
+  await assertNoCriticalErrors(diagnostics, testInfo, { allowConsole: [/imagen/i] });
 });
 
 test('@crud @critical eliminar venta revierte exactamente la salida de stock', async ({ page }, testInfo) => {
@@ -65,5 +64,5 @@ test('@crud @critical eliminar venta revierte exactamente la salida de stock', a
   await expectStock(page, productName, 10);
   await deleteUnusedStockProduct(page, productName);
 
-  await assertNoCriticalErrors(diagnostics, testInfo, { allowConsole: [/Tienda Nube/i, /imagen/i] });
+  await assertNoCriticalErrors(diagnostics, testInfo, { allowConsole: [/imagen/i] });
 });

@@ -1,92 +1,42 @@
 # ============================================================
-# BALTO - TESTING POR LOTES CON NPX
-# Ejecutar desde:
-# C:\Users\USER\Desktop\BALTO\BALTO_COMERCIO\frontend
+# BALTO SERVICIOS - TESTING PLAYWRIGHT POR LOTES
+# Ejecutar desde el frontend de BALTO_SERVICIOS.
 # ============================================================
 
-
-# ============================================================
 # PREPARAR ENTORNO
-# Ejecutar estas dos líneas antes de comenzar.
-# Desactiva Tienda Nube y evita acciones reales en ARCA.
-# ============================================================
-
-$env:PW_SKIP_TIENDA_NUBE="1"
+# .env.playwright debe apuntar al API de BALTO_SERVICIOS y usar un ADMIN del tenant.
+# Para pruebas mutables: PW_ALLOW_MUTATIONS=1.
+# ARCA queda fuera de la regresión interna salvo que se habilite explícitamente.
 Remove-Item Env:PW_ALLOW_ARCA -ErrorAction SilentlyContinue
-# La limpieza E2E queda forzada cuando PW_ALLOW_MUTATIONS=1: limpia PW al inicio y al terminar.
+$env:PW_EXPECTED_SYSTEM="SERVICIOS"
 
+# 1. NÚCLEO DE SERVICIOS
+# Catálogo, categorías, unidades, materiales, insumos, stock y trabajadores.
+npx playwright test tests/03-services-catalog-crud.spec.js tests/20-services-inventory-lifecycle.spec.js tests/22-configuration-lists-categories.spec.js --project=chromium --workers=1 --reporter=list
 
-# ============================================================
-# 1. MOVIMIENTOS
-# Ventas, compras, presupuestos, otros movimientos,
-# notas de crédito, eliminaciones, detalles y cheques.
-# ============================================================
+# 2. MOVIMIENTOS + INTEGRACIÓN SERVICIOS/STOCK
+# Compras, ventas, presupuestos, otros movimientos, NC, reversión y servicios compuestos.
+npx playwright test tests/04-purchases-credit-note.spec.js tests/05-sales-credit-note.spec.js tests/06-budgets.spec.js tests/07-other-movements.spec.js tests/13-movement-delete-reversal.spec.js tests/14-details-and-cancel.spec.js tests/16-movement-details-integrity.spec.js tests/17-other-income-fiscal.spec.js tests/25-services-movements-integration.spec.js --project=chromium --workers=1 --reporter=list
 
-npx playwright test tests/04-purchases-credit-note.spec.js tests/05-sales-credit-note.spec.js tests/06-budgets.spec.js tests/07-other-movements.spec.js tests/13-movement-delete-reversal.spec.js tests/14-details-and-cancel.spec.js tests/15-cheques-lifecycle.spec.js tests/16-movement-details-integrity.spec.js tests/17-other-income-fiscal.spec.js tests/26-barcode-movements.spec.js --project=chromium --workers=1 --reporter=list
+# 3. CUENTAS CORRIENTES + RECIBOS/OP
+npx playwright test tests/08-current-accounts.spec.js tests/19-current-account-entities.spec.js --project=chromium --workers=1 --reporter=list
 
-
-# ============================================================
-# 2. CUENTAS CORRIENTES
-# Clientes, proveedores, saldos, recibos,
-# órdenes de pago, bajas, altas, eliminaciones y edición por código de barra.
-# ============================================================
-
-npx playwright test tests/08-current-accounts.spec.js tests/19-current-account-entities.spec.js tests/26-barcode-movements.spec.js --project=chromium --workers=1 --reporter=list
-
-
-# ============================================================
-# 3. STOCK
-# Productos, edición, eliminación, baja, reactivación
-# ciclo completo de variantes y códigos de barra (BL-P/BL-V/códigos físicos/permisos).
-# ============================================================
-
-npx playwright test tests/03-stock-crud.spec.js tests/20-stock-lifecycle.spec.js tests/22-stock-variants-lifecycle.spec.js tests/25-stock-barcodes.spec.js --project=chromium --workers=1 --reporter=list
-
-
-# ============================================================
-# 4. CHEQUES
-# Pantalla de cheques, búsqueda, utilización,
-# liberación, depósito, reactivación e historial.
-# ============================================================
-
+# 4. CHEQUES / ECHEQ
 npx playwright test tests/09-cheques-smoke.spec.js tests/15-cheques-lifecycle.spec.js --project=chromium --workers=1 --reporter=list
 
-
-# ============================================================
 # 5. CONFIGURACIÓN
-# Usuarios, calendario, tema, alta, edición,
-# baja, reactivación, eliminación y saldos iniciales.
-# No ejecuta ARCA ni Tienda Nube.
-# ============================================================
+# Calendario, tema, usuarios, Listas y categorías y saldos iniciales.
+npx playwright test tests/10-config-accounting.spec.js tests/21-configuration-actions.spec.js tests/22-configuration-lists-categories.spec.js tests/24-initial-balances.spec.js --project=chromium --workers=1 --reporter=list
 
-npx playwright test tests/10-config-accounting.spec.js tests/21-configuration-actions.spec.js tests/24-initial-balances.spec.js --project=chromium --workers=1 --reporter=list
-
-
-# ============================================================
-# 6. AUTENTICACIÓN
-# Preflight, login, credenciales inválidas,
-# rutas protegidas, mostrar contraseña y logout.
-# ============================================================
-
+# 6. AUTENTICACIÓN / SEGURIDAD DE RUTAS
 npx playwright test tests/00-preflight.spec.js tests/01-auth.spec.js tests/18-auth-actions.spec.js --project=chromium --workers=1 --reporter=list
 
-
-# ============================================================
-# 7. NAVEGACIÓN INTERNA
-# Comprueba que las pantallas internas carguen correctamente.
-# No incluye acciones de ARCA ni de Tienda Nube.
-# ============================================================
-
+# 7. NAVEGACIÓN Y GUARDS
 npx playwright test tests/02-navigation-smoke.spec.js tests/11-global-guards.spec.js tests/12-documents-readonly.spec.js tests/23-internal-navigation-smoke.spec.js --project=chromium --workers=1 --reporter=list
 
+# 8. SUPERFICIE API DE SERVICIOS + SALUD DE BÚSQUEDAS
+# Verifica acciones servicios_* y concentra regresiones SQL de q= en un único test.
+npx playwright test tests/26-services-action-surface.spec.js tests/27-movement-search-health.spec.js tests/28-purchase-ui-health.spec.js --project=chromium --workers=1 --reporter=list
 
-# ============================================================
-# TODOS LOS TESTS INTERNOS JUNTOS
-# Ejecutar solamente cuando quieras una regresión completa.
-# No hace falta ejecutarlo después de correr todos los lotes,
-# porque repetiría prácticamente las mismas pruebas.
-# ============================================================
-
-npx playwright test tests/00-preflight.spec.js tests/01-auth.spec.js tests/02-navigation-smoke.spec.js tests/03-stock-crud.spec.js tests/04-purchases-credit-note.spec.js tests/05-sales-credit-note.spec.js tests/06-budgets.spec.js tests/07-other-movements.spec.js tests/08-current-accounts.spec.js tests/09-cheques-smoke.spec.js tests/10-config-accounting.spec.js tests/11-global-guards.spec.js tests/12-documents-readonly.spec.js tests/13-movement-delete-reversal.spec.js tests/14-details-and-cancel.spec.js tests/15-cheques-lifecycle.spec.js tests/16-movement-details-integrity.spec.js tests/17-other-income-fiscal.spec.js tests/18-auth-actions.spec.js tests/19-current-account-entities.spec.js tests/20-stock-lifecycle.spec.js tests/21-configuration-actions.spec.js tests/22-stock-variants-lifecycle.spec.js tests/23-internal-navigation-smoke.spec.js tests/24-initial-balances.spec.js tests/25-stock-barcodes.spec.js tests/26-barcode-movements.spec.js tests/example.spec.js --project=chromium --workers=1 --reporter=list
-
+# REGRESIÓN COMPLETA
 npx playwright test --project=chromium --workers=1 --reporter=list

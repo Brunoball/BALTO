@@ -16,7 +16,8 @@ const routes = [
   ['/panel/flujo-de-caja', /Flujo de Caja/i],
   ['/panel/cuentas-corrientes/clientes', /Clientes/i],
   ['/panel/cuentas-corrientes/proveedores', /Proveedores/i],
-  ['/panel/stock', /Stock · Productos/i],
+  ['/panel/servicios', /Servicios/i],
+  ['/panel/servicios?seccion=inventario', /Inventario de servicios/i],
   ['/panel/contabilidad/iva-ventas', /IVA Ventas/i],
   ['/panel/contabilidad/iva-compras', /IVA Compras/i],
   ['/panel/cheques/cartera', /Cheques en Cartera/i],
@@ -26,6 +27,8 @@ const routes = [
   ['/panel/analisis-financiero', /Análisis Financiero/i],
   ['/panel/configuracion/calendario', /Calendario global/i],
   ['/panel/configuracion/usuarios', /Usuarios del sistema/i],
+  ['/panel/configuracion/listas-categorias', /Listas y categorías/i],
+  ['/panel/configuracion/saldos-iniciales', /Saldos iniciales/i],
 ];
 
 for (const [route, text] of routes) {

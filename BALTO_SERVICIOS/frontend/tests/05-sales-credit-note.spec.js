@@ -24,12 +24,11 @@ import {
   deleteUnusedStockProduct,
   openMovementDetail,
 } from './support/flows.js';
+import { expectServiceStock } from './support/services.js';
 
 const CREDIT_NOTE_MOTIVES = [
   'DEVOLUCION_MERCADERIA',
   'ANULACION_TOTAL',
-  'DESCUENTO',
-  'BONIFICACION',
   'DIFERENCIA_PRECIO',
   'OTRO',
 ];
@@ -55,15 +54,15 @@ function parseArsInput(value) {
 }
 
 
-test('@crud @critical venta: descuento manual reajusta el medio de pago al total neto', async ({ page }, testInfo) => {
+test('@crud @critical venta: contado asigna exactamente el total vigente al medio de pago', async ({ page }, testInfo) => {
   await requireMutations(test, page);
   test.setTimeout(4 * 60_000);
   const diagnostics = installDiagnostics(page);
-  const productName = uniqueName('VENTA-DESCUENTO');
+  const productName = uniqueName('VENTA-CONTADO');
 
   await createStockProduct(page, {
     name: productName,
-    sku: uniqueSku('VENTADESC'),
+    sku: uniqueSku('VENTACONT'),
     stock: 5,
     cost: 500,
     price: 1000,
@@ -84,20 +83,16 @@ test('@crud @critical venta: descuento manual reajusta el medio de pago al total
   const typeField = dialog.locator('.gm-field').filter({ hasText: 'Forma de venta' }).first();
   await selectFirstNonEmpty(typeField.locator('select'), /CONTADO/i);
 
-  // Reproduce exactamente el error: primero se completa el pago por el bruto
-  // y recién después se aplica el descuento.
+  // BALTO Servicios actual ya no expone el descuento comercial heredado de
+  // Comercio. El medio de pago debe cubrir exactamente el total vigente.
+  await expect(dialog.getByLabel('Tipo de descuento')).toHaveCount(0);
+  await expect(dialog.getByLabel('Valor del descuento')).toHaveCount(0);
+
   await fillPayment(dialog);
   const amountInput = dialog.locator('.gm-payment-row--amount input').first();
   await expect.poll(async () => parseArsInput(await amountInput.inputValue())).toBeCloseTo(1000, 2);
-
-  await dialog.getByLabel('Tipo de descuento').selectOption('PORCENTAJE');
-  await dialog.getByLabel('Valor del descuento').fill('10');
-
-  await expect.poll(async () => parseArsInput(await amountInput.inputValue()), {
-    message: 'El medio de pago debe reajustarse automáticamente al total con descuento',
-  }).toBeCloseTo(900, 2);
   await expect(dialog.locator('.gm-payment-totals')).toContainText(/Asignado/i);
-  await expect(dialog.locator('.gm-payment-totals')).toContainText(/900,00/);
+  await expect(dialog.locator('.gm-payment-totals')).toContainText(/1\.000,00/);
 
   const responsePromise = page.waitForResponse(
     (response) =>
@@ -114,40 +109,31 @@ test('@crud @critical venta: descuento manual reajusta el medio de pago al total
 
   expect(response.status(), JSON.stringify(body)).toBeLessThan(400);
   expect(body?.exito !== false && body?.success !== false, body?.mensaje || body?.message).toBeTruthy();
-  expect(Number(requestPayload?.total_bruto || 0)).toBeCloseTo(1000, 2);
-  expect(Number(requestPayload?.descuento_monto || 0)).toBeCloseTo(100, 2);
-  expect(Number(result?.monto_total ?? result?.total ?? 0)).toBeCloseTo(900, 2);
-  expect(Number(result?.total_pagado ?? 0)).toBeCloseTo(900, 2);
+  expect(Number(requestPayload?.total_bruto ?? requestPayload?.total ?? 1000)).toBeCloseTo(1000, 2);
+  expect(Number(requestPayload?.descuento_monto || 0)).toBeCloseTo(0, 2);
+  expect(Number(result?.monto_total ?? result?.total ?? 0)).toBeCloseTo(1000, 2);
+  expect(Number(result?.total_pagado ?? 0)).toBeCloseTo(1000, 2);
 
   const pagosEnviados = Array.isArray(requestPayload?.medios_pago) ? requestPayload.medios_pago : [];
   expect(pagosEnviados).toHaveLength(1);
-  expect(Number(pagosEnviados[0]?.monto || 0)).toBeCloseTo(900, 2);
+  expect(Number(pagosEnviados[0]?.monto || 0)).toBeCloseTo(1000, 2);
 
   const row = await searchRow(page, productName, /Buscar por descripción, cliente/i);
-  await expect(row).toContainText(/900,00/);
+  await expect(row).toContainText(/1\.000,00/);
 
   const detail = await openMovementDetail(page, productName, 'sale');
-  const discountNote = detail.getByLabel('Detalle del descuento comercial');
-  await expect(discountNote).toBeVisible();
-  await expect(discountNote).toContainText(/Total sin descuento/i);
-  await expect(discountNote).toContainText(/1\.000,00/);
-  await expect(discountNote).toContainText(/Descuento \(10/i);
-  await expect(discountNote).toContainText(/100,00/);
-  await expect(discountNote).toContainText(/Total vendido/i);
-  await expect(discountNote).toContainText(/900,00/);
-
+  await expect(detail.getByLabel('Detalle del descuento comercial')).toHaveCount(0);
   const paymentSection = detail.locator('.mdm-section--medios');
   await expect(paymentSection).toContainText(/Total pagado/i);
-  await expect(paymentSection).toContainText(/900,00/);
+  await expect(paymentSection).toContainText(/1\.000,00/);
 
   await detail.getByRole('button', { name: /Cerrar/i }).click();
   await expect(detail).toBeHidden();
 
   await deleteSale(page, productName);
-  await page.goto('/panel/stock');
   await deleteUnusedStockProduct(page, productName);
 
-  await assertNoCriticalErrors(diagnostics, testInfo, { allowConsole: [/Tienda Nube/i, /imagen/i] });
+  await assertNoCriticalErrors(diagnostics, testInfo, { allowConsole: [/imagen/i] });
 });
 
 test('@crud @critical venta: descuenta stock y NC interna reingresa stock', async ({ page }, testInfo) => {
@@ -171,9 +157,7 @@ test('@crud @critical venta: descuenta stock y NC interna reingresa stock', asyn
   await createSale(page, { productName, quantity: 2, price: 200 });
   await applySaleCreditNote(page, productName, 1);
 
-  await page.goto('/panel/stock');
-  let stockRow = await searchRow(page, productName, /Buscar por nombre, SKU o variante/i);
-  await expect(stockRow.locator('[role="cell"]').nth(2)).toContainText('9');
+  await expectServiceStock(page, productName, 9);
 
   // Los ajustes sin stock comparten una rama distinta. Deben exponer todas las
   // opciones, usar el selector cerrado de IVA y conservar el stock.
@@ -200,19 +184,15 @@ test('@crud @critical venta: descuenta stock y NC interna reingresa stock', asyn
   await expect(await selectOptionValues(ivaSelect)).toEqual(IVA_VALUES);
   await clickSaveAndWait(dialog, /Aplicar nota de crédito/i, { timeout: 60_000 });
 
-  await page.goto('/panel/stock');
-  stockRow = await searchRow(page, productName, /Buscar por nombre, SKU o variante/i);
-  await expect(stockRow.locator('[role="cell"]').nth(2)).toContainText('9');
+  await expectServiceStock(page, productName, 9);
 
   // La eliminación conjunta debe revertir venta y todas sus NC, dejando el stock original.
   await page.goto('/panel/ventas');
   await deleteSale(page, productName);
-  await page.goto('/panel/stock');
-  const restoredRow = await searchRow(page, productName, /Buscar por nombre, SKU o variante/i);
-  await expect(restoredRow.locator('[role="cell"]').nth(2)).toContainText('10');
+  await expectServiceStock(page, productName, 10);
   await deleteUnusedStockProduct(page, productName);
 
-  await assertNoCriticalErrors(diagnostics, testInfo, { allowConsole: [/Tienda Nube/i, /imagen/i] });
+  await assertNoCriticalErrors(diagnostics, testInfo, { allowConsole: [/imagen/i] });
 });
 
 test('@crud @critical NC venta: repetir la misma petición no duplica nota ni stock', async ({ page }, testInfo) => {
@@ -281,32 +261,26 @@ test('@crud @critical NC venta: repetir la misma petición no duplica nota ni st
   expect(firstId, 'La primera petición debe crear o recuperar una nota').toBeGreaterThan(0);
   expect(duplicateId, 'La petición repetida debe devolver la misma nota').toBe(firstId);
 
-  await page.goto('/panel/stock');
-  const stockRow = await searchRow(page, productName, /Buscar por nombre, SKU o variante/i);
-  await expect(
-    stockRow.locator('[role="cell"]').nth(2),
-    'La devolución de una unidad debe impactar una sola vez',
-  ).toContainText('9');
+  await expectServiceStock(page, productName, 9);
 
   await page.unroute('**/api.php?action=ventas_nota_credito_crear**');
   await page.goto('/panel/ventas');
   await deleteSale(page, productName);
-  await page.goto('/panel/stock');
   await deleteUnusedStockProduct(page, productName);
 
-  await assertNoCriticalErrors(diagnostics, testInfo, { allowConsole: [/Tienda Nube/i, /imagen/i] });
+  await assertNoCriticalErrors(diagnostics, testInfo, { allowConsole: [/imagen/i] });
 });
 
-test('@crud @critical NC venta: ejecuta realmente los seis motivos y valida su impacto de stock', async ({ page }, testInfo) => {
+test('@crud @critical NC venta: ejecuta realmente los cuatro motivos actuales y valida su impacto de stock', async ({ page }, testInfo) => {
   await requireMutations(test, page);
   test.setTimeout(9 * 60_000);
   const diagnostics = installDiagnostics(page);
-  const productName = uniqueName('VENTA-NC-SEIS-MOTIVOS');
+  const productName = uniqueName('VENTA-NC-CUATRO-MOTIVOS');
   const totalProductName = uniqueName('VENTA-NC-ANULACION-TOTAL');
 
   await createStockProduct(page, {
     name: productName,
-    sku: uniqueSku('VENTANC6'),
+    sku: uniqueSku('VENTANC4'),
     stock: 12,
     cost: 100,
     price: 200,
@@ -330,16 +304,11 @@ test('@crud @critical NC venta: ejecuta realmente los seis motivos y valida su i
   };
 
   await apply(productName, { motive: 'DEVOLUCION_MERCADERIA', quantity: 1 });
-  for (const motive of ['DESCUENTO', 'BONIFICACION', 'DIFERENCIA_PRECIO', 'OTRO']) {
+  for (const motive of ['DIFERENCIA_PRECIO', 'OTRO']) {
     await apply(productName, { motive, amount: 5, ivaPct: 21 });
   }
 
-  await page.goto('/panel/stock');
-  let stockRow = await searchRow(page, productName, /Buscar por nombre, SKU o variante/i);
-  await expect(
-    stockRow.locator('[role="cell"]').nth(2),
-    'Sólo DEVOLUCION_MERCADERIA debe reingresar stock; los cuatro ajustes económicos no deben tocarlo',
-  ).toContainText('7');
+  await expectServiceStock(page, productName, 7);
 
   // La anulación total usa una venta independiente para no mezclarla con los
   // ajustes económicos previos. En la misma venta esos ajustes reducen el saldo
@@ -347,19 +316,13 @@ test('@crud @critical NC venta: ejecuta realmente los seis motivos y valida su i
   await apply(totalProductName, { motive: 'ANULACION_TOTAL' });
   expect([...applied].sort()).toEqual([...CREDIT_NOTE_MOTIVES].sort());
 
-  await page.goto('/panel/stock');
-  stockRow = await searchRow(page, totalProductName, /Buscar por nombre, SKU o variante/i);
-  await expect(
-    stockRow.locator('[role="cell"]').nth(2),
-    'La anulación total debe reingresar toda la venta independiente y dejar su stock original',
-  ).toContainText('4');
+  await expectServiceStock(page, totalProductName, 4);
 
   await page.goto('/panel/ventas');
   await deleteSale(page, productName);
   await deleteSale(page, totalProductName);
-  await page.goto('/panel/stock');
   await deleteUnusedStockProduct(page, productName);
   await deleteUnusedStockProduct(page, totalProductName);
 
-  await assertNoCriticalErrors(diagnostics, testInfo, { allowConsole: [/Tienda Nube/i, /imagen/i] });
+  await assertNoCriticalErrors(diagnostics, testInfo, { allowConsole: [/imagen/i] });
 });
