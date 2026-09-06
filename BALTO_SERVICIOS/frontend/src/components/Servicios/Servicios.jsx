@@ -39,6 +39,19 @@ const META = {
 const RESOURCE_TABS = new Set(["materiales", "insumos"]);
 const INVENTORY_TABS = new Set(["materiales", "insumos", "stock"]);
 const RESPONSIVE_FOOTER_TABS = new Set(["servicios", "materiales", "insumos"]);
+const PAGE_SIZE = 10;
+
+const paginationItems = (current, total) => {
+  if (total <= 5) return Array.from({ length: total }, (_, index) => index + 1);
+  const items = [1];
+  const start = Math.max(2, current - 1);
+  const end = Math.min(total - 1, current + 1);
+  if (start > 2) items.push("ellipsis-start");
+  for (let page = start; page <= end; page += 1) items.push(page);
+  if (end < total - 1) items.push("ellipsis-end");
+  items.push(total);
+  return items;
+};
 const idFor = (tab, row) => tab === "servicios" ? row.id_servicio : tab === "trabajadores" ? row.id_trabajador : row.id_articulo;
 const categoryTabs = new Set(["servicios", "materiales", "insumos"]);
 const textMatch = (value, q) => upper(value).includes(q);
@@ -62,6 +75,7 @@ export default function Servicios() {
   });
   const [filters, setFilters] = useState(() => Object.fromEntries(Object.keys(META).map((key) => [key, { ...EMPTY_FILTER }])));
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState(null);
   const [editModal, setEditModal] = useState({ kind: null, item: null });
@@ -90,7 +104,7 @@ export default function Servicios() {
   }, [inventoryMode, notify]);
 
   useEffect(() => { cargar(); }, [cargar]);
-  useEffect(() => { setTab(inventoryMode ? "materiales" : "servicios"); }, [inventoryMode]);
+  useEffect(() => { setCurrentPage(1); setTab(inventoryMode ? "materiales" : "servicios"); }, [inventoryMode]);
 
   const execute = async (fn, message) => {
     setSaving(true);
@@ -108,7 +122,10 @@ export default function Servicios() {
   };
 
   const currentFilter = filters[tab] || EMPTY_FILTER;
-  const updateFilter = (key, value) => setFilters((prev) => ({ ...prev, [tab]: { ...prev[tab], [key]: value } }));
+  const updateFilter = (key, value) => {
+    setCurrentPage(1);
+    setFilters((prev) => ({ ...prev, [tab]: { ...prev[tab], [key]: value } }));
+  };
   const categories = tab === "servicios"
     ? data.categorias_servicios
     : tab === "materiales"
@@ -128,6 +145,20 @@ export default function Servicios() {
       return true;
     });
   }, [rawRows, filters, tab]);
+
+  const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+  const resolvedPage = Math.min(currentPage, totalPages);
+  const visibleRows = useMemo(() => {
+    const start = (resolvedPage - 1) * PAGE_SIZE;
+    return rows.slice(start, start + PAGE_SIZE);
+  }, [rows, resolvedPage]);
+  const firstVisible = rows.length ? ((resolvedPage - 1) * PAGE_SIZE) + 1 : 0;
+  const lastVisible = rows.length ? Math.min(resolvedPage * PAGE_SIZE, rows.length) : 0;
+  const pageItems = useMemo(() => paginationItems(resolvedPage, totalPages), [resolvedPage, totalPages]);
+
+  useEffect(() => {
+    setCurrentPage((page) => Math.min(page, totalPages));
+  }, [totalPages]);
 
   const openEdit = async (row) => {
     if (tab === "servicios") {
@@ -389,7 +420,7 @@ export default function Servicios() {
           <div className="mov-card__headLeft">
             <div className="title-mov servicios-titleBlock">
               <div className="servicios-titleBlock__copy"><div className="mov-card__title">{inventoryMode ? "Inventario de servicios" : "Servicios"}</div></div>
-              <div className="servicios-inventoryTabs" role="tablist">{tabs.map((key) => <button key={key} type="button" className={`servicios-inventoryTab ${tab === key ? "is-active" : ""}`} onClick={() => setTab(key)}>{META[key].title}</button>)}</div>
+              <div className="servicios-inventoryTabs" role="tablist">{tabs.map((key) => <button key={key} type="button" className={`servicios-inventoryTab ${tab === key ? "is-active" : ""}`} onClick={() => { setCurrentPage(1); setTab(key); }}>{META[key].title}</button>)}</div>
             </div>
             <div className="mov-headFilters servicios-headFilters">
               <div className="cc-filter cc-filter--search servicios-searchFilter"><div className="cc-floatingField cc-floatingField--search is-active"><div className="cc-searchInput"><div className="cc-searchInput__fieldWrap"><input className="cc-input cc-input--floating servicios-searchInput" value={currentFilter.buscar} onChange={(e) => updateFilter("buscar", upper(e.target.value).slice(0, 100))} placeholder={META[tab].search} /><span className="cc-floatingLabel"><FontAwesomeIcon icon={faMagnifyingGlass} /> Búsqueda</span>{currentFilter.buscar && <button type="button" className="cc-clearSearch cc-clearSearch--inside" onClick={() => updateFilter("buscar", "")}><FontAwesomeIcon icon={faTimes} /></button>}</div></div></div></div>
@@ -411,22 +442,68 @@ export default function Servicios() {
         </div>
 
         <div className={`mov-gridTable mov-gridTable--head ${hasTableScroll ? "has-y-scroll" : ""}`} style={{ gridTemplateColumns: gridCols }}>{columns.map((column) => <div key={column.k} className={`mov-gridCell mov-gridCell--head ${column.right ? "is-right" : ""} ${column.center ? "is-center" : ""} ${column.k === "acciones" ? "mov-gridCell--actions" : ""}`}>{column.l}</div>)}</div>
-        <div className="mov-tableWrap servicios-tableWrap" ref={tableWrapRef}>
+        <div className="mov-tableWrap servicios-mainTableWrap" ref={tableWrapRef}>
           <div className="mov-gridBody mov-gridBody--relative">
-            {loading ? Array.from({ length: 8 }).map((_, i) => <div key={i} className="mov-gridTable mov-gridTable--row mov-row--skeleton" style={{ gridTemplateColumns: gridCols }}>{columns.map((column) => <div key={column.k} className="mov-gridCell"><span className="mov-skeletonBar" /></div>)}</div>) : rows.length ? rows.map((row) => {
+            {loading ? Array.from({ length: 8 }).map((_, i) => <div key={i} className="mov-gridTable mov-gridTable--row mov-row--skeleton" style={{ gridTemplateColumns: gridCols }}>{columns.map((column) => <div key={column.k} className="mov-gridCell"><span className="mov-skeletonBar" /></div>)}</div>) : visibleRows.length ? visibleRows.map((row) => {
               const display = values(row);
               return <div key={`${tab}-${idFor(tab, row)}`} className={`mov-gridTable mov-gridTable--row ${Number(row.activo) === 1 ? "" : "servicios-row--inactive"}`} style={{ gridTemplateColumns: gridCols }}>{columns.map((column) => <div key={column.k} className={`mov-gridCell ${column.right ? "is-right" : ""} ${column.center ? "is-center" : ""} ${column.k === "acciones" ? "mov-gridCell--actions" : ""}`}>{column.k === "acciones" ? renderActions(row) : <span className="mov-ellipsissss">{display[column.k] ?? "—"}</span>}</div>)}</div>;
-            }) : <div className="cc-emptyState servicios-emptyState"><FontAwesomeIcon icon={faBoxOpen} className="cc-emptyIcon" /><div className="cc-emptyText">No hay registros para los filtros actuales.</div></div>}
+            }) : <div className="cc-emptyState"><FontAwesomeIcon icon={faBoxOpen} className="cc-emptyIcon" /><div className="cc-emptyText">No hay registros para los filtros actuales.</div></div>}
           </div>
         </div>
         <div className="servicios-tableFooter">
-          <div className="mov-card__hint servicios-resultsCount">Mostrando <b>{rows.length}</b> registro(s)</div>
-          {RESPONSIVE_FOOTER_TABS.has(tab) && (
-            <div className="servicios-bottomActions" aria-label="Acciones de la tabla">
-              <BotonExportar label="Exportar" opciones={exportOptions} disabled={loading || rows.length === 0} />
-              <button type="button" className="mov-btn mov-btn--ghost servicios-categoriesBtn" onClick={() => setCategoryModal(true)}><FontAwesomeIcon icon={faTags} /> Categorías</button>
-            </div>
-          )}
+          <div className="servicios-tableCount" aria-live="polite">
+            {loading ? (
+              <span>Cargando registros…</span>
+            ) : (
+              <span>Mostrando <b>{firstVisible}-{lastVisible}</b> de <b>{rows.length}</b> registro(s)</span>
+            )}
+          </div>
+
+          <div className="servicios-tableFooter__right">
+            {totalPages > 1 && (
+              <nav className="servicios-pagination" aria-label="Paginación de la tabla">
+                <button
+                  type="button"
+                  className="servicios-pageBtn servicios-pageBtn--nav"
+                  onClick={() => setCurrentPage(Math.max(1, resolvedPage - 1))}
+                  disabled={loading || resolvedPage <= 1}
+                  aria-label="Página anterior"
+                >
+                  ‹
+                </button>
+                {pageItems.map((item) => typeof item === "number" ? (
+                  <button
+                    key={item}
+                    type="button"
+                    className={`servicios-pageBtn ${resolvedPage === item ? "is-active" : ""}`}
+                    onClick={() => setCurrentPage(item)}
+                    disabled={loading}
+                    aria-current={resolvedPage === item ? "page" : undefined}
+                  >
+                    {item}
+                  </button>
+                ) : (
+                  <span key={item} className="servicios-pageEllipsis" aria-hidden="true">…</span>
+                ))}
+                <button
+                  type="button"
+                  className="servicios-pageBtn servicios-pageBtn--nav"
+                  onClick={() => setCurrentPage(Math.min(totalPages, resolvedPage + 1))}
+                  disabled={loading || resolvedPage >= totalPages}
+                  aria-label="Página siguiente"
+                >
+                  ›
+                </button>
+              </nav>
+            )}
+
+            {RESPONSIVE_FOOTER_TABS.has(tab) && (
+              <div className="servicios-bottomActions" aria-label="Acciones de la tabla">
+                <BotonExportar label="Exportar" opciones={exportOptions} disabled={loading || rows.length === 0} />
+                <button type="button" className="mov-btn mov-btn--ghost servicios-categoriesBtn" onClick={() => setCategoryModal(true)}><FontAwesomeIcon icon={faTags} /> Categorías</button>
+              </div>
+            )}
+          </div>
         </div>
       </section>
 

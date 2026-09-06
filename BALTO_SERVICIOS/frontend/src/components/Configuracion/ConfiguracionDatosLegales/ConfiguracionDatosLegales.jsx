@@ -449,6 +449,7 @@ export default function ConfiguracionDatosLegales() {
             </div>
           </div>
 
+          <div className="cfg-legal-card__scroll">
           {!loading && configs.length > 1 && (
             <div className="cfg-legal-tabsWrap" aria-label="Cuentas de facturación">
               <div className="cfg-legal-tabsHeader">
@@ -750,6 +751,7 @@ export default function ConfiguracionDatosLegales() {
               </div>
             </form>
           )}
+          </div>
         </div>
         </div>
       </div>

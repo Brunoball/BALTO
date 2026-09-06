@@ -5,6 +5,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowLeft,
   faBuildingColumns,
+  faCircleInfo,
   faFloppyDisk,
   faMoneyCheckDollar,
   faPlus,
@@ -14,9 +15,9 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 
 import Toast from "../../Global/Toast";
+import ModalEliminar from "../../Global/Modales/ModalEliminar";
 import { apiFetchActionJson as apiFetch } from "../api/configuracionApi";
 import { todayISO } from "../utils/configuracionUtils";
-import ModalEliminar from "../../Global/Modales/ModalEliminar";
 import "../../Global/Global_css/GlobalsModalsV2.css";
 import "./ConfiguracionSaldosIniciales.css";
 import "./ConfiguracionSaldosInicialesVolver.css";
@@ -127,6 +128,7 @@ export default function ConfiguracionSaldosIniciales() {
   const [ccTipo, setCcTipo] = useState("CLIENTE");
   const [ccSearch, setCcSearch] = useState("");
   const [ccEditor, setCcEditor] = useState(null);
+  const [ccAEliminar, setCcAEliminar] = useState(null);
   const [chequeAEliminar, setChequeAEliminar] = useState(null);
   const [chequeForm, setChequeForm] = useState({
     tipo: "CHEQUE",
@@ -181,7 +183,7 @@ export default function ConfiguracionSaldosIniciales() {
   useEffect(() => { load(); }, [load]);
 
   useEffect(() => {
-    if (!ccEditor) return undefined;
+    if (!ccEditor || ccAEliminar) return undefined;
     const onKeyDown = (event) => {
       if (event.key === "Escape" && !saving) {
         event.preventDefault();
@@ -190,7 +192,7 @@ export default function ConfiguracionSaldosIniciales() {
     };
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [ccEditor, saving]);
+  }, [ccEditor, ccAEliminar, saving]);
 
   const saveTreasury = useCallback(async () => {
     const rowsToSave = tesoreriaRows.filter(
@@ -284,22 +286,22 @@ export default function ConfiguracionSaldosIniciales() {
   }, [ccEditor, hydrate, notify]);
 
   const deleteCc = useCallback(async () => {
-    if (!ccEditor?.exists) return;
+    if (!ccAEliminar?.exists) return;
     setSaving(true);
     try {
       const payload = await apiFetch("config_saldos_iniciales_cc_eliminar", {
         method: "POST",
-        body: JSON.stringify({ tipo_entidad: ccEditor.tipo_entidad, id_entidad: ccEditor.id_entidad }),
+        body: JSON.stringify({ tipo_entidad: ccAEliminar.tipo_entidad, id_entidad: ccAEliminar.id_entidad }),
       });
       hydrate(payload);
+      setCcAEliminar(null);
       setCcEditor(null);
-      notify("exito", payload.mensaje || "Saldo inicial eliminado.");
     } catch (e) {
-      notify("error", e?.message || "No se pudo eliminar el saldo inicial.", 4500);
+      throw e;
     } finally {
       setSaving(false);
     }
-  }, [ccEditor, hydrate, notify]);
+  }, [ccAEliminar, hydrate]);
 
   const saveCheque = useCallback(async () => {
     if (!normalizeText(chequeForm.emisor)) return notify("advertencia", "Ingresá el emisor del cheque/eCheq.");
@@ -354,6 +356,8 @@ export default function ConfiguracionSaldosIniciales() {
       });
       hydrate(payload);
       setChequeAEliminar(null);
+    } catch (e) {
+      throw e;
     } finally {
       setSaving(false);
     }
@@ -381,19 +385,19 @@ export default function ConfiguracionSaldosIniciales() {
           </button>
         </header>
 
-        <div className="cfg-si-tabs" role="tablist">
-          <button className={tab === "tesoreria" ? "is-active" : ""} onClick={() => setTab("tesoreria")} type="button">
-            <FontAwesomeIcon icon={faWallet} /> Caja y cuentas <span>{configuredCount.tesoreria}</span>
-          </button>
-          <button className={tab === "cheques" ? "is-active" : ""} onClick={() => setTab("cheques")} type="button">
-            <FontAwesomeIcon icon={faMoneyCheckDollar} /> Cheques <span>{configuredCount.cheques}</span>
-          </button>
-          <button className={tab === "cc" ? "is-active" : ""} onClick={() => setTab("cc")} type="button">
-            <FontAwesomeIcon icon={faUsers} /> Cuentas corrientes <span>{configuredCount.cc}</span>
-          </button>
-        </div>
-
         <div className="cfg-si-scroll">
+          <div className="cfg-si-tabs" role="tablist">
+            <button className={tab === "tesoreria" ? "is-active" : ""} onClick={() => setTab("tesoreria")} type="button">
+              <FontAwesomeIcon icon={faWallet} /> Caja y cuentas <span>{configuredCount.tesoreria}</span>
+            </button>
+            <button className={tab === "cheques" ? "is-active" : ""} onClick={() => setTab("cheques")} type="button">
+              <FontAwesomeIcon icon={faMoneyCheckDollar} /> Cheques <span>{configuredCount.cheques}</span>
+            </button>
+            <button className={tab === "cc" ? "is-active" : ""} onClick={() => setTab("cc")} type="button">
+              <FontAwesomeIcon icon={faUsers} /> Cuentas corrientes <span>{configuredCount.cc}</span>
+            </button>
+          </div>
+
           {loading ? (
             <div className="cfg-si-empty">Cargando configuración de saldos iniciales…</div>
           ) : tab === "tesoreria" ? (
@@ -488,72 +492,118 @@ export default function ConfiguracionSaldosIniciales() {
         </div>
 
         {ccEditor && createPortal(
-          <div className="gm-modal-overlay" role="presentation">
-            <div className="gm-modal-container gm-modal-v2 cfg-si-ccModal" role="dialog" aria-modal="true" aria-labelledby="cfg-si-cc-modal-title">
-              <div className="gm-modal-header">
+          <div className="gm-modal-overlay" role="presentation" onMouseDown={(e) => e.stopPropagation()}>
+            <div className="gm-modal-container gm-modal-v2 cfg-si-serviceModal cfg-si-ccModal" role="dialog" aria-modal="true" aria-labelledby="cfg-si-cc-modal-title">
+              <header className="gm-modal-header">
                 <div className="gm-modal-head-icon" aria-hidden="true"><FontAwesomeIcon icon={faUsers} /></div>
                 <div className="gm-modal-head-left">
                   <h2 className="gm-modal-title" id="cfg-si-cc-modal-title">{ccEditor.nombre}</h2>
                   <p className="gm-modal-subtitle">{ccEditor.tipo_entidad === "CLIENTE" ? "Saldo inicial de cliente" : "Saldo inicial de proveedor"}</p>
                 </div>
                 <button type="button" className="gm-modal-close" onClick={() => setCcEditor(null)} disabled={saving} aria-label="Cerrar">✕</button>
+              </header>
+
+              <div className="gm-modal-content cfg-si-serviceModal__content">
+                {ccEditor.exists && (
+                  <div className="gm-info-box cfg-si-serviceModal__notice">
+                    <FontAwesomeIcon icon={faCircleInfo} />
+                    <span>Al modificar este saldo inicial también cambiarán los saldos posteriores de esta cuenta corriente.</span>
+                  </div>
+                )}
+
+                <section className="gm-section cfg-si-serviceModal__panel">
+                  <div className="gm-section-head cfg-si-serviceModal__sectionHead">
+                    <span className="cfg-si-serviceModal__sectionIcon"><FontAwesomeIcon icon={faWallet} /></span>
+                    <span className="cfg-si-serviceModal__sectionCopy">
+                      <strong>Datos del saldo inicial</strong>
+                      <small>Definí la fecha, situación e importe con el que comienza la cuenta.</small>
+                    </span>
+                  </div>
+                  <div className="gm-section-body cfg-si-serviceModal__sectionBody">
+                    <div className="cfg-si-ccModalGrid">
+                      <label className="gm-field">
+                        <input className="gm-input" type="date" max={todayISO()} value={ccEditor.fecha_saldo} placeholder=" " onClick={openNativeDatePicker} onChange={(e) => setCcEditor((p) => ({ ...p, fecha_saldo: e.target.value }))} />
+                        <span className="gm-label gm-label--up">Fecha de apertura</span>
+                      </label>
+
+                      <label className="gm-field">
+                        <select className="gm-input gm-select" value={ccEditor.sentido} onChange={(e) => setCcEditor((p) => ({ ...p, sentido: e.target.value }))}>
+                          {ccEditor.tipo_entidad === "CLIENTE" ? <><option value="DEUDA">El cliente nos debe</option><option value="FAVOR">El cliente tiene saldo a favor</option></> : <><option value="DEUDA">Le debemos al proveedor</option><option value="FAVOR">Tenemos saldo a favor</option></>}
+                        </select>
+                        <span className="gm-label gm-label--up">Situación</span>
+                      </label>
+
+                      <label className="gm-field cfg-si-ccModalMoneyField cfg-si-ccModalWide">
+                        <input className="gm-input cfg-si-ccModalMoneyInput" autoFocus inputMode="decimal" placeholder=" " value={ccEditor.importe} onChange={(e) => setCcEditor((p) => ({ ...p, importe: e.target.value }))} />
+                        <span className="gm-label">Importe</span>
+                      </label>
+                    </div>
+                  </div>
+                </section>
+
+                <section className="gm-section cfg-si-serviceModal__panel cfg-si-serviceModal__panel--notes">
+                  <div className="gm-section-head cfg-si-serviceModal__sectionHead">
+                    <span className="cfg-si-serviceModal__sectionIcon"><FontAwesomeIcon icon={faCircleInfo} /></span>
+                    <span className="cfg-si-serviceModal__sectionCopy">
+                      <strong>Observación</strong>
+                      <small>Agregá una referencia opcional para identificar el origen del saldo.</small>
+                    </span>
+                  </div>
+                  <div className="gm-section-body cfg-si-serviceModal__sectionBody">
+                    <label className="gm-field cfg-si-ccModalObservation">
+                      <textarea className="gm-input cfg-si-ccModalTextarea" rows="3" maxLength={500} placeholder=" " value={ccEditor.observaciones} onChange={(e) => setCcEditor((p) => ({ ...p, observaciones: e.target.value }))} />
+                      <span className={`gm-label ${ccEditor.observaciones !== "" ? "gm-label--up" : ""}`.trim()}>Observación</span>
+                    </label>
+                  </div>
+                </section>
               </div>
 
-              <div className="gm-modal-content cfg-si-ccModalContent">
-                {ccEditor.exists && <div className="gm-info-box cfg-si-ccModalNotice">Al modificar este saldo inicial también cambiarán los saldos posteriores de esta cuenta corriente.</div>}
-
-                <div className="cfg-si-ccModalGrid">
-                  <div className="gm-field">
-                    <input className="gm-input" type="date" max={todayISO()} value={ccEditor.fecha_saldo} placeholder=" " onClick={openNativeDatePicker} onChange={(e) => setCcEditor((p) => ({ ...p, fecha_saldo: e.target.value }))} />
-                    <span className="gm-label gm-label--up">Fecha de apertura</span>
-                  </div>
-
-                  <div className="gm-field">
-                    <select className="gm-input gm-select" value={ccEditor.sentido} onChange={(e) => setCcEditor((p) => ({ ...p, sentido: e.target.value }))}>
-                      {ccEditor.tipo_entidad === "CLIENTE" ? <><option value="DEUDA">El cliente nos debe</option><option value="FAVOR">El cliente tiene saldo a favor</option></> : <><option value="DEUDA">Le debemos al proveedor</option><option value="FAVOR">Tenemos saldo a favor</option></>}
-                    </select>
-                    <span className="gm-label gm-label--up">Situación</span>
-                  </div>
-
-                  <div className="gm-field cfg-si-ccModalMoneyField">
-                    <input className="gm-input cfg-si-ccModalMoneyInput" autoFocus inputMode="decimal" placeholder=" " value={ccEditor.importe} onChange={(e) => setCcEditor((p) => ({ ...p, importe: e.target.value }))} />
-                    <span className="gm-label">Importe</span>
-                  </div>
-
-                  <div className="gm-field cfg-si-ccModalObservation">
-                    <textarea className="gm-input cfg-si-ccModalTextarea" rows="3" maxLength={500} placeholder=" " value={ccEditor.observaciones} onChange={(e) => setCcEditor((p) => ({ ...p, observaciones: e.target.value }))} />
-                    <span className={`gm-label ${ccEditor.observaciones !== "" ? "gm-label--up" : ""}`.trim()}>Observación</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="gm-modal-footer cfg-si-ccModalFooter">
-                {ccEditor.exists && <button className="gm-action-btn gm-action-btn--danger cfg-si-ccModalDelete" type="button" onClick={deleteCc} disabled={saving}><span className="gm-action-btn__icon"><FontAwesomeIcon icon={faTrash} /></span>Eliminar saldo</button>}
+              <footer className="gm-modal-footer gm-view-footer-actions cfg-si-ccModalFooter">
+                {ccEditor.exists && <button className="gm-action-btn gm-action-btn--danger cfg-si-ccModalDelete" type="button" onClick={() => setCcAEliminar({ ...ccEditor })} disabled={saving}><span className="gm-action-btn__icon"><FontAwesomeIcon icon={faTrash} /></span>Eliminar saldo</button>}
                 <div className="cfg-si-ccModalFooterRight">
                   <button className="gm-action-btn gm-action-btn--cancel" type="button" onClick={() => setCcEditor(null)} disabled={saving}>Cancelar</button>
-                  <button className="gm-action-btn gm-action-btn--save" type="button" onClick={saveCc} disabled={saving}><span className="gm-action-btn__icon"><FontAwesomeIcon icon={faFloppyDisk} /></span>Guardar</button>
+                  <button className="gm-action-btn gm-action-btn--save" type="button" onClick={saveCc} disabled={saving}><span className="gm-action-btn__icon"><FontAwesomeIcon icon={faFloppyDisk} /></span>{saving ? "Guardando..." : "Guardar"}</button>
                 </div>
-              </div>
+              </footer>
             </div>
           </div>,
           document.body
         )}
 
         <ModalEliminar
-          open={!!chequeAEliminar}
+          open={Boolean(ccAEliminar)}
+          row={ccAEliminar}
+          loading={saving}
+          onClose={() => setCcAEliminar(null)}
+          onConfirm={deleteCc}
+          onToast={notify}
+          title="Eliminar saldo inicial"
+          message="¿Seguro que querés eliminar este saldo inicial?"
+          warning="Esta acción no se puede deshacer."
+          loadingMessage="Eliminando saldo inicial…"
+          successMessage="Saldo inicial eliminado correctamente."
+          errorMessage="No se pudo eliminar el saldo inicial."
+          details={ccAEliminar ? [
+            { label: ccAEliminar.tipo_entidad === "CLIENTE" ? "Cliente" : "Proveedor", value: ccAEliminar.nombre || "—" },
+            { label: "Fecha de apertura", value: fmtDate(ccAEliminar.fecha_saldo) },
+            { label: "Situación", value: ccAEliminar.sentido === "FAVOR" ? "Saldo a favor" : "Deuda" },
+            { label: "Importe", value: moneyARS(Math.abs(parseMoney(ccAEliminar.importe) || 0)) },
+          ] : []}
+        />
+
+        <ModalEliminar
+          open={Boolean(chequeAEliminar)}
           row={chequeAEliminar}
           loading={saving}
           onClose={() => setChequeAEliminar(null)}
           onConfirm={deleteCheque}
           onToast={notify}
           title="Eliminar cheque/eCheq"
-          message={`¿Seguro que querés eliminar el ${chequeAEliminar?.tipo === "ECHEQ" ? "eCheq" : "cheque"} N.º ${chequeAEliminar?.numero_cheque || ""} de los saldos iniciales?`}
-          warning="Esta acción quitará el documento de la cartera inicial y no se puede deshacer."
+          message="¿Seguro que querés eliminar este documento de los saldos iniciales?"
+          warning="Esta acción no se puede deshacer."
           loadingMessage="Eliminando cheque/eCheq…"
           successMessage="Cheque/eCheq inicial eliminado correctamente."
           errorMessage="No se pudo eliminar el cheque/eCheq inicial."
-          confirmLabel="Eliminar"
-          cancelLabel="Cancelar"
           details={chequeAEliminar ? [
             { label: "Tipo", value: chequeAEliminar.tipo === "ECHEQ" ? "eCheq" : "Cheque" },
             { label: "Número", value: chequeAEliminar.numero_cheque || "—" },
