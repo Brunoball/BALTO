@@ -334,10 +334,17 @@ export default function Movimientos() {
     (async () => {
       await ensureListsLoaded({ force: false, background: true }).catch(() => null);
       if (!alive) return;
-      await loadRows({ dateRange, q: "", offset: 0, append: false });
+
+      // La carga inicial espera a que terminen las listas globales. Si el usuario
+      // ya escribió una búsqueda durante esa espera, no debemos pisarla con una
+      // petición sin `q` que llegue unos milisegundos después. Tomamos siempre el
+      // valor vigente desde el ref para que la respuesta inicial y el live token
+      // pertenezcan al filtro que realmente está visible en pantalla.
+      const activeQ = qRef.current;
+      await loadRows({ dateRange, q: activeQ, offset: 0, append: false });
       try {
-        const token = await fetchLiveToken(dateRange, "");
-        if (alive) liveTokenRef.current = token;
+        const token = await fetchLiveToken(dateRange, activeQ);
+        if (alive && qRef.current === activeQ) liveTokenRef.current = token;
       } catch {}
     })();
 

@@ -9,11 +9,12 @@ const readOnlyPages = [
   ['/panel/contabilidad/iva-ventas', /IVA Ventas/i],
   ['/panel/contabilidad/iva-compras', /IVA Compras/i],
   ['/panel/analisis-financiero', /Análisis Financiero/i],
-  ['/panel/configuracion', /Tienda Nube|Usuarios del sistema|Datos legales/i],
-  ['/panel/configuracion/tiendanube', /Configuración de Tienda Nube/i],
+  ['/panel/configuracion', /Usuarios del sistema|Datos legales|Listas y categorías|Saldos iniciales/i],
   ['/panel/configuracion/calendario', /Calendario global/i],
   ['/panel/configuracion/usuarios', /Usuarios del sistema/i],
   ['/panel/configuracion/datos-legales', /Datos legales/i],
+  ['/panel/configuracion/listas-categorias', /Listas y categorías/i],
+  ['/panel/configuracion/saldos-iniciales', /Saldos iniciales/i],
 ];
 
 for (const [route, title] of readOnlyPages) {
@@ -24,7 +25,7 @@ for (const [route, title] of readOnlyPages) {
     await expect(page.locator('body')).toContainText(title);
     await expect(page.locator('body')).not.toContainText(/HTTP 5\d\d|Error interno|Fatal error/i);
     await assertNoCriticalErrors(diagnostics, testInfo, {
-      allowConsole: [/Tienda Nube/i, /cotizaci/i, /imagen/i],
+      allowConsole: [/cotizaci/i, /imagen/i],
     });
   });
 }
@@ -38,15 +39,12 @@ test('@smoke configuración: los modales sensibles abren y cancelan sin guardar'
   if (await cancelUser.isVisible().catch(() => false)) await cancelUser.click();
   else await userDialog.getByRole('button', { name: /Cerrar/i }).click();
 
-  await page.goto('/panel/configuracion/tiendanube');
-  const guide = page.getByTitle('Ver guía de conexión');
-  if (await guide.isVisible().catch(() => false)) {
-    await guide.click();
-    const guideDialog = page.getByRole('dialog').last();
-    await expect(guideDialog).toBeVisible();
-    const closeGuide = guideDialog.getByRole('button', { name: /Cerrar|Cancelar|Aceptar/i }).last();
-    if (await closeGuide.isVisible().catch(() => false)) await closeGuide.click();
-    else await page.keyboard.press('Escape');
-    await expect(guideDialog).toBeHidden();
-  }
+  await page.goto('/panel/configuracion/listas-categorias');
+  await waitForBusyToFinish(page);
+  await page.getByRole('button', { name: /Agregar detalle/i }).click();
+  const detailDialog = page.getByRole('dialog').filter({ hasText: /Agregar detalle/i }).last();
+  await expect(detailDialog).toBeVisible();
+  await detailDialog.getByRole('button', { name: /Cancelar/i }).click();
+  await expect(detailDialog).toBeHidden();
+
 });

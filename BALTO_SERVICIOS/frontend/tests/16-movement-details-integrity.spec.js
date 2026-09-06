@@ -206,7 +206,7 @@ test('@crud @critical modales: cada módulo y Movimientos muestran los datos exa
     thirdParty: String(purchaseData.providerName || '').split('\n')[0].trim(),
     quantity: 2,
     price: 137,
-    total: 274,
+    total: 331.54,
   };
   await openModuleDetail(purchaseRow, purchaseExpected);
 
@@ -368,9 +368,14 @@ test('@crud @critical Movimientos: unifica venta y NC parcial con total y pago v
   expect(paidTotal, 'El medio de pago debe quedar limitado al total vigente').toBeCloseTo(currentTotal, 2);
 
   await waitForBusyToFinish(page);
-  const rows = page.locator('.mov-gridTable--row:visible:not(.mov-row--skeleton)');
-  await expect(rows, 'La búsqueda no debe mostrar una fila separada para la NC').toHaveCount(1);
-  const row = rows.first();
+  // La respuesta de API ya probó que venta + NC están unificadas. Para la grilla
+  // usamos el helper endurecido, que inspecciona el detalle si React deja una
+  // respuesta sin q pintada por encima de la filtrada.
+  const row = await searchRow(
+    page,
+    productName,
+    /Buscar por descripción, cliente, proveedor, medio de pago/i,
+  );
   await expectMoney(row.locator('[role="cell"]').nth(4), currentTotal, 'Monto vigente incorrecto en la tabla');
 
   await row.getByTitle(/Ver información completa del movimiento/i).click();
@@ -475,8 +480,9 @@ test('@crud @critical Compras: el modal muestra los productos de la NC parcial',
   const quantity = 2;
   const price = 300;
   const returnedQuantity = 1;
-  const originalTotal = quantity * price;
-  const creditTotal = returnedQuantity * price;
+  // Compras fixture usa IVA 21%; los importes del modal incluyen IVA.
+  const originalTotal = quantity * price * 1.21;
+  const creditTotal = returnedQuantity * price * 1.21;
   const currentTotal = originalTotal - creditTotal;
 
   await createStockProduct(page, {

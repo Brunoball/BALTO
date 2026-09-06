@@ -65,7 +65,7 @@ function ArticulosCard({ rows, setRows, catalog }) {
             return (
               <div className="servicios-component-row" key={id}>
                 <div className="servicios-component-row__name">
-                  <strong>{found?.nombre || row.nombre || "MATERIAL / INSUMO"}</strong>
+                  <strong>{found?.nombre || row.nombre || "MATERIAL / INSUMO"}{Number(found?.activo ?? row.activo ?? 1) === 1 ? "" : " · BAJA"}</strong>
                   <small>{money(found?.costo_unitario ?? row.costo_unitario ?? 0)} por {unit || "unidad"}</small>
                 </div>
                 <label className="gm-field servicios-component-quantity">

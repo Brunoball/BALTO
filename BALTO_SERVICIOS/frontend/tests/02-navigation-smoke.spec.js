@@ -19,7 +19,8 @@ const routes = [
   { route: '/panel/flujo-de-caja', text: /Flujo de Caja/i },
   { route: '/panel/cuentas-corrientes/clientes', text: /Clientes/i },
   { route: '/panel/cuentas-corrientes/proveedores', text: /Proveedores/i },
-  { route: '/panel/stock', text: /Stock · Productos/i },
+  { route: '/panel/servicios', text: /Servicios/i },
+  { route: '/panel/servicios?seccion=inventario', text: /Inventario de servicios/i },
   { route: '/panel/contabilidad', text: /IVA Ventas/i },
   { route: '/panel/contabilidad/iva-ventas', text: /IVA Ventas/i },
   { route: '/panel/contabilidad/iva-compras', text: /IVA Compras/i },
@@ -28,11 +29,12 @@ const routes = [
   { route: '/panel/cheques/echeqs-cartera', text: /Echeqs(?: ·| en) Cartera/i },
   { route: '/panel/cheques/flujo-echeqs', text: /Flujo de E-?Cheqs/i },
   { route: '/panel/analisis-financiero', text: /Análisis Financiero/i },
-  { route: '/panel/configuracion', text: /Tienda Nube|Usuarios del sistema|Datos legales/i },
-  { route: '/panel/configuracion/tiendanube', text: /Configuración de Tienda Nube/i },
+  { route: '/panel/configuracion', text: /Usuarios del sistema|Datos legales|Listas y categorías|Saldos iniciales/i },
   { route: '/panel/configuracion/calendario', text: /Calendario global/i },
   { route: '/panel/configuracion/usuarios', text: /Usuarios del sistema/i },
   { route: '/panel/configuracion/datos-legales', text: /Datos legales/i },
+  { route: '/panel/configuracion/listas-categorias', text: /Listas y categorías/i },
+  { route: '/panel/configuracion/saldos-iniciales', text: /Saldos iniciales/i },
 ];
 
 function escapeRegex(value) {
@@ -47,7 +49,7 @@ for (const { route, finalRoute = route, text } of routes) {
     await waitForBusyToFinish(page);
     await expect(page.locator('body')).toContainText(text);
     await assertNoCriticalErrors(diagnostics, testInfo, {
-      allowConsole: [/Tienda Nube/i, /imagen/i],
+      allowConsole: [/imagen/i],
     });
   });
 }

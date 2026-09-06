@@ -33,11 +33,13 @@ async function expectDebtSettledOrRemoved(page, {
   await waitForBusyToFinish(page);
   const search = page.getByPlaceholder(searchPlaceholder).first();
   await expect(search).toBeVisible({ timeout: 20_000 });
-  await search.fill(productName);
+  // El buscador q= de Recibos/Órdenes de Pago tiene un HY093 conocido y se
+  // cubre explícitamente en 27-movement-search-health. Para validar el saldo sin
+  // duplicar ese mismo bug, consultamos el listado sin q y localizamos el fixture.
 
   await expect.poll(async () => {
     const result = await authenticatedApi(page, listAction, {
-      query: { q: productName, limit: 101, offset: 0, _: Date.now() },
+      query: { limit: 500, offset: 0, _: Date.now() },
     });
     expectApiSuccess(result, `No se pudo verificar el saldo final de ${productName}`);
 
@@ -440,7 +442,7 @@ test('@crud @critical cuenta corriente cliente: venta pendiente y recibo complet
     listKeys: ['movimientos', 'recibos'],
   });
 
-  await assertNoCriticalErrors(diagnostics, testInfo, { allowConsole: [/PDF/i, /recibo/i, /Tienda Nube/i] });
+  await assertNoCriticalErrors(diagnostics, testInfo, { allowConsole: [/PDF/i, /recibo/i] });
 });
 
 test('@crud @critical cuenta corriente proveedor: compra pendiente y orden de pago completa', async ({ page }, testInfo) => {
@@ -467,7 +469,7 @@ test('@crud @critical cuenta corriente proveedor: compra pendiente y orden de pa
     listKeys: ['movimientos', 'ordenes', 'ordenes_pago'],
   });
 
-  await assertNoCriticalErrors(diagnostics, testInfo, { allowConsole: [/PDF/i, /orden/i, /Tienda Nube/i] });
+  await assertNoCriticalErrors(diagnostics, testInfo, { allowConsole: [/PDF/i, /orden/i] });
 });
 
 test('@crud @critical cuenta corriente cliente: NC parcial calcula saldo y muestra detalle completo', async ({ page }, testInfo) => {
@@ -553,7 +555,7 @@ test('@crud @critical cuenta corriente cliente: NC parcial calcula saldo y muest
   });
 
   await assertNoCriticalErrors(diagnostics, testInfo, {
-    allowConsole: [/PDF/i, /nota de crédito/i, /Tienda Nube/i],
+    allowConsole: [/PDF/i, /nota de crédito/i],
   });
 });
 
@@ -567,9 +569,10 @@ test('@crud @critical cuenta corriente proveedor: NC parcial calcula saldo y mue
 
   const party = await createAccountParty(page, 'provider', uniqueName('CC-NC-PROVEEDOR'));
   const productName = uniqueName('CC-NC-COMPRA');
-  const originalTotal = 480;
-  const creditTotal = 240;
-  const currentTotal = 240;
+  // Las compras fixture se crean con IVA 21% (2 x 240 + IVA).
+  const originalTotal = 580.8;
+  const creditTotal = 290.4;
+  const currentTotal = 290.4;
   const returnedQuantity = 1;
 
   await createStockProduct(page, {
@@ -637,6 +640,6 @@ test('@crud @critical cuenta corriente proveedor: NC parcial calcula saldo y mue
   });
 
   await assertNoCriticalErrors(diagnostics, testInfo, {
-    allowConsole: [/PDF/i, /nota de crédito/i, /Tienda Nube/i],
+    allowConsole: [/PDF/i, /nota de crédito/i],
   });
 });

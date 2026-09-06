@@ -1588,9 +1588,10 @@ export default function ModalNuevaCompra({ open, lists, onClose, onToast, onSave
       if (p) problems.push(p);
     });
 
-    const usable = rowsCalc.filter(
-      (r) => Number.isFinite(Number(r.id_detalle)) && Number(r.id_detalle) > 0 && Number(r.total || 0) > 0
-    );
+    const usable = rowsCalc.filter((r) => {
+      const articuloId = Number(r.id_articulo || r.id_stock_producto || r.id_detalle || 0);
+      return Number.isFinite(articuloId) && articuloId > 0 && Number(r.total || 0) > 0;
+    });
 
     if (!usable.length) {
       if (problems.length) {

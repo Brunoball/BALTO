@@ -41,7 +41,6 @@ test('@crud ventas y compras: el detalle completo abre con los datos guardados',
   await deleteSale(page, productName);
   await page.goto('/panel/compras');
   await deletePurchase(page, productName);
-  await page.goto('/panel/stock');
   await deleteUnusedStockProduct(page, productName);
 
   await expect(page.locator('[role="dialog"]')).toHaveCount(0);

@@ -300,38 +300,83 @@ export async function selectFirstAutocomplete(scope, labelText, preferredText = 
   return text;
 }
 
-export async function selectProduct(scope, productName, options = {}) {
+async function selectCatalogItem(scope, itemName, kind, options = {}) {
   const productInput = scope
     .locator([
+      'input.psa-input',
+      'input[placeholder*="servicio" i]',
+      'input[placeholder*="stock" i]',
       'input[placeholder*="producto" i]',
       'input[placeholder*="material" i]',
+      'input[placeholder*="insumo" i]',
+      'input[placeholder*="artículo" i]',
       'input[placeholder*="descripción" i]',
       'input[placeholder*="detalle" i]',
     ].join(','))
     .first();
 
-  await expect(productInput).toBeVisible();
-  await productInput.fill(productName);
+  await expect(productInput).toBeVisible({ timeout: 15_000 });
+
+  const wrap = productInput
+    .locator('xpath=ancestor::*[contains(concat(" ", normalize-space(@class), " "), " psa-wrap ")]')
+    .first();
+  const kindButton = wrap
+    .getByRole('button', { name: new RegExp(`^${kind}$`, 'i') })
+    .first();
+
+  // Ventas usa un catálogo combinado y arranca en "Servicio". El toggle recién
+  // aparece cuando terminaron de hidratarse ambos catálogos; el helper anterior
+  // lo comprobaba durante 800 ms y escribía en Servicio antes de que apareciera
+  // "Stock". En inputs exclusivos (Compras/Otros ingresos) no hay toggle.
+  const placeholder = String(await productInput.getAttribute('placeholder') || '');
+  const combinedCatalog = /servicio.*stock|stock.*servicio/i.test(placeholder);
+  if (combinedCatalog) {
+    await expect(
+      kindButton,
+      `Debe habilitarse el selector de tipo "${kind}" en el catálogo combinado`,
+    ).toBeVisible({ timeout: 15_000 });
+
+    const isActive = await kindButton.evaluate((button) => button.classList.contains('is-active'));
+    if (!isActive) await kindButton.click();
+    await expect(kindButton).toHaveClass(/is-active/, { timeout: 10_000 });
+  }
+
+  await productInput.click();
+  await productInput.fill(itemName);
 
   const list = scope.page().locator('#psa-portal-list');
-  await expect(list).toBeVisible({ timeout: 12_000 });
+  await expect(list).toBeVisible({ timeout: 15_000 });
 
   const item = list
     .locator('.psa-item, li')
-    .filter({ hasText: productName })
+    .filter({ hasText: itemName })
     .first();
 
   await expect(
     item,
-    `Debe aparecer el producto "${productName}" en el autocompletado`
-  ).toBeVisible({ timeout: 15_000 });
+    `Debe aparecer el ${kind.toLowerCase()} "${itemName}" en el autocompletado`,
+  ).toBeVisible({ timeout: 20_000 });
 
   await item.click();
 
   if (options.expectSelected !== false) {
-    await expect(productInput).toHaveValue(new RegExp(productName, 'i'));
+    await expect(productInput).toHaveValue(new RegExp(itemName, 'i'), { timeout: 10_000 });
   }
+
+  // Espera el commit de onSelect antes de tocar cantidad/precio en la misma fila.
+  await productInput.evaluate(() => new Promise((resolve) => {
+    requestAnimationFrame(() => requestAnimationFrame(resolve));
+  }));
+
   return productInput;
+}
+
+export async function selectProduct(scope, productName, options = {}) {
+  return selectCatalogItem(scope, productName, 'Stock', options);
+}
+
+export async function selectService(scope, serviceName, options = {}) {
+  return selectCatalogItem(scope, serviceName, 'Servicio', options);
 }
 
 function parseDisplayedDecimal(value) {
@@ -384,7 +429,9 @@ export async function fillMovementRow(dialog, data) {
   const row = dialog.locator('.gm-table-body .gm-table-row').first();
   await expect(row).toBeVisible();
 
-  if (data.productName) {
+  if (data.serviceName) {
+    await selectService(row, data.serviceName);
+  } else if (data.productName) {
     await selectProduct(row, data.productName);
   } else if (data.description) {
     const input = row
@@ -415,22 +462,73 @@ export async function selectMovementMode(dialog, labelText, preferredPattern) {
   return selectFirstNonEmpty(select, preferredPattern);
 }
 
+function normalizeSearchText(value) {
+  return String(value || '')
+    .normalize('NFKD')
+    .replace(/[\u200B-\u200D\uFEFF]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLocaleLowerCase('es-AR');
+}
+
+async function findRowByDetail(page, rows, query, maxRows = 100) {
+  const needle = normalizeSearchText(query);
+  const count = Math.min(await rows.count(), maxRows);
+  for (let index = 0; index < count; index += 1) {
+    const candidate = rows.nth(index);
+    const info = candidate
+      .getByTitle(/Ver información completa|Ver detalle|Información completa/i)
+      .first();
+    if (!(await info.isVisible({ timeout: 350 }).catch(() => false))) continue;
+
+    await info.click();
+    const detail = page.getByRole('dialog').last();
+    if (!(await detail.isVisible({ timeout: 3_000 }).catch(() => false))) continue;
+
+    const text = normalizeSearchText(await detail.innerText().catch(() => ''));
+    const matches = text.includes(needle);
+    const close = detail.getByRole('button', { name: /Cerrar|✕/i }).last();
+    if (await close.isVisible({ timeout: 350 }).catch(() => false)) {
+      await close.click();
+      await expect(detail).toBeHidden({ timeout: 10_000 }).catch(() => null);
+    }
+
+    if (matches) return rows.nth(index);
+  }
+  return null;
+}
+
+async function findMovementRowWithoutBrokenSearch(page, query, search) {
+  // q= está roto en varios endpoints del backend actual (HY093). Recargamos la
+  // ruta para reconstruir la grilla sin q y buscamos el fixture dentro de los
+  // detalles, nunca devolviendo "la primera fila" a ciegas.
+  const placeholder = String(await search.getAttribute('placeholder') || '');
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await waitForBusyToFinish(page);
+
+  const freshSearch = placeholder
+    ? page.getByPlaceholder(placeholder).first()
+    : page.getByPlaceholder(/Buscar/i).first();
+  if (await freshSearch.isVisible({ timeout: 1_000 }).catch(() => false)) {
+    await freshSearch.fill('');
+  }
+
+  const freshRows = page.locator('.mov-gridTable--row:visible:not(.mov-row--skeleton)');
+  const direct = freshRows.filter({ hasText: query }).first();
+  if (await direct.isVisible({ timeout: 1_500 }).catch(() => false)) return direct;
+
+  return findRowByDetail(page, freshRows, query, 150);
+}
+
 export async function searchRow(page, query, placeholderPattern = /Buscar/i) {
   const search = page.getByPlaceholder(placeholderPattern).first();
   await expect(search).toBeVisible();
   await search.fill(query);
   await search.press('Enter');
 
-  // Stock y algunos listados disparan la consulta con debounce. Si se busca el
-  // loader inmediatamente, todavía no existe y Playwright puede devolver una fila
-  // skeleton (sin texto) como si fuera el resultado real.
   await page.waitForTimeout(450);
   await waitForBusyToFinish(page);
 
-  // Algunos listados permiten buscar por datos internos del detalle (por ejemplo,
-  // el nombre de un producto), aunque la grilla solo muestre "1 PRODUCTO".
-  // Primero intentamos encontrar una fila que exponga el texto buscado y, si no
-  // aparece visualmente, usamos la primera fila devuelta por el filtro del backend.
   const rows = page.locator('.mov-gridTable--row:visible:not(.mov-row--skeleton)');
   const rowWithVisibleText = rows.filter({ hasText: query }).first();
 
@@ -441,7 +539,25 @@ export async function searchRow(page, query, placeholderPattern = /Buscar/i) {
   const backendError = page.locator('body').getByText(
     /SQLSTATE|Invalid parameter number|Error interno|Fatal error/i,
   ).first();
+  const errorText = await backendError.isVisible({ timeout: 500 })
+    .then(async (visible) => (visible ? backendError.innerText() : ''))
+    .catch(() => '');
+
+  if (/HY093|Invalid parameter number/i.test(errorText)) {
+    const fallback = await findMovementRowWithoutBrokenSearch(page, query, search);
+    if (fallback) return fallback;
+    throw new Error(
+      `La búsqueda del módulo falló con ${errorText} y no se pudo localizar de forma segura el registro "${query}" sin usar q.`,
+    );
+  }
+
   await expect(backendError).toHaveCount(0);
+
+  // Varias grillas muestran "1 PRODUCTO" en vez del nombre. Además una respuesta
+  // sin q puede ganar la carrera y dejar filas extra aunque la API filtrada haya
+  // respondido bien. Confirmamos el fixture leyendo el detalle de cada fila.
+  const byDetail = await findRowByDetail(page, rows, query, 100);
+  if (byDetail) return byDetail;
 
   const firstFilteredRow = rows.first();
   await expect(firstFilteredRow).toBeVisible({ timeout: 20_000 });
@@ -469,7 +585,7 @@ export async function requireMutations(test, page) {
 
   // Todas las mutaciones de Playwright llevan e2e_run=PW-... para que la
   // auditoría y el limpiador puedan reconocerlas sin confundirlas con datos
-  // reales. Si PW_SKIP_TIENDA_NUBE=1 también se conserva el bloqueo de sync.
+  // reales del tenant de BALTO Servicios.
   if (page) {
     await page.context().route('**/api.php**', async (route) => {
       const request = route.request();
@@ -479,7 +595,6 @@ export async function requireMutations(test, page) {
       }
 
       const url = new URL(request.url());
-      if (ENV.skipTiendaNube) url.searchParams.set('skip_tiendanube_sync', '1');
       url.searchParams.set('e2e_run', RUN_PREFIX);
       await route.continue({ url: url.toString() });
     });

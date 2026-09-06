@@ -18,6 +18,7 @@ import {
   deleteSale,
   deleteUnusedStockProduct,
 } from './support/flows.js';
+import { expectServiceStock } from './support/services.js';
 
 const IVA_VALUES = ['0', '10.5', '21', '27'];
 
@@ -112,20 +113,17 @@ test('@crud @critical presupuesto: crear, eliminar y convertir sin doble impacto
   await expect(convertedItem.locator(':scope > span').nth(5)).toContainText(/217[,.]80/);
   await closeDialog(saleDetail);
 
-  await page.goto('/panel/stock');
-  const stockRow = await searchRow(page, productName, /Buscar por nombre, SKU o variante/i);
-  await expect(stockRow.locator('[role="cell"]').nth(2)).toContainText('9');
+  await expectServiceStock(page, productName, 9);
 
   // Eliminar la venta libera la conversión; luego se limpian presupuesto y productos de prueba.
   await page.goto('/panel/ventas');
   await deleteSale(page, productName);
   await page.goto('/panel/presupuesto');
   await deleteBudget(page, productName);
-  await page.goto('/panel/stock');
   await deleteUnusedStockProduct(page, productName);
   await deleteUnusedStockProduct(page, disposableName);
 
-  await assertNoCriticalErrors(diagnostics, testInfo, { allowConsole: [/Tienda Nube/i, /PDF/i, /imagen/i] });
+  await assertNoCriticalErrors(diagnostics, testInfo, { allowConsole: [/PDF/i, /imagen/i] });
 });
 
 test('@crud @critical presupuesto: dos pestañas no pueden convertirlo dos veces', async ({ page, context }, testInfo) => {
@@ -184,21 +182,18 @@ test('@crud @critical presupuesto: dos pestañas no pueden convertirlo dos veces
   const sales = verifier.locator('.mov-gridTable--row:visible:not(.mov-row--skeleton)');
   await expect(sales, 'La búsqueda debe devolver exactamente una venta').toHaveCount(1, { timeout: 30_000 });
 
-  await verifier.goto('/panel/stock');
-  const stockRow = await searchRow(verifier, productName, /Buscar por nombre, SKU o variante/i);
-  await expect(stockRow.locator('[role="cell"]').nth(2)).toContainText('9');
+  await expectServiceStock(verifier, productName, 9);
 
   // Limpieza controlada: borrar la única venta libera el presupuesto.
   await verifier.goto('/panel/ventas');
   await deleteSale(verifier, productName);
   await verifier.goto('/panel/presupuesto');
   await deleteBudget(verifier, productName);
-  await verifier.goto('/panel/stock');
   await deleteUnusedStockProduct(verifier, productName);
 
   await secondPage.close();
   await verifier.close();
-  await assertNoCriticalErrors(diagnostics, testInfo, { allowConsole: [/ya fue convertido/i, /Tienda Nube/i, /PDF/i, /imagen/i] });
+  await assertNoCriticalErrors(diagnostics, testInfo, { allowConsole: [/ya fue convertido/i, /PDF/i, /imagen/i] });
 });
 
 test('@crud @critical presupuesto: selector IVA, recálculo backend y rechazo de IVA manipulado', async ({ page }, testInfo) => {
@@ -319,12 +314,10 @@ test('@crud @critical presupuesto: selector IVA, recálculo backend y rechazo de
   await closeDialog(dialog);
 
   await page.unroute('**/api.php?action=presupuestos_crear**');
-  await page.goto('/panel/stock');
   await deleteUnusedStockProduct(page, productName);
 
   await assertNoCriticalErrors(diagnostics, testInfo, {
     allowConsole: [
-      /Tienda Nube/i,
       /PDF/i,
       /imagen/i,
       // Esta respuesta 422 confirma que el backend rechazó el IVA adulterado.

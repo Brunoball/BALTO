@@ -10,6 +10,7 @@ import {
   selectOptionValues,
 } from './support/ui.js';
 import { createStockProductFixture } from './support/stock-fixtures.js';
+import { expectServiceStock } from './support/services.js';
 import {
   createPurchase,
   editPurchaseQuantity,
@@ -24,8 +25,6 @@ import {
 const CREDIT_NOTE_MOTIVES = [
   'DEVOLUCION_MERCADERIA',
   'ANULACION_TOTAL',
-  'DESCUENTO',
-  'BONIFICACION',
   'DIFERENCIA_PRECIO',
   'OTRO',
 ];
@@ -60,9 +59,7 @@ test('@crud @critical compra: ingresa stock, edita cantidad y NC de proveedor re
   await editPurchaseQuantity(page, productName, 4);
   await applyPurchaseCreditNote(page, productName, 1);
 
-  await page.goto('/panel/stock');
-  let stockRow = await searchRow(page, productName, /Buscar por nombre, SKU o variante/i);
-  await expect(stockRow.locator('[role="cell"]').nth(2)).toContainText('13');
+  await expectServiceStock(page, productName, 13);
 
   // La rama de ajustes económicos debe ofrecer todos los motivos, usar selector
   // cerrado de IVA y no modificar el stock.
@@ -76,7 +73,7 @@ test('@crud @critical compra: ingresa stock, edita cantidad y NC de proveedor re
   await expect((await selectOptionValues(motiveSelect)).sort()).toEqual([...CREDIT_NOTE_MOTIVES].sort());
 
   await configurePurchaseCreditNote(dialog, {
-    motive: 'DESCUENTO',
+    motive: 'DIFERENCIA_PRECIO',
     amount: 10,
     ivaPct: 21,
   });
@@ -89,9 +86,7 @@ test('@crud @critical compra: ingresa stock, edita cantidad y NC de proveedor re
   await expect(await selectOptionValues(ivaSelect)).toEqual(IVA_VALUES);
   await clickSaveAndWait(dialog, /Aplicar nota de crédito/i, { timeout: 60_000 });
 
-  await page.goto('/panel/stock');
-  stockRow = await searchRow(page, productName, /Buscar por nombre, SKU o variante/i);
-  await expect(stockRow.locator('[role="cell"]').nth(2)).toContainText('13');
+  await expectServiceStock(page, productName, 13);
 
   // Una compra con NC aplicada no se puede reescribir: cambiar sus items rompería
   // la trazabilidad entre el movimiento original y la nota. La acción Editar
@@ -107,7 +102,7 @@ test('@crud @critical compra: ingresa stock, edita cantidad y NC de proveedor re
     'No debe quedar visible el antiguo botón Editar deshabilitado',
   ).toHaveCount(0);
 
-  await assertNoCriticalErrors(diagnostics, testInfo, { allowConsole: [/Tienda Nube/i, /imagen/i] });
+  await assertNoCriticalErrors(diagnostics, testInfo, { allowConsole: [/imagen/i] });
 });
 
 test('@crud @critical NC compra: adjunta archivo y lo abre desde el ojo de la compra', async ({ page }, testInfo) => {
@@ -134,7 +129,7 @@ test('@crud @critical NC compra: adjunta archivo y lo abre desde el ojo de la co
 
   const { dialog } = await openPurchaseCreditNote(page, productName);
   await configurePurchaseCreditNote(dialog, {
-    motive: 'DESCUENTO',
+    motive: 'DIFERENCIA_PRECIO',
     amount: 10,
     ivaPct: 21,
   });
@@ -218,10 +213,9 @@ test('@crud @critical NC compra: adjunta archivo y lo abre desde el ojo de la co
   await closeDialog(viewer);
 
   await deletePurchase(page, productName);
-  await page.goto('/panel/stock');
   await deleteUnusedStockProduct(page, productName);
 
-  await assertNoCriticalErrors(diagnostics, testInfo, { allowConsole: [/Tienda Nube/i, /imagen/i] });
+  await assertNoCriticalErrors(diagnostics, testInfo, { allowConsole: [/imagen/i] });
 });
 
 test('@crud @critical NC compra: backend rechaza IVA manipulado fuera del selector', async ({ page }, testInfo) => {
@@ -254,7 +248,7 @@ test('@crud @critical NC compra: backend rechaza IVA manipulado fuera del select
 
   const { dialog } = await openPurchaseCreditNote(page, productName);
   await configurePurchaseCreditNote(dialog, {
-    motive: 'BONIFICACION',
+    motive: 'OTRO',
     amount: 10,
     ivaPct: 21,
   });
@@ -278,12 +272,10 @@ test('@crud @critical NC compra: backend rechaza IVA manipulado fuera del select
   await page.unroute('**/api.php?action=compras_nota_credito_crear**');
   await page.goto('/panel/compras');
   await deletePurchase(page, productName);
-  await page.goto('/panel/stock');
   await deleteUnusedStockProduct(page, productName);
 
   await assertNoCriticalErrors(diagnostics, testInfo, {
     allowConsole: [
-      /Tienda Nube/i,
       /imagen/i,
       // Esta respuesta 422 es el resultado esperado de la manipulación intencional de IVA.
       /Failed to load resource: the server responded with a status of 422/i,
@@ -291,16 +283,16 @@ test('@crud @critical NC compra: backend rechaza IVA manipulado fuera del select
   });
 });
 
-test('@crud @critical NC compra: ejecuta realmente los seis motivos y valida su impacto de stock', async ({ page }, testInfo) => {
+test('@crud @critical NC compra: ejecuta realmente los cuatro motivos actuales y valida su impacto de stock', async ({ page }, testInfo) => {
   await requireMutations(test, page);
   test.setTimeout(9 * 60_000);
   const diagnostics = installDiagnostics(page);
-  const productName = uniqueName('COMPRA-NC-SEIS-MOTIVOS');
+  const productName = uniqueName('COMPRA-NC-CUATRO-MOTIVOS');
   const totalProductName = uniqueName('COMPRA-NC-ANULACION-TOTAL');
 
   await createStockProductFixture(page, {
     name: productName,
-    sku: uniqueSku('COMPRANC6'),
+    sku: uniqueSku('COMPRANC4'),
     stock: 12,
     cost: 100,
     price: 160,
@@ -324,16 +316,11 @@ test('@crud @critical NC compra: ejecuta realmente los seis motivos y valida su 
   };
 
   await apply(productName, { motive: 'DEVOLUCION_MERCADERIA', quantity: 1 });
-  for (const motive of ['DESCUENTO', 'BONIFICACION', 'DIFERENCIA_PRECIO', 'OTRO']) {
+  for (const motive of ['DIFERENCIA_PRECIO', 'OTRO']) {
     await apply(productName, { motive, amount: 5, ivaPct: 21 });
   }
 
-  await page.goto('/panel/stock');
-  let stockRow = await searchRow(page, productName, /Buscar por nombre, SKU o variante/i);
-  await expect(
-    stockRow.locator('[role="cell"]').nth(2),
-    'Sólo DEVOLUCION_MERCADERIA debe restar stock; los cuatro ajustes económicos no deben tocarlo',
-  ).toContainText('17');
+  await expectServiceStock(page, productName, 17);
 
   // ANULACION_TOTAL se prueba sobre una compra independiente. Si se aplica
   // después de ajustes económicos sobre la misma compra, el modal selecciona
@@ -342,19 +329,13 @@ test('@crud @critical NC compra: ejecuta realmente los seis motivos y valida su 
   await apply(totalProductName, { motive: 'ANULACION_TOTAL' });
   expect([...applied].sort()).toEqual([...CREDIT_NOTE_MOTIVES].sort());
 
-  await page.goto('/panel/stock');
-  stockRow = await searchRow(page, totalProductName, /Buscar por nombre, SKU o variante/i);
-  await expect(
-    stockRow.locator('[role="cell"]').nth(2),
-    'La anulación total debe retirar toda la compra independiente y dejar su stock original',
-  ).toContainText('4');
+  await expectServiceStock(page, totalProductName, 4);
 
   await page.goto('/panel/compras');
   await deletePurchase(page, productName);
   await deletePurchase(page, totalProductName);
-  await page.goto('/panel/stock');
   await deleteUnusedStockProduct(page, productName);
   await deleteUnusedStockProduct(page, totalProductName);
 
-  await assertNoCriticalErrors(diagnostics, testInfo, { allowConsole: [/Tienda Nube/i, /imagen/i] });
+  await assertNoCriticalErrors(diagnostics, testInfo, { allowConsole: [/imagen/i] });
 });

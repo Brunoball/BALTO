@@ -156,25 +156,17 @@ export async function selectPortfolioCheque(scope, numero, tipo = 'CHEQUE') {
   const chequeAmount = parseMoney(await card.locator('.gm-check-amount').first().innerText());
   expect(chequeAmount, `El cheque ${numero} debe exponer un importe válido`).toBeGreaterThan(0);
 
-  // `card` ya está scopeado al diálogo. Usarlo directamente dentro de
-  // filter({ has: card }) hace que Playwright intente resolver un locator
-  // absoluto desde cada .gm-payment-card y nunca encuentre coincidencia.
-  // El número de cheque es único en cartera, así que buscamos la tarjeta de
-  // medio de pago que contiene ese número y leemos su input bloqueado.
-  const paymentCard = scope
-    .locator('.gm-payment-card')
-    .filter({ hasText: String(numero) })
-    .first();
-  await expect(
-    paymentCard,
-    `Debe existir la fila de medio de pago asociada al cheque ${numero}`
-  ).toBeVisible({ timeout: 15_000 });
-
+  // `card` ya está scopeado al diálogo. Usarlo dentro de `filter({ has: card })`
+  // genera un selector absoluto anidado que Playwright no puede resolver como
+  // descendiente de `.gm-payment-card` (aunque la tarjeta y el input sí existan).
+  // Subimos desde la tarjeta seleccionada a SU fila de medio de pago para que el
+  // cheque y el monto validado pertenezcan siempre al mismo bloque.
+  const paymentCard = card.locator(
+    'xpath=ancestor::div[contains(concat(" ", normalize-space(@class), " "), " gm-payment-card ")][1]',
+  );
   const amountInput = paymentCard.locator('.gm-payment-amount-input').first();
-  await expect(
-    amountInput,
-    `Debe existir el importe aplicado del cheque ${numero}`
-  ).toBeVisible({ timeout: 15_000 });
+  await expect(amountInput, `El monto del cheque ${numero} debe estar visible en su medio de pago`)
+    .toBeVisible({ timeout: 10_000 });
   await expect.poll(
     async () => parseMoney(await amountInput.inputValue()),
     {
