@@ -3,9 +3,13 @@ import { expectApiSuccess } from './support/api.js';
 import { uniqueName } from './support/data.js';
 import { requireMutations, waitDialog } from './support/ui.js';
 import {
+  createServiceArticleFixture,
+  deleteServiceArticleFixture,
   expectServiceStock,
   ensureActiveServiceUnit,
   findServiceInventoryRow,
+  getServiceArticleByName,
+  getTypedServiceArticleByName,
   serviciosApi,
 } from './support/services.js';
 
@@ -97,6 +101,7 @@ async function runTypedLifecycle(page, type) {
       descripcion: `${type} E2E`,
       id_categoria: categoryId,
       id_unidad: Number(unit.id_unidad),
+      controla_stock: 1,
       stock_actual: 10,
       costo_unitario: 100,
       precio_venta: 160,
@@ -117,6 +122,7 @@ async function runTypedLifecycle(page, type) {
       descripcion: `${type} E2E EDITADO`,
       id_categoria: categoryId,
       id_unidad: Number(unit.id_unidad),
+      controla_stock: 1,
       costo_unitario: 125,
       precio_venta: 190,
       iva_pct: 10.5,
@@ -151,6 +157,13 @@ async function runTypedLifecycle(page, type) {
 
     const stockHistory = await get(page, 'servicios_stock_historial', { id_articulo: itemId, limit: 100 });
     expect(stockHistory.historial?.length || 0).toBeGreaterThanOrEqual(4);
+    const historyByReason = new Map((stockHistory.historial || []).map((row) => [String(row.motivo || ''), row]));
+    expect(historyByReason.get('INGRESO E2E')).toMatchObject({ operacion: 'SUMAR' });
+    expect(Number(historyByReason.get('INGRESO E2E')?.cantidad_anterior)).toBe(10);
+    expect(Number(historyByReason.get('INGRESO E2E')?.cantidad_movimiento)).toBe(3);
+    expect(Number(historyByReason.get('INGRESO E2E')?.cantidad_nueva)).toBe(13);
+    expect(historyByReason.get('CONSUMO E2E')).toMatchObject({ operacion: 'RESTAR' });
+    expect(historyByReason.get('RECUENTO E2E')).toMatchObject({ operacion: 'ESTABLECER' });
 
     await post(page, cfg.down, { id_articulo: itemId });
     rows = (await get(page, cfg.list, { activo: 0, q: itemEdited, limit: 200 }))[cfg.listKey];
@@ -168,14 +181,52 @@ async function runTypedLifecycle(page, type) {
     }
 
     const stockRow = await findServiceInventoryRow(page, itemEdited, 'stock');
-    await expect(stockRow.getByTitle('Ajustar stock')).toBeVisible();
-    await expect(stockRow.getByTitle('Ver historial de stock')).toBeVisible();
+    for (const title of ['Ajustar stock', 'Ver historial de stock', 'Editar', 'Dar de baja', 'Eliminar']) {
+      await expect(stockRow.getByTitle(title)).toBeVisible();
+    }
+
+    await stockRow.getByTitle('Editar').click();
+    const editDialog = await waitDialog(page, `Editar ${cfg.label}`);
+    await expect(editDialog.getByText(itemEdited, { exact: false })).toBeVisible();
+    await editDialog.getByRole('button', { name: 'Cancelar' }).click();
+    await expect(editDialog).toBeHidden();
+
+    await stockRow.getByTitle('Dar de baja').click();
+    const statusDialog = await waitDialog(page, `Dar de baja ${cfg.label}`);
+    await expect(statusDialog.getByText(itemEdited, { exact: false })).toBeVisible();
+    await statusDialog.getByRole('button', { name: 'Cancelar' }).click();
+    await expect(statusDialog).toBeHidden();
+
+    await stockRow.getByTitle('Eliminar').click();
+    const deleteDialog = await waitDialog(page, 'Eliminar registro');
+    await expect(deleteDialog.getByText(itemEdited, { exact: false })).toBeVisible();
+    await deleteDialog.getByRole('button', { name: 'Cancelar' }).click();
+    await expect(deleteDialog).toBeHidden();
+
     await stockRow.getByTitle('Ajustar stock').click();
     const stockDialog = await waitDialog(page, 'Ajustar stock');
     await expect(stockDialog.getByText(itemEdited, { exact: false })).toBeVisible();
     const operation = stockDialog.locator('select').first();
     await expect(operation.locator('option')).toHaveCount(3);
     await expect(stockDialog.getByText('Motivo del ajuste', { exact: false }).first()).toBeVisible();
+    await expect(stockDialog.getByRole('button', { name: 'Ver historial de reajustes' })).toBeVisible();
+
+    const amountInput = stockDialog.locator('input').first();
+    const reasonInput = stockDialog.locator('textarea').first();
+    await amountInput.fill('2');
+    await reasonInput.fill('BORRADOR E2E');
+    await stockDialog.getByRole('button', { name: 'Ver historial de reajustes' }).click();
+
+    const historyDialog = await waitDialog(page, 'Historial de stock');
+    await expect(historyDialog.getByText('INGRESO E2E', { exact: true })).toBeVisible();
+    await expect(historyDialog.getByText('CONSUMO E2E', { exact: true })).toBeVisible();
+    await expect(historyDialog.getByText('RECUENTO E2E', { exact: true })).toBeVisible();
+    await historyDialog.getByRole('button', { name: 'Cerrar' }).last().click();
+    await expect(historyDialog).toBeHidden();
+
+    await expect(stockDialog).toBeVisible();
+    await expect(amountInput).toHaveValue('2');
+    await expect(reasonInput).toHaveValue('BORRADOR E2E');
     await stockDialog.getByRole('button', { name: 'Cancelar' }).click();
     await expect(stockDialog).toBeHidden();
   } finally {
@@ -194,4 +245,92 @@ test.describe('BALTO Servicios - materiales, insumos y stock simple', () => {
     await requireMutations(test, page);
     await runTypedLifecycle(page, 'INSUMO');
   });
+
+  test('@crud @critical material/insumo sin control de stock queda fuera de Stock y no permite ajustes', async ({ page }) => {
+    await requireMutations(test, page);
+    const name = uniqueName('INSUMO-SIN-CONTROL-STOCK', 120);
+    let id = 0;
+    try {
+      const row = await createServiceArticleFixture(page, {
+        name,
+        type: 'INSUMO',
+        controlStock: false,
+        stock: 99,
+        cost: 45,
+        price: 70,
+      });
+      id = Number(row.id_articulo);
+      expect(Number(row.controla_stock)).toBe(0);
+      expect(Number(row.stock_actual || 0)).toBe(0);
+
+      const typed = await getTypedServiceArticleByName(page, name, 'INSUMO', { activo: 'todos' });
+      expect(Number(typed?.controla_stock)).toBe(0);
+      expect(await getServiceArticleByName(page, name, { activo: 'todos' })).toBeNull();
+
+      const stockGet = await serviciosApi(page, 'servicios_stock_obtener', { query: { id_articulo: id } });
+      expect(stockGet.status).toBe(404);
+
+      const uiRow = await findServiceInventoryRow(page, name, 'insumos');
+      await expect(uiRow).toContainText('NO CONTROLADO');
+      await expect(uiRow.getByTitle('Ajustar stock')).toHaveCount(0);
+      await expect(uiRow.getByTitle('Editar')).toBeVisible();
+    } finally {
+      if (id) await deleteServiceArticleFixture(page, name, { tolerateHistoricalUse: true });
+    }
+  });
+
+  test('@crud @critical Stock permite productos independientes con alta, edición, ajuste y estado', async ({ page }) => {
+    await requireMutations(test, page);
+    const name = uniqueName('PRODUCTO-STOCK', 120);
+    const edited = `${name}-EDIT`.slice(0, 120);
+    let id = 0;
+    try {
+      const product = await createServiceArticleFixture(page, {
+        name,
+        type: 'PRODUCTO',
+        stock: 7,
+        cost: 80,
+        price: 130,
+      });
+      id = Number(product.id_articulo);
+      expect(product.tipo).toBe('PRODUCTO');
+      expect(Number(product.controla_stock)).toBe(1);
+      await expectServiceStock(page, name, 7);
+
+      await post(page, 'servicios_stock_producto_actualizar', {
+        id_articulo: id,
+        nombre: edited,
+        descripcion: 'PRODUCTO INDEPENDIENTE EDITADO E2E',
+        id_categoria: product.id_categoria || null,
+        id_unidad: Number(product.id_unidad),
+        costo_unitario: 90,
+        precio_venta: 145,
+        iva_pct: 21,
+      });
+      await expectServiceStock(page, edited, 7);
+
+      await post(page, 'servicios_stock_ajustar', {
+        id_articulo: id, operacion: 'SUMAR', cantidad: 3, motivo: 'PRODUCTO E2E',
+      });
+      await expectServiceStock(page, edited, 10);
+
+      await post(page, 'servicios_stock_producto_dar_baja', { id_articulo: id });
+      let inactive = (await get(page, 'servicios_stock_listar', { activo: 0, q: edited, limit: 50 })).stock || [];
+      expect(exact(inactive, edited)?.tipo).toBe('PRODUCTO');
+      await post(page, 'servicios_stock_producto_reactivar', { id_articulo: id });
+
+      const uiRow = await findServiceInventoryRow(page, edited, 'stock');
+      for (const title of ['Ajustar stock', 'Ver historial de stock', 'Editar', 'Dar de baja', 'Eliminar']) {
+        await expect(uiRow.getByTitle(title)).toBeVisible();
+      }
+
+      await page.getByRole('button', { name: /Agregar producto/i }).click();
+      const dialog = await waitDialog(page, 'Agregar producto');
+      await expect(dialog.getByText(/independiente de Materiales e Insumos/i)).toBeVisible();
+      await dialog.getByRole('button', { name: 'Cancelar' }).click();
+    } finally {
+      if (id) await deleteServiceArticleFixture(page, edited, { tolerateHistoricalUse: true });
+    }
+  });
+
 });

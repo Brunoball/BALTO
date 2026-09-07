@@ -1,11 +1,11 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faBoxOpen, faCircleInfo, faFileLines } from "@fortawesome/free-solid-svg-icons";
+import { faBoxOpen, faCircleInfo, faClockRotateLeft, faFileLines } from "@fortawesome/free-solid-svg-icons";
 import { clampText, decimalText, money } from "../utils/serviciosFormUtils";
 import useServiciosGlobalModal from "./useServiciosGlobalModal";
 
-export default function ModalAjusteStock({ open, item, saving, onClose, onSave, onToast }) {
+export default function ModalAjusteStock({ open, item, saving, onClose, onSave, onOpenHistory, onToast }) {
   const [form, setForm] = useState({ operacion: "SUMAR", cantidad: "", motivo: "" });
   useEffect(() => { if (open) setForm({ operacion: "SUMAR", cantidad: "", motivo: "" }); }, [open, item]);
   const { overlayRef, cerrarDesdeFondo } = useServiciosGlobalModal({ open, busy: saving, onClose });
@@ -93,7 +93,13 @@ export default function ModalAjusteStock({ open, item, saving, onClose, onSave, 
           </section>
           </div>
         </div>
-        <footer className="gm-modal-footer gm-view-footer-actions"><button type="button" className="gm-action-btn gm-action-btn--cancel" onClick={onClose} disabled={saving}>Cancelar</button><button type="submit" className="gm-action-btn gm-action-btn--save" disabled={saving || nuevoStock < 0}>{saving ? "Guardando..." : "Confirmar ajuste"}</button></footer>
+        <footer className="gm-modal-footer gm-view-footer-actions">
+          <button type="button" className="gm-action-btn gm-action-btn--secondary gm-view-action-btn" onClick={() => onOpenHistory?.(item)} disabled={saving}>
+            <FontAwesomeIcon icon={faClockRotateLeft} /> Ver historial de reajustes
+          </button>
+          <button type="button" className="gm-action-btn gm-action-btn--cancel" onClick={onClose} disabled={saving}>Cancelar</button>
+          <button type="submit" className="gm-action-btn gm-action-btn--save" disabled={saving || nuevoStock < 0}>{saving ? "Guardando..." : "Confirmar ajuste"}</button>
+        </footer>
       </form>
     </div>,
     document.body

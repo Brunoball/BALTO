@@ -127,12 +127,6 @@ export async function cargarModuloServicios({ seccion = "servicios", limit = 100
 }
 
 // SERVICIOS
-export const listarCategoriasServicios = (params = {}) => serviciosGet("servicios_categorias_listar", params);
-export const crearCategoriaServicios = (body) => serviciosPost("servicios_categoria_crear", body);
-export const actualizarCategoriaServicios = (body) => serviciosPost("servicios_categoria_actualizar", body);
-export const darBajaCategoriaServicios = (id) => serviciosPost("servicios_categoria_dar_baja", { id_categoria: id });
-export const reactivarCategoriaServicios = (id) => serviciosPost("servicios_categoria_reactivar", { id_categoria: id });
-export const eliminarCategoriaServicios = (id) => serviciosPost("servicios_categoria_eliminar", { id_categoria: id });
 export const listarCatalogoServicios = (params = {}) => serviciosGet("servicios_catalogo_listar", params);
 export const obtenerServicioServicios = (id) => serviciosGet("servicios_servicio_obtener", { id_servicio: id });
 export const crearServicioServicios = (body) => serviciosPost("servicios_servicio_crear", body);
@@ -145,12 +139,6 @@ export const guardarComposicionServicios = (id, articulos = [], trabajadores = [
   serviciosPost("servicios_composicion_guardar", { id_servicio: id, composicion: { articulos, trabajadores } });
 
 // ARTÍCULOS
-export const listarCategoriasArticulosServicios = (params = {}) => serviciosGet("servicios_articulos_categorias_listar", params);
-export const crearCategoriaArticuloServicios = (body) => serviciosPost("servicios_articulos_categoria_crear", body);
-export const actualizarCategoriaArticuloServicios = (body) => serviciosPost("servicios_articulos_categoria_actualizar", body);
-export const darBajaCategoriaArticuloServicios = (id) => serviciosPost("servicios_articulos_categoria_dar_baja", { id_categoria: id });
-export const reactivarCategoriaArticuloServicios = (id) => serviciosPost("servicios_articulos_categoria_reactivar", { id_categoria: id });
-export const eliminarCategoriaArticuloServicios = (id) => serviciosPost("servicios_articulos_categoria_eliminar", { id_categoria: id });
 export const listarArticulosServicios = (params = {}) => serviciosGet("servicios_articulos_listar", params);
 export const obtenerArticuloServicios = (id) => serviciosGet("servicios_articulo_obtener", { id_articulo: id });
 export const crearArticuloServicios = (body) => serviciosPost("servicios_articulo_crear", body);
@@ -161,12 +149,6 @@ export const eliminarArticuloServicios = (id) => serviciosPost("servicios_articu
 export const historialArticuloServicios = (id) => serviciosGet("servicios_articulo_historial_precios", { id_articulo: id }, { force: true });
 
 // MATERIALES (comparten servicio_articulos, filtrados por tipo=MATERIAL)
-export const listarCategoriasMaterialesServicios = (params = {}) => serviciosGet("servicios_materiales_categorias_listar", params);
-export const crearCategoriaMaterialServicios = (body) => serviciosPost("servicios_material_categoria_crear", body);
-export const actualizarCategoriaMaterialServicios = (body) => serviciosPost("servicios_material_categoria_actualizar", body);
-export const darBajaCategoriaMaterialServicios = (id) => serviciosPost("servicios_material_categoria_dar_baja", { id_categoria: id });
-export const reactivarCategoriaMaterialServicios = (id) => serviciosPost("servicios_material_categoria_reactivar", { id_categoria: id });
-export const eliminarCategoriaMaterialServicios = (id) => serviciosPost("servicios_material_categoria_eliminar", { id_categoria: id });
 export const listarMaterialesServicios = (params = {}) => serviciosGet("servicios_materiales_listar", params);
 export const obtenerMaterialServicios = (id) => serviciosGet("servicios_material_obtener", { id_articulo: id });
 export const crearMaterialServicios = (body) => serviciosPost("servicios_material_crear", body);
@@ -177,12 +159,6 @@ export const eliminarMaterialServicios = (id) => serviciosPost("servicios_materi
 export const historialMaterialServicios = (id) => serviciosGet("servicios_material_historial_precios", { id_articulo: id }, { force: true });
 
 // INSUMOS (comparten servicio_articulos, filtrados por tipo=INSUMO)
-export const listarCategoriasInsumosServicios = (params = {}) => serviciosGet("servicios_insumos_categorias_listar", params);
-export const crearCategoriaInsumoServicios = (body) => serviciosPost("servicios_insumo_categoria_crear", body);
-export const actualizarCategoriaInsumoServicios = (body) => serviciosPost("servicios_insumo_categoria_actualizar", body);
-export const darBajaCategoriaInsumoServicios = (id) => serviciosPost("servicios_insumo_categoria_dar_baja", { id_categoria: id });
-export const reactivarCategoriaInsumoServicios = (id) => serviciosPost("servicios_insumo_categoria_reactivar", { id_categoria: id });
-export const eliminarCategoriaInsumoServicios = (id) => serviciosPost("servicios_insumo_categoria_eliminar", { id_categoria: id });
 export const listarInsumosServicios = (params = {}) => serviciosGet("servicios_insumos_listar", params);
 export const obtenerInsumoServicios = (id) => serviciosGet("servicios_insumo_obtener", { id_articulo: id });
 export const crearInsumoServicios = (body) => serviciosPost("servicios_insumo_crear", body);
@@ -193,11 +169,18 @@ export const eliminarInsumoServicios = (id) => serviciosPost("servicios_insumo_e
 export const historialInsumoServicios = (id) => serviciosGet("servicios_insumo_historial_precios", { id_articulo: id }, { force: true });
 
 // STOCK CONSOLIDADO SOBRE servicio_articulos
-// No existe una tabla servicio_stock: esta vista reúne Materiales + Insumos.
+// No existe una tabla servicio_stock: esta vista reúne recursos con controla_stock=1 y productos independientes.
 export const listarStockServicios = (params = {}) => serviciosGet("servicios_stock_listar", params);
 export const obtenerStockServicios = (id) => serviciosGet("servicios_stock_obtener", { id_articulo: id });
 export const ajustarStockServicios = (body) => serviciosPost("servicios_stock_ajustar", body);
 export const historialStockServicios = (id) => serviciosGet("servicios_stock_historial", { id_articulo: id }, { force: true });
+
+// PRODUCTOS DE STOCK (tipo=PRODUCTO, siempre controla_stock=1)
+export const crearProductoStockServicios = (body) => serviciosPost("servicios_stock_producto_crear", body);
+export const actualizarProductoStockServicios = (body) => serviciosPost("servicios_stock_producto_actualizar", body);
+export const darBajaProductoStockServicios = (id) => serviciosPost("servicios_stock_producto_dar_baja", { id_articulo: id });
+export const reactivarProductoStockServicios = (id) => serviciosPost("servicios_stock_producto_reactivar", { id_articulo: id });
+export const eliminarProductoStockServicios = (id) => serviciosPost("servicios_stock_producto_eliminar", { id_articulo: id });
 
 // TRABAJADORES
 export const listarTrabajadoresServicios = (params = {}) => serviciosGet("servicios_trabajadores_listar", params);

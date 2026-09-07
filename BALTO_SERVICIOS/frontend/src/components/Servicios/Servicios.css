@@ -663,23 +663,8 @@
   flex: 0 0 auto;
 }
 
-.servicios-categoriesBtn,
 .servicios-addBtn {
   white-space: nowrap;
-}
-
-.servicios-headSecondary .servicios-categoriesBtn {
-  border-color: rgba(0, 85, 187, .32);
-  background: linear-gradient(180deg, rgba(0, 85, 187, .13), rgba(0, 85, 187, .08));
-  color: var(--color-primary, #0055bb);
-  box-shadow: 0 7px 16px rgba(0, 85, 187, .10);
-}
-
-.servicios-headSecondary .servicios-categoriesBtn:hover:not(:disabled) {
-  border-color: rgba(0, 85, 187, .48);
-  background: linear-gradient(180deg, rgba(0, 85, 187, .18), rgba(0, 85, 187, .12));
-  color: var(--color-primary-strong, #003f8f);
-  box-shadow: 0 9px 18px rgba(0, 85, 187, .14);
 }
 
 /* En escritorio, igual que el criterio usado en Ventas: una sola fila.
@@ -911,8 +896,7 @@
     flex: 0 0 auto;
   }
 
-  .servicios-bottomActions .boton-exportar-trigger,
-  .servicios-bottomActions .servicios-categoriesBtn {
+  .servicios-bottomActions .boton-exportar-trigger {
     min-width: 124px;
     height: 32px;
     padding: 0 9px;
@@ -1058,13 +1042,6 @@ body.dark .servicios-tableFooter {
   border-color: rgba(148, 163, 184, 0.16);
 }
 
-html[data-theme="oscuro"] .servicios-headSecondary .servicios-categoriesBtn,
-body.dark .servicios-headSecondary .servicios-categoriesBtn {
-  border-color: rgba(96, 165, 250, .38) !important;
-  background: linear-gradient(180deg, rgba(59, 130, 246, .20), rgba(59, 130, 246, .12)) !important;
-  color: #93c5fd !important;
-}
-
 /* =========================================================
    MODALES DE SERVICIOS · FORMULARIOS GLOBALES Y SCROLL
 ========================================================= */
@@ -1184,59 +1161,6 @@ body.dark .servicios-headSecondary .servicios-categoriesBtn {
   overflow: visible;
 }
 
-/* Modal de categorías: la tabla ocupa solo el espacio disponible.
-   El aviso inferior permanece en el flujo y nunca se superpone a las filas. */
-.servicios-categories-modal__content.gm-modal-content {
-  min-height: 0;
-  overflow: hidden;
-}
-
-.servicios-categories-modal__table.mov-page {
-  flex: 1 1 auto;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.servicios-category-tableWrap.mov-tableWrap {
-  width: 100%;
-  flex: 1 1 auto;
-  height: auto;
-  min-height: 0 !important;
-  max-height: none !important;
-  overflow-y: auto;
-  overflow-x: hidden;
-}
-
-.servicios-categories-modal__content > .gm-info-box {
-  position: static;
-  flex: 0 0 auto;
-  margin-top: 10px;
-}
-
-.servicios-category-tableWrap .mov-gridBody--relative {
-  height: auto;
-  min-height: inherit;
-}
-
-.servicios-category-tableWrap .servicios-emptyState {
-  min-height: inherit;
-}
-
-.servicios-category-detail {
-  display: grid;
-  min-width: 0;
-  gap: 2px;
-}
-
-.servicios-category-detail small {
-  overflow: hidden;
-  font-size: 10px;
-  opacity: .72;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
 
 .servicios-component-card.gm-section {
   min-width: 0;
@@ -1337,13 +1261,6 @@ body.dark .servicios-field__counter {
   .servicios-field--span-9,
   .servicios-field--wide {
     grid-column: 1;
-  }
-
-
-  .servicios-category-detail small {
-    overflow: visible;
-    text-overflow: initial;
-    white-space: normal;
   }
 }
 
@@ -2622,17 +2539,64 @@ body.dark .servicios-article-stockNotice > svg {
   .servicios-adjust-modal .servicios-history-summaryGrid { grid-template-columns: 1fr; }
 }
 
-/* Modal de categorías: el encabezado conserva el alto normal de las tablas.
-   Solo el body cede espacio y scrollea dentro del modal. */
-.servicios-categories-modal__table > .mov-gridTable--head {
-  flex: 0 0 44px;
-  height: 44px;
-  min-height: 44px;
-}
 
-.servicios-categories-modal__table > .mov-gridTable--head .mov-gridCell--head {
-  height: 44px;
-  min-height: 44px;
-  padding-top: 11px;
-  padding-bottom: 11px;
+/* Control opcional de existencias para Materiales/Insumos. */
+.servicios-stock-control {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+  border: 1px solid var(--gm-border);
+  border-radius: 12px;
+  background: var(--gm-bg);
+  cursor: pointer;
+}
+.servicios-stock-control input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.servicios-stock-control__switch {
+  position: relative;
+  flex: 0 0 auto;
+  width: 42px;
+  height: 24px;
+  border: 1px solid var(--gm-border);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--gm-muted) 22%, transparent);
+  transition: background .18s ease, border-color .18s ease;
+}
+.servicios-stock-control__switch::after {
+  content: "";
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  left: 2px;
+  top: 2px;
+  border-radius: 50%;
+  background: var(--gm-bg);
+  box-shadow: 0 1px 4px rgba(0,0,0,.2);
+  transition: transform .18s ease;
+}
+.servicios-stock-control.is-active .servicios-stock-control__switch {
+  background: #0055bb;
+  border-color: #0055bb;
+}
+.servicios-stock-control.is-active .servicios-stock-control__switch::after {
+  transform: translateX(18px);
+}
+.servicios-stock-control__copy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.servicios-stock-control__copy strong {
+  color: var(--gm-text);
+  font-size: 13px;
+}
+.servicios-stock-control__copy small {
+  color: var(--gm-muted);
+  font-size: 11px;
+  line-height: 1.4;
 }

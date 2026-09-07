@@ -12,11 +12,10 @@ import ModalEliminar from "../Global/Modales/ModalEliminar";
 import Toast from "../Global/Toast";
 import useTableScrollGutter from "../Global/useTableScrollGutter.jsx";
 import * as api from "./api/serviciosApi";
-import ModalCategorias from "./modales/ModalCategorias";
-import ModalAgregarCategoria from "./modales/ModalAgregarCategoria";
 import ModalMaterial from "./modales/ModalMaterial";
 import ModalInsumo from "./modales/ModalInsumo";
 import ModalAjusteStock from "./modales/ModalAjusteStock";
+import ModalProductoStock from "./modales/ModalProductoStock";
 import ModalServicio from "./modales/ModalServicio";
 import ModalTrabajador from "./modales/ModalTrabajador";
 import ModalUnidad from "./modales/ModalUnidad";
@@ -24,7 +23,7 @@ import ModalHistorial from "./modales/ModalHistorial";
 import { money, upper } from "./utils/serviciosFormUtils";
 import { exportServiciosExcel, exportServiciosPdf } from "./utils/serviciosExport";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faBan, faBoxOpen, faClockRotateLeft, faMagnifyingGlass, faPenToSquare, faPlus, faRotateLeft, faSliders, faTags, faTimes, faTrashCan } from "@fortawesome/free-solid-svg-icons";
+import { faBan, faBoxOpen, faClockRotateLeft, faMagnifyingGlass, faPenToSquare, faPlus, faRotateLeft, faSliders, faTimes, faTrashCan } from "@fortawesome/free-solid-svg-icons";
 
 const STATUS_TABS = [{ value: "1", label: "Activos" }, { value: "0", label: "Bajas" }];
 const EMPTY_FILTER = { buscar: "", categoria: "", estado: "1" };
@@ -33,7 +32,7 @@ const META = {
   trabajadores: { title: "Trabajadores", add: "Agregar trabajador", search: "Buscar trabajador o rol..." },
   materiales: { title: "Materiales", add: "Agregar material", search: "Buscar material..." },
   insumos: { title: "Insumos", add: "Agregar insumo", search: "Buscar insumo..." },
-  stock: { title: "Stock", add: null, search: "Buscar material o insumo..." },
+  stock: { title: "Stock", add: "Agregar producto", search: "Buscar producto, material o insumo..." },
 };
 
 const RESOURCE_TABS = new Set(["materiales", "insumos"]);
@@ -53,7 +52,7 @@ const paginationItems = (current, total) => {
   return items;
 };
 const idFor = (tab, row) => tab === "servicios" ? row.id_servicio : tab === "trabajadores" ? row.id_trabajador : row.id_articulo;
-const categoryTabs = new Set(["servicios", "materiales", "insumos"]);
+const categoryTabs = new Set(["servicios", "materiales", "insumos", "stock"]);
 const textMatch = (value, q) => upper(value).includes(q);
 
 export default function Servicios() {
@@ -66,6 +65,7 @@ export default function Servicios() {
     categorias_servicios: [],
     categorias_materiales: [],
     categorias_insumos: [],
+    categorias_productos: [],
     servicios: [],
     materiales: [],
     insumos: [],
@@ -80,9 +80,7 @@ export default function Servicios() {
   const [toast, setToast] = useState(null);
   const [editModal, setEditModal] = useState({ kind: null, item: null });
   const [deleteModal, setDeleteModal] = useState({ kind: null, item: null });
-  const [statusModal, setStatusModal] = useState({ kind: null, item: null, category: false });
-  const [categoryModal, setCategoryModal] = useState(false);
-  const [quickCategory, setQuickCategory] = useState({ open: false, item: null, apply: null });
+  const [statusModal, setStatusModal] = useState({ kind: null, item: null });
   const [quickUnit, setQuickUnit] = useState({ open: false, apply: null });
   const [historyModal, setHistoryModal] = useState({ open: false, kind: null, item: null, rows: [], loading: false });
   const requestRef = useRef(0);
@@ -132,7 +130,9 @@ export default function Servicios() {
       ? data.categorias_materiales
       : tab === "insumos"
         ? data.categorias_insumos
-        : [];
+        : tab === "stock"
+          ? [...(data.categorias_productos || []), ...(data.categorias_materiales || []), ...(data.categorias_insumos || [])]
+          : [];
   const rawRows = data[tab] || [];
 
   const rows = useMemo(() => {
@@ -160,6 +160,13 @@ export default function Servicios() {
     setCurrentPage((page) => Math.min(page, totalPages));
   }, [totalPages]);
 
+  const stockKindForRow = (row) => {
+    if (row?.tipo === "MATERIAL") return "materiales";
+    if (row?.tipo === "INSUMO") return "insumos";
+    if (row?.tipo === "PRODUCTO") return "productos_stock";
+    return null;
+  };
+
   const openEdit = async (row) => {
     if (tab === "servicios") {
       try {
@@ -175,18 +182,26 @@ export default function Servicios() {
       } catch (error) { notify("error", error.message); }
       return;
     }
-    if (tab === "materiales" || tab === "insumos") {
+
+    const inventoryKind = tab === "stock" ? stockKindForRow(row) : tab;
+    if (inventoryKind === "materiales" || inventoryKind === "insumos") {
       try {
-        const response = tab === "materiales"
+        const response = inventoryKind === "materiales"
           ? await api.obtenerMaterialServicios(row.id_articulo)
           : await api.obtenerInsumoServicios(row.id_articulo);
-        setEditModal({ kind: tab, item: response.material || response.insumo || response.articulo || row });
+        setEditModal({ kind: inventoryKind, item: response.material || response.insumo || response.articulo || row });
       } catch (error) { notify("error", error.message); }
       return;
     }
+    if (inventoryKind === "productos_stock") {
+      try {
+        const response = await api.obtenerStockServicios(row.id_articulo);
+        setEditModal({ kind: "productos_stock", item: response.producto || response.stock_item || response.articulo || row });
+      } catch (error) { notify("error", error.message); }
+    }
   };
 
-  const openNew = () => META[tab].add && setEditModal({ kind: tab, item: null });
+  const openNew = () => META[tab].add && setEditModal({ kind: tab === "stock" ? "productos_stock" : tab, item: null });
 
   const save = async (payload) => {
     const kind = editModal.kind;
@@ -194,6 +209,7 @@ export default function Servicios() {
       servicios: [api.crearServicioServicios, api.actualizarServicioServicios, "Servicio"],
       materiales: [api.crearMaterialServicios, api.actualizarMaterialServicios, "Material"],
       insumos: [api.crearInsumoServicios, api.actualizarInsumoServicios, "Insumo"],
+      productos_stock: [api.crearProductoStockServicios, api.actualizarProductoStockServicios, "Producto"],
       trabajadores: [api.crearTrabajadorServicios, api.actualizarTrabajadorServicios, "Trabajador"],
     }[kind];
     if (!config) return;
@@ -211,8 +227,8 @@ export default function Servicios() {
     } catch {}
   };
 
-  const toggle = (row) => {
-    setStatusModal({ kind: tab, item: row, category: false });
+  const toggle = (row, kindOverride = null) => {
+    setStatusModal({ kind: kindOverride || tab, item: row });
   };
 
   const confirmDelete = async () => {
@@ -222,88 +238,31 @@ export default function Servicios() {
       servicios: api.eliminarServicioServicios,
       materiales: api.eliminarMaterialServicios,
       insumos: api.eliminarInsumoServicios,
+      productos_stock: api.eliminarProductoStockServicios,
       trabajadores: api.eliminarTrabajadorServicios,
     };
-    const categoryActions = {
-      servicios: api.eliminarCategoriaServicios,
-      materiales: api.eliminarCategoriaMaterialServicios,
-      insumos: api.eliminarCategoriaInsumoServicios,
-    };
-    if (kind.startsWith("category:")) await execute(() => categoryActions[kind.split(":")[1]](item.id_categoria), "Categoría eliminada.");
-    else await execute(() => actions[kind](idFor(kind, item)), "Registro eliminado correctamente.");
+    const action = actions[kind];
+    if (!action) return;
+    await execute(() => action(idFor(kind, item)), "Registro eliminado correctamente.");
     setDeleteModal({ kind: null, item: null });
   };
 
-  const categoryApi = useMemo(() => ({
-    servicios: {
-      list: api.listarCategoriasServicios,
-      create: api.crearCategoriaServicios,
-      update: (id, body) => api.actualizarCategoriaServicios({ id_categoria: id, ...body }),
-      id: (c) => c?.id_categoria,
-      count: (c) => c?.cantidad_servicios,
-    },
-    materiales: {
-      list: api.listarCategoriasMaterialesServicios,
-      create: api.crearCategoriaMaterialServicios,
-      update: (id, body) => api.actualizarCategoriaMaterialServicios({ id_categoria: id, ...body }),
-      id: (c) => c?.id_categoria,
-      count: (c) => c?.cantidad_articulos,
-    },
-    insumos: {
-      list: api.listarCategoriasInsumosServicios,
-      create: api.crearCategoriaInsumoServicios,
-      update: (id, body) => api.actualizarCategoriaInsumoServicios({ id_categoria: id, ...body }),
-      id: (c) => c?.id_categoria,
-      count: (c) => c?.cantidad_articulos,
-    },
-  })[tab], [tab]);
-
-  const saveCategory = async (body) => {
-    setSaving(true);
-    try {
-      const id = quickCategory.item && categoryApi.id(quickCategory.item);
-      const result = id ? await categoryApi.update(id, body) : await categoryApi.create(body);
-      const response = await categoryApi.list({ activo: "todos" });
-      const list = response.categorias || [];
-      setData((prev) => ({ ...prev, [`categorias_${tab}`]: list }));
-      const created = result.categoria || result.data?.categoria;
-      quickCategory.apply?.(String(categoryApi.id(created) || ""));
-      setQuickCategory({ open: false, item: null, apply: null });
-      notify("exito", id ? "Categoría actualizada." : "Categoría creada.");
-    } catch (error) { notify("error", error.message); }
-    finally { setSaving(false); }
-  };
-
-  const toggleCategory = (category) => {
-    setStatusModal({ kind: tab, item: category, category: true });
-  };
-
   const confirmStatusChange = async () => {
-    const { kind, item, category } = statusModal;
+    const { kind, item } = statusModal;
     if (!kind || !item) return;
 
     const active = Number(item.activo) === 1;
+    const actions = {
+      servicios: [api.darBajaServicioServicios, api.reactivarServicioServicios],
+      materiales: [api.darBajaMaterialServicios, api.reactivarMaterialServicios],
+      insumos: [api.darBajaInsumoServicios, api.reactivarInsumoServicios],
+      productos_stock: [api.darBajaProductoStockServicios, api.reactivarProductoStockServicios],
+      trabajadores: [api.darBajaTrabajadorServicios, api.reactivarTrabajadorServicios],
+    }[kind];
+    if (!actions) return;
 
-    if (category) {
-      const categoryActions = {
-        servicios: [api.darBajaCategoriaServicios, api.reactivarCategoriaServicios],
-        materiales: [api.darBajaCategoriaMaterialServicios, api.reactivarCategoriaMaterialServicios],
-        insumos: [api.darBajaCategoriaInsumoServicios, api.reactivarCategoriaInsumoServicios],
-      }[kind];
-      if (!categoryActions) return;
-      await execute(() => categoryActions[active ? 0 : 1](item.id_categoria));
-    } else {
-      const actions = {
-        servicios: [api.darBajaServicioServicios, api.reactivarServicioServicios],
-        materiales: [api.darBajaMaterialServicios, api.reactivarMaterialServicios],
-        insumos: [api.darBajaInsumoServicios, api.reactivarInsumoServicios],
-        trabajadores: [api.darBajaTrabajadorServicios, api.reactivarTrabajadorServicios],
-      }[kind];
-      if (!actions) return;
-      await execute(() => actions[active ? 0 : 1](idFor(kind, item)));
-    }
-
-    setStatusModal({ kind: null, item: null, category: false });
+    await execute(() => actions[active ? 0 : 1](idFor(kind, item)));
+    setStatusModal({ kind: null, item: null });
   };
 
   const saveQuickUnit = async (payload) => {
@@ -322,8 +281,8 @@ export default function Servicios() {
     finally { setSaving(false); }
   };
 
-  const openHistory = async (row) => {
-    const kind = tab === "servicios" ? "servicio" : tab === "stock" ? "stock" : RESOURCE_TABS.has(tab) ? "articulo" : "trabajador";
+  const openHistory = async (row, kindOverride = null) => {
+    const kind = kindOverride || (tab === "servicios" ? "servicio" : tab === "stock" ? "stock" : RESOURCE_TABS.has(tab) ? "articulo" : "trabajador");
     setHistoryModal({ open: true, kind, item: row, rows: [], loading: true });
     try {
       const response = kind === "servicio"
@@ -365,7 +324,7 @@ export default function Servicios() {
   }).join(" ");
   const values = (row) => ({
     nombre: <span className="servicios-nameCell"><strong>{row.nombre}</strong><small>{row.descripcion || (tab === "trabajadores" ? row.rol : "") || "SIN DESCRIPCIÓN"}</small></span>,
-    tipo: row.tipo === "MATERIAL" ? "MATERIAL" : row.tipo === "INSUMO" ? "INSUMO" : "—",
+    tipo: row.tipo === "MATERIAL" ? "MATERIAL" : row.tipo === "INSUMO" ? "INSUMO" : row.tipo === "PRODUCTO" ? "PRODUCTO" : "—",
     categoria: row.categoria_nombre || "SIN CATEGORÍA",
     unidad: row.unidad_simbolo || row.unidad_nombre || "—",
     composicion: `${Number(row.cantidad_articulos || 0)} elem. · ${Number(row.cantidad_trabajadores || 0)} trab.`,
@@ -376,25 +335,32 @@ export default function Servicios() {
     tarifa: `${money(row.monto_periodo)} / ${({ HORA: "hora", JORNADA: "jornada", SEMANA: "semana", QUINCENA: "quincena", MES: "mes" })[row.modalidad_pago] || "período"}`,
     hora: money(row.costo_hora),
     servicios: Number(row.cantidad_servicios || 0).toLocaleString("es-AR"),
-    stock: `${Number(row.stock_actual || 0).toLocaleString("es-AR", { maximumFractionDigits: 6 })} ${row.unidad_simbolo || ""}`,
+    stock: Number(row.controla_stock ?? 1) === 1
+      ? `${Number(row.stock_actual || 0).toLocaleString("es-AR", { maximumFractionDigits: 6 })} ${row.unidad_simbolo || ""}`
+      : "NO CONTROLADO",
   });
 
-  const renderActions = (row) => (
-    <div className="mov-actionsInline servicios-actionsInline">
-      {INVENTORY_TABS.has(tab) && <button type="button" className="mov-iconBtn" title="Ajustar stock" onClick={() => setEditModal({ kind: "stock", item: row })} disabled={Number(row.activo) !== 1}><FontAwesomeIcon icon={faSliders} /></button>}
-      <button type="button" className="mov-iconBtn" title={tab === "stock" ? "Ver historial de stock" : "Ver historial"} onClick={() => openHistory(row)}><FontAwesomeIcon icon={faClockRotateLeft} /></button>
-      {tab !== "stock" && <button type="button" className="mov-iconBtn" title="Editar" onClick={() => openEdit(row)}><FontAwesomeIcon icon={faPenToSquare} /></button>}
-      {tab !== "stock" && <button type="button" className="mov-iconBtn" title={Number(row.activo) === 1 ? "Dar de baja" : "Reactivar"} onClick={() => toggle(row)}><FontAwesomeIcon icon={Number(row.activo) === 1 ? faBan : faRotateLeft} /></button>}
-      {tab !== "stock" && <button type="button" className="mov-iconBtn mov-iconBtn--danger" title="Eliminar" onClick={() => setDeleteModal({ kind: tab, item: row })}><FontAwesomeIcon icon={faTrashCan} /></button>}
-    </div>
-  );
+  const renderActions = (row) => {
+    const controlsStock = Number(row.controla_stock ?? 1) === 1;
+    const managementKind = tab === "stock" ? stockKindForRow(row) : tab;
+    const canManage = Boolean(managementKind);
+    return (
+      <div className="mov-actionsInline servicios-actionsInline">
+        {INVENTORY_TABS.has(tab) && controlsStock && <button type="button" className="mov-iconBtn" title="Ajustar stock" onClick={() => setEditModal({ kind: "stock", item: row })} disabled={Number(row.activo) !== 1}><FontAwesomeIcon icon={faSliders} /></button>}
+        <button type="button" className="mov-iconBtn" title={tab === "stock" && controlsStock ? "Ver historial de stock" : "Ver historial"} onClick={() => openHistory(row)}><FontAwesomeIcon icon={faClockRotateLeft} /></button>
+        {canManage && <button type="button" className="mov-iconBtn" title="Editar" onClick={() => openEdit(row)}><FontAwesomeIcon icon={faPenToSquare} /></button>}
+        {canManage && <button type="button" className="mov-iconBtn" title={Number(row.activo) === 1 ? "Dar de baja" : "Reactivar"} onClick={() => toggle(row, managementKind)}><FontAwesomeIcon icon={Number(row.activo) === 1 ? faBan : faRotateLeft} /></button>}
+        {canManage && <button type="button" className="mov-iconBtn mov-iconBtn--danger" title="Eliminar" onClick={() => setDeleteModal({ kind: managementKind, item: row })}><FontAwesomeIcon icon={faTrashCan} /></button>}
+      </div>
+    );
+  };
 
   const exportDefinition = useMemo(() => {
     const base = [{ label: "NOMBRE", value: (row) => row.nombre, width: 34 }];
     if (tab === "servicios") return { title: "BALTO_SERVICIOS", rows, columns: [...base, { label: "CATEGORÍA", value: (r) => r.categoria_nombre || "", width: 22 }, { label: "UNIDAD", value: (r) => r.unidad_simbolo || "", width: 14 }, { label: "DURACIÓN (MIN)", value: (r) => r.duracion_estimada_minutos ?? "", width: 16 }, { label: "OTROS COSTOS", value: (r) => r.costo_base || 0, width: 16 }, { label: "COSTO TOTAL", value: (r) => r.costo_estimado || 0, width: 16 }, { label: "PRECIO", value: (r) => r.precio_venta || 0, width: 16 }, { label: "ESTADO", value: (r) => Number(r.activo) === 1 ? "ACTIVO" : "BAJA", width: 12 }] };
     if (tab === "trabajadores") return { title: "BALTO_TRABAJADORES", rows, columns: [...base, { label: "DOCUMENTO", value: (r) => r.documento || "", width: 18 }, { label: "ROL", value: (r) => r.rol || "", width: 24 }, { label: "TIPO", value: (r) => r.tipo_trabajador || "", width: 16 }, { label: "MODALIDAD", value: (r) => r.modalidad_pago || "", width: 16 }, { label: "TARIFA", value: (r) => r.monto_periodo || 0, width: 16 }, { label: "HORAS EQUIV.", value: (r) => r.horas_periodo || 0, width: 16 }, { label: "COSTO/H", value: (r) => r.costo_hora || 0, width: 16 }, { label: "ESTADO", value: (r) => Number(r.activo) === 1 ? "ACTIVO" : "BAJA", width: 12 }] };
-    if (tab === "stock") return { title: "BALTO_STOCK_SERVICIOS", rows, columns: [...base, { label: "TIPO", value: (r) => r.tipo || "", width: 14 }, { label: "CATEGORÍA", value: (r) => r.categoria_nombre || "", width: 22 }, { label: "UNIDAD", value: (r) => r.unidad_simbolo || "", width: 14 }, { label: "STOCK", value: (r) => r.stock_actual || 0, width: 16 }, { label: "COSTO", value: (r) => r.costo_unitario || 0, width: 16 }, { label: "ESTADO", value: (r) => Number(r.activo) === 1 ? "ACTIVO" : "BAJA", width: 12 }] };
-    return { title: tab === "materiales" ? "BALTO_MATERIALES" : "BALTO_INSUMOS", rows, columns: [...base, { label: "CATEGORÍA", value: (r) => r.categoria_nombre || "", width: 22 }, { label: "UNIDAD", value: (r) => r.unidad_simbolo || "", width: 14 }, { label: "STOCK", value: (r) => r.stock_actual || 0, width: 16 }, { label: "COSTO", value: (r) => r.costo_unitario || 0, width: 16 }, { label: "PRECIO", value: (r) => r.precio_venta ?? "", width: 16 }, { label: "ESTADO", value: (r) => Number(r.activo) === 1 ? "ACTIVO" : "BAJA", width: 12 }] };
+    if (tab === "stock") return { title: "BALTO_STOCK_SERVICIOS", rows, columns: [...base, { label: "TIPO", value: (r) => r.tipo || "", width: 14 }, { label: "CATEGORÍA", value: (r) => r.categoria_nombre || "", width: 22 }, { label: "UNIDAD", value: (r) => r.unidad_simbolo || "", width: 14 }, { label: "STOCK", value: (r) => Number(r.controla_stock ?? 1) === 1 ? (r.stock_actual || 0) : "NO CONTROLADO", width: 18 }, { label: "COSTO", value: (r) => r.costo_unitario || 0, width: 16 }, { label: "ESTADO", value: (r) => Number(r.activo) === 1 ? "ACTIVO" : "BAJA", width: 12 }] };
+    return { title: tab === "materiales" ? "BALTO_MATERIALES" : "BALTO_INSUMOS", rows, columns: [...base, { label: "CATEGORÍA", value: (r) => r.categoria_nombre || "", width: 22 }, { label: "UNIDAD", value: (r) => r.unidad_simbolo || "", width: 14 }, { label: "STOCK", value: (r) => Number(r.controla_stock ?? 1) === 1 ? (r.stock_actual || 0) : "NO CONTROLADO", width: 18 }, { label: "COSTO", value: (r) => r.costo_unitario || 0, width: 16 }, { label: "PRECIO", value: (r) => r.precio_venta ?? "", width: 16 }, { label: "ESTADO", value: (r) => Number(r.activo) === 1 ? "ACTIVO" : "BAJA", width: 12 }] };
   }, [tab, rows]);
   const exportOptions = [
     { key: "excel", label: "Exportar Excel (.xlsx)", tipo: "excel", onClick: () => exportServiciosExcel(exportDefinition) },
@@ -402,18 +368,17 @@ export default function Servicios() {
   ];
 
   const statusIsActive = Number(statusModal.item?.activo) === 1;
-  const statusLabel = statusModal.category
-    ? "categoría"
-    : ({
-        servicios: "servicio",
-        materiales: "material",
-        insumos: "insumo",
-        trabajadores: "trabajador",
-      })[statusModal.kind] || "registro";
+  const statusLabel = ({
+    servicios: "servicio",
+    materiales: "material",
+    insumos: "insumo",
+    productos_stock: "producto",
+    trabajadores: "trabajador",
+  })[statusModal.kind] || "registro";
   const statusActionLabel = statusIsActive ? "Dar de baja" : "Reactivar";
   const statusUsageCount = Number(statusModal.item?.cantidad_servicios || 0);
   const statusWarning = statusIsActive
-    ? (!statusModal.category && RESOURCE_TABS.has(statusModal.kind) && statusUsageCount > 0
+    ? (RESOURCE_TABS.has(statusModal.kind) && statusUsageCount > 0
         ? `Este ${statusLabel} forma parte de ${statusUsageCount} ${statusUsageCount === 1 ? "servicio" : "servicios"}. La baja no borra ni modifica esas composiciones ni el historial: dejará de poder elegirse como artículo directo, pero los servicios que ya lo incluyen conservarán su receta y podrán seguir consumiendo su stock existente.`
         : "El registro dejará de estar disponible para nuevas selecciones, pero conservará sus relaciones e historial.")
     : "El registro volverá a estar disponible para nuevas selecciones.";
@@ -438,7 +403,6 @@ export default function Servicios() {
             {RESPONSIVE_FOOTER_TABS.has(tab) ? (
               <div className="servicios-headSecondary">
                 <BotonExportar label="Exportar" opciones={exportOptions} disabled={loading || rows.length === 0} />
-                <button type="button" className="mov-btn mov-btn--ghost servicios-categoriesBtn" onClick={() => setCategoryModal(true)}><FontAwesomeIcon icon={faTags} /> Categorías</button>
               </div>
             ) : (
               <BotonExportar label="Exportar" opciones={exportOptions} disabled={loading || rows.length === 0} />
@@ -506,14 +470,13 @@ export default function Servicios() {
             {RESPONSIVE_FOOTER_TABS.has(tab) && (
               <div className="servicios-bottomActions" aria-label="Acciones de la tabla">
                 <BotonExportar label="Exportar" opciones={exportOptions} disabled={loading || rows.length === 0} />
-                <button type="button" className="mov-btn mov-btn--ghost servicios-categoriesBtn" onClick={() => setCategoryModal(true)}><FontAwesomeIcon icon={faTags} /> Categorías</button>
               </div>
             )}
           </div>
         </div>
       </section>
 
-      <ModalServicio open={editModal.kind === "servicios"} item={editModal.item} categorias={data.categorias_servicios} unidades={data.unidades} articulos={data.articulos} trabajadores={data.trabajadores} saving={saving} onClose={() => setEditModal({ kind: null, item: null })} onSave={save} onToast={notify} onOpenAgregarCategoria={(apply) => setQuickCategory({ open: true, item: null, apply })} />
+      <ModalServicio open={editModal.kind === "servicios"} item={editModal.item} categorias={data.categorias_servicios} unidades={data.unidades} articulos={data.articulos} trabajadores={data.trabajadores} saving={saving} onClose={() => setEditModal({ kind: null, item: null })} onSave={save} onToast={notify} />
       <ModalMaterial
         open={editModal.kind === "materiales"}
         item={editModal.item}
@@ -523,7 +486,6 @@ export default function Servicios() {
         onClose={() => setEditModal({ kind: null, item: null })}
         onSave={save}
         onToast={notify}
-        onOpenAgregarCategoria={(apply) => setQuickCategory({ open: true, item: null, apply })}
         onOpenAgregarUnidad={(apply) => setQuickUnit({ open: true, apply })}
       />
       <ModalInsumo
@@ -535,26 +497,33 @@ export default function Servicios() {
         onClose={() => setEditModal({ kind: null, item: null })}
         onSave={save}
         onToast={notify}
-        onOpenAgregarCategoria={(apply) => setQuickCategory({ open: true, item: null, apply })}
         onOpenAgregarUnidad={(apply) => setQuickUnit({ open: true, apply })}
       />
-      <ModalAjusteStock open={editModal.kind === "stock"} item={editModal.item} saving={saving} onClose={() => setEditModal({ kind: null, item: null })} onSave={adjustStock} onToast={notify} />
+      <ModalProductoStock
+        open={editModal.kind === "productos_stock"}
+        item={editModal.item}
+        categorias={data.categorias_productos}
+        unidades={data.unidades}
+        saving={saving}
+        onClose={() => setEditModal({ kind: null, item: null })}
+        onSave={save}
+        onToast={notify}
+        onOpenAgregarUnidad={(apply) => setQuickUnit({ open: true, apply })}
+      />
+      <ModalAjusteStock open={editModal.kind === "stock"} item={editModal.item} saving={saving} onClose={() => setEditModal({ kind: null, item: null })} onSave={adjustStock} onOpenHistory={(row) => openHistory(row, "stock")} onToast={notify} />
       <ModalTrabajador open={editModal.kind === "trabajadores"} item={editModal.item} saving={saving} onClose={() => setEditModal({ kind: null, item: null })} onSave={save} onToast={notify} />
       <ModalUnidad open={quickUnit.open} item={null} saving={saving} onClose={() => setQuickUnit({ open: false, apply: null })} onSave={saveQuickUnit} onToast={notify} />
       <ModalHistorial open={historyModal.open} kind={historyModal.kind} item={historyModal.item} rows={historyModal.rows} loading={historyModal.loading} onClose={() => setHistoryModal({ open: false, kind: null, item: null, rows: [], loading: false })} />
-
-      {categoryApi && <ModalCategorias open={categoryModal} titulo={`Categorías de ${META[tab].title.toLowerCase()}`} categorias={categories} getId={categoryApi.id} getCount={(c) => categoryApi.count(c) || 0} saving={saving} onClose={() => setCategoryModal(false)} onAdd={() => setQuickCategory({ open: true, item: null, apply: null })} onEdit={(c) => setQuickCategory({ open: true, item: c, apply: null })} onToggle={toggleCategory} onDelete={(c) => setDeleteModal({ kind: `category:${tab}`, item: c })} nota="Al eliminar una categoría, sus registros quedan sin categoría; no se eliminan." />}
-      <ModalAgregarCategoria open={quickCategory.open} titulo={quickCategory.item ? "Editar categoría" : "Agregar categoría"} subtitulo="Completá los datos de la categoría." initialValues={quickCategory.item} submitLabel={quickCategory.item ? "Guardar cambios" : "Agregar categoría"} saving={saving} onClose={() => setQuickCategory({ open: false, item: null, apply: null })} onSave={saveCategory} onToast={notify} />
 
       <ModalEliminar
         open={Boolean(statusModal.kind)}
         row={statusModal.item}
         loading={saving}
         onToast={notify}
-        onClose={() => setStatusModal({ kind: null, item: null, category: false })}
+        onClose={() => setStatusModal({ kind: null, item: null })}
         onConfirm={confirmStatusChange}
         title={`${statusActionLabel} ${statusLabel}`}
-        message={`¿Seguro que querés ${statusIsActive ? "dar de baja" : "reactivar"} ${statusModal.category ? "la" : "el"} ${statusLabel} "${statusModal.item?.nombre || "seleccionado"}"?`}
+        message={`¿Seguro que querés ${statusIsActive ? "dar de baja" : "reactivar"} el ${statusLabel} "${statusModal.item?.nombre || "seleccionado"}"?`}
         warning={statusWarning}
         loadingMessage={statusIsActive ? "Dando de baja…" : "Reactivando…"}
         successMessage={statusIsActive ? "Registro dado de baja correctamente." : "Registro reactivado correctamente."}
@@ -570,7 +539,7 @@ export default function Servicios() {
         ]}
       />
 
-      <ModalEliminar open={Boolean(deleteModal.kind)} row={deleteModal.item} loading={saving} onToast={notify} onClose={() => setDeleteModal({ kind: null, item: null })} onConfirm={confirmDelete} title={deleteModal.kind?.startsWith("category:") ? "Eliminar categoría" : "Eliminar registro"} message={`¿Seguro que querés eliminar definitivamente "${deleteModal.item?.nombre || "este registro"}"?`} warning="Si el registro ya tiene relaciones históricas, el backend bloqueará el borrado y podrás darlo de baja." loadingMessage="Eliminando…" successMessage="Registro eliminado." errorMessage="No se pudo eliminar." confirmLabel="Eliminar definitivamente" />
+      <ModalEliminar open={Boolean(deleteModal.kind)} row={deleteModal.item} loading={saving} onToast={notify} onClose={() => setDeleteModal({ kind: null, item: null })} onConfirm={confirmDelete} title="Eliminar registro" message={`¿Seguro que querés eliminar definitivamente "${deleteModal.item?.nombre || "este registro"}"?`} warning="Si el registro ya tiene relaciones históricas, el backend bloqueará el borrado y podrás darlo de baja." loadingMessage="Eliminando…" successMessage="Registro eliminado." errorMessage="No se pudo eliminar." confirmLabel="Eliminar definitivamente" />
     </section>
   );
 }

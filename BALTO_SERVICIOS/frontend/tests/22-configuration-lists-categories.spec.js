@@ -21,17 +21,17 @@ function exact(rows, name) {
 }
 
 test.describe('Configuración - Listas y categorías de BALTO Servicios', () => {
-  test('@smoke @config muestra las cinco listas actuales y su resumen', async ({ page }) => {
+  test('@smoke @config muestra las seis listas actuales y su resumen', async ({ page }) => {
     await page.goto('/panel/configuracion/listas-categorias');
     await waitForBusyToFinish(page);
 
     const resumen = await cfgGet(page, 'config_listas_categorias_resumen_listar', { activo: 'todos' });
-    for (const key of ['detalles', 'unidades', 'categorias_servicios', 'categorias_materiales', 'categorias_insumos']) {
+    for (const key of ['detalles', 'unidades', 'categorias_servicios', 'categorias_materiales', 'categorias_insumos', 'categorias_productos']) {
       expect(Array.isArray(resumen[key]), `${key} debe formar parte del resumen actual`).toBe(true);
     }
 
     const tabs = page.getByRole('tablist');
-    for (const label of ['Detalles', 'Unidades', 'Cat. servicios', 'Cat. materiales', 'Cat. insumos']) {
+    for (const label of ['Detalles', 'Unidades', 'Cat. servicios', 'Cat. materiales', 'Cat. insumos', 'Cat. productos']) {
       await expect(tabs.getByRole('button', { name: label, exact: true })).toBeVisible();
     }
 
@@ -41,6 +41,7 @@ test.describe('Configuración - Listas y categorías de BALTO Servicios', () => 
       ['Cat. servicios', 'Agregar categoría'],
       ['Cat. materiales', 'Agregar categoría'],
       ['Cat. insumos', 'Agregar categoría'],
+      ['Cat. productos', 'Agregar categoría'],
     ]) {
       await tabs.getByRole('button', { name: label, exact: true }).click();
       await expect(page.getByRole('button', { name: addButton, exact: true }).first()).toBeVisible();
@@ -102,7 +103,7 @@ test.describe('Configuración - Listas y categorías de BALTO Servicios', () => 
     }
   });
 
-  test('@crud @critical categorías de servicio, material e insumo: ciclo completo por grupo', async ({ page }) => {
+  test('@crud @critical categorías de servicio, material, insumo y producto: ciclo completo por grupo', async ({ page }) => {
     await page.goto('/panel/configuracion/listas-categorias');
     await waitForBusyToFinish(page);
     await requireMutations(test, page);
@@ -111,6 +112,7 @@ test.describe('Configuración - Listas y categorías de BALTO Servicios', () => 
       { group: 'SERVICIO', list: 'config_listas_categorias_categorias_servicios_listar', tab: 'Cat. servicios' },
       { group: 'MATERIAL', list: 'config_listas_categorias_categorias_materiales_listar', tab: 'Cat. materiales' },
       { group: 'INSUMO', list: 'config_listas_categorias_categorias_insumos_listar', tab: 'Cat. insumos' },
+      { group: 'PRODUCTO', list: 'config_listas_categorias_categorias_productos_listar', tab: 'Cat. productos' },
     ];
     const created = [];
 

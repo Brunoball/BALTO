@@ -2,16 +2,24 @@ function safeStr(value) {
   return String(value ?? "").trim();
 }
 
-function detalleProductosLabel(cantidad) {
+function resumenCantidadLabel(cantidad, singular, plural) {
   const n = Number(cantidad || 0);
-  if (!Number.isFinite(n) || n <= 0) return "SIN PRODUCTOS";
-  if (n === 1) return "1 PRODUCTO";
-  return `${n} PRODUCTOS`;
+  if (!Number.isFinite(n) || n <= 0) return "SIN DETALLES";
+  if (n === 1) return `1 ${singular}`;
+  return `${Math.trunc(n)} ${plural}`;
 }
 
 function isResumenProductosText(value) {
   const text = safeStr(value).toUpperCase();
-  return text === "SIN PRODUCTOS" || text === "1 CONCEPTO" || /^\d+\s+PRODUCTO(S)?$/.test(text);
+  const resumenParte = "\\d+\\s+(?:PRODUCTO(?:S)?|SERVICIO(?:S)?|DETALLE(?:S)?)";
+  const resumenCompuesto = new RegExp(`^${resumenParte}(?:\\s*\\/\\s*${resumenParte})*$`);
+  return (
+    text === "SIN PRODUCTOS" ||
+    text === "SIN DETALLES" ||
+    text === "1 CONCEPTO" ||
+    text === "COMBINADO" ||
+    resumenCompuesto.test(text)
+  );
 }
 
 function normalizeCompareText(value) {
@@ -153,34 +161,126 @@ function getItemsArray(row) {
   return [];
 }
 
-function getCantidadProductos(row) {
-  const items = getItemsArray(row);
-  if (items.length > 0) return items.length;
-
-  const cantidadItems = Number(row?.cantidad_items ?? row?.cantidadItems ?? row?.productos_count ?? row?.productosCount ?? 0);
-  if (Number.isFinite(cantidadItems) && cantidadItems > 0) return Math.trunc(cantidadItems);
-
-  const resumenOriginal = safeStr(row?.detalle || row?.descripcion || row?.concepto || row?.nombre);
-  const resumen = resumenOriginal.toUpperCase();
-  const match = resumen.match(/^(\d+)\s+PRODUCTO(S)?$/);
-  if (match) return Number(match[1]);
-
-  const tieneProducto = safeStr(
-    row?.id_servicio || row?.idServicio ||
-    row?.id_articulo || row?.idArticulo ||
-    row?.id_stock_producto || row?.idStockProducto ||
-    row?.servicio_nombre || row?.articulo_nombre ||
-    row?.producto_nombre || row?.stock_producto_nombre
-  );
-  if (tieneProducto) return 1;
-
-  if (resumenOriginal && !isResumenProductosText(resumenOriginal) && resumenOriginal !== "Producto / Servicio") return 1;
-
+function positiveId(...values) {
+  for (const value of values) {
+    const n = Number(value);
+    if (Number.isFinite(n) && n > 0) return n;
+  }
   return 0;
 }
 
+function getItemKind(item) {
+  const raw = item && typeof item === "object" ? item : {};
+  const tipoDb = safeStr(raw.tipo_item_db ?? raw.tipoItemDb).toUpperCase();
+
+  // La receta de un servicio también genera filas internas de consumo. Esas filas
+  // representan stock consumido, no productos vendidos, y nunca deben modificar
+  // el resumen visible de la operación.
+  if (tipoDb === "CONSUMO_ARTICULO") return "consumo";
+  if (tipoDb === "SERVICIO") return "servicio";
+  if (tipoDb === "ARTICULO") return "producto";
+  if (tipoDb === "DETALLE" || tipoDb === "MANUAL") return "detalle";
+
+  const tipo = safeStr(raw.tipo_item ?? raw.tipoItem ?? raw.tipo).toUpperCase();
+  if (tipo === "CONSUMO_ARTICULO") return "consumo";
+  if (tipo === "SERVICIO" || tipo === "SERVICE") return "servicio";
+  if (tipo === "ARTICULO" || tipo === "PRODUCTO" || tipo === "STOCK") return "producto";
+
+  if (positiveId(raw.id_servicio, raw.idServicio, raw.servicio_id)) return "servicio";
+  if (positiveId(
+    raw.id_articulo,
+    raw.idArticulo,
+    raw.id_stock_producto,
+    raw.idStockProducto,
+    raw.stock_producto_id,
+    raw.id_producto,
+    raw.idProducto
+  )) return "producto";
+
+  const servicioNombre = safeStr(raw.servicio_nombre ?? raw.servicioNombre);
+  const productoNombre = safeStr(
+    raw.articulo_nombre ??
+      raw.articuloNombre ??
+      raw.stock_producto_nombre ??
+      raw.producto_nombre ??
+      raw.productoNombre
+  );
+  if (servicioNombre && !productoNombre) return "servicio";
+  if (productoNombre && !servicioNombre) return "producto";
+
+  return "detalle";
+}
+
+function getCantidadFallback(row) {
+  const n = Number(
+    row?.cantidad_items ??
+      row?.cantidadItems ??
+      row?.productos_count ??
+      row?.productosCount ??
+      row?.detalles_count ??
+      row?.detallesCount ??
+      0
+  );
+  return Number.isFinite(n) && n > 0 ? Math.trunc(n) : 0;
+}
+
+function resumenDesdeItems(row) {
+  const items = getItemsArray(row);
+  if (!items.length) return "";
+
+  let servicios = 0;
+  let productos = 0;
+  let detalles = 0;
+
+  for (const item of items) {
+    const kind = getItemKind(item);
+    if (kind === "consumo") continue;
+    if (kind === "servicio") servicios += 1;
+    else if (kind === "producto") productos += 1;
+    else detalles += 1;
+  }
+
+  const partes = [];
+  if (servicios > 0) partes.push(resumenCantidadLabel(servicios, "SERVICIO", "SERVICIOS"));
+  if (productos > 0) partes.push(resumenCantidadLabel(productos, "PRODUCTO", "PRODUCTOS"));
+  if (detalles > 0) partes.push(resumenCantidadLabel(detalles, "DETALLE", "DETALLES"));
+
+  // En operaciones mixtas mostramos la composición real en vez de una etiqueta
+  // genérica. Ej.: "1 SERVICIO / 1 PRODUCTO".
+  return partes.join(" / ");
+}
+
+function resumenDesdeRow(row) {
+  const cantidad = getCantidadFallback(row);
+  const kind = getItemKind(row);
+  if (kind === "servicio") return resumenCantidadLabel(cantidad || 1, "SERVICIO", "SERVICIOS");
+  if (kind === "producto") return resumenCantidadLabel(cantidad || 1, "PRODUCTO", "PRODUCTOS");
+
+  const resumenOriginal = safeStr(row?.detalle || row?.descripcion || row?.concepto || row?.nombre).toUpperCase();
+
+  // Compatibilidad con filas antiguas: si alguna venía persistida como COMBINADO
+  // pero sin items tipados, no volvemos a mostrar esa etiqueta genérica.
+  if (resumenOriginal === "COMBINADO") {
+    return resumenCantidadLabel(cantidad || 1, "DETALLE", "DETALLES");
+  }
+
+  const resumenParte = "\\d+\\s+(?:PRODUCTO(?:S)?|SERVICIO(?:S)?|DETALLE(?:S)?)";
+  const resumenCompuesto = new RegExp(`^${resumenParte}(?:\\s*\\/\\s*${resumenParte})*$`);
+  if (resumenCompuesto.test(resumenOriginal)) return resumenOriginal;
+  if (resumenOriginal === "SIN PRODUCTOS" || resumenOriginal === "SIN DETALLES") return "SIN DETALLES";
+  if (cantidad > 0 || resumenOriginal) return resumenCantidadLabel(cantidad || 1, "DETALLE", "DETALLES");
+
+  return "SIN DETALLES";
+}
+
+export function getResumenItemsMovimiento(row) {
+  return resumenDesdeItems(row) || resumenDesdeRow(row);
+}
+
+// Nombre legacy conservado para no romper las pantallas que ya importan este helper.
+// Ahora el resumen distingue SERVICIOS, PRODUCTOS y muestra la composición exacta en operaciones mixtas.
 export function getResumenProductosMovimiento(row) {
-  return detalleProductosLabel(getCantidadProductos(row));
+  return getResumenItemsMovimiento(row);
 }
 
 export function getDetalleMovimiento(row) {

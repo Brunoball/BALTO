@@ -137,6 +137,8 @@ export const listarCategoriasMaterialesConfiguracion = (params = {}) =>
   configuracionGet("config_listas_categorias_categorias_materiales_listar", params);
 export const listarCategoriasInsumosConfiguracion = (params = {}) =>
   configuracionGet("config_listas_categorias_categorias_insumos_listar", params);
+export const listarCategoriasProductosConfiguracion = (params = {}) =>
+  configuracionGet("config_listas_categorias_categorias_productos_listar", params);
 export const crearCategoriaServiciosConfiguracion = (grupo, body) =>
   configuracionPost("config_listas_categorias_categoria_crear", { ...(body || {}), grupo });
 export const actualizarCategoriaServiciosConfiguracion = (grupo, body) =>

@@ -184,7 +184,6 @@ export default function ModalServicio({
   onClose,
   onSave,
   onToast,
-  onOpenAgregarCategoria,
 }) {
   const [form, setForm] = useState(EMPTY);
   const [articleRows, setArticleRows] = useState([]);
@@ -286,14 +285,6 @@ export default function ModalServicio({
     });
   };
 
-  const categoria = (event) => {
-    if (event.target.value === "__ADD__") {
-      onOpenAgregarCategoria?.((id) => set("id_categoria", String(id || "")));
-    } else {
-      set("id_categoria", event.target.value);
-    }
-  };
-
   return createPortal(
     <div ref={overlayRef} className="gm-modal-overlay" data-servicios-modal-overlay="true" onMouseDown={cerrarDesdeFondo}>
       <form className="gm-modal-container gm-modal-v2 servicios-modal servicios-modal--service" onSubmit={submit} role="dialog" aria-modal="true">
@@ -321,8 +312,7 @@ export default function ModalServicio({
                   </label>
 
                   <label className="gm-field servicios-field--span-4">
-                    <select className="gm-input gm-select" value={form.id_categoria} onChange={categoria}>
-                      <option value="__ADD__">+ AGREGAR CATEGORÍA</option>
+                    <select className="gm-input gm-select" value={form.id_categoria} onChange={(e) => set("id_categoria", e.target.value)}>
                       <option value="">SIN CATEGORÍA</option>
                       {categorias.filter((c) => Number(c.activo) === 1).map((c) => (
                         <option key={c.id_categoria} value={c.id_categoria}>{c.nombre}</option>

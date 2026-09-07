@@ -58,9 +58,13 @@ export async function createServiceArticleFixture(page, options = {}) {
   const unit = options.idUnit
     ? { id_unidad: Number(options.idUnit) }
     : await ensureActiveServiceUnit(page);
-  const type = String(options.type || 'MATERIAL').trim().toUpperCase() === 'INSUMO' ? 'INSUMO' : 'MATERIAL';
-  const action = type === 'INSUMO' ? 'servicios_insumo_crear' : 'servicios_material_crear';
+  const requestedType = String(options.type || 'MATERIAL').trim().toUpperCase();
+  const type = ['MATERIAL', 'INSUMO', 'PRODUCTO'].includes(requestedType) ? requestedType : 'MATERIAL';
+  const action = type === 'PRODUCTO'
+    ? 'servicios_stock_producto_crear'
+    : type === 'INSUMO' ? 'servicios_insumo_crear' : 'servicios_material_crear';
   const name = String(options.name || uniqueName(type)).trim();
+  const controlStock = type === 'PRODUCTO' ? true : options.controlStock !== false;
 
   const body = expectApiSuccess(
     await serviciosApi(page, action, {
@@ -70,7 +74,8 @@ export async function createServiceArticleFixture(page, options = {}) {
         descripcion: options.description || `FIXTURE ${name}`,
         id_categoria: Number(options.categoryId || 0) || null,
         id_unidad: Number(unit.id_unidad),
-        stock_actual: Number(options.stock ?? 10),
+        controla_stock: controlStock ? 1 : 0,
+        stock_actual: controlStock ? Number(options.stock ?? 10) : Number(options.stock ?? 0),
         costo_unitario: Number(options.cost ?? 100),
         precio_venta: options.price === null ? null : Number(options.price ?? 150),
         iva_pct: Number(options.ivaPct ?? 21),
@@ -79,12 +84,29 @@ export async function createServiceArticleFixture(page, options = {}) {
     `No se pudo crear el ${type.toLowerCase()} ${name}`,
   );
 
-  const id = Number(body?.id_articulo || body?.data?.id_articulo || body?.material?.id_articulo || body?.insumo?.id_articulo || 0);
+  const id = Number(body?.id_articulo || body?.data?.id_articulo || body?.material?.id_articulo || body?.insumo?.id_articulo || body?.producto?.id_articulo || 0);
   expect(id, `El alta de ${name} debe devolver id_articulo`).toBeGreaterThan(0);
 
-  const row = await getServiceArticleByName(page, name, { activo: 'todos' });
+  const row = controlStock
+    ? await getServiceArticleByName(page, name, { activo: 'todos' })
+    : await getTypedServiceArticleByName(page, name, type, { activo: 'todos' });
   expect(row, `El artículo ${name} debe existir después del alta`).toBeTruthy();
   return { ...row, id_articulo: id || row.id_articulo };
+}
+
+export async function getTypedServiceArticleByName(page, name, type = 'MATERIAL', options = {}) {
+  const normalizedType = String(type || 'MATERIAL').trim().toUpperCase();
+  if (normalizedType === 'PRODUCTO') return getServiceArticleByName(page, name, options);
+  const isInput = normalizedType === 'INSUMO';
+  const action = isInput ? 'servicios_insumos_listar' : 'servicios_materiales_listar';
+  const key = isInput ? 'insumos' : 'materiales';
+  const body = expectApiSuccess(
+    await serviciosApi(page, action, {
+      query: { q: name, activo: options.activo ?? 'todos', limit: options.limit ?? 200 },
+    }),
+    `No se pudo consultar ${normalizedType.toLowerCase()} ${name}`,
+  );
+  return exactByName(body?.[key], name);
 }
 
 export async function getServiceArticleByName(page, name, options = {}) {
@@ -127,11 +149,19 @@ export async function expectServiceStock(page, name, expected, precision = 6) {
   return getServiceArticleByName(page, name, { activo: 'todos' });
 }
 
+export async function getAnyServiceArticleByName(page, name, options = {}) {
+  const stock = await getServiceArticleByName(page, name, options);
+  if (stock) return stock;
+  const material = await getTypedServiceArticleByName(page, name, 'MATERIAL', options);
+  if (material) return material;
+  return getTypedServiceArticleByName(page, name, 'INSUMO', options);
+}
+
 export async function updateServiceArticleFixture(page, name, updates = {}) {
-  const current = await getServiceArticleByName(page, name, { activo: 'todos' });
+  const current = await getAnyServiceArticleByName(page, name, { activo: 'todos' });
   expect(current, `Debe existir ${name} para editarlo`).toBeTruthy();
   const type = String(current.tipo || 'MATERIAL').toUpperCase();
-  const action = type === 'INSUMO' ? 'servicios_insumo_actualizar' : 'servicios_material_actualizar';
+  const action = type === 'PRODUCTO' ? 'servicios_stock_producto_actualizar' : type === 'INSUMO' ? 'servicios_insumo_actualizar' : 'servicios_material_actualizar';
 
   const body = expectApiSuccess(
     await serviciosApi(page, action, {
@@ -142,6 +172,7 @@ export async function updateServiceArticleFixture(page, name, updates = {}) {
         descripcion: updates.description ?? current.descripcion ?? null,
         id_categoria: updates.categoryId === undefined ? (current.id_categoria || null) : (Number(updates.categoryId) || null),
         id_unidad: Number(updates.idUnit || current.id_unidad),
+        controla_stock: type === 'PRODUCTO' ? 1 : (updates.controlStock === undefined ? Number(current.controla_stock ?? 1) : (updates.controlStock ? 1 : 0)),
         costo_unitario: Number(updates.cost ?? current.costo_unitario ?? 0),
         precio_venta: updates.price === undefined ? current.precio_venta : updates.price,
         iva_pct: Number(updates.ivaPct ?? current.iva_pct ?? 0),
@@ -150,8 +181,8 @@ export async function updateServiceArticleFixture(page, name, updates = {}) {
     `No se pudo editar ${name}`,
   );
 
-  return body?.material || body?.insumo || body?.articulo || body?.data?.material || body?.data?.insumo || body?.data?.articulo
-    || getServiceArticleByName(page, updates.name || name, { activo: 'todos' });
+  return body?.material || body?.insumo || body?.producto || body?.articulo || body?.data?.material || body?.data?.insumo || body?.data?.producto || body?.data?.articulo
+    || getAnyServiceArticleByName(page, updates.name || name, { activo: 'todos' });
 }
 
 export async function adjustServiceStock(page, nameOrId, options = {}) {
@@ -177,12 +208,12 @@ export async function adjustServiceStock(page, nameOrId, options = {}) {
 }
 
 export async function deleteServiceArticleFixture(page, name, { tolerateHistoricalUse = true } = {}) {
-  const current = await getServiceArticleByName(page, name, { activo: 'todos' });
+  const current = await getAnyServiceArticleByName(page, name, { activo: 'todos' });
   if (!current) return { deleted: true, missing: true };
 
   const type = String(current.tipo || 'MATERIAL').toUpperCase();
-  const deleteAction = type === 'INSUMO' ? 'servicios_insumo_eliminar' : 'servicios_material_eliminar';
-  const deactivateAction = type === 'INSUMO' ? 'servicios_insumo_dar_baja' : 'servicios_material_dar_baja';
+  const deleteAction = type === 'PRODUCTO' ? 'servicios_stock_producto_eliminar' : type === 'INSUMO' ? 'servicios_insumo_eliminar' : 'servicios_material_eliminar';
+  const deactivateAction = type === 'PRODUCTO' ? 'servicios_stock_producto_dar_baja' : type === 'INSUMO' ? 'servicios_insumo_dar_baja' : 'servicios_material_dar_baja';
   const result = await serviciosApi(page, deleteAction, {
     method: 'POST',
     body: { id_articulo: Number(current.id_articulo) },
@@ -224,7 +255,7 @@ export async function findServiceInventoryRow(page, name, tab = 'stock') {
     ? /Buscar material/i
     : tab === 'insumos'
       ? /Buscar insumo/i
-      : /Buscar material o insumo/i;
+      : /Buscar producto, material o insumo/i;
   const search = page.getByPlaceholder(placeholder).first();
   await expect(search).toBeVisible();
   await search.fill(name);

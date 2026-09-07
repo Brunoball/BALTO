@@ -48,7 +48,7 @@ test.describe('BALTO Servicios - catálogo principal', () => {
 
     const ping = await apiGet(page, 'servicios_ping');
     expect(ping.module).toBe('servicios');
-    expect(ping.version).toBe('8.2-db15');
+    expect(ping.version).toBe('8.3-db16-stock-independiente');
     expect(ping.status).toBe('ok');
     expect(ping.areas).toEqual(expect.arrayContaining([
       'servicios', 'materiales', 'insumos', 'stock', 'trabajadores', 'unidades',
@@ -65,12 +65,20 @@ test.describe('BALTO Servicios - catálogo principal', () => {
 
     const inventario = await apiGet(page, 'servicios_modulo_cargar', { seccion: 'inventario', limit: 1000 });
     expect(inventario.seccion).toBe('inventario');
-    for (const key of ['unidades', 'categorias_materiales', 'categorias_insumos', 'materiales', 'insumos', 'stock', 'articulos']) {
+    for (const key of ['unidades', 'categorias_materiales', 'categorias_insumos', 'categorias_productos', 'materiales', 'insumos', 'stock', 'articulos']) {
       expect(Array.isArray(inventario[key]), `${key} debe venir en la carga de inventario`).toBe(true);
     }
 
     await expect(page.getByText('Servicios', { exact: true }).first()).toBeVisible();
     await expect(page.getByPlaceholder('Buscar servicio...')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Categorías', exact: true })).toHaveCount(0);
+
+    await page.getByRole('button', { name: 'Agregar servicio', exact: true }).click();
+    const serviceDialog = page.getByRole('dialog');
+    await expect(serviceDialog).toBeVisible();
+    await expect(serviceDialog.getByRole('option', { name: '+ AGREGAR CATEGORÍA', exact: true })).toHaveCount(0);
+    await expect(serviceDialog.getByRole('option', { name: 'SIN CATEGORÍA', exact: true })).toHaveCount(1);
+    await serviceDialog.getByRole('button', { name: 'Cerrar' }).click();
     await page.getByRole('tablist').getByRole('button', { name: /^Trabajadores$/ }).click();
     await expect(page.getByPlaceholder('Buscar trabajador o rol...')).toBeVisible();
 
@@ -80,27 +88,25 @@ test.describe('BALTO Servicios - catálogo principal', () => {
     for (const [tab, placeholder] of [
       ['Materiales', 'Buscar material...'],
       ['Insumos', 'Buscar insumo...'],
-      ['Stock', 'Buscar material o insumo...'],
+      ['Stock', 'Buscar producto, material o insumo...'],
     ]) {
       await page.getByRole('tablist').getByRole('button', { name: new RegExp(`^${tab}$`) }).click();
       await expect(page.getByPlaceholder(placeholder)).toBeVisible();
     }
+    await expect(page.getByRole('button', { name: 'Agregar producto', exact: true })).toBeVisible();
   });
 
-  test('@crud @critical categoría + unidad + trabajador + servicio + composición: ciclo completo', async ({ page }) => {
+  test('@crud @critical unidad + trabajador + servicio + composición: ciclo completo', async ({ page }) => {
     await requireMutations(test, page);
 
     const unitName = uniqueName('UNIDAD-CATALOGO', 70);
     const unitNameUpdated = `${unitName}-EDIT`.slice(0, 70);
-    const categoryName = uniqueName('CAT-SERVICIO', 100);
-    const categoryNameUpdated = `${categoryName}-EDIT`.slice(0, 100);
     const workerName = uniqueName('TRABAJADOR', 100);
     const serviceName = uniqueName('SERVICIO', 120);
     const serviceNameUpdated = `${serviceName}-EDIT`.slice(0, 120);
     const articleName = uniqueName('MATERIAL-COMP', 120);
 
     let unitId = 0;
-    let categoryId = 0;
     let workerId = 0;
     let serviceId = 0;
     let articleCreated = false;
@@ -124,24 +130,6 @@ test.describe('BALTO Servicios - catálogo principal', () => {
       units = (await apiGet(page, 'servicios_unidades_listar', { activo: 0 })).unidades;
       expect(exactName(units, unitNameUpdated)).toBeTruthy();
       await apiPost(page, 'servicios_unidad_reactivar', { id_unidad: unitId });
-
-      const categoryCreated = await apiPost(page, 'servicios_categoria_crear', {
-        nombre: categoryName,
-        descripcion: 'CATEGORIA E2E SERVICIOS',
-      });
-      categoryId = idOf(categoryCreated, 'id_categoria');
-      expect(categoryId).toBeGreaterThan(0);
-      let categories = (await apiGet(page, 'servicios_categorias_listar', { activo: 'todos' })).categorias;
-      expect(exactName(categories, categoryName)).toBeTruthy();
-      await apiPost(page, 'servicios_categoria_actualizar', {
-        id_categoria: categoryId,
-        nombre: categoryNameUpdated,
-        descripcion: 'CATEGORIA E2E EDITADA',
-      });
-      await apiPost(page, 'servicios_categoria_dar_baja', { id_categoria: categoryId });
-      categories = (await apiGet(page, 'servicios_categorias_listar', { activo: 0 })).categorias;
-      expect(exactName(categories, categoryNameUpdated)).toBeTruthy();
-      await apiPost(page, 'servicios_categoria_reactivar', { id_categoria: categoryId });
 
       const workerCreated = await apiPost(page, 'servicios_trabajador_crear', {
         nombre: workerName,
@@ -188,7 +176,7 @@ test.describe('BALTO Servicios - catálogo principal', () => {
 
       const serviceCreated = await apiPost(page, 'servicios_servicio_crear', {
         nombre: serviceName,
-        id_categoria: categoryId,
+        id_categoria: null,
         id_unidad_cobro: unitId,
         descripcion: 'SERVICIO E2E CON COMPOSICION',
         costo_base: 150,
@@ -225,7 +213,7 @@ test.describe('BALTO Servicios - catálogo principal', () => {
       await apiPost(page, 'servicios_servicio_actualizar', {
         id_servicio: serviceId,
         nombre: serviceNameUpdated,
-        id_categoria: categoryId,
+        id_categoria: null,
         id_unidad_cobro: unitId,
         descripcion: 'SERVICIO E2E EDITADO',
         costo_base: 175,
@@ -274,7 +262,6 @@ test.describe('BALTO Servicios - catálogo principal', () => {
       }
       if (articleCreated) await deleteServiceArticleFixture(page, articleName, { tolerateHistoricalUse: true });
       if (workerId) await bestEffortPost(page, 'servicios_trabajador_eliminar', { id_trabajador: workerId });
-      if (categoryId) await bestEffortPost(page, 'servicios_categoria_eliminar', { id_categoria: categoryId });
       if (unitId) await bestEffortPost(page, 'servicios_unidad_eliminar', { id_unidad: unitId });
     }
   });

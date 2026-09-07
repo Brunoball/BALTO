@@ -80,6 +80,11 @@ function hasPositiveStock(x) {
   return stock !== null && stock > 0;
 }
 
+function controlsStock(x) {
+  if (x?.controla_stock !== undefined && x?.controla_stock !== null) return Number(x.controla_stock) === 1;
+  return Number(x?.mueve_stock ?? 1) === 1;
+}
+
 function filterAvailableProduct(product, allowOutOfStock = false) {
   if (!product) return null;
   const kind = getItemKind(product);
@@ -91,6 +96,12 @@ function filterAvailableProduct(product, allowOutOfStock = false) {
     const stock = getStock(product);
     if (!allowOutOfStock && stock !== null && stock <= 0) return null;
     return { ...product, variantes: [], tiene_variantes: 0 };
+  }
+
+  // Un Material/Insumo con controla_stock=0 sigue siendo vendible como artículo
+  // directo, pero no limita cantidades ni genera movimientos de existencias.
+  if (!controlsStock(product)) {
+    return { ...product, stock: null, stock_disponible: null, variantes: [], tiene_variantes: 0 };
   }
 
   const activeVariants = Array.isArray(product?.variantes)

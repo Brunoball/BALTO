@@ -44,6 +44,7 @@ import * as XLSX from "xlsx";
 import { useListas } from "../../../context/ListasContext.jsx";
 import { useDateRange } from "../../../context/DateRangeContext.jsx";
 import { readMovPerfCache, writeMovPerfCache, clearMovPerfCache } from "../_shared/performanceCache.js";
+import { getResumenItemsMovimiento } from "../_shared/detalleMovimiento.js";
 
 const MIN_LOADING_MS = 0;
 const FORCE_SHOW_LOADER_DEV = false;
@@ -53,31 +54,9 @@ const SKELETON_ROWS = 10;
 
 
 
-function cantidadDetallesMovimiento(row) {
-  const arrays = [row?.items_detalle, row?.itemsDetalle, row?.items, row?.detalles];
-  for (const arr of arrays) {
-    if (Array.isArray(arr) && arr.length > 0) return arr.length;
-  }
-
-  const n = Number(
-    row?.cantidad_items ??
-      row?.cantidadItems ??
-      row?.detalles_count ??
-      row?.detallesCount ??
-      row?.cantidad_detalles ??
-      row?.cantidadDetalles ??
-      0
-  );
-  if (Number.isFinite(n) && n > 0) return Math.trunc(n);
-
-  return 1;
-}
-
 function productosLabel(row) {
-  const n = cantidadDetallesMovimiento(row);
-  return n === 1 ? "1 DETALLE" : `${n} DETALLES`;
+  return getResumenItemsMovimiento(row);
 }
-
 
 
 

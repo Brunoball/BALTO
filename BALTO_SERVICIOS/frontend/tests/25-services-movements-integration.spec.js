@@ -21,6 +21,7 @@ import {
   deleteServiceArticleFixture,
   ensureActiveServiceUnit,
   expectServiceStock,
+  getTypedServiceArticleByName,
   serviciosApi,
 } from './support/services.js';
 
@@ -301,4 +302,113 @@ test.describe('BALTO Servicios <-> Movimientos', () => {
       if (articleId) await deleteServiceArticleFixture(page, articleName, { tolerateHistoricalUse: true });
     }
   });
+
+  test('@critical un recurso sin control de stock puede integrar un servicio sin limitar ni consumir existencias', async ({ page }) => {
+    test.setTimeout(4 * 60_000);
+    await requireMutations(test, page);
+
+    const articleName = uniqueName('INSUMO-SIN-CONTROL', 120);
+    const serviceName = uniqueName('SERVICIO-SIN-CONTROL', 120);
+    const unit = await ensureActiveServiceUnit(page);
+    let articleId = 0;
+    let serviceId = 0;
+    let saleCreated = false;
+
+    try {
+      const article = await createServiceArticleFixture(page, {
+        name: articleName,
+        type: 'INSUMO',
+        controlStock: false,
+        idUnit: Number(unit.id_unidad),
+        stock: 0,
+        cost: 20,
+        price: 40,
+      });
+      articleId = Number(article.id_articulo);
+      expect(Number(article.controla_stock)).toBe(0);
+
+      const created = await post(page, 'servicios_servicio_crear', {
+        nombre: serviceName,
+        id_categoria: null,
+        id_unidad_cobro: Number(unit.id_unidad),
+        descripcion: 'SERVICIO E2E CON RECURSO SIN CONTROL DE STOCK',
+        costo_base: 0,
+        duracion_estimada_minutos: 20,
+        precio_venta: 120,
+        iva_pct: 21,
+        composicion: {
+          articulos: [{ id_articulo: articleId, cantidad: 5 }],
+          trabajadores: [],
+        },
+      });
+      serviceId = Number(created.id_servicio || created.data?.id_servicio || 0);
+      expect(serviceId).toBeGreaterThan(0);
+
+      await createSale(page, { serviceName, quantity: 3, price: 120 });
+      saleCreated = true;
+
+      const typed = await getTypedServiceArticleByName(page, articleName, 'INSUMO', { activo: 'todos' });
+      expect(Number(typed?.controla_stock)).toBe(0);
+      expect(Number(typed?.stock_actual || 0)).toBe(0);
+      const stockGet = await serviciosApi(page, 'servicios_stock_obtener', { query: { id_articulo: articleId } });
+      expect(stockGet.status).toBe(404);
+
+      await page.goto('/panel/ventas');
+      await deleteSale(page, serviceName);
+      saleCreated = false;
+      const afterDelete = await getTypedServiceArticleByName(page, articleName, 'INSUMO', { activo: 'todos' });
+      expect(Number(afterDelete?.stock_actual || 0)).toBe(0);
+    } finally {
+      if (saleCreated) {
+        try { await page.goto('/panel/ventas'); await deleteSale(page, serviceName); } catch {}
+      }
+      if (serviceId) {
+        await bestEffort(page, 'servicios_composicion_guardar', {
+          id_servicio: serviceId,
+          composicion: { articulos: [], trabajadores: [] },
+        });
+        await bestEffort(page, 'servicios_servicio_eliminar', { id_servicio: serviceId });
+      }
+      if (articleId) await deleteServiceArticleFixture(page, articleName, { tolerateHistoricalUse: true });
+    }
+  });
+
+  test('@critical un PRODUCTO independiente de Stock se descuenta en venta directa y se revierte al eliminarla', async ({ page }) => {
+    test.setTimeout(4 * 60_000);
+    await requireMutations(test, page);
+
+    const productName = uniqueName('PRODUCTO-STOCK-VENTA', 120);
+    let productId = 0;
+    let saleCreated = false;
+    try {
+      const product = await createServiceArticleFixture(page, {
+        name: productName,
+        type: 'PRODUCTO',
+        stock: 5,
+        cost: 40,
+        price: 95,
+      });
+      productId = Number(product.id_articulo);
+      expect(product.tipo).toBe('PRODUCTO');
+      await expectServiceStock(page, productName, 5);
+
+      await createSale(page, { productName, quantity: 2, price: 95 });
+      saleCreated = true;
+      await expectServiceStock(page, productName, 3);
+
+      const history = (await get(page, 'servicios_stock_historial', { id_articulo: productId, limit: 100 })).historial || [];
+      expect(history.some((row) => /VENTA_RESTA/i.test(String(row.motivo || '')))).toBe(true);
+
+      await page.goto('/panel/ventas');
+      await deleteSale(page, productName);
+      saleCreated = false;
+      await expectServiceStock(page, productName, 5);
+    } finally {
+      if (saleCreated) {
+        try { await page.goto('/panel/ventas'); await deleteSale(page, productName); } catch {}
+      }
+      if (productId) await deleteServiceArticleFixture(page, productName, { tolerateHistoricalUse: true });
+    }
+  });
+
 });
