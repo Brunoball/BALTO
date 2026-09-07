@@ -782,8 +782,31 @@ body.dark .servicios-page {
 }
 
 .servicios-mainTableWrap > .mov-gridBody--relative {
+  position: relative;
   height: auto;
   min-height: 100%;
+}
+
+/* Estado vacío centrado dentro de toda el área útil de la tabla.
+   Se aplica a todas las pestañas de Servicios porque comparten este wrapper. */
+.servicios-mainTableWrap .cc-emptyState {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 100%;
+  gap: 8px;
+  padding: 20px;
+  box-sizing: border-box;
+  text-align: center;
+}
+
+.servicios-mainTableWrap .cc-emptyIcon,
+.servicios-mainTableWrap .cc-emptyText {
+  flex: 0 0 auto;
 }
 
 .servicios-tableFooter {
