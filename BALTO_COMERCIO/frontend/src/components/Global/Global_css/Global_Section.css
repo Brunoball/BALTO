@@ -10,7 +10,12 @@
   width: 100%;
   min-height: 100%;
   color: var(--color-text);
-  background: var(--color-bg-soft);
+  /*
+   * El fondo general lo pinta el layout principal de BALTO.
+   * Mantener este wrapper transparente evita que aparezca un bloque
+   * rectangular detrás de las esquinas redondeadas de .mov-card.
+   */
+  background: transparent;
   font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
 }
 
@@ -55,7 +60,16 @@
   align-items: flex-end;
   justify-content: space-between;
   gap: 12px;
-  
+
+  /*
+   * El header lleva un fondo propio (especialmente visible en modo oscuro).
+   * Como .mov-card no puede recortar overflow —los calendarios y menús de
+   * acciones deben poder salir del card—, redondeamos el propio header para
+   * que su fondo nunca pinte esquinas cuadradas por encima del radio del card.
+   */
+  border-top-left-radius: var(--radius-lg, 18px);
+  border-top-right-radius: var(--radius-lg, 18px);
+  background-clip: padding-box;
 }
 
 .mov-card__headLeft{
