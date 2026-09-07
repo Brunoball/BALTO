@@ -111,12 +111,7 @@ export default function ModalUsuario({
   if (!abierto) return null;
 
   return createPortal(
-    <div
-      className="mu-overlay"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget && !saving) onClose?.();
-      }}
-    >
+    <div className="mu-overlay">
       <div
         className="mu-modal"
         role="dialog"

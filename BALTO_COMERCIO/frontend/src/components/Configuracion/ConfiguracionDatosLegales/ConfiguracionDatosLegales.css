@@ -592,7 +592,7 @@
 
 @media (max-width: 620px) {
   .cfg-legal-page {
-    height: calc(100vh - 90px);
+    height: calc(100vh - 118px);
     min-height: 0;
     overflow: hidden;
     padding: 12px;
@@ -1109,3 +1109,7 @@ body.dark .cfg-legal-tab__badge {
   color: rgba(160, 200, 255, 0.95);
 }
 
+
+.cfg-legal-page {
+  height: calc(100vh - 118px);
+}

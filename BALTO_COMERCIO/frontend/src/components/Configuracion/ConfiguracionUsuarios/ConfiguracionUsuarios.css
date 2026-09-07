@@ -944,3 +944,6 @@ body.dark .cfg-users-btn--save {
     text-align: center;
   }
 }
+.cfg-users-page {
+  height: calc(100vh - 118px);
+}

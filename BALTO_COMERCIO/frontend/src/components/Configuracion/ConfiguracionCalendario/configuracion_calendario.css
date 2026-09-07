@@ -764,3 +764,7 @@ body.dark .cal-badge--info {
   border-color: rgba(44, 90, 173, 0.35);
 }
 
+
+.cal-page {
+  height: calc(100vh - 118px);
+}
