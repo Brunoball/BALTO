@@ -48,6 +48,9 @@ export default function ModalHistorial({ open, kind, item, rows = [], loading, o
         ? "Historial de stock"
         : "Historial de tarifa del trabajador";
 
+  const esHistorialMaterial = kind === "articulo" && recurso === "material";
+  const loadingMaterial = esHistorialMaterial && loading;
+
   const summary = kind === "servicio"
     ? [
         { label: "Precio actual", value: money(item?.precio_venta), detail: "Valor vigente del servicio", icon: faDollarSign, tone: "green" },
@@ -74,7 +77,87 @@ export default function ModalHistorial({ open, kind, item, rows = [], loading, o
 
   return createPortal(
     <div ref={overlayRef} className="gm-modal-overlay" data-servicios-modal-overlay="true" onMouseDown={cerrarDesdeFondo}>
-      <section className="gm-modal-container gm-modal-v2 servicios-modal servicios-history-modal" role="dialog" aria-modal="true">
+      <section className={`gm-modal-container gm-modal-v2 servicios-modal servicios-history-modal ${esHistorialMaterial ? "servicios-history-modal--material" : ""} ${loadingMaterial ? "is-full-skeleton" : ""}`} role="dialog" aria-modal="true">
+        {loadingMaterial ? (
+          <>
+            <header className="gm-modal-header servicios-history-fullSkeletonHeader">
+              <span className="servicios-history-fullSkeleton servicios-history-fullSkeleton--headIcon" aria-hidden="true" />
+              <div className="gm-modal-head-left servicios-history-fullSkeletonHeadCopy" aria-hidden="true">
+                <span className="servicios-history-fullSkeleton servicios-history-fullSkeleton--title" />
+                <span className="servicios-history-fullSkeleton servicios-history-fullSkeleton--subtitle" />
+              </div>
+              <button type="button" className="gm-modal-close" onClick={onClose} aria-label="Cerrar">✕</button>
+            </header>
+
+            <div className="gm-modal-content servicios-modal__content servicios-service-content servicios-history-content servicios-history-fullSkeletonContent" role="status" aria-label="Cargando historial de valores del material">
+              <span className="servicios-history-srOnly">Cargando historial de valores del material…</span>
+              <section className="gm-section servicios-service-panel servicios-history-panel servicios-history-panel--summary">
+                <div className="gm-section-head servicios-service-sectionHead servicios-history-fullSkeletonSectionHead" aria-hidden="true">
+                  <span className="servicios-history-fullSkeleton servicios-history-fullSkeleton--sectionIcon" />
+                  <span className="servicios-history-fullSkeletonHeadLines">
+                    <span className="servicios-history-fullSkeleton servicios-history-fullSkeleton--sectionTitle" />
+                    <span className="servicios-history-fullSkeleton servicios-history-fullSkeleton--sectionSubtitle" />
+                  </span>
+                </div>
+                <div className="gm-section-body servicios-history-summaryGrid">
+                  {Array.from({ length: 3 }).map((_, cardIndex) => (
+                    <article className="servicios-history-summaryCard servicios-history-summaryCard--skeleton" key={`summary-skeleton-${cardIndex}`} aria-hidden="true">
+                      <span className="servicios-history-fullSkeleton servicios-history-fullSkeleton--metricIcon" />
+                      <span className="servicios-history-fullSkeletonMetricCopy">
+                        <span className="servicios-history-fullSkeleton servicios-history-fullSkeleton--metricLabel" />
+                        <span className="servicios-history-fullSkeleton servicios-history-fullSkeleton--metricValue" />
+                        <span className="servicios-history-fullSkeleton servicios-history-fullSkeleton--metricDetail" />
+                      </span>
+                    </article>
+                  ))}
+                </div>
+              </section>
+
+              <section className="gm-section servicios-service-panel servicios-history-panel servicios-history-panel--timeline">
+                <div className="gm-section-head servicios-service-sectionHead servicios-history-timelineHead servicios-history-fullSkeletonSectionHead" aria-hidden="true">
+                  <span className="servicios-history-fullSkeleton servicios-history-fullSkeleton--sectionIcon" />
+                  <span className="servicios-history-fullSkeletonHeadLines">
+                    <span className="servicios-history-fullSkeleton servicios-history-fullSkeleton--sectionTitle servicios-history-fullSkeleton--sectionTitleShort" />
+                    <span className="servicios-history-fullSkeleton servicios-history-fullSkeleton--sectionSubtitle" />
+                  </span>
+                  <span className="servicios-history-fullSkeleton servicios-history-fullSkeleton--count" />
+                </div>
+                <div className="gm-section-body servicios-history-panelBody">
+                  <div className="servicios-history-skeleton servicios-history-skeleton--articulo">
+                    {Array.from({ length: 4 }).map((_, skeletonIndex) => (
+                      <div className="servicios-history-skeletonRow" key={`history-full-skeleton-${skeletonIndex}`} aria-hidden="true">
+                        <div className="servicios-history-skeletonDate">
+                          <span className="servicios-history-skeletonCircle" />
+                          <div>
+                            <span className="servicios-history-skeletonBar servicios-history-skeletonBar--date" />
+                            <span className="servicios-history-skeletonBar servicios-history-skeletonBar--short" />
+                          </div>
+                        </div>
+                        <div className="servicios-history-skeletonValues">
+                          {Array.from({ length: 3 }).map((__, valueIndex) => (
+                            <div key={`history-full-skeleton-value-${valueIndex}`}>
+                              <span className="servicios-history-skeletonBar servicios-history-skeletonBar--label" />
+                              <span className="servicios-history-skeletonBar servicios-history-skeletonBar--value" />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </section>
+
+              <div className="gm-info-box servicios-history-audit servicios-history-audit--skeleton" aria-hidden="true">
+                <span className="servicios-history-fullSkeleton servicios-history-fullSkeleton--auditIcon" />
+                <span className="servicios-history-fullSkeleton servicios-history-fullSkeleton--auditText" />
+              </div>
+            </div>
+            <footer className="gm-modal-footer gm-view-footer-actions servicios-history-fullSkeletonFooter" aria-hidden="true">
+              <span className="servicios-history-fullSkeleton servicios-history-fullSkeleton--footerButton" />
+            </footer>
+          </>
+        ) : (
+          <>
         <header className="gm-modal-header">
           <div className="gm-modal-head-icon"><FontAwesomeIcon icon={faClockRotateLeft} /></div>
           <div className="gm-modal-head-left"><h2 className="gm-modal-title">{title}</h2><p className="gm-modal-subtitle">{item?.nombre || "Registro"} · consultá la evolución de sus valores.</p></div>
@@ -92,7 +175,11 @@ export default function ModalHistorial({ open, kind, item, rows = [], loading, o
                   <div className="servicios-history-summaryCard__icon" aria-hidden="true"><FontAwesomeIcon icon={metric.icon} /></div>
                   <div className="servicios-history-summaryCard__body">
                     <span className="servicios-history-summaryCard__label">{metric.label}</span>
-                    <strong className="servicios-history-summaryCard__value">{metric.value}</strong>
+                    <strong className="servicios-history-summaryCard__value">
+                      {esHistorialMaterial && loading && (metric.label === "Cambios registrados" || metric.label === "Movimientos")
+                        ? <span className="servicios-history-summaryValueSkeleton" aria-label="Cargando cantidad de cambios" />
+                        : metric.value}
+                    </strong>
                     <span className="servicios-history-summaryCard__detail">{metric.detail}</span>
                   </div>
                 </article>
@@ -102,13 +189,40 @@ export default function ModalHistorial({ open, kind, item, rows = [], loading, o
 
           <section className="gm-section servicios-service-panel servicios-history-panel servicios-history-panel--timeline">
             <div className="gm-section-head servicios-service-sectionHead servicios-history-timelineHead">
-              <span className="servicios-service-sectionIcon"><FontAwesomeIcon icon={faClockRotateLeft} /></span>
-              <span className="servicios-service-sectionCopy"><strong>Cambios registrados</strong><small>Cada registro conserva su fecha y los valores aplicados.</small></span>
-              <span className="servicios-history-count">{rows.length}</span>
+              <span className="servicios-service-sectionIcon servicios-history-timelineIcon"><FontAwesomeIcon icon={faClockRotateLeft} /></span>
+              <span className="servicios-service-sectionCopy servicios-history-timelineCopy"><strong>Cambios registrados</strong><small>{esHistorialMaterial ? "Fecha y valores aplicados en cada cambio." : "Cada registro conserva su fecha y los valores aplicados."}</small></span>
+              <span className={`servicios-history-count ${esHistorialMaterial && loading ? "is-loading" : ""}`}>
+                {esHistorialMaterial && loading ? <span className="servicios-history-countSkeleton" aria-hidden="true" /> : rows.length}
+              </span>
             </div>
             <div className="gm-section-body servicios-history-panelBody">
               {loading ? (
-                <div className="servicios-history-empty is-loading"><FontAwesomeIcon icon={faClockRotateLeft} /><strong>Cargando historial...</strong><small>Estamos consultando los cambios registrados.</small></div>
+                esHistorialMaterial ? (
+                  <div className="servicios-history-skeleton servicios-history-skeleton--articulo" role="status" aria-label="Cargando historial de valores del material">
+                    <span className="servicios-history-srOnly">Cargando historial de valores del material…</span>
+                    {Array.from({ length: 4 }).map((_, skeletonIndex) => (
+                      <div className="servicios-history-skeletonRow" key={`history-skeleton-${skeletonIndex}`} aria-hidden="true">
+                        <div className="servicios-history-skeletonDate">
+                          <span className="servicios-history-skeletonCircle" />
+                          <div>
+                            <span className="servicios-history-skeletonBar servicios-history-skeletonBar--date" />
+                            <span className="servicios-history-skeletonBar servicios-history-skeletonBar--short" />
+                          </div>
+                        </div>
+                        <div className="servicios-history-skeletonValues">
+                          {Array.from({ length: 3 }).map((__, valueIndex) => (
+                            <div key={`history-skeleton-value-${valueIndex}`}>
+                              <span className="servicios-history-skeletonBar servicios-history-skeletonBar--label" />
+                              <span className="servicios-history-skeletonBar servicios-history-skeletonBar--value" />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="servicios-history-empty is-loading"><FontAwesomeIcon icon={faClockRotateLeft} /><strong>Cargando historial...</strong><small>Estamos consultando los cambios registrados.</small></div>
+                )
               ) : rows.length === 0 ? (
                 <div className="servicios-history-empty"><FontAwesomeIcon icon={faBoxOpen} /><strong>Sin cambios históricos</strong><small>Todavía no hay modificaciones registradas para este elemento.</small></div>
               ) : (
@@ -136,6 +250,8 @@ export default function ModalHistorial({ open, kind, item, rows = [], loading, o
           <div className="gm-info-box servicios-history-audit"><FontAwesomeIcon icon={faCircleInfo} /><span>El usuario responsable de cada modificación se conserva en <strong>Auditoría</strong>.</span></div>
         </div>
         <footer className="gm-modal-footer gm-view-footer-actions"><button type="button" className="gm-action-btn gm-action-btn--cancel" onClick={onClose}>Cerrar</button></footer>
+          </>
+        )}
       </section>
     </div>,
     document.body

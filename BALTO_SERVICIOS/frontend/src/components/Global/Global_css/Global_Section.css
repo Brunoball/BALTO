@@ -9,7 +9,10 @@ body{overflow: hidden;}
   width: 100%;
   min-height: 100%;
   color: var(--color-text);
-  background: var(--color-bg-soft);
+  /* El fondo general lo pinta el layout principal de BALTO.
+     Mantener este wrapper transparente evita el bloque rectangular
+     detrás de las esquinas redondeadas de las tarjetas. */
+  background: transparent;
   font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
 }
 
@@ -54,7 +57,12 @@ body{overflow: hidden;}
   align-items: flex-end;
   justify-content: space-between;
   gap: 12px;
-  
+
+  /* El header tiene fondo propio en oscuro. Se redondea directamente
+     para no necesitar overflow:hidden, que rompería calendarios y menús. */
+  border-top-left-radius: var(--radius-lg, 18px);
+  border-top-right-radius: var(--radius-lg, 18px);
+  background-clip: padding-box;
 }
 
 .mov-card__headLeft{

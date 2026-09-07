@@ -457,8 +457,15 @@
 .servicios-page {
   padding: 0;
   color: var(--color-text);
-  background: var(--color-bg-soft);
+  /* Debe permanecer transparente igual que .mov-page. Si se pinta aquí
+     var(--color-bg-soft), reaparece el rectángulo oscuro tras el card. */
+  background: transparent;
   font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+}
+
+html[data-theme="oscuro"] .servicios-page,
+body.dark .servicios-page {
+  background: transparent !important;
 }
 
 .servicios-page > .servicios-alert--ok {
@@ -2599,4 +2606,586 @@ body.dark .servicios-article-stockNotice > svg {
   color: var(--gm-muted);
   font-size: 11px;
   line-height: 1.4;
+}
+
+/* =========================================================
+   HISTORIAL DE VALORES · CARGA SKELETON + CABECERA COMPACTA
+   Inventario e Insumos / Materiales.
+========================================================= */
+.servicios-history-modal--material .servicios-history-timelineHead.gm-section-head {
+  min-height: 42px;
+  padding: 7px 10px;
+  gap: 8px;
+  border-radius: 11px 11px 0 0;
+  background: var(--gm-bg);
+  border-bottom: 1px solid color-mix(in srgb, var(--gm-border) 78%, transparent);
+  box-shadow: none;
+}
+
+.servicios-history-modal--material .servicios-history-timelineIcon.servicios-service-sectionIcon {
+  width: 27px;
+  height: 27px;
+  flex: 0 0 27px;
+  border-radius: 8px;
+  border-color: color-mix(in srgb, #6d28d9 18%, transparent);
+  background: color-mix(in srgb, #6d28d9 7%, var(--gm-bg));
+  color: #6d28d9 !important;
+  font-size: 11px !important;
+  box-shadow: none;
+}
+
+.servicios-history-modal--material .servicios-history-timelineCopy.servicios-service-sectionCopy {
+  gap: 1px;
+}
+
+.servicios-history-modal--material .servicios-history-timelineCopy.servicios-service-sectionCopy strong {
+  font-size: 11.5px;
+  font-weight: 620;
+  line-height: 1.15;
+}
+
+.servicios-history-modal--material .servicios-history-timelineCopy.servicios-service-sectionCopy small {
+  font-size: 9.5px;
+  font-weight: 420;
+  line-height: 1.15;
+  opacity: .76;
+}
+
+.servicios-history-modal--material .servicios-history-count {
+  min-width: 25px;
+  height: 21px;
+  padding: 0 7px;
+  border-color: color-mix(in srgb, #6d28d9 15%, var(--gm-border));
+  background: color-mix(in srgb, #6d28d9 6%, var(--gm-bg));
+  font-size: 9.5px !important;
+  font-weight: 650 !important;
+}
+
+.servicios-history-modal--material .servicios-history-count.is-loading {
+  min-width: 31px;
+}
+
+.servicios-history-modal--material .servicios-history-countSkeleton,
+.servicios-history-modal--material .servicios-history-summaryValueSkeleton,
+.servicios-history-modal--material .servicios-history-skeletonBar,
+.servicios-history-modal--material .servicios-history-skeletonCircle {
+  position: relative;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--gm-muted) 14%, var(--gm-bg-soft));
+}
+
+.servicios-history-modal--material .servicios-history-countSkeleton::after,
+.servicios-history-modal--material .servicios-history-summaryValueSkeleton::after,
+.servicios-history-modal--material .servicios-history-skeletonBar::after,
+.servicios-history-modal--material .servicios-history-skeletonCircle::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .58), transparent);
+  animation: servicios-history-skeleton-shimmer 1.25s ease-in-out infinite;
+}
+
+.servicios-history-modal--material .servicios-history-countSkeleton {
+  width: 14px;
+  height: 7px;
+  display: block;
+  border-radius: 999px;
+}
+
+.servicios-history-modal--material .servicios-history-summaryValueSkeleton {
+  width: 42px;
+  height: 17px;
+  display: inline-block;
+  border-radius: 6px;
+  vertical-align: middle;
+}
+
+.servicios-history-modal--material .servicios-history-skeleton {
+  display: grid;
+  gap: 9px;
+}
+
+.servicios-history-modal--material .servicios-history-skeletonRow {
+  display: grid;
+  grid-template-columns: minmax(180px, .82fr) minmax(0, 2.18fr);
+  min-height: 66px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, #6d28d9 12%, var(--gm-border));
+  border-left: 3px solid color-mix(in srgb, #6d28d9 22%, transparent);
+  border-radius: 12px;
+  background: var(--gm-bg);
+}
+
+.servicios-history-modal--material .servicios-history-skeletonDate {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 13px;
+  border-right: 1px solid var(--gm-border);
+  background: color-mix(in srgb, #6d28d9 3.5%, var(--gm-bg));
+}
+
+.servicios-history-modal--material .servicios-history-skeletonDate > div {
+  min-width: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.servicios-history-modal--material .servicios-history-skeletonCircle {
+  width: 27px;
+  height: 27px;
+  flex: 0 0 27px;
+  border-radius: 9px;
+}
+
+.servicios-history-modal--material .servicios-history-skeletonValues {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.servicios-history-modal--material .servicios-history-skeletonValues > div {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+  padding: 11px 12px;
+  border-right: 1px solid var(--gm-border);
+}
+
+.servicios-history-modal--material .servicios-history-skeletonValues > div:last-child {
+  border-right: 0;
+}
+
+.servicios-history-modal--material .servicios-history-skeletonBar {
+  display: block;
+  height: 8px;
+  border-radius: 999px;
+}
+
+.servicios-history-modal--material .servicios-history-skeletonBar--date {
+  width: 72%;
+  height: 10px;
+}
+
+.servicios-history-modal--material .servicios-history-skeletonBar--short {
+  width: 44%;
+  height: 7px;
+}
+
+.servicios-history-modal--material .servicios-history-skeletonBar--label {
+  width: 48%;
+  height: 7px;
+}
+
+.servicios-history-modal--material .servicios-history-skeletonBar--value {
+  width: 68%;
+  height: 10px;
+}
+
+.servicios-history-modal--material .servicios-history-srOnly {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+@keyframes servicios-history-skeleton-shimmer {
+  100% { transform: translateX(100%); }
+}
+
+html[data-theme="oscuro"] .servicios-history-modal--material .servicios-history-timelineHead.gm-section-head,
+body.dark .servicios-history-modal--material .servicios-history-timelineHead.gm-section-head {
+  background: var(--gm-bg);
+}
+
+html[data-theme="oscuro"] .servicios-history-modal--material .servicios-history-timelineIcon.servicios-service-sectionIcon,
+body.dark .servicios-history-modal--material .servicios-history-timelineIcon.servicios-service-sectionIcon {
+  border-color: rgba(167, 139, 250, .15);
+  background: rgba(124, 58, 237, .07);
+  color: #c4b5fd !important;
+}
+
+html[data-theme="oscuro"] .servicios-history-modal--material .servicios-history-countSkeleton::after,
+html[data-theme="oscuro"] .servicios-history-modal--material .servicios-history-summaryValueSkeleton::after,
+html[data-theme="oscuro"] .servicios-history-modal--material .servicios-history-skeletonBar::after,
+html[data-theme="oscuro"] .servicios-history-modal--material .servicios-history-skeletonCircle::after,
+body.dark .servicios-history-modal--material .servicios-history-countSkeleton::after,
+body.dark .servicios-history-modal--material .servicios-history-summaryValueSkeleton::after,
+body.dark .servicios-history-modal--material .servicios-history-skeletonBar::after,
+body.dark .servicios-history-modal--material .servicios-history-skeletonCircle::after {
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .10), transparent);
+}
+
+@media (max-width: 760px) {
+  .servicios-history-modal--material .servicios-history-skeletonRow {
+    grid-template-columns: 1fr;
+  }
+
+  .servicios-history-modal--material .servicios-history-skeletonDate {
+    border-right: 0;
+    border-bottom: 1px solid var(--gm-border);
+  }
+}
+
+/* =========================================================
+   HISTORIAL DE VALORES · FILAS MINIMALISTAS
+   Materiales: reduce carga visual de cada cambio registrado.
+========================================================= */
+.servicios-history-modal--material .servicios-history-list {
+  gap: 6px;
+}
+
+.servicios-history-modal--material .servicios-history-row--articulo {
+  grid-template-columns: minmax(185px, .72fr) minmax(0, 2.28fr);
+  min-height: 52px;
+  border: 1px solid color-mix(in srgb, var(--gm-border) 86%, transparent);
+  border-left-width: 1px;
+  border-radius: 9px;
+  background: var(--gm-bg);
+  box-shadow: none;
+  overflow: hidden;
+  transition: background .16s ease, border-color .16s ease;
+}
+
+.servicios-history-modal--material .servicios-history-row--articulo:hover {
+  border-color: color-mix(in srgb, #6d28d9 15%, var(--gm-border));
+  background: color-mix(in srgb, #6d28d9 1.7%, var(--gm-bg));
+  box-shadow: none;
+  transform: none;
+}
+
+.servicios-history-modal--material .servicios-history-row--articulo .servicios-history-row__date {
+  gap: 8px;
+  padding: 8px 11px;
+  border-right: 1px solid color-mix(in srgb, var(--gm-border) 80%, transparent);
+  background: transparent;
+}
+
+.servicios-history-modal--material .servicios-history-row--articulo .servicios-history-index {
+  width: 21px;
+  height: 21px;
+  flex: 0 0 21px;
+  border: 1px solid color-mix(in srgb, #6d28d9 14%, var(--gm-border));
+  border-radius: 7px;
+  background: color-mix(in srgb, #6d28d9 4%, var(--gm-bg));
+  color: color-mix(in srgb, #6d28d9 75%, var(--gm-text)) !important;
+  font-size: 8.5px !important;
+  font-weight: 650 !important;
+}
+
+.servicios-history-modal--material .servicios-history-row--articulo .servicios-history-row__date > div {
+  gap: 1px;
+}
+
+.servicios-history-modal--material .servicios-history-row--articulo .servicios-history-row__date strong {
+  font-size: 11px;
+  font-weight: 610;
+  line-height: 1.2;
+}
+
+.servicios-history-modal--material .servicios-history-row--articulo .servicios-history-row__date small {
+  font-size: 8px;
+  font-weight: 470;
+  letter-spacing: .015em;
+  opacity: .72;
+}
+
+.servicios-history-modal--material .servicios-history-row--articulo .servicios-history-row__values > div {
+  gap: 2px;
+  padding: 8px 11px;
+  border-right-color: color-mix(in srgb, var(--gm-border) 80%, transparent);
+}
+
+.servicios-history-modal--material .servicios-history-row--articulo .servicios-history-row__values span,
+.servicios-history-modal--material .servicios-history-row--articulo .servicios-history-row__values small {
+  font-size: 8px;
+  font-weight: 500;
+  letter-spacing: .015em;
+  opacity: .72;
+}
+
+.servicios-history-modal--material .servicios-history-row--articulo .servicios-history-row__values strong {
+  font-size: 11.5px;
+  font-weight: 610;
+  line-height: 1.2;
+}
+
+/* El skeleton reproduce la nueva fila compacta para que no haya salto visual. */
+.servicios-history-modal--material .servicios-history-skeleton {
+  gap: 6px;
+}
+
+.servicios-history-modal--material .servicios-history-skeletonRow {
+  grid-template-columns: minmax(185px, .72fr) minmax(0, 2.28fr);
+  min-height: 52px;
+  border: 1px solid color-mix(in srgb, var(--gm-border) 86%, transparent);
+  border-left-width: 1px;
+  border-radius: 9px;
+}
+
+.servicios-history-modal--material .servicios-history-skeletonDate {
+  gap: 8px;
+  padding: 8px 11px;
+  background: transparent;
+  border-right-color: color-mix(in srgb, var(--gm-border) 80%, transparent);
+}
+
+.servicios-history-modal--material .servicios-history-skeletonDate > div {
+  gap: 4px;
+}
+
+.servicios-history-modal--material .servicios-history-skeletonCircle {
+  width: 21px;
+  height: 21px;
+  flex: 0 0 21px;
+  border-radius: 7px;
+}
+
+.servicios-history-modal--material .servicios-history-skeletonValues > div {
+  gap: 5px;
+  padding: 8px 11px;
+  border-right-color: color-mix(in srgb, var(--gm-border) 80%, transparent);
+}
+
+.servicios-history-modal--material .servicios-history-skeletonBar--date {
+  width: 62%;
+  height: 8px;
+}
+
+.servicios-history-modal--material .servicios-history-skeletonBar--short,
+.servicios-history-modal--material .servicios-history-skeletonBar--label {
+  height: 6px;
+}
+
+.servicios-history-modal--material .servicios-history-skeletonBar--value {
+  width: 58%;
+  height: 8px;
+}
+
+html[data-theme="oscuro"] .servicios-history-modal--material .servicios-history-row--articulo,
+body.dark .servicios-history-modal--material .servicios-history-row--articulo {
+  background: var(--gm-bg);
+  border-color: rgba(148, 163, 184, .14);
+}
+
+html[data-theme="oscuro"] .servicios-history-modal--material .servicios-history-row--articulo:hover,
+body.dark .servicios-history-modal--material .servicios-history-row--articulo:hover {
+  background: rgba(124, 58, 237, .025);
+  border-color: rgba(167, 139, 250, .16);
+}
+
+html[data-theme="oscuro"] .servicios-history-modal--material .servicios-history-row--articulo .servicios-history-index,
+body.dark .servicios-history-modal--material .servicios-history-row--articulo .servicios-history-index {
+  border-color: rgba(167, 139, 250, .14);
+  background: rgba(124, 58, 237, .04);
+  color: #c4b5fd !important;
+}
+
+@media (max-width: 760px) {
+  .servicios-history-modal--material .servicios-history-row--articulo,
+  .servicios-history-modal--material .servicios-history-skeletonRow {
+    grid-template-columns: 1fr;
+  }
+
+  .servicios-history-modal--material .servicios-history-row--articulo .servicios-history-row__date {
+    border-right: 0;
+    border-bottom: 1px solid color-mix(in srgb, var(--gm-border) 80%, transparent);
+  }
+}
+
+/* Historial de material: skeleton integral durante la carga */
+.servicios-history-modal--material.is-full-skeleton .servicios-history-fullSkeleton {
+  position: relative;
+  display: inline-block;
+  overflow: hidden;
+  background: rgba(148, 163, 184, .18);
+  border-radius: 8px;
+}
+
+.servicios-history-modal--material.is-full-skeleton .servicios-history-fullSkeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .48), transparent);
+  animation: servicios-history-skeleton-shimmer 1.25s ease-in-out infinite;
+}
+
+.servicios-history-modal--material .servicios-history-fullSkeletonHeader {
+  min-height: 74px;
+}
+
+.servicios-history-modal--material .servicios-history-fullSkeleton--headIcon {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  border-radius: 12px;
+}
+
+.servicios-history-modal--material .servicios-history-fullSkeletonHeadCopy {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+}
+
+.servicios-history-modal--material .servicios-history-fullSkeleton--title {
+  width: 250px;
+  max-width: 52vw;
+  height: 18px;
+}
+
+.servicios-history-modal--material .servicios-history-fullSkeleton--subtitle {
+  width: 340px;
+  max-width: 64vw;
+  height: 10px;
+}
+
+.servicios-history-modal--material .servicios-history-fullSkeletonContent {
+  pointer-events: none;
+}
+
+.servicios-history-modal--material .servicios-history-fullSkeletonSectionHead {
+  min-height: 48px;
+}
+
+.servicios-history-modal--material .servicios-history-fullSkeleton--sectionIcon {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  border-radius: 9px;
+}
+
+.servicios-history-modal--material .servicios-history-fullSkeletonHeadLines {
+  min-width: 0;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.servicios-history-modal--material .servicios-history-fullSkeleton--sectionTitle {
+  width: 138px;
+  height: 11px;
+}
+
+.servicios-history-modal--material .servicios-history-fullSkeleton--sectionTitleShort {
+  width: 112px;
+}
+
+.servicios-history-modal--material .servicios-history-fullSkeleton--sectionSubtitle {
+  width: 220px;
+  max-width: 48vw;
+  height: 8px;
+}
+
+.servicios-history-modal--material .servicios-history-summaryCard--skeleton {
+  pointer-events: none;
+  transform: none !important;
+  box-shadow: 0 8px 22px -24px rgba(10, 37, 64, .28);
+}
+
+.servicios-history-modal--material .servicios-history-summaryCard--skeleton::after {
+  display: none;
+}
+
+.servicios-history-modal--material .servicios-history-fullSkeleton--metricIcon {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  border-radius: 12px;
+}
+
+.servicios-history-modal--material .servicios-history-fullSkeletonMetricCopy {
+  min-width: 0;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+}
+
+.servicios-history-modal--material .servicios-history-fullSkeleton--metricLabel {
+  width: 72px;
+  height: 8px;
+}
+
+.servicios-history-modal--material .servicios-history-fullSkeleton--metricValue {
+  width: 108px;
+  max-width: 82%;
+  height: 16px;
+}
+
+.servicios-history-modal--material .servicios-history-fullSkeleton--metricDetail {
+  width: 132px;
+  max-width: 92%;
+  height: 8px;
+}
+
+.servicios-history-modal--material .servicios-history-fullSkeleton--count {
+  width: 30px;
+  height: 24px;
+  margin-left: auto;
+  border-radius: 999px;
+}
+
+.servicios-history-modal--material .servicios-history-audit--skeleton {
+  min-height: 42px;
+}
+
+.servicios-history-modal--material .servicios-history-fullSkeleton--auditIcon {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  border-radius: 6px;
+}
+
+.servicios-history-modal--material .servicios-history-fullSkeleton--auditText {
+  width: 330px;
+  max-width: 72vw;
+  height: 9px;
+}
+
+.servicios-history-modal--material .servicios-history-fullSkeletonFooter {
+  pointer-events: none;
+}
+
+.servicios-history-modal--material .servicios-history-fullSkeleton--footerButton {
+  width: 92px;
+  height: 36px;
+  border-radius: 10px;
+}
+
+html[data-theme="oscuro"] .servicios-history-modal--material.is-full-skeleton .servicios-history-fullSkeleton,
+body.dark .servicios-history-modal--material.is-full-skeleton .servicios-history-fullSkeleton {
+  background: rgba(148, 163, 184, .14);
+}
+
+html[data-theme="oscuro"] .servicios-history-modal--material.is-full-skeleton .servicios-history-fullSkeleton::after,
+body.dark .servicios-history-modal--material.is-full-skeleton .servicios-history-fullSkeleton::after {
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .12), transparent);
+}
+
+@media (max-width: 760px) {
+  .servicios-history-modal--material .servicios-history-fullSkeleton--title {
+    width: 190px;
+  }
+
+  .servicios-history-modal--material .servicios-history-fullSkeleton--subtitle {
+    width: 240px;
+  }
+
+  .servicios-history-modal--material .servicios-history-fullSkeleton--auditText {
+    width: 220px;
+  }
 }

@@ -2290,8 +2290,11 @@ html[data-theme="oscuro"] .cmi-warnBox div{color:rgba(226,232,240,.60) !importan
    MOVIMIENTOS — DARK MODE (override)
    Pegalo AL FINAL del archivo movimientos.css
 ========================================================= */
-html[data-theme="oscuro"] .mov-page{
-  background: #0B1220 !important;
+html[data-theme="oscuro"] .mov-page,
+body.dark .mov-page{
+  /* Deja ver el fondo real del layout y elimina el halo/cuadrado oscuro
+     detrás de las esquinas redondeadas del card. */
+  background: transparent !important;
   color: rgba(226,232,240,.92) !important;
 }
 
@@ -2315,6 +2318,9 @@ html[data-theme="oscuro"] .mov-page .mov-card__head{
     radial-gradient(900px 180px at 0% 0%, rgba(78,161,255,.12), transparent 55%),
     linear-gradient(180deg, rgba(15,23,42,.85), rgba(15,23,42,.62)) !important;
   border-bottom-color: rgba(148,163,184,.12) !important;
+  border-top-left-radius: var(--radius-lg, 18px);
+  border-top-right-radius: var(--radius-lg, 18px);
+  background-clip: padding-box;
 }
 
 html[data-theme="oscuro"] .mov-page .mov-card__title{
