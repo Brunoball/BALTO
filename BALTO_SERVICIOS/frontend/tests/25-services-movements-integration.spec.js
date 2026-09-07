@@ -1,5 +1,5 @@
 import { test, expect } from './support/test.js';
-import { expectApiSuccess } from './support/api.js';
+import { authenticatedApi, expectApiSuccess } from './support/api.js';
 import { uniqueName } from './support/data.js';
 import {
   fillMovementRow,
@@ -326,6 +326,54 @@ test.describe('BALTO Servicios <-> Movimientos', () => {
       });
       articleId = Number(article.id_articulo);
       expect(Number(article.controla_stock)).toBe(0);
+
+      // Un recurso que no controla existencias puede participar de una receta,
+      // pero NO pertenece al catálogo "Stock" de Movimientos. Esto debe cumplirse
+      // tanto en la lista vendible (Ventas/Presupuestos) como en la lista completa
+      // usada por Compras, aunque Compras permita artículos con existencia 0.
+      const movementLists = expectApiSuccess(
+        await authenticatedApi(page, 'global_obtener_listas', { query: { _: Date.now() } }),
+        'No se pudieron consultar las listas de Movimientos',
+      );
+      const purchaseLists = expectApiSuccess(
+        await authenticatedApi(page, 'global_obtener_listas', {
+          query: { contexto: 'compras', include_sin_stock: 1, _: Date.now() },
+        }),
+        'No se pudieron consultar las listas de Compras',
+      );
+      const movementCatalog = movementLists?.listas || movementLists;
+      const purchaseCatalog = purchaseLists?.listas || purchaseLists;
+      const containsArticle = (rows) => (Array.isArray(rows) ? rows : []).some(
+        (row) => Number(row?.id_articulo || 0) === articleId || String(row?.nombre || '').trim() === articleName,
+      );
+      expect(containsArticle(movementCatalog?.articulos_stock)).toBe(false);
+      expect(containsArticle(movementCatalog?.detalles_stock)).toBe(false);
+      expect(containsArticle(purchaseCatalog?.articulos_stock_todos)).toBe(false);
+      expect(containsArticle(purchaseCatalog?.detalles_compras)).toBe(false);
+
+      // Cobertura UI adicional: incluso si una respuesta legacy/cacheada llegara a
+      // contener el recurso, el autocomplete de Stock debe descartarlo.
+      await page.goto('/panel/ventas');
+      await waitForBusyToFinish(page);
+      await page.getByRole('button', { name: /Nueva Venta/i }).click();
+      const saleDialog = await waitDialog(page, 'Nueva Venta');
+      const movementRow = saleDialog.locator('.gm-table-body .gm-table-row').first();
+      const stockInput = movementRow.locator('input.psa-input').first();
+      await expect(stockInput).toBeVisible({ timeout: 15_000 });
+      const stockWrap = stockInput.locator('xpath=ancestor::*[contains(concat(" ", normalize-space(@class), " "), " psa-wrap ")]').first();
+      const stockButton = stockWrap.getByRole('button', { name: /^Stock$/i }).first();
+      if (await stockButton.isVisible({ timeout: 15_000 }).catch(() => false)) {
+        const active = await stockButton.evaluate((button) => button.classList.contains('is-active'));
+        if (!active) await stockButton.click();
+      }
+      await stockInput.fill(articleName);
+      const stockList = page.locator('#psa-portal-list');
+      await expect(stockList).toBeVisible({ timeout: 15_000 });
+      await expect(stockList.locator('.psa-item').filter({ hasText: articleName })).toHaveCount(0);
+      await expect(stockList.locator('.psa-empty')).toContainText(/Sin resultados/i);
+      const cancelSale = saleDialog.getByRole('button', { name: /Cancelar|Cerrar/i }).last();
+      if (await cancelSale.isVisible().catch(() => false)) await cancelSale.click();
+      await expect(saleDialog).toBeHidden({ timeout: 15_000 });
 
       const created = await post(page, 'servicios_servicio_crear', {
         nombre: serviceName,

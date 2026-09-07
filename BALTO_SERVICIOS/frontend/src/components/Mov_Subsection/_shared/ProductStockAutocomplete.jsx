@@ -98,11 +98,10 @@ function filterAvailableProduct(product, allowOutOfStock = false) {
     return { ...product, variantes: [], tiene_variantes: 0 };
   }
 
-  // Un Material/Insumo con controla_stock=0 sigue siendo vendible como artículo
-  // directo, pero no limita cantidades ni genera movimientos de existencias.
-  if (!controlsStock(product)) {
-    return { ...product, stock: null, stock_disponible: null, variantes: [], tiene_variantes: 0 };
-  }
+  // El selector "Stock" representa exclusivamente inventario real. Un Material/Insumo
+  // con controla_stock=0 puede seguir usándose dentro de la composición de Servicios,
+  // pero no debe ofrecerse como artículo directo de Stock en Movimientos.
+  if (!controlsStock(product)) return null;
 
   const activeVariants = Array.isArray(product?.variantes)
     ? product.variantes.filter((v) => Number(v?.activo ?? 1) !== 0)
