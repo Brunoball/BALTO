@@ -1455,8 +1455,7 @@ body.dark .servicios-component-card {
 .servicios-history-row > div {
   min-width: 0;
   display: flex;
-  flex-direction: column;
-  gap: 3px;
+  gap: 8px;
 }
 
 .servicios-history-row span,
