@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import { clampText, decimalText, money } from "../utils/serviciosFormUtils";
+import { clampText, decimalNumber, decimalText, money, moneyApiValue, moneyDecimalText, moneyInputValue } from "../utils/serviciosFormUtils";
 import useServiciosGlobalModal from "./useServiciosGlobalModal";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCalculator, faCircleInfo, faDollarSign, faUser } from "@fortawesome/free-solid-svg-icons";
@@ -36,7 +36,7 @@ export default function ModalTrabajador({ open, item, saving, onClose, onSave, o
       rol: item?.rol || "",
       tipo_trabajador: item?.tipo_trabajador || "EMPLEADO",
       modalidad_pago: item?.modalidad_pago || "HORA",
-      monto_periodo: item ? String(item.monto_periodo ?? item.costo_hora ?? "") : "",
+      monto_periodo: item ? moneyInputValue(item.monto_periodo ?? item.costo_hora) : "",
       horas_periodo: String(item?.horas_periodo ?? "1"),
       notas: item?.notas || "",
     });
@@ -47,7 +47,7 @@ export default function ModalTrabajador({ open, item, saving, onClose, onSave, o
   const costoHora = useMemo(() => {
     const horas = Number(form.horas_periodo || 0);
     if (horas <= 0) return 0;
-    return Number(form.monto_periodo || 0) / horas;
+    return decimalNumber(form.monto_periodo) / horas;
   }, [form.monto_periodo, form.horas_periodo]);
 
   if (!open) return null;
@@ -66,12 +66,12 @@ export default function ModalTrabajador({ open, item, saving, onClose, onSave, o
     event.preventDefault();
 
     if (!form.nombre.trim()) return onToast?.("error", "Completá el nombre del trabajador.", 4200);
-    if (Number(form.monto_periodo || 0) < 0) return onToast?.("error", "El monto del período no puede ser negativo.", 4200);
+    if (decimalNumber(form.monto_periodo) < 0) return onToast?.("error", "El monto del período no puede ser negativo.", 4200);
     if (Number(form.horas_periodo || 0) <= 0) return onToast?.("error", "Las horas equivalentes deben ser mayores a cero.", 4200);
 
     await onSave({
       ...form,
-      monto_periodo: form.monto_periodo === "" ? "0" : form.monto_periodo,
+      monto_periodo: moneyApiValue(form.monto_periodo),
       id_trabajador: item?.id_trabajador,
     });
   };
@@ -143,7 +143,7 @@ export default function ModalTrabajador({ open, item, saving, onClose, onSave, o
                   </label>
 
                   <label className="gm-field servicios-field--span-6">
-                    <input className="gm-input" inputMode="decimal" value={form.monto_periodo} onChange={(e) => set("monto_periodo", decimalText(e.target.value, 2))} placeholder="0" />
+                    <input className="gm-input" inputMode="decimal" value={form.monto_periodo} onChange={(e) => set("monto_periodo", moneyDecimalText(e.target.value))} placeholder="0" />
                     <span className="gm-label gm-label--up">Monto del período</span>
                   </label>
 

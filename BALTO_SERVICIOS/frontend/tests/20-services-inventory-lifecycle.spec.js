@@ -187,20 +187,31 @@ async function runTypedLifecycle(page, type) {
 
     await stockRow.getByTitle('Editar').click();
     const editDialog = await waitDialog(page, `Editar ${cfg.label}`);
-    await expect(editDialog.getByText(itemEdited, { exact: false })).toBeVisible();
+
+    // En los modales nuevos el nombre vive en el value del input, no como nodo de texto.
+    // Validamos los controles reales y, de paso, el formato visual vigente de stock/importes.
+    await expect(editDialog.getByRole('textbox', { name: `Nombre del ${cfg.label}`, exact: true })).toHaveValue(itemEdited);
+    await expect(editDialog.getByRole('textbox', { name: 'Stock actual', exact: true })).toHaveValue('5');
+    await expect(editDialog.getByRole('textbox', { name: 'Costo unitario', exact: true })).toHaveValue('125,00');
+    await expect(editDialog.getByRole('textbox', { name: 'Precio de venta (opcional)', exact: true })).toHaveValue('190,00');
     await editDialog.getByRole('button', { name: 'Cancelar' }).click();
     await expect(editDialog).toBeHidden();
 
     await stockRow.getByTitle('Dar de baja').click();
     const statusDialog = await waitDialog(page, `Dar de baja ${cfg.label}`);
-    await expect(statusDialog.getByText(itemEdited, { exact: false })).toBeVisible();
+    await expect(statusDialog.locator('.mvdel-value').filter({ hasText: itemEdited }).first()).toHaveText(itemEdited);
     await statusDialog.getByRole('button', { name: 'Cancelar' }).click();
     await expect(statusDialog).toBeHidden();
 
     await stockRow.getByTitle('Eliminar').click();
     const deleteDialog = await waitDialog(page, 'Eliminar registro');
-    await expect(deleteDialog.getByText(itemEdited, { exact: false })).toBeVisible();
-    await deleteDialog.getByRole('button', { name: 'Cancelar' }).click();
+
+    // El modal global de eliminación no garantiza que el nombre quede en una
+    // `.mvdel-value`: según el registro puede mostrarse en el mensaje principal.
+    // Validamos el contenido funcional del modal sin acoplarnos a ese detalle de markup.
+    await expect(deleteDialog).toContainText(itemEdited);
+    await expect(deleteDialog.getByRole('button', { name: 'Eliminar definitivamente', exact: true })).toBeVisible();
+    await deleteDialog.getByRole('button', { name: 'Cancelar', exact: true }).click();
     await expect(deleteDialog).toBeHidden();
 
     await stockRow.getByTitle('Ajustar stock').click();
@@ -213,7 +224,8 @@ async function runTypedLifecycle(page, type) {
 
     const amountInput = stockDialog.locator('input').first();
     const reasonInput = stockDialog.locator('textarea').first();
-    await amountInput.fill('2');
+    await amountInput.fill('2,25');
+    await expect(amountInput).toHaveValue('2,25');
     await reasonInput.fill('BORRADOR E2E');
     await stockDialog.getByRole('button', { name: 'Ver historial de reajustes' }).click();
 
@@ -225,7 +237,7 @@ async function runTypedLifecycle(page, type) {
     await expect(historyDialog).toBeHidden();
 
     await expect(stockDialog).toBeVisible();
-    await expect(amountInput).toHaveValue('2');
+    await expect(amountInput).toHaveValue('2,25');
     await expect(reasonInput).toHaveValue('BORRADOR E2E');
     await stockDialog.getByRole('button', { name: 'Cancelar' }).click();
     await expect(stockDialog).toBeHidden();

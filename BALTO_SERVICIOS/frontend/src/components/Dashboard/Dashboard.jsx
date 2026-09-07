@@ -9,6 +9,7 @@ import {
   faTruck,
   faCreditCard,
   faUsers,
+  faBriefcase,
   faWallet,
   faArrowTrendUp,
 } from "@fortawesome/free-solid-svg-icons";
@@ -321,6 +322,16 @@ export default function Dashboard() {
         tone: "yellow",
         valueClass: "",
       },
+      {
+        key: "servicios",
+        label: "Servicios activos",
+        value: kpis.servicios_activos,
+        formatter: formatNumber,
+        detail: "Servicios disponibles",
+        icon: faBriefcase,
+        tone: "pink",
+        valueClass: "",
+      },
     ],
     [kpis]
   );
@@ -341,8 +352,8 @@ export default function Dashboard() {
           <div className="db-header__left">
             <h1 className="db-title">Panel Contable</h1>
             <p className="db-subtitle">
-              Vista general del sistema: caja, movimientos del mes, clientes y
-              proveedores.
+              Vista general del sistema: caja, movimientos del mes, clientes,
+              proveedores y servicios.
             </p>
           </div>
 

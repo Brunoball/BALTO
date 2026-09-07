@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBoxOpen, faCircleInfo, faClockRotateLeft, faFileLines } from "@fortawesome/free-solid-svg-icons";
-import { clampText, decimalText, money } from "../utils/serviciosFormUtils";
+import { clampText, decimalNumber, money, stock, stockApiValue, stockDecimalText } from "../utils/serviciosFormUtils";
 import useServiciosGlobalModal from "./useServiciosGlobalModal";
 
 export default function ModalAjusteStock({ open, item, saving, onClose, onSave, onOpenHistory, onToast }) {
@@ -10,8 +10,8 @@ export default function ModalAjusteStock({ open, item, saving, onClose, onSave, 
   useEffect(() => { if (open) setForm({ operacion: "SUMAR", cantidad: "", motivo: "" }); }, [open, item]);
   const { overlayRef, cerrarDesdeFondo } = useServiciosGlobalModal({ open, busy: saving, onClose });
   const nuevoStock = useMemo(() => {
-    const actual = Number(item?.stock_actual || 0);
-    const cantidad = Number(form.cantidad || 0);
+    const actual = decimalNumber(item?.stock_actual);
+    const cantidad = decimalNumber(form.cantidad);
     if (form.operacion === "SUMAR") return actual + cantidad;
     if (form.operacion === "RESTAR") return actual - cantidad;
     return cantidad;
@@ -20,14 +20,14 @@ export default function ModalAjusteStock({ open, item, saving, onClose, onSave, 
 
   const submit = async (event) => {
     event.preventDefault();
-    if (form.cantidad === "" || Number(form.cantidad) < 0) return onToast?.("error", "Indicá una cantidad válida.", 4200);
-    if (form.operacion !== "ESTABLECER" && Number(form.cantidad) <= 0) return onToast?.("error", "La cantidad debe ser mayor a cero.", 4200);
+    if (form.cantidad === "" || decimalNumber(form.cantidad) < 0) return onToast?.("error", "Indicá una cantidad válida.", 4200);
+    if (form.operacion !== "ESTABLECER" && decimalNumber(form.cantidad) <= 0) return onToast?.("error", "La cantidad debe ser mayor a cero.", 4200);
     if (nuevoStock < 0) return onToast?.("error", "El stock no puede quedar negativo.", 4200);
     if (!form.motivo.trim()) return onToast?.("error", "Indicá el motivo del ajuste.", 4200);
-    await onSave({ id_articulo: item.id_articulo, operacion: form.operacion, cantidad: form.cantidad, motivo: form.motivo });
+    await onSave({ id_articulo: item.id_articulo, operacion: form.operacion, cantidad: stockApiValue(form.cantidad), motivo: form.motivo });
   };
 
-  const formatStock = (value) => Number(value).toLocaleString("es-AR", { maximumFractionDigits: 6 });
+  const formatStock = (value) => stock(value);
   const pendiente = form.cantidad === "";
   const ayudaOperacion = {
     SUMAR: "La cantidad se agrega a la existencia actual.",
@@ -73,7 +73,7 @@ export default function ModalAjusteStock({ open, item, saving, onClose, onSave, 
             <div className="gm-section-body servicios-service-panelBody">
           <div className="servicios-form-grid">
             <label className="gm-field servicios-field--span-6"><select className="gm-input gm-select" value={form.operacion} onChange={(e) => setForm((p) => ({ ...p, operacion: e.target.value }))}><option value="SUMAR">INGRESAR / SUMAR</option><option value="RESTAR">EGRESAR / RESTAR</option><option value="ESTABLECER">FIJAR EXISTENCIA</option></select><span className="gm-label gm-label--up">Operación</span></label>
-            <label className="gm-field servicios-field--span-6"><input className="gm-input" autoFocus inputMode="decimal" value={form.cantidad} onChange={(e) => setForm((p) => ({ ...p, cantidad: decimalText(e.target.value, 6) }))} placeholder=" " /><span className="gm-label">{form.operacion === "ESTABLECER" ? "Existencia final" : "Cantidad"}</span></label>
+            <label className="gm-field servicios-field--span-6"><input className="gm-input" autoFocus inputMode="decimal" value={form.cantidad} onChange={(e) => setForm((p) => ({ ...p, cantidad: stockDecimalText(e.target.value) }))} placeholder=" " /><span className="gm-label">{form.operacion === "ESTABLECER" ? "Existencia final" : "Cantidad"}</span></label>
           </div>
               <div className="gm-info-box servicios-article-stockNotice"><FontAwesomeIcon icon={faCircleInfo} /><span>{ayudaOperacion[form.operacion]}</span></div>
               <div className={`gm-info-box ${!pendiente && nuevoStock < 0 ? "servicios-info-danger" : ""}`} role="status">

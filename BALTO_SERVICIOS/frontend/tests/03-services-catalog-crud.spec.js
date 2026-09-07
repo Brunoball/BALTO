@@ -1,7 +1,7 @@
 import { test, expect } from './support/test.js';
-import { expectApiSuccess } from './support/api.js';
+import { authenticatedApi, expectApiSuccess } from './support/api.js';
 import { uniqueName } from './support/data.js';
-import { requireMutations, waitForBusyToFinish } from './support/ui.js';
+import { requireMutations, waitDialog, waitForBusyToFinish } from './support/ui.js';
 import {
   createServiceArticleFixture,
   deleteServiceArticleFixture,
@@ -41,6 +41,18 @@ function exactName(rows, name) {
   );
 }
 
+async function waitQuickCategoryDialog(page) {
+  // Selector estable: el modal rápido tiene aria-labelledby propio.
+  // No usamos waitDialog('Agregar categoría') porque el formulario padre
+  // también contiene la opción '+ AGREGAR CATEGORÍA' y, al cerrarse el
+  // modal rápido, ese locator dinámico podía pasar a apuntar al padre.
+  const dialog = page.locator(
+    '[role="dialog"][aria-labelledby="servicios-quick-category-title"]',
+  );
+  await expect(dialog).toBeVisible();
+  return dialog;
+}
+
 test.describe('BALTO Servicios - catálogo principal', () => {
   test('@smoke @servicios ping, resumen, carga agregada y navegación del módulo', async ({ page }) => {
     await page.goto('/panel/servicios');
@@ -74,10 +86,18 @@ test.describe('BALTO Servicios - catálogo principal', () => {
     await expect(page.getByRole('button', { name: 'Categorías', exact: true })).toHaveCount(0);
 
     await page.getByRole('button', { name: 'Agregar servicio', exact: true }).click();
-    const serviceDialog = page.getByRole('dialog');
-    await expect(serviceDialog).toBeVisible();
-    await expect(serviceDialog.getByRole('option', { name: '+ AGREGAR CATEGORÍA', exact: true })).toHaveCount(0);
-    await expect(serviceDialog.getByRole('option', { name: 'SIN CATEGORÍA', exact: true })).toHaveCount(1);
+    const serviceDialog = await waitDialog(page, 'Agregar servicio');
+    const serviceCategory = serviceDialog.getByRole('combobox', { name: 'Categoría', exact: true });
+    await expect(serviceCategory.getByRole('option', { name: '+ AGREGAR CATEGORÍA', exact: true })).toHaveCount(1);
+    await expect(serviceCategory.getByRole('option', { name: 'SIN CATEGORÍA', exact: true })).toHaveCount(1);
+
+    // La administración completa sigue en Configuración; desde el formulario sólo
+    // debe existir el alta rápida solicitada en el desplegable.
+    await serviceCategory.selectOption('__ADD__');
+    const quickCategoryDialog = await waitQuickCategoryDialog(page);
+    await expect(quickCategoryDialog.getByRole('textbox', { name: 'Nombre de la categoría', exact: true })).toBeVisible();
+    await quickCategoryDialog.getByRole('button', { name: 'Cancelar', exact: true }).click();
+    await expect(quickCategoryDialog).toBeHidden();
     await serviceDialog.getByRole('button', { name: 'Cerrar' }).click();
     await page.getByRole('tablist').getByRole('button', { name: /^Trabajadores$/ }).click();
     await expect(page.getByPlaceholder('Buscar trabajador o rol...')).toBeVisible();
@@ -85,15 +105,120 @@ test.describe('BALTO Servicios - catálogo principal', () => {
     await page.goto('/panel/servicios?seccion=inventario');
     await waitForBusyToFinish(page);
     await expect(page.getByText('Inventario de servicios', { exact: true })).toBeVisible();
-    for (const [tab, placeholder] of [
-      ['Materiales', 'Buscar material...'],
-      ['Insumos', 'Buscar insumo...'],
-      ['Stock', 'Buscar producto, material o insumo...'],
+    for (const [tab, placeholder, addLabel, dialogTitle] of [
+      ['Materiales', 'Buscar material...', 'Agregar material', 'Agregar material'],
+      ['Insumos', 'Buscar insumo...', 'Agregar insumo', 'Agregar insumo'],
+      ['Stock', 'Buscar producto, material o insumo...', 'Agregar producto', 'Agregar producto'],
     ]) {
       await page.getByRole('tablist').getByRole('button', { name: new RegExp(`^${tab}$`) }).click();
       await expect(page.getByPlaceholder(placeholder)).toBeVisible();
+      await page.getByRole('button', { name: addLabel, exact: true }).click();
+
+      const articleDialog = await waitDialog(page, dialogTitle);
+      const categorySelect = articleDialog.getByRole('combobox', { name: 'Categoría', exact: true });
+      await expect(categorySelect.getByRole('option', { name: '+ AGREGAR CATEGORÍA', exact: true })).toHaveCount(1);
+      await expect(categorySelect.getByRole('option', { name: 'SIN CATEGORÍA', exact: true })).toHaveCount(1);
+      await expect(articleDialog.getByRole('combobox', { name: 'Unidad de medida', exact: true }).getByRole('option', { name: '+ AGREGAR UNIDAD', exact: true })).toHaveCount(1);
+
+      await categorySelect.selectOption('__ADD__');
+      const quickDialog = await waitQuickCategoryDialog(page);
+      await expect(quickDialog.getByRole('textbox', { name: 'Nombre de la categoría', exact: true })).toBeVisible();
+      await quickDialog.getByRole('button', { name: 'Cancelar', exact: true }).click();
+      await expect(quickDialog).toBeHidden();
+      await articleDialog.getByRole('button', { name: 'Cancelar', exact: true }).click();
+      await expect(articleDialog).toBeHidden();
     }
-    await expect(page.getByRole('button', { name: 'Agregar producto', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Categorías', exact: true })).toHaveCount(0);
+  });
+
+
+  test('@crud @critical alta rápida de categorías desde los desplegables de Servicios', async ({ page }) => {
+    test.setTimeout(2 * 60_000);
+    await requireMutations(test, page);
+
+    const cases = [
+      {
+        group: 'SERVICIO',
+        path: '/panel/servicios',
+        tab: null,
+        addLabel: 'Agregar servicio',
+        dialogTitle: 'Agregar servicio',
+        createAction: 'servicios_categoria_crear',
+      },
+      {
+        group: 'MATERIAL',
+        path: '/panel/servicios?seccion=inventario',
+        tab: 'Materiales',
+        addLabel: 'Agregar material',
+        dialogTitle: 'Agregar material',
+        createAction: 'servicios_material_categoria_crear',
+      },
+      {
+        group: 'INSUMO',
+        path: '/panel/servicios?seccion=inventario',
+        tab: 'Insumos',
+        addLabel: 'Agregar insumo',
+        dialogTitle: 'Agregar insumo',
+        createAction: 'servicios_insumo_categoria_crear',
+      },
+      {
+        group: 'PRODUCTO',
+        path: '/panel/servicios?seccion=inventario',
+        tab: 'Stock',
+        addLabel: 'Agregar producto',
+        dialogTitle: 'Agregar producto',
+        createAction: 'servicios_articulos_categoria_crear',
+      },
+    ];
+    const created = [];
+
+    try {
+      for (const cfg of cases) {
+        await page.goto(cfg.path);
+        await waitForBusyToFinish(page);
+        if (cfg.tab) {
+          await page.getByRole('tablist').getByRole('button', { name: cfg.tab, exact: true }).click();
+        }
+
+        await page.getByRole('button', { name: cfg.addLabel, exact: true }).click();
+        const parentDialog = await waitDialog(page, cfg.dialogTitle);
+        const categorySelect = parentDialog.getByRole('combobox', { name: 'Categoría', exact: true });
+        await categorySelect.selectOption('__ADD__');
+
+        const quickDialog = await waitQuickCategoryDialog(page);
+        const categoryName = uniqueName(`RAPIDA-${cfg.group}`, 100);
+        await quickDialog.getByRole('textbox', { name: 'Nombre de la categoría', exact: true }).fill(categoryName);
+
+        const responsePromise = page.waitForResponse(
+          (response) => response.request().method() === 'POST'
+            && new URL(response.url()).searchParams.get('action') === cfg.createAction,
+          { timeout: 30_000 },
+        );
+        await quickDialog.getByRole('button', { name: 'Agregar categoría', exact: true }).click();
+        const response = await responsePromise;
+        const body = await response.json().catch(() => ({}));
+        expect(response.status(), JSON.stringify(body)).toBeLessThan(400);
+        expect(body?.exito !== false && body?.success !== false, body?.mensaje || body?.message).toBeTruthy();
+        await expect(quickDialog).toBeHidden({ timeout: 20_000 });
+
+        const createdOption = categorySelect.getByRole('option', { name: categoryName, exact: true });
+        await expect(createdOption).toHaveCount(1, { timeout: 20_000 });
+        const categoryId = Number(await createdOption.getAttribute('value'));
+        expect(categoryId).toBeGreaterThan(0);
+        await expect(categorySelect).toHaveValue(String(categoryId));
+        created.push({ group: cfg.group, id_categoria: categoryId });
+
+        await parentDialog.getByRole('button', { name: /Cancelar|Cerrar/i }).last().click();
+        await expect(parentDialog).toBeHidden();
+      }
+    } finally {
+      for (const row of created.reverse()) {
+        await authenticatedApi(page, 'config_listas_categorias_categoria_eliminar', {
+          method: 'POST',
+          body: { grupo: row.group, id_categoria: row.id_categoria },
+        }).catch(() => null);
+      }
+    }
   });
 
   test('@crud @critical unidad + trabajador + servicio + composición: ciclo completo', async ({ page }) => {

@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import BuscadorSelector from "../components/BuscadorSelector";
-import { clampText, decimalText, integerText, money } from "../utils/serviciosFormUtils";
+import { clampText, decimalNumber, decimalText, integerText, money, moneyApiValue, moneyDecimalText, moneyInputValue } from "../utils/serviciosFormUtils";
 import useServiciosGlobalModal from "./useServiciosGlobalModal";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBriefcase, faCircleInfo, faDollarSign, faLayerGroup } from "@fortawesome/free-solid-svg-icons";
@@ -184,6 +184,7 @@ export default function ModalServicio({
   onClose,
   onSave,
   onToast,
+  onOpenAgregarCategoria,
 }) {
   const [form, setForm] = useState(EMPTY);
   const [articleRows, setArticleRows] = useState([]);
@@ -201,9 +202,9 @@ export default function ModalServicio({
       id_categoria: item?.id_categoria ? String(item.id_categoria) : "",
       id_unidad_cobro: item?.id_unidad_cobro ? String(item.id_unidad_cobro) : String(defaultUnit),
       descripcion: item?.descripcion || "",
-      costo_base: item ? String(item.costo_base ?? "") : "",
+      costo_base: item ? moneyInputValue(item.costo_base) : "",
       duracion_estimada_minutos: item?.duracion_estimada_minutos == null ? "" : String(item.duracion_estimada_minutos),
-      precio_venta: item ? String(item.precio_venta ?? "") : "",
+      precio_venta: item ? moneyInputValue(item.precio_venta) : "",
       iva_pct: String(item?.iva_pct ?? "0"),
     });
 
@@ -236,7 +237,7 @@ export default function ModalServicio({
       return sum + Number(row.horas_estimadas || 0) * costoAplicado;
     }, 0);
 
-    const otros = Number(form.costo_base || 0);
+    const otros = decimalNumber(form.costo_base);
     return {
       articulos: articulosCosto,
       manoObra,
@@ -246,7 +247,7 @@ export default function ModalServicio({
   }, [articleRows, workerRows, articulos, trabajadores, form.costo_base]);
 
   const saleSummary = useMemo(() => {
-    const netPrice = Number(form.precio_venta || 0);
+    const netPrice = decimalNumber(form.precio_venta);
     const profit = netPrice - cost.total;
 
     return {
@@ -265,16 +266,16 @@ export default function ModalServicio({
 
     if (!form.nombre.trim()) return onToast?.("error", "Completá el nombre del servicio.", 4200);
     if (!form.id_unidad_cobro) return onToast?.("error", "Seleccioná una unidad de cobro.", 4200);
-    if (Number(form.costo_base || 0) < 0) return onToast?.("error", "Otros costos no puede ser negativo.", 4200);
-    if (Number(form.precio_venta || 0) < 0) return onToast?.("error", "Indicá un precio de venta válido.", 4200);
+    if (decimalNumber(form.costo_base) < 0) return onToast?.("error", "Otros costos no puede ser negativo.", 4200);
+    if (decimalNumber(form.precio_venta) < 0) return onToast?.("error", "Indicá un precio de venta válido.", 4200);
     if (articleRows.some((r) => Number(r.cantidad) <= 0) || workerRows.some((r) => Number(r.horas_estimadas) <= 0)) {
       return onToast?.("error", "Todas las cantidades y horas deben ser mayores a cero.", 4200);
     }
 
     await onSave({
       ...form,
-      costo_base: form.costo_base === "" ? "0" : form.costo_base,
-      precio_venta: form.precio_venta === "" ? "0" : form.precio_venta,
+      costo_base: moneyApiValue(form.costo_base),
+      precio_venta: moneyApiValue(form.precio_venta),
       id_servicio: item?.id_servicio,
       id_categoria: form.id_categoria || null,
       duracion_estimada_minutos: form.duracion_estimada_minutos || null,
@@ -283,6 +284,11 @@ export default function ModalServicio({
         trabajadores: workerRows,
       },
     });
+  };
+
+  const categoria = (event) => {
+    if (event.target.value === "__ADD__") onOpenAgregarCategoria?.((id) => set("id_categoria", String(id || "")));
+    else set("id_categoria", event.target.value);
   };
 
   return createPortal(
@@ -312,7 +318,8 @@ export default function ModalServicio({
                   </label>
 
                   <label className="gm-field servicios-field--span-4">
-                    <select className="gm-input gm-select" value={form.id_categoria} onChange={(e) => set("id_categoria", e.target.value)}>
+                    <select className="gm-input gm-select" value={form.id_categoria} onChange={categoria}>
+                      <option value="__ADD__">+ AGREGAR CATEGORÍA</option>
                       <option value="">SIN CATEGORÍA</option>
                       {categorias.filter((c) => Number(c.activo) === 1).map((c) => (
                         <option key={c.id_categoria} value={c.id_categoria}>{c.nombre}</option>
@@ -359,11 +366,11 @@ export default function ModalServicio({
               <div className="gm-section-body servicios-service-panelBody">
                 <div className="servicios-form-grid servicios-service-priceFields">
                   <label className="gm-field servicios-field--span-6">
-                    <input className="gm-input" inputMode="decimal" value={form.costo_base} onChange={(e) => set("costo_base", decimalText(e.target.value, 6))} placeholder="0" />
+                    <input className="gm-input" inputMode="decimal" value={form.costo_base} onChange={(e) => set("costo_base", moneyDecimalText(e.target.value))} placeholder="0" />
                     <span className="gm-label gm-label--up">Otros costos</span>
                   </label>
                   <label className="gm-field servicios-field--span-6">
-                    <input className="gm-input" inputMode="decimal" value={form.precio_venta} onChange={(e) => set("precio_venta", decimalText(e.target.value, 2))} placeholder="0" />
+                    <input className="gm-input" inputMode="decimal" value={form.precio_venta} onChange={(e) => set("precio_venta", moneyDecimalText(e.target.value))} placeholder="0" />
                     <span className="gm-label gm-label--up">Precio de venta</span>
                   </label>
                   <label className="gm-field servicios-field--span-12">

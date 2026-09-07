@@ -177,9 +177,22 @@ async function deleteCurrentAccountInitialBalance(page, kind, name) {
   await expect(row).toBeVisible({ timeout: 30_000 });
   await row.click();
 
-  const dialog = page.getByRole('dialog').last();
+  const dialog = page
+    .getByRole('dialog')
+    .filter({ has: page.getByRole('heading', { name, exact: true }) })
+    .last();
   await expect(dialog).toBeVisible();
   await expect(dialog.getByRole('button', { name: /Eliminar saldo/i })).toBeVisible();
+
+  // El rediseño agrega una confirmación intermedia. El POST recién sale al
+  // confirmar "Eliminar" en ModalEliminar, no al pulsar "Eliminar saldo".
+  await dialog.getByRole('button', { name: /Eliminar saldo/i }).click();
+  const confirmDialog = page
+    .getByRole('dialog')
+    .filter({ has: page.getByRole('heading', { name: 'Eliminar saldo inicial', exact: true }) })
+    .last();
+  await expect(confirmDialog).toBeVisible();
+  await expect(confirmDialog).toContainText(name);
 
   const responsePromise = page.waitForResponse(
     (response) =>
@@ -187,12 +200,13 @@ async function deleteCurrentAccountInitialBalance(page, kind, name) {
       new URL(response.url()).searchParams.get('action') === 'config_saldos_iniciales_cc_eliminar',
     { timeout: 90_000 },
   );
-  await dialog.getByRole('button', { name: /Eliminar saldo/i }).click();
+  await confirmDialog.getByRole('button', { name: 'Eliminar', exact: true }).click();
   const response = await responsePromise;
   const body = await response.json().catch(() => ({}));
 
   expect(response.status(), JSON.stringify(body)).toBeLessThan(400);
   expect(body?.exito, body?.mensaje || 'El saldo inicial debe eliminarse').toBe(true);
+  await expect(confirmDialog).toBeHidden({ timeout: 30_000 });
   await expect(dialog).toBeHidden({ timeout: 30_000 });
 }
 
@@ -630,6 +644,7 @@ test('@flujo @saldos-iniciales aplica aperturas existentes al saldo pero no las 
 
 for (const kind of ['cliente', 'proveedor']) {
   test(`@cuentas-corrientes @saldos-iniciales ${kind}: alta, cambio deuda/favor, historial y eliminación`, async ({ page }) => {
+    test.setTimeout(2 * 60_000);
     await requireMutations(test, page);
     const name = uniqueName(`SALDO-${kind}`, 65);
     const type = kind === 'cliente' ? 'CLIENTE' : 'PROVEEDOR';

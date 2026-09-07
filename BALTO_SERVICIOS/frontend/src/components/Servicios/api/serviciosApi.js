@@ -138,6 +138,12 @@ export const historialServicioServicios = (id) => serviciosGet("servicios_servic
 export const guardarComposicionServicios = (id, articulos = [], trabajadores = []) =>
   serviciosPost("servicios_composicion_guardar", { id_servicio: id, composicion: { articulos, trabajadores } });
 
+// CATEGORÍAS (alta rápida desde los desplegables de Servicios)
+export const crearCategoriaServicioServicios = (body) => serviciosPost("servicios_categoria_crear", body);
+export const crearCategoriaMaterialServicios = (body) => serviciosPost("servicios_material_categoria_crear", body);
+export const crearCategoriaInsumoServicios = (body) => serviciosPost("servicios_insumo_categoria_crear", body);
+export const crearCategoriaProductoServicios = (body) => serviciosPost("servicios_articulos_categoria_crear", { ...(body || {}), tipo: "PRODUCTO" });
+
 // ARTÍCULOS
 export const listarArticulosServicios = (params = {}) => serviciosGet("servicios_articulos_listar", params);
 export const obtenerArticuloServicios = (id) => serviciosGet("servicios_articulo_obtener", { id_articulo: id });

@@ -19,8 +19,9 @@ import ModalProductoStock from "./modales/ModalProductoStock";
 import ModalServicio from "./modales/ModalServicio";
 import ModalTrabajador from "./modales/ModalTrabajador";
 import ModalUnidad from "./modales/ModalUnidad";
+import ModalAgregarCategoria from "./modales/ModalAgregarCategoria";
 import ModalHistorial from "./modales/ModalHistorial";
-import { money, upper } from "./utils/serviciosFormUtils";
+import { money, stock, upper } from "./utils/serviciosFormUtils";
 import { exportServiciosExcel, exportServiciosPdf } from "./utils/serviciosExport";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBan, faBoxOpen, faClockRotateLeft, faMagnifyingGlass, faPenToSquare, faPlus, faRotateLeft, faSliders, faTimes, faTrashCan } from "@fortawesome/free-solid-svg-icons";
@@ -82,6 +83,7 @@ export default function Servicios() {
   const [deleteModal, setDeleteModal] = useState({ kind: null, item: null });
   const [statusModal, setStatusModal] = useState({ kind: null, item: null });
   const [quickUnit, setQuickUnit] = useState({ open: false, apply: null });
+  const [quickCategory, setQuickCategory] = useState({ open: false, kind: null, apply: null });
   const [historyModal, setHistoryModal] = useState({ open: false, kind: null, item: null, rows: [], loading: false });
   const requestRef = useRef(0);
   const [tableWrapRef, hasTableScroll] = useTableScrollGutter();
@@ -281,6 +283,48 @@ export default function Servicios() {
     finally { setSaving(false); }
   };
 
+  const openQuickCategory = (kind, apply) => setQuickCategory({ open: true, kind, apply });
+
+  const saveQuickCategory = async (payload) => {
+    const kind = quickCategory.kind;
+    const config = {
+      servicios: [api.crearCategoriaServicioServicios, "categorias_servicios"],
+      materiales: [api.crearCategoriaMaterialServicios, "categorias_materiales"],
+      insumos: [api.crearCategoriaInsumoServicios, "categorias_insumos"],
+      productos_stock: [api.crearCategoriaProductoServicios, "categorias_productos"],
+    }[kind];
+    if (!config) return;
+
+    setSaving(true);
+    try {
+      const result = await config[0](payload);
+      const created = result?.categoria || result?.data?.categoria;
+      const createdId = result?.id_categoria || result?.data?.id_categoria || created?.id_categoria;
+
+      if (!createdId) throw new Error("No se pudo identificar la categoría creada.");
+
+      if (created) {
+        setData((prev) => {
+          const current = prev[config[1]] || [];
+          const next = current.some((row) => String(row.id_categoria) === String(createdId))
+            ? current
+            : [...current, created];
+          return { ...prev, [config[1]]: next };
+        });
+      } else {
+        await cargar();
+      }
+
+      quickCategory.apply?.(String(createdId));
+      setQuickCategory({ open: false, kind: null, apply: null });
+      notify("exito", "Categoría creada correctamente.");
+    } catch (error) {
+      notify("error", error?.message || "No se pudo crear la categoría.", 4800);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const openHistory = async (row, kindOverride = null) => {
     const kind = kindOverride || (tab === "servicios" ? "servicio" : tab === "stock" ? "stock" : RESOURCE_TABS.has(tab) ? "articulo" : "trabajador");
     setHistoryModal({ open: true, kind, item: row, rows: [], loading: true });
@@ -336,7 +380,7 @@ export default function Servicios() {
     hora: money(row.costo_hora),
     servicios: Number(row.cantidad_servicios || 0).toLocaleString("es-AR"),
     stock: Number(row.controla_stock ?? 1) === 1
-      ? `${Number(row.stock_actual || 0).toLocaleString("es-AR", { maximumFractionDigits: 6 })} ${row.unidad_simbolo || ""}`
+      ? `${stock(row.stock_actual)} ${row.unidad_simbolo || ""}`
       : "NO CONTROLADO",
   });
 
@@ -359,8 +403,8 @@ export default function Servicios() {
     const base = [{ label: "NOMBRE", value: (row) => row.nombre, width: 34 }];
     if (tab === "servicios") return { title: "BALTO_SERVICIOS", rows, columns: [...base, { label: "CATEGORÍA", value: (r) => r.categoria_nombre || "", width: 22 }, { label: "UNIDAD", value: (r) => r.unidad_simbolo || "", width: 14 }, { label: "DURACIÓN (MIN)", value: (r) => r.duracion_estimada_minutos ?? "", width: 16 }, { label: "OTROS COSTOS", value: (r) => r.costo_base || 0, width: 16 }, { label: "COSTO TOTAL", value: (r) => r.costo_estimado || 0, width: 16 }, { label: "PRECIO", value: (r) => r.precio_venta || 0, width: 16 }, { label: "ESTADO", value: (r) => Number(r.activo) === 1 ? "ACTIVO" : "BAJA", width: 12 }] };
     if (tab === "trabajadores") return { title: "BALTO_TRABAJADORES", rows, columns: [...base, { label: "DOCUMENTO", value: (r) => r.documento || "", width: 18 }, { label: "ROL", value: (r) => r.rol || "", width: 24 }, { label: "TIPO", value: (r) => r.tipo_trabajador || "", width: 16 }, { label: "MODALIDAD", value: (r) => r.modalidad_pago || "", width: 16 }, { label: "TARIFA", value: (r) => r.monto_periodo || 0, width: 16 }, { label: "HORAS EQUIV.", value: (r) => r.horas_periodo || 0, width: 16 }, { label: "COSTO/H", value: (r) => r.costo_hora || 0, width: 16 }, { label: "ESTADO", value: (r) => Number(r.activo) === 1 ? "ACTIVO" : "BAJA", width: 12 }] };
-    if (tab === "stock") return { title: "BALTO_STOCK_SERVICIOS", rows, columns: [...base, { label: "TIPO", value: (r) => r.tipo || "", width: 14 }, { label: "CATEGORÍA", value: (r) => r.categoria_nombre || "", width: 22 }, { label: "UNIDAD", value: (r) => r.unidad_simbolo || "", width: 14 }, { label: "STOCK", value: (r) => Number(r.controla_stock ?? 1) === 1 ? (r.stock_actual || 0) : "NO CONTROLADO", width: 18 }, { label: "COSTO", value: (r) => r.costo_unitario || 0, width: 16 }, { label: "ESTADO", value: (r) => Number(r.activo) === 1 ? "ACTIVO" : "BAJA", width: 12 }] };
-    return { title: tab === "materiales" ? "BALTO_MATERIALES" : "BALTO_INSUMOS", rows, columns: [...base, { label: "CATEGORÍA", value: (r) => r.categoria_nombre || "", width: 22 }, { label: "UNIDAD", value: (r) => r.unidad_simbolo || "", width: 14 }, { label: "STOCK", value: (r) => Number(r.controla_stock ?? 1) === 1 ? (r.stock_actual || 0) : "NO CONTROLADO", width: 18 }, { label: "COSTO", value: (r) => r.costo_unitario || 0, width: 16 }, { label: "PRECIO", value: (r) => r.precio_venta ?? "", width: 16 }, { label: "ESTADO", value: (r) => Number(r.activo) === 1 ? "ACTIVO" : "BAJA", width: 12 }] };
+    if (tab === "stock") return { title: "BALTO_STOCK_SERVICIOS", rows, columns: [...base, { label: "TIPO", value: (r) => r.tipo || "", width: 14 }, { label: "CATEGORÍA", value: (r) => r.categoria_nombre || "", width: 22 }, { label: "UNIDAD", value: (r) => r.unidad_simbolo || "", width: 14 }, { label: "STOCK", value: (r) => Number(r.controla_stock ?? 1) === 1 ? Number(Number(r.stock_actual || 0).toFixed(2)) : "NO CONTROLADO", width: 18 }, { label: "COSTO", value: (r) => r.costo_unitario || 0, width: 16 }, { label: "ESTADO", value: (r) => Number(r.activo) === 1 ? "ACTIVO" : "BAJA", width: 12 }] };
+    return { title: tab === "materiales" ? "BALTO_MATERIALES" : "BALTO_INSUMOS", rows, columns: [...base, { label: "CATEGORÍA", value: (r) => r.categoria_nombre || "", width: 22 }, { label: "UNIDAD", value: (r) => r.unidad_simbolo || "", width: 14 }, { label: "STOCK", value: (r) => Number(r.controla_stock ?? 1) === 1 ? Number(Number(r.stock_actual || 0).toFixed(2)) : "NO CONTROLADO", width: 18 }, { label: "COSTO", value: (r) => r.costo_unitario || 0, width: 16 }, { label: "PRECIO", value: (r) => r.precio_venta ?? "", width: 16 }, { label: "ESTADO", value: (r) => Number(r.activo) === 1 ? "ACTIVO" : "BAJA", width: 12 }] };
   }, [tab, rows]);
   const exportOptions = [
     { key: "excel", label: "Exportar Excel (.xlsx)", tipo: "excel", onClick: () => exportServiciosExcel(exportDefinition) },
@@ -476,7 +520,7 @@ export default function Servicios() {
         </div>
       </section>
 
-      <ModalServicio open={editModal.kind === "servicios"} item={editModal.item} categorias={data.categorias_servicios} unidades={data.unidades} articulos={data.articulos} trabajadores={data.trabajadores} saving={saving} onClose={() => setEditModal({ kind: null, item: null })} onSave={save} onToast={notify} />
+      <ModalServicio open={editModal.kind === "servicios"} item={editModal.item} categorias={data.categorias_servicios} unidades={data.unidades} articulos={data.articulos} trabajadores={data.trabajadores} saving={saving} onClose={() => setEditModal({ kind: null, item: null })} onSave={save} onToast={notify} onOpenAgregarCategoria={(apply) => openQuickCategory("servicios", apply)} />
       <ModalMaterial
         open={editModal.kind === "materiales"}
         item={editModal.item}
@@ -487,6 +531,7 @@ export default function Servicios() {
         onSave={save}
         onToast={notify}
         onOpenAgregarUnidad={(apply) => setQuickUnit({ open: true, apply })}
+        onOpenAgregarCategoria={(apply) => openQuickCategory("materiales", apply)}
       />
       <ModalInsumo
         open={editModal.kind === "insumos"}
@@ -498,6 +543,7 @@ export default function Servicios() {
         onSave={save}
         onToast={notify}
         onOpenAgregarUnidad={(apply) => setQuickUnit({ open: true, apply })}
+        onOpenAgregarCategoria={(apply) => openQuickCategory("insumos", apply)}
       />
       <ModalProductoStock
         open={editModal.kind === "productos_stock"}
@@ -509,10 +555,21 @@ export default function Servicios() {
         onSave={save}
         onToast={notify}
         onOpenAgregarUnidad={(apply) => setQuickUnit({ open: true, apply })}
+        onOpenAgregarCategoria={(apply) => openQuickCategory("productos_stock", apply)}
       />
       <ModalAjusteStock open={editModal.kind === "stock"} item={editModal.item} saving={saving} onClose={() => setEditModal({ kind: null, item: null })} onSave={adjustStock} onOpenHistory={(row) => openHistory(row, "stock")} onToast={notify} />
       <ModalTrabajador open={editModal.kind === "trabajadores"} item={editModal.item} saving={saving} onClose={() => setEditModal({ kind: null, item: null })} onSave={save} onToast={notify} />
       <ModalUnidad open={quickUnit.open} item={null} saving={saving} onClose={() => setQuickUnit({ open: false, apply: null })} onSave={saveQuickUnit} onToast={notify} />
+      <ModalAgregarCategoria
+        open={quickCategory.open}
+        saving={saving}
+        titulo="Agregar categoría"
+        subtitulo="Creá una categoría sin salir del formulario actual."
+        submitLabel="Agregar categoría"
+        onClose={() => setQuickCategory({ open: false, kind: null, apply: null })}
+        onSave={saveQuickCategory}
+        onToast={notify}
+      />
       <ModalHistorial open={historyModal.open} kind={historyModal.kind} item={historyModal.item} rows={historyModal.rows} loading={historyModal.loading} onClose={() => setHistoryModal({ open: false, kind: null, item: null, rows: [], loading: false })} />
 
       <ModalEliminar

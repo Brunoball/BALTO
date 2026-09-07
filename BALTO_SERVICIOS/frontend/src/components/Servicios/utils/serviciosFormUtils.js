@@ -29,6 +29,54 @@ export const decimalText = (value, maxDecimals = 2, maxIntegerDigits = 12) => {
 
 export const clampText = (value, maxLength) => upper(value).slice(0, maxLength);
 
+export const decimalNumber = (value) => {
+  if (typeof value === "number") return Number.isFinite(value) ? value : 0;
+  const normalized = String(value ?? "")
+    .trim()
+    .replace(/\s+/g, "")
+    .replace(",", ".");
+  const number = Number(normalized);
+  return Number.isFinite(number) ? number : 0;
+};
+
+export const moneyInputValue = (value, { empty = "" } = {}) => {
+  if (value == null || String(value).trim() === "") return empty;
+  return decimalNumber(value).toFixed(2).replace(".", ",");
+};
+
+export const moneyDecimalText = (value, maxIntegerDigits = 12) =>
+  decimalText(value, 2, maxIntegerDigits).replace(".", ",");
+
+export const moneyApiValue = (value, fallback = "0") => {
+  if (value == null || String(value).trim() === "") return fallback;
+  return decimalNumber(value).toFixed(2);
+};
+
+export const stockInputValue = (value, { empty = "" } = {}) => {
+  if (value == null || String(value).trim() === "") return empty;
+  const number = decimalNumber(value);
+  return Number.isInteger(number)
+    ? String(number)
+    : number.toFixed(2).replace(".", ",");
+};
+
+export const stockDecimalText = (value, maxIntegerDigits = 12) =>
+  decimalText(value, 2, maxIntegerDigits).replace(".", ",");
+
+export const stockApiValue = (value, fallback = "0.00") => {
+  if (value == null || String(value).trim() === "") return fallback;
+  return decimalNumber(value).toFixed(2);
+};
+
+export const stock = (value) => {
+  const number = decimalNumber(value);
+  const hasDecimals = !Number.isInteger(number);
+  return new Intl.NumberFormat("es-AR", {
+    minimumFractionDigits: hasDecimals ? 2 : 0,
+    maximumFractionDigits: 2,
+  }).format(number);
+};
+
 export const stockNumber = (value) => {
   const number = Number(value);
   if (!Number.isFinite(number)) return 0;
@@ -40,7 +88,7 @@ export const money = (value) =>
     style: "currency",
     currency: "ARS",
     maximumFractionDigits: 2,
-  }).format(Number(value || 0));
+  }).format(decimalNumber(value));
 
 export const integer = (value) =>
   new Intl.NumberFormat("es-AR", {
