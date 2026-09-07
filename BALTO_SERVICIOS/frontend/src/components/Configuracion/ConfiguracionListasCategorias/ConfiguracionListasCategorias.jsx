@@ -31,6 +31,7 @@ const TABS = [
   { value: "categorias_servicios", label: "Cat. servicios", grupo: "SERVICIO", singular: "categoría de servicio" },
   { value: "categorias_materiales", label: "Cat. materiales", grupo: "MATERIAL", singular: "categoría de material" },
   { value: "categorias_insumos", label: "Cat. insumos", grupo: "INSUMO", singular: "categoría de insumo" },
+  { value: "categorias_productos", label: "Cat. productos", grupo: "PRODUCTO", singular: "categoría de producto" },
 ];
 
 const ESTADOS = [
@@ -64,6 +65,7 @@ export default function ConfiguracionListasCategorias() {
     categorias_servicios: [],
     categorias_materiales: [],
     categorias_insumos: [],
+    categorias_productos: [],
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -80,7 +82,7 @@ export default function ConfiguracionListasCategorias() {
     setLoading(true);
     try {
       // Una sola ida al backend: evita repetir autenticación/bootstrap del tenant
-      // cinco veces cada vez que se abre esta pantalla.
+      // seis veces cada vez que se abre esta pantalla.
       const resumen = await configuracionApi.listarResumenListasCategoriasConfiguracion({ activo: "todos" });
 
       setData({
@@ -89,6 +91,7 @@ export default function ConfiguracionListasCategorias() {
         categorias_servicios: resumen?.categorias_servicios || [],
         categorias_materiales: resumen?.categorias_materiales || [],
         categorias_insumos: resumen?.categorias_insumos || [],
+        categorias_productos: resumen?.categorias_productos || [],
       });
     } catch (error) {
       notify("error", error?.message || "No se pudieron cargar las listas y categorías.", 5000);

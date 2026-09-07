@@ -1,3 +1,5 @@
+import { getResumenItemsMovimiento } from "../../Mov_Subsection/_shared/detalleMovimiento.js";
+
 export function formatDateISO(d) {
   if (!d) return "";
   const yyyy = d.getFullYear();
@@ -288,17 +290,7 @@ export function normalizeRowForInfoModal(row) {
 export function detallesLabel(row) {
   const depositoLabel = getDepositoChequeLabel(row);
   if (depositoLabel) return depositoLabel;
-
-  const cantidadDesdeCampo = Number(row?.cantidad_items || 0);
-  const cantidadDesdeItems = Array.isArray(row?.items_detalle)
-    ? row.items_detalle.length
-    : 0;
-  const cantidad =
-    cantidadDesdeCampo > 0 ? cantidadDesdeCampo : cantidadDesdeItems;
-
-  if (cantidad <= 0) return "SIN DETALLES";
-  if (cantidad === 1) return "1 DETALLE";
-  return `${cantidad} DETALLES`;
+  return getResumenItemsMovimiento(row);
 }
 
 export function numOrZero(v) {
