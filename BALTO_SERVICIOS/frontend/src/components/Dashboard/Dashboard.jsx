@@ -347,7 +347,7 @@ export default function Dashboard() {
         />
       )}
 
-      <div className="db">
+      <div className="db" data-balto-dashboard-ready={loadingDashboard ? "false" : "true"}>
         <header className="db-header db-header--dashboard">
           <div className="db-header__left">
             <h1 className="db-title">Panel Contable</h1>

@@ -48,7 +48,8 @@ export default function GlobalSessionGate({ children }) {
       storeValidatedUser(result.data?.usuario);
 
       const goToDashboard = consumeDashboardAfterLogin();
-      if (goToDashboard) {
+      const browserPath = String(window.location.pathname || "").replace(/\/+$/, "");
+      if (goToDashboard && !browserPath.endsWith("/panel/dashboard")) {
         navigate("/panel/dashboard", { replace: true });
       }
 

@@ -184,7 +184,7 @@ export default function App() {
           path="/"
           element={
             hasSession() ? (
-              <Navigate to="/panel" replace />
+              <Navigate to="/panel/dashboard" replace />
             ) : (
               <CentralAccessRedirect />
             )

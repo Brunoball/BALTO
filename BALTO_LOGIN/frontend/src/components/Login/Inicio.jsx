@@ -70,6 +70,14 @@ function resolverDestinoLogin(data) {
     }
   }
 
+  // El login siempre entra directamente al Dashboard. Evita cargar primero
+  // /BALTO_SERVICIOS/ (o /BALTO_COMERCIO/) y después volver a redirigir desde
+  // la SPA. Conservamos querystring/hash que pudiera devolver la MASTER.
+  const pathname = destino.pathname.replace(/\/+$/, "");
+  if (!pathname.endsWith("/panel/dashboard")) {
+    destino.pathname = `${pathname}/panel/dashboard`;
+  }
+
   return destino.href;
 }
 
@@ -117,6 +125,11 @@ export default function Inicio() {
     }
 
     setCargando(true);
+    let redireccionando = false;
+
+    // Mostramos el GIF en el mismo click. El overlay vive fuera de #root, por
+    // lo que React no puede desmontarlo mientras se prepara la navegación.
+    window.__BALTO_LOGIN_TRANSITION__?.show?.();
 
     try {
       const r = await loginGlobal(user, pass);
@@ -192,7 +205,10 @@ export default function Inicio() {
           sistema,
         });
 
-        if (retornoLocal) return;
+        if (retornoLocal) {
+          redireccionando = true;
+          return;
+        }
       } catch (localRedirectError) {
         clearGlobalSession();
         mostrarToast(
@@ -223,8 +239,12 @@ export default function Inicio() {
       }
 
       // En producción Login, Comercio y Servicios viven bajo balto.3devsnet.com.
-      // Ahí sí se realiza el redirect normal devuelto por la MASTER.
+      // El overlay NO se apaga antes del replace: el siguiente documento de
+      // BALTO reutiliza exactamente el mismo GIF y la transición queda limpia.
+      redireccionando = true;
+      window.__BALTO_LOGIN_TRANSITION__?.show?.();
       window.location.replace(destino);
+      return;
     } catch (err) {
       mostrarToast(
         "error",
@@ -233,7 +253,10 @@ export default function Inicio() {
           : "No se pudo conectar al servidor. Verificá tu conexión o la URL del API global."
       );
     } finally {
-      setCargando(false);
+      if (!redireccionando) {
+        setCargando(false);
+        window.__BALTO_LOGIN_TRANSITION__?.hide?.();
+      }
     }
   };
 
