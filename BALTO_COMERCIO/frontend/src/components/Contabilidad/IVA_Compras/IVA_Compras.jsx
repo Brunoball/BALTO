@@ -464,6 +464,9 @@ export default function IVACompras() {
               title={filteredRegistros.length ? "Exportar archivo" : "No hay datos para exportar"}
               opciones={exportOptions}
               align="right"
+              entityLabel="registros de IVA compras"
+              currentCount={filteredRegistros.length}
+              scopeEnabled={false}
             />
           </div>
         </div>

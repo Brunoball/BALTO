@@ -16,6 +16,7 @@ import Toast from "../../Global/Toast.jsx";
 import useTableScrollGutter from "../../Global/useTableScrollGutter.jsx";
 
 import BotonExportar from "../../Global/Boton_Exportar/BotonExportar.jsx";
+import { collectAllExportRows } from "../../Global/Boton_Exportar/exportScopeUtils.js";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -33,7 +34,7 @@ import {
 import * as XLSX from "xlsx";
 import { useListas } from "../../../context/ListasContext.jsx";
 import { useDateRange } from "../../../context/DateRangeContext.jsx";
-import { getResumenProductosMovimiento } from "../_shared/detalleMovimiento.js";
+import { getDetalleMovimiento, getResumenProductosMovimiento } from "../_shared/detalleMovimiento.js";
 import { apiGet, apiPostJson, getAuthInfo, buildHeadersGET, ordenesPagoFetch } from "./api/ordenesPagoApi.js";
 import useOrdenesPagoToast from "./hooks/useOrdenesPagoToast.js";
 import { moneyARS, safeText, normalizeSearchText, formatFechaDMY, startOfDay, parseRowFecha, dateToAPI, todayISO, formatDateUI, rowInDateRange, slugifySheetName, escapeCSV, downloadBlob } from "./utils/ordenesPagoUtils.js";
@@ -152,7 +153,7 @@ function rowMatchesQuery(row, query) {
 function buildExportRows(rows) {
   return (Array.isArray(rows) ? rows : []).map((r) => ({
     FECHA: safeText(formatFechaDMY(r?.fecha)),
-    DESCRIPCION: productosLabel(r),
+    DESCRIPCION: safeText(getDetalleMovimiento(r)),
     PROVEEDOR: safeText(r?.proveedor),
     ESTADO: getEstadoOrdenPagoLabel(r),
     MONTO: getSaldoPendienteRow(r),
@@ -529,100 +530,96 @@ export default function OrdenesPago() {
   /* =========================
      Export helpers
   ========================= */
-  const getExportData = useCallback(() => {
-    const dataToExport = buildExportRows(filteredRows);
+  const getExportData = useCallback((sourceRows = filteredRows) => {
+    const rowsToUse = Array.isArray(sourceRows) ? sourceRows : filteredRows;
+    const dataToExport = buildExportRows(rowsToUse);
     if (!dataToExport.length) throw new Error("No hay datos para exportar.");
     return dataToExport;
   }, [filteredRows]);
 
-  const exportToExcel = useCallback(() => {
-    const dataToExport = getExportData();
+  const exportToExcel = useCallback((sourceRows = filteredRows) => {
+    const dataToExport = getExportData(sourceRows);
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.json_to_sheet(dataToExport);
-
     const headers = Object.keys(dataToExport[0] || {});
     const montoColIndex = headers.findIndex((h) => h === "MONTO");
-
     if (montoColIndex >= 0 && ws["!ref"]) {
       const colLetter = XLSX.utils.encode_col(montoColIndex);
       const range = XLSX.utils.decode_range(ws["!ref"]);
-      for (let r = range.s.r + 1; r <= range.e.r; r++) {
+      for (let r = range.s.r + 1; r <= range.e.r; r += 1) {
         const cell = ws[`${colLetter}${r + 1}`];
         if (cell && typeof cell.v === "number") cell.z = '"$"#,##0.00';
       }
     }
-
     XLSX.utils.book_append_sheet(wb, ws, slugifySheetName("OrdenesPago_Pendientes"));
     XLSX.writeFile(wb, `${exportBaseName}.xlsx`);
-  }, [getExportData, exportBaseName]);
+  }, [filteredRows, getExportData, exportBaseName]);
 
-  const exportToCSV = useCallback(() => {
-    const dataToExport = getExportData();
+  const exportToCSV = useCallback((sourceRows = filteredRows) => {
+    const dataToExport = getExportData(sourceRows);
     const headers = Object.keys(dataToExport[0] || {});
-    const lines = [
-      headers.join(";"),
-      ...dataToExport.map((row) => headers.map((h) => escapeCSV(row[h])).join(";")),
-    ];
+    const lines = [headers.join(";"), ...dataToExport.map((row) => headers.map((h) => escapeCSV(row[h])).join(";"))];
     downloadBlob("\uFEFF" + lines.join("\n"), `${exportBaseName}.csv`, "text/csv;charset=utf-8;");
-  }, [getExportData, exportBaseName]);
+  }, [filteredRows, getExportData, exportBaseName]);
 
-  const exportToTXT = useCallback(() => {
-    const dataToExport = getExportData();
-    const lines = dataToExport.map((row, index) =>
-      [
-        `REGISTRO ${index + 1}`,
-        `FECHA: ${row.FECHA ?? ""}`,
-        `DESCRIPCION: ${row.DESCRIPCION ?? ""}`,
-        `PROVEEDOR: ${row.PROVEEDOR ?? ""}`,
-        `ESTADO: ${row.ESTADO ?? ""}`,
-        `MONTO: ${row.MONTO ?? ""}`,
-        "----------------------------------------",
-      ].join("\n")
-    );
+  const exportToTXT = useCallback((sourceRows = filteredRows) => {
+    const dataToExport = getExportData(sourceRows);
+    const lines = dataToExport.map((row, index) => [
+      `REGISTRO ${index + 1}`,
+      `FECHA: ${row.FECHA ?? ""}`,
+      `DESCRIPCION: ${row.DESCRIPCION ?? ""}`,
+      `PROVEEDOR: ${row.PROVEEDOR ?? ""}`,
+      `ESTADO: ${row.ESTADO ?? ""}`,
+      `MONTO: ${row.MONTO ?? ""}`,
+      "----------------------------------------",
+    ].join("\n"));
     downloadBlob(lines.join("\n"), `${exportBaseName}.txt`, "text/plain;charset=utf-8;");
-  }, [getExportData, exportBaseName]);
+  }, [filteredRows, getExportData, exportBaseName]);
 
-  const handleExport = useCallback(
-    async (type) => {
-      try {
-        if (hasMore) {
-          showToast(
-            "error",
-            'Todavía hay más registros sin cargar. Tocá "Cargar 100 más" hasta completar todo.');
-          return;
-        }
-
-        if (type === "excel") {
-          exportToExcel();
-          showToast("exito", "Excel exportado.");
-          return;
-        }
-
-        if (type === "csv") {
-          exportToCSV();
-          showToast("exito", "CSV exportado.");
-          return;
-        }
-
-        if (type === "txt") {
-          exportToTXT();
-          showToast("exito", "TXT exportado.");
-        }
-      } catch (e) {
-        showToast("error", e?.message || "Error exportando archivo.");
-      }
+  const loadAllRowsForExport = useCallback(() => collectAllExportRows({
+    fetchPage: async (offset) => {
+      const sp = new URLSearchParams();
+      sp.set("action", "ordenes_pago_listar");
+      const fromAPI = dateToAPI(dateRange?.from);
+      const toAPI = dateToAPI(dateRange?.to);
+      if (fromAPI) sp.set("fecha_desde", fromAPI);
+      if (toAPI) sp.set("fecha_hasta", toAPI);
+      if ((q || "").trim()) sp.set("q", (q || "").trim());
+      sp.set("limit", String(PAGE_SIZE));
+      sp.set("offset", String(offset));
+      const data = await apiGet(`${API}?${sp.toString()}`);
+      if (!data?.exito) throw new Error(data?.mensaje || "No se pudieron cargar todas las órdenes de pago.");
+      const raw = Array.isArray(data.movimientos) ? data.movimientos : Array.isArray(data.ordenes) ? data.ordenes : [];
+      const norm = raw.map((r) => ({ ...r, pagado: isPagadoRow(r) ? 1 : 0, saldo_pendiente: getSaldoPendienteRow(r) }));
+      const pageHasMore = data.has_more !== undefined ? !!data.has_more : norm.length > PAGE_SIZE;
+      const page = (pageHasMore ? norm.slice(0, PAGE_SIZE) : norm)
+        .filter((r) => isCompraCuentaCorriente(r))
+        .filter((r) => !isPagado(r))
+        .filter((r) => rowInDateRange(r, dateRange?.from, dateRange?.to))
+        .filter((r) => rowMatchesQuery(r, q));
+      const next = data.next_offset !== undefined && data.next_offset !== null ? Number(data.next_offset) : (pageHasMore ? offset + PAGE_SIZE : null);
+      return { rows: page, hasMore: pageHasMore, nextOffset: next };
     },
-    [hasMore, exportToExcel, exportToCSV, exportToTXT, showToast]
-  );
+    getRowKey: (row) => row?.id_movimiento,
+  }), [API, apiGet, dateRange?.from, dateRange?.to, q]);
 
-  const exportOptions = useMemo(
-    () => [
-      { key: "excel", label: "Exportar Excel (.xlsx)", icon: faFileExcel, onClick: () => handleExport("excel") },
-      { key: "csv", label: "Exportar CSV (.csv)", onClick: () => handleExport("csv") },
-      { key: "txt", label: "Exportar TXT (.txt)", onClick: () => handleExport("txt") },
-    ],
-    [handleExport]
-  );
+  const handleExport = useCallback(async (type, sourceRows) => {
+    try {
+      const rowsToExport = Array.isArray(sourceRows) ? sourceRows : filteredRows;
+      if (type === "excel") { exportToExcel(rowsToExport); showToast("exito", "Excel exportado."); return; }
+      if (type === "csv") { exportToCSV(rowsToExport); showToast("exito", "CSV exportado."); return; }
+      if (type === "txt") { exportToTXT(rowsToExport); showToast("exito", "TXT exportado."); }
+    } catch (e) {
+      showToast("error", e?.message || "Error exportando archivo.");
+      throw e;
+    }
+  }, [filteredRows, exportToExcel, exportToCSV, exportToTXT, showToast]);
+
+  const exportOptions = useMemo(() => [
+    { key: "excel", label: "Excel (.xlsx)", tipo: "excel", icon: faFileExcel, onClick: ({ rows: exportRows } = {}) => handleExport("excel", exportRows) },
+    { key: "csv", label: "CSV (.csv)", tipo: "csv", onClick: ({ rows: exportRows } = {}) => handleExport("csv", exportRows) },
+    { key: "txt", label: "TXT (.txt)", tipo: "txt", onClick: ({ rows: exportRows } = {}) => handleExport("txt", exportRows) },
+  ], [handleExport]);
 
   /* =========================
      Cargar 100 más
@@ -1137,6 +1134,13 @@ export default function OrdenesPago() {
               title={filteredRows.length ? "Exportar archivo" : "No hay datos para exportar"}
               opciones={exportOptions}
               align="right"
+              entityLabel="órdenes de pago"
+              currentRows={filteredRows}
+              allRows={hasMore ? null : filteredRows}
+              loadAllRows={loadAllRowsForExport}
+              currentCount={filteredRows.length}
+              allCount={hasMore ? null : filteredRows.length}
+              hasMore={hasMore}
             />
           </div>
         </div>

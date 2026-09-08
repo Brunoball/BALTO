@@ -249,7 +249,12 @@ export async function createPurchase(page, data) {
   if (/CONTADO/i.test(mode.text)) await fillPayment(dialog);
 
   await clickSaveAndWait(dialog, /Guardar compra/i, { timeout: 60_000 });
-  return searchRow(page, data.productName, /Buscar por descripción, proveedor/i);
+
+  // La fila de Compras no siempre imprime el nombre completo del producto. En una
+  // suite larga puede seguir visible una respuesta anterior y searchRow() terminar
+  // devolviendo esa primera fila. Rebuscamos por backend y cruzamos con el ID real
+  // del movimiento para devolver exactamente la compra recién creada.
+  return searchPurchaseRowStrict(page, data.productName);
 }
 
 export async function editPurchaseQuantity(page, productName, quantity) {

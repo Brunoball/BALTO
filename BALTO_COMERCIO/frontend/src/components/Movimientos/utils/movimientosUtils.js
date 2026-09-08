@@ -1,3 +1,5 @@
+import { getDetalleMovimiento } from "../../Mov_Subsection/_shared/detalleMovimiento.js";
+
 export function formatDateISO(d) {
   if (!d) return "";
   const yyyy = d.getFullYear();
@@ -409,14 +411,148 @@ export function slugifySheetName(name) {
 export function buildExportRows(rows) {
   return (Array.isArray(rows) ? rows : []).map((r) => {
     const total = pick(r, ["monto_total", "total", "importe_total", "monto", "importe"], 0);
+    const pagado = pick(r, ["total_pagado", "pagado_total", "cobrado_total"], 0);
+    const saldo = pick(r, ["saldo_pendiente", "saldo"], Math.max(0, numOrZero(total) - numOrZero(pagado)));
+    const detalleCompleto = getDetalleMovimiento(r);
     return {
+      ID: pick(r, ["id_movimiento", "id"], ""),
       FECHA: safeText(formatFechaDMY(pick(r, ["fecha", "fecha_movimiento", "created_at"], ""))),
       TIPO: getMovimientoTipoLabel(r),
-      DESCRIPCION: detallesLabel(r),
+      DETALLE: safeText(detalleCompleto),
       "CLIENTE/PROVEEDOR": clienteProveedorLabel(r),
-      MONTO: numOrZero(total),
+      CATEGORIA: safeText(pick(r, ["clasificacion_nombre", "categoria"], "")),
+      "TIPO DE PAGO": safeText(pick(r, ["tipo_venta", "pago_tipo_venta"], "")),
+      TOTAL: numOrZero(total),
+      PAGADO: numOrZero(pagado),
+      SALDO: numOrZero(saldo),
+      ESTADO: safeText(pick(r, ["estado_pago", "estado"], "")),
+      "FACTURA ARCA": normalizeFlag(r?.factura_emitida_en_arca) ? "SI" : "NO",
+      "NOTAS DE CREDITO": Number(r?.nota_credito_cantidad || 0),
     };
   });
+}
+
+function movementIdForExport(row) {
+  return pick(row, ["id_movimiento", "id"], "");
+}
+
+function arrayFromRow(row, keys) {
+  for (const key of keys) {
+    if (Array.isArray(row?.[key])) return row[key];
+  }
+  return [];
+}
+
+export function buildExportItemRows(rows) {
+  const out = [];
+  (Array.isArray(rows) ? rows : []).forEach((row) => {
+    const base = {
+      MOVIMIENTO_ID: movementIdForExport(row),
+      FECHA: safeText(formatFechaDMY(pick(row, ["fecha", "fecha_movimiento", "created_at"], ""))),
+      TIPO_MOVIMIENTO: getMovimientoTipoLabel(row),
+      "CLIENTE/PROVEEDOR": clienteProveedorLabel(row),
+    };
+
+    const items = arrayFromRow(row, ["items_detalle", "items", "productos"]);
+    items.forEach((item, index) => {
+      const tipoDb = safeText(pick(item, ["tipo_item_db", "tipo_item", "tipo"], "DETALLE"));
+      if (String(tipoDb).toUpperCase() === "CONSUMO_ARTICULO") return;
+      const nombre = pick(item, [
+        "nombre", "descripcion", "detalle", "stock_producto_nombre", "producto_nombre",
+        "detalle_nombre", "concepto", "servicio_nombre", "articulo_nombre"
+      ], "Item");
+      const variante = pick(item, [
+        "stock_variante_nombre", "variante_nombre", "nombre_variante",
+        "producto_variante_nombre", "stock_variante", "variante"
+      ], "");
+      const detalleItem = getDetalleMovimiento({ items_detalle: [item] });
+      out.push({
+        ...base,
+        RENGLON: index + 1,
+        TIPO_ITEM: tipoDb,
+        ITEM: safeText(detalleItem || nombre),
+        VARIANTE: safeText(variante),
+        SKU: safeText(pick(item, ["sku", "codigo", "stock_variante_sku"], "")),
+        CODIGO_BARRAS: safeText(pick(item, ["codigo_barras", "barcode", "ean", "gtin"], "")),
+        CANTIDAD: numOrZero(item?.cantidad),
+        PRECIO_UNITARIO: numOrZero(pick(item, ["precio", "precio_unitario"], 0)),
+        SUBTOTAL: numOrZero(item?.subtotal),
+        IVA_PCT: numOrZero(item?.iva_pct),
+        IVA_MONTO: numOrZero(item?.iva_monto),
+        TOTAL: numOrZero(item?.total),
+      });
+    });
+  });
+  return out;
+}
+
+export function buildExportPaymentRows(rows) {
+  const out = [];
+  (Array.isArray(rows) ? rows : []).forEach((row) => {
+    const medios = arrayFromRow(row, ["medios_pago_detalle", "medios_pago"]);
+    medios.forEach((medio, index) => {
+      out.push({
+        MOVIMIENTO_ID: movementIdForExport(row),
+        FECHA: safeText(formatFechaDMY(pick(row, ["fecha", "fecha_movimiento", "created_at"], ""))),
+        TIPO_MOVIMIENTO: getMovimientoTipoLabel(row),
+        RENGLON: index + 1,
+        MEDIO_PAGO: safeText(pick(medio, ["medio_pago_nombre", "medio_pago", "nombre"], "")),
+        MONTO: numOrZero(pick(medio, ["monto_aplicado", "monto"], 0)),
+        CHEQUE_TIPO: safeText(pick(medio, ["cheque_tipo", "tipo_cheque"], "")),
+        CHEQUE_NUMERO: safeText(pick(medio, ["numero_cheque", "cheque_numero"], "")),
+        CHEQUE_EMISOR: safeText(pick(medio, ["cheque_emisor", "emisor"], "")),
+        CHEQUE_FECHA_EMISION: safeText(formatFechaDMY(pick(medio, ["cheque_fecha_emision", "fecha_emision"], ""))),
+        CHEQUE_FECHA_PAGO: safeText(formatFechaDMY(pick(medio, ["cheque_fecha_pago", "fecha_pago"], ""))),
+      });
+    });
+  });
+  return out;
+}
+
+export function buildExportComprobanteRows(rows) {
+  const out = [];
+  (Array.isArray(rows) ? rows : []).forEach((row) => {
+    const docs = arrayFromRow(row, ["comprobantes_detalle", "comprobantes"]);
+    docs.forEach((doc, index) => {
+      out.push({
+        MOVIMIENTO_ID: movementIdForExport(row),
+        FECHA: safeText(formatFechaDMY(pick(row, ["fecha", "created_at"], ""))),
+        TIPO_MOVIMIENTO: getMovimientoTipoLabel(row),
+        RENGLON: index + 1,
+        COMPROBANTE: safeText(pick(doc, ["label", "tipo", "key"], "")),
+        ARCHIVO_ID: pick(doc, ["id_archivo", "id_comprobante"], ""),
+        EMITIDO_ARCA: normalizeFlag(doc?.emitido_en_arca) ? "SI" : "NO",
+        CAE: safeText(doc?.cae),
+        PUNTO_VENTA: safeText(pick(doc, ["pto_vta", "punto_venta"], "")),
+        NUMERO: safeText(pick(doc, ["cbte_nro", "numero"], "")),
+      });
+    });
+  });
+  return out;
+}
+
+export function buildExportNotaCreditoRows(rows) {
+  const out = [];
+  (Array.isArray(rows) ? rows : []).forEach((row) => {
+    const notas = arrayFromRow(row, ["notas_credito_detalle", "notas_credito"]);
+    notas.forEach((nota, index) => {
+      out.push({
+        MOVIMIENTO_ID: movementIdForExport(row),
+        FECHA_MOVIMIENTO: safeText(formatFechaDMY(pick(row, ["fecha", "created_at"], ""))),
+        TIPO_MOVIMIENTO: getMovimientoTipoLabel(row),
+        RENGLON: index + 1,
+        NOTA_CREDITO_ID: pick(nota, ["id_nota_credito", "id_movimiento_nc"], ""),
+        FECHA_NOTA: safeText(formatFechaDMY(pick(nota, ["fecha", "created_at"], ""))),
+        MODALIDAD: safeText(nota?.modalidad),
+        MOTIVO: safeText(nota?.motivo),
+        OBSERVACIONES: safeText(nota?.observaciones),
+        TOTAL: numOrZero(pick(nota, ["total_nota", "total"], 0)),
+        EMITIDA_ARCA: normalizeFlag(nota?.emitida_arca) ? "SI" : "NO",
+        CAE: safeText(pick(nota, ["comprobante_cae", "cae"], "")),
+      });
+    });
+  });
+  return out;
 }
 
 export function escapeCSV(value) {

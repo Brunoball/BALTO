@@ -14,6 +14,7 @@ import ModalModelosPresupuesto from "./modales/ModalModelosPresupuesto.jsx";
 import ModalEliminar from "../../Global/Modales/ModalEliminar.jsx";
 import ModalAsignarPresupuestoVenta from "./modales/ModalAsignarPresupuestoVenta.jsx";
 import BotonExportar from "../../Global/Boton_Exportar/BotonExportar.jsx";
+import { collectAllExportRows } from "../../Global/Boton_Exportar/exportScopeUtils.js";
 import ModalVerComprobante from "../../Global/Ver_Comprobantes/ModalVerComprobante.jsx";
 import ModalDetalleMovimiento from "../../Global/Modales/ModalDetalleMovimiento.jsx";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -1197,13 +1198,53 @@ export default function Presupuestos() {
   ], []);
   const gridCols = "0.85fr 2.05fr 1.35fr 1.15fr 1fr 1fr";
 
+  const loadAllRowsForExport = useCallback(async () => {
+    const fromAPI = dateToAPI(dateRange.from);
+    const toAPI = dateToAPI(dateRange.to);
+    const query = String(q || "").trim();
+
+    return collectAllExportRows({
+      getRowKey: (row) => getMovimientoId(row),
+      fetchPage: async (offset) => {
+        const p = new URLSearchParams({
+          action: "presupuestos_listar",
+          limit: String(PAGE_SIZE),
+          offset: String(offset),
+        });
+        if (dateRange.from) p.set("fecha_desde", fromAPI);
+        if (dateRange.to) p.set("fecha_hasta", toAPI);
+        if (query) p.set("q", query);
+
+        const data = await apiGet(`${API}?${p.toString()}`);
+        const raw = Array.isArray(data?.presupuestos)
+          ? data.presupuestos
+          : Array.isArray(data?.movimientos)
+            ? data.movimientos
+            : [];
+        const normalized = raw.slice(0, PAGE_SIZE).map(normalizePresupuestoRow);
+        const pageHasMore = raw.length > PAGE_SIZE || !!data?.has_more;
+        const backendNextOffset = Number(data?.next_offset);
+
+        return {
+          rows: normalized,
+          hasMore: pageHasMore,
+          nextOffset: Number.isFinite(backendNextOffset) && backendNextOffset > offset
+            ? backendNextOffset
+            : pageHasMore
+              ? offset + normalized.length
+              : null,
+        };
+      },
+    });
+  }, [API, apiGet, dateRange.from, dateRange.to, normalizePresupuestoRow, q]);
+
   const exportOptions = useMemo(() => [
     {
       key: "excel",
-      label: "Exportar Excel (.xlsx)",
+      label: "Excel (.xlsx)",
       icon: faFileExcel,
-      onClick: () => {
-        const exportRows = buildExportRows(filteredRows);
+      onClick: ({ rows: sourceRows } = {}) => {
+        const exportRows = buildExportRows(Array.isArray(sourceRows) ? sourceRows : filteredRows);
         const ws = XLSX.utils.json_to_sheet(exportRows);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, slugifySheetName("Presupuestos"));
@@ -1212,9 +1253,9 @@ export default function Presupuestos() {
     },
     {
       key: "csv",
-      label: "Exportar CSV (.csv)",
-      onClick: () => {
-        const exportRows = buildExportRows(filteredRows);
+      label: "CSV (.csv)",
+      onClick: ({ rows: sourceRows } = {}) => {
+        const exportRows = buildExportRows(Array.isArray(sourceRows) ? sourceRows : filteredRows);
         const headers = Object.keys(exportRows[0] || { FECHA: "", DESCRIPCION: "", CLIENTE: "", ESTADO: "", TOTAL: "" });
         const csvRows = exportRows.map((row) => headers.map((h) => escapeCSV(row[h])).join(";"));
         const csv = "\uFEFF" + [headers.join(";"), ...csvRows].join("\n");
@@ -1223,9 +1264,9 @@ export default function Presupuestos() {
     },
     {
       key: "txt",
-      label: "Exportar TXT (.txt)",
-      onClick: () => {
-        const exportRows = buildExportRows(filteredRows);
+      label: "TXT (.txt)",
+      onClick: ({ rows: sourceRows } = {}) => {
+        const exportRows = buildExportRows(Array.isArray(sourceRows) ? sourceRows : filteredRows);
         const lines = exportRows.map((row, index) => [
           `REGISTRO ${index + 1}`,
           `FECHA: ${row.FECHA ?? ""}`,
@@ -1295,7 +1336,7 @@ export default function Presupuestos() {
           </div>
 
           <div className="mov-card__actions" style={{ display: "flex", gap: 10, alignItems: "center" }}>
-            <BotonExportar className="doccom-exportBtn" disabled={loadingRows || filteredRows.length === 0} loading={false} label="Exportar" title={filteredRows.length ? "Exportar archivo" : "No hay datos para exportar"} opciones={exportOptions} align="right" />
+            <BotonExportar className="doccom-exportBtn" disabled={loadingRows || filteredRows.length === 0} loading={false} label="Exportar" title={filteredRows.length ? "Exportar archivo" : "No hay datos para exportar"} opciones={exportOptions} align="right" entityLabel="presupuestos" currentRows={filteredRows} allRows={hasMore ? null : filteredRows} loadAllRows={loadAllRowsForExport} currentCount={filteredRows.length} allCount={hasMore ? null : filteredRows.length} hasMore={hasMore} />
             <button type="button" className="mov-btn" onClick={() => setOpenModels(true)} title="Ver y administrar modelos de presupuesto">
               Modelos
             </button>

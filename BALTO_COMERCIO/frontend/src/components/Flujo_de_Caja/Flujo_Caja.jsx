@@ -344,6 +344,9 @@ export default function Flujo_Caja() {
               title={rows.length ? "Exportar archivo" : "No hay datos para exportar"}
               opciones={exportOptions}
               align="right"
+              entityLabel="registros de flujo"
+              currentCount={rows.length}
+              scopeEnabled={false}
             />
           </div>
         </div>

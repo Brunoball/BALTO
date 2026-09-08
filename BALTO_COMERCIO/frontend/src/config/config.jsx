@@ -24,3 +24,6 @@ export const APP_BASENAME = String(
 ).trim() || "/";
 
 export default BASE_URL;
+
+
+//npx playwright test --project=chromium --workers=1 --reporter=list

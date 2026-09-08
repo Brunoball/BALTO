@@ -14,7 +14,7 @@ function escapeRegExp(value) {
 function configRow(page, name) {
   const exact = new RegExp(`^${escapeRegExp(name)}$`, 'i');
   return page
-    .locator('.cfg-listas-table tbody tr')
+    .locator('.cfg-listas-gridBody [role="row"]')
     .filter({ has: page.locator('strong').filter({ hasText: exact }) })
     .first();
 }
@@ -158,7 +158,7 @@ test('@configuracion @critical listas y categorías: eliminar un Detalle usado c
   await openListsAndCategories(page);
   const row = configRow(page, usedDetail);
   await expect(row).toBeVisible({ timeout: 20_000 });
-  await expect(row.locator('td').nth(1)).not.toHaveText('0');
+  await expect(row.locator(':scope > [role="cell"]').nth(1)).not.toHaveText('0');
 
   await row.getByTitle('Eliminar').click();
   const dialog = page.getByRole('dialog', { name: /Eliminar detalle/i }).last();
@@ -310,8 +310,8 @@ test('@configuracion @critical @stock listas y categorías: categoría con produ
   await page.getByRole('button', { name: /Categorías de stock/i }).click();
   parentRow = configRow(page, parentName);
   await expect(parentRow).toBeVisible();
-  await expect(parentRow.locator('td').nth(2)).toHaveText('1');
-  await expect(parentRow.locator('td').nth(3)).toHaveText('1');
+  await expect(parentRow.locator(':scope > [role="cell"]').nth(2)).toHaveText('1');
+  await expect(parentRow.locator(':scope > [role="cell"]').nth(3)).toHaveText('1');
 
   await parentRow.getByTitle('Eliminar').click();
   dialog = page.getByRole('dialog', { name: /Eliminar categoría de stock/i }).last();

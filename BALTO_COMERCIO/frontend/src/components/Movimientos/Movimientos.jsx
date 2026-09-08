@@ -59,6 +59,10 @@ import {
   sortMovimientosRecientes,
   slugifySheetName,
   buildExportRows,
+  buildExportItemRows,
+  buildExportPaymentRows,
+  buildExportComprobanteRows,
+  buildExportNotaCreditoRows,
   escapeCSV,
   downloadBlob,
 } from "./utils/movimientosUtils";
@@ -622,24 +626,36 @@ export default function Movimientos() {
 
   const gridCols = useMemo(() => columns.map((c) => `${Number(c.fr) || 1}fr`).join(" "), [columns]);
 
-  const getExportData = useCallback(() => {
-    const dataToExport = buildExportRows(filteredRows);
-    if (!dataToExport.length) {
-      throw new Error("No hay datos para exportar.");
-    }
+  const getExportData = useCallback((sourceRows = filteredRows) => {
+    const rowsToUse = Array.isArray(sourceRows) ? sourceRows : filteredRows;
+    const dataToExport = buildExportRows(rowsToUse);
+    if (!dataToExport.length) throw new Error("No hay datos para exportar.");
     return dataToExport;
   }, [filteredRows]);
 
-  const exportToExcel = useCallback(() => {
-    const dataToExport = getExportData();
+  const exportToExcel = useCallback((sourceRows = filteredRows) => {
+    const rowsToUse = Array.isArray(sourceRows) ? sourceRows : filteredRows;
+    const dataToExport = getExportData(rowsToUse);
     const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.json_to_sheet(dataToExport);
-    XLSX.utils.book_append_sheet(wb, ws, slugifySheetName("Movimientos_Vista"));
-    XLSX.writeFile(wb, `${exportBaseName}.xlsx`);
-  }, [getExportData, exportBaseName]);
 
-  const exportToCSV = useCallback(() => {
-    const dataToExport = getExportData();
+    const addSheet = (name, data) => {
+      if (!Array.isArray(data) || data.length === 0) return;
+      const ws = XLSX.utils.json_to_sheet(data);
+      ws["!autofilter"] = ws["!ref"] ? { ref: ws["!ref"] } : undefined;
+      XLSX.utils.book_append_sheet(wb, ws, slugifySheetName(name));
+    };
+
+    addSheet("Movimientos", dataToExport);
+    addSheet("Detalle_items", buildExportItemRows(rowsToUse));
+    addSheet("Medios_pago", buildExportPaymentRows(rowsToUse));
+    addSheet("Comprobantes", buildExportComprobanteRows(rowsToUse));
+    addSheet("Notas_credito", buildExportNotaCreditoRows(rowsToUse));
+
+    XLSX.writeFile(wb, `${exportBaseName}.xlsx`);
+  }, [filteredRows, getExportData, exportBaseName]);
+
+  const exportToCSV = useCallback((sourceRows = filteredRows) => {
+    const dataToExport = getExportData(sourceRows);
     const headers = Object.keys(dataToExport[0] || {});
     const lines = [
       headers.join(";"),
@@ -647,60 +663,88 @@ export default function Movimientos() {
     ];
     const csvContent = "\uFEFF" + lines.join("\n");
     downloadBlob(csvContent, `${exportBaseName}.csv`, "text/csv;charset=utf-8;");
-  }, [getExportData, exportBaseName]);
+  }, [filteredRows, getExportData, exportBaseName]);
 
-  const exportToTXT = useCallback(() => {
-    const dataToExport = getExportData();
+  const exportToTXT = useCallback((sourceRows = filteredRows) => {
+    const rowsToUse = Array.isArray(sourceRows) ? sourceRows : filteredRows;
+    const dataToExport = getExportData(rowsToUse);
+    const itemRows = buildExportItemRows(rowsToUse);
+    const paymentRows = buildExportPaymentRows(rowsToUse);
 
     const lines = dataToExport.map((row, index) => {
+      const id = row.ID;
+      const items = itemRows.filter((item) => String(item.MOVIMIENTO_ID) === String(id));
+      const payments = paymentRows.filter((item) => String(item.MOVIMIENTO_ID) === String(id));
       return [
-        `REGISTRO ${index + 1}`,
+        `REGISTRO ${index + 1} - MOVIMIENTO #${id}`,
         `FECHA: ${row.FECHA ?? ""}`,
         `TIPO: ${row.TIPO ?? ""}`,
-        `DESCRIPCION: ${row.DESCRIPCION ?? ""}`,
+        `DETALLE: ${row.DETALLE ?? ""}`,
         `CLIENTE/PROVEEDOR: ${row["CLIENTE/PROVEEDOR"] ?? ""}`,
-        `MONTO: ${row.MONTO ?? ""}`,
-        "----------------------------------------",
+        `TOTAL: ${row.TOTAL ?? ""}`,
+        `PAGADO: ${row.PAGADO ?? ""}`,
+        `SALDO: ${row.SALDO ?? ""}`,
+        items.length ? "ITEMS:" : "ITEMS: -",
+        ...items.map((item) => `  - ${item.CANTIDAD} x ${item.ITEM} | P.Unit: ${item.PRECIO_UNITARIO} | IVA: ${item.IVA_PCT}% | Total: ${item.TOTAL}`),
+        payments.length ? "MEDIOS DE PAGO:" : "MEDIOS DE PAGO: -",
+        ...payments.map((medio) => `  - ${medio.MEDIO_PAGO}: ${medio.MONTO}${medio.CHEQUE_NUMERO !== "-" ? ` | Cheque ${medio.CHEQUE_NUMERO}` : ""}`),
+        "------------------------------------------------------------",
       ].join("\n");
     });
 
-    const txtContent = lines.join("\n");
-    downloadBlob(txtContent, `${exportBaseName}.txt`, "text/plain;charset=utf-8;");
-  }, [getExportData, exportBaseName]);
+    downloadBlob(lines.join("\n"), `${exportBaseName}.txt`, "text/plain;charset=utf-8;");
+  }, [filteredRows, getExportData, exportBaseName]);
+
+  const loadAllRowsForExport = useCallback(async () => {
+    if (!dateRange?.from) return [];
+    const fechaDesde = formatDateISO(dateRange.from);
+    const fechaHasta = formatDateISO(dateRange.to || dateRange.from);
+    const qLocal = (q || "").trim();
+    let offset = 0;
+    let guard = 0;
+    const all = [];
+    const seen = new Set();
+
+    while (guard < 5000) {
+      const data = await listarMovimientos({
+        fechaDesde,
+        fechaHasta,
+        q: qLocal,
+        limit: PAGE_SIZE,
+        offset,
+        includeTotal: 0,
+      });
+      if (!data?.exito) throw new Error(data?.mensaje || "No se pudieron cargar todos los movimientos.");
+      const page = Array.isArray(data.movimientos) ? data.movimientos : [];
+      for (const row of page) {
+        const key = String(row?.id_movimiento ?? row?.id ?? `${offset}-${all.length}`);
+        if (seen.has(key)) continue;
+        seen.add(key);
+        all.push(row);
+      }
+      guard += 1;
+      if (!data.has_more) break;
+      const next = data.next_offset !== undefined && data.next_offset !== null ? Number(data.next_offset) : offset + page.length;
+      if (!Number.isFinite(next) || next <= offset || page.length === 0) break;
+      offset = next;
+    }
+
+    return sortMovimientosRecientes(all);
+  }, [dateRange, q]);
 
   const handleExport = useCallback(
-    async (type) => {
+    async (type, sourceRows) => {
       try {
-        if (hasMore) {
-          showToast(
-            "error",
-            'Todavía hay más registros sin cargar. Tocá "Cargar 100 más" hasta completar todo.',
-            5200
-          );
-          return;
-        }
-
-        if (type === "excel") {
-          exportToExcel();
-          showToast("exito", "Excel exportado.", 2200);
-          return;
-        }
-
-        if (type === "csv") {
-          exportToCSV();
-          showToast("exito", "CSV exportado.", 2200);
-          return;
-        }
-
-        if (type === "txt") {
-          exportToTXT();
-          showToast("exito", "TXT exportado.", 2200);
-        }
+        const rowsToExport = Array.isArray(sourceRows) ? sourceRows : filteredRows;
+        if (type === "excel") { exportToExcel(rowsToExport); showToast("exito", "Excel exportado con detalle completo.", 2600); return; }
+        if (type === "csv") { exportToCSV(rowsToExport); showToast("exito", "CSV exportado.", 2200); return; }
+        if (type === "txt") { exportToTXT(rowsToExport); showToast("exito", "TXT exportado con detalle completo.", 2600); }
       } catch (e) {
         showToast("error", e?.message || "Error exportando archivo.", 3500);
+        throw e;
       }
     },
-    [hasMore, exportToExcel, exportToCSV, exportToTXT, showToast]
+    [filteredRows, exportToExcel, exportToCSV, exportToTXT, showToast]
   );
 
   const softLoading = loadingRows && showSkeleton;
@@ -751,22 +795,9 @@ export default function Movimientos() {
 
   const exportOptions = useMemo(
     () => [
-      {
-        key: "excel",
-        label: "Exportar Excel (.xlsx)",
-        icon: faFileExcel,
-        onClick: () => handleExport("excel"),
-      },
-      {
-        key: "csv",
-        label: "Exportar CSV (.csv)",
-        onClick: () => handleExport("csv"),
-      },
-      {
-        key: "txt",
-        label: "Exportar TXT (.txt)",
-        onClick: () => handleExport("txt"),
-      },
+      { key: "excel", label: "Excel (.xlsx)", tipo: "excel", description: "Incluye resumen y hojas separadas con items, medios de pago, comprobantes y notas de crédito.", icon: faFileExcel, onClick: ({ rows: exportRows } = {}) => handleExport("excel", exportRows) },
+      { key: "csv", label: "CSV (.csv)", tipo: "csv", description: "Exporta la información general con el detalle textual completo.", onClick: ({ rows: exportRows } = {}) => handleExport("csv", exportRows) },
+      { key: "txt", label: "TXT (.txt)", tipo: "txt", description: "Incluye cada movimiento con sus items y medios de pago en bloques legibles.", onClick: ({ rows: exportRows } = {}) => handleExport("txt", exportRows) },
     ],
     [handleExport]
   );
@@ -912,6 +943,13 @@ export default function Movimientos() {
                     title={filteredRows.length ? "Exportar archivo" : "No hay datos para exportar"}
                     opciones={exportOptions}
                     align="right"
+                    entityLabel="movimientos"
+                    currentRows={filteredRows}
+                    allRows={hasMore ? null : filteredRows}
+                    loadAllRows={loadAllRowsForExport}
+                    currentCount={filteredRows.length}
+                    allCount={hasMore ? null : filteredRows.length}
+                    hasMore={hasMore}
                   />
                 </div>
               </div>
@@ -926,6 +964,13 @@ export default function Movimientos() {
               title={filteredRows.length ? "Exportar archivo" : "No hay datos para exportar"}
               opciones={exportOptions}
               align="right"
+              entityLabel="movimientos"
+              currentRows={filteredRows}
+              allRows={hasMore ? null : filteredRows}
+              loadAllRows={loadAllRowsForExport}
+              currentCount={filteredRows.length}
+              allCount={hasMore ? null : filteredRows.length}
+              hasMore={hasMore}
             />
           </div>
         </div>
