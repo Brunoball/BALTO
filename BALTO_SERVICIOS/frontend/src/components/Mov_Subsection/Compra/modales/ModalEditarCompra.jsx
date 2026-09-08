@@ -10,7 +10,6 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faFileInvoiceDollar,
   faUpload,
-  faTrashCan,
   faEye,
   faXmark,
   faMoneyCheckDollar,
@@ -1019,6 +1018,7 @@ function buildFormFromRowCompra(row, fixedLocal) {
 
   return {
     id_movimiento: safeNumber(r.id_movimiento ?? r.id ?? r.id_compra) || null,
+    id_item: Number(item?.id_item || 0) > 0 ? Number(item.id_item) : null,
     fecha: String(r.fecha || "").slice(0, 10) || "",
     id_tipo_venta: nOrNull(r.id_tipo_venta) || fallbackTipoVenta,
     id_tipo_movimiento: fixedLocal?.idEntrada ?? NULL_OPTION,
@@ -1038,6 +1038,67 @@ function buildFormFromRowCompra(row, fixedLocal) {
   };
 }
 
+
+function buildExtraItemsFromCompra(row) {
+  return getCompraItemsDetalle(row).slice(1).map((item) => {
+    const idArticulo = Number(
+      item?.id_articulo ??
+      item?.id_stock_producto ??
+      item?.idStockProducto ??
+      item?.stock_producto_id ??
+      0
+    );
+    const idDetalle = Number(item?.id_detalle ?? item?.idDetalle ?? 0);
+    const cantidad = Math.max(0, safeNumber(item?.cantidad));
+    const precio = Math.max(0, safeNumber(item?.precio));
+    const ivaPct = Math.max(0, safeNumber(item?.iva_pct ?? item?.ivaPct));
+    return {
+      client_id: `item-${Number(item?.id_item || 0) || uid()}`,
+      id_item: Number(item?.id_item || 0) > 0 ? Number(item.id_item) : null,
+      tipo_item: String(item?.tipo_item_db || item?.tipo_item || (idArticulo > 0 ? "ARTICULO" : idDetalle > 0 ? "DETALLE" : "MANUAL")).toUpperCase(),
+      id_articulo: idArticulo > 0 ? String(idArticulo) : NULL_OPTION,
+      id_detalle: idDetalle > 0 ? String(idDetalle) : NULL_OPTION,
+      descripcion: String(item?.descripcion ?? item?.detalle ?? item?.nombre ?? "").trim(),
+      cantidad,
+      precio,
+      iva_pct: ivaPct,
+    };
+  });
+}
+
+function compraItemPayloadDesdeEstado(item) {
+  const idArticulo = Number(item?.id_articulo ?? item?.id_stock_producto ?? 0);
+  const idDetalle = Number(item?.id_detalle ?? 0);
+  const cantidad = Math.max(0, safeNumber(item?.cantidad));
+  const precio = Math.max(0, safeNumber(item?.precio));
+  const ivaPct = Math.max(0, safeNumber(item?.iva_pct ?? item?.ivaPct));
+  const t = calcItemTotals(cantidad, precio, ivaPct);
+  const tipoRaw = String(item?.tipo_item || "").toUpperCase();
+  const tipoItem = idArticulo > 0 ? "ARTICULO" : (idDetalle > 0 ? "DETALLE" : (tipoRaw || "MANUAL"));
+
+  return {
+    ...(Number(item?.id_item || 0) > 0 ? { id_item: Number(item.id_item) } : {}),
+    tipo_item: tipoItem,
+    id_articulo: idArticulo > 0 ? idArticulo : null,
+    id_stock_producto: idArticulo > 0 ? idArticulo : null,
+    id_stock_variante: null,
+    id_detalle: idArticulo > 0 ? null : (idDetalle > 0 ? idDetalle : null),
+    descripcion: String(item?.descripcion ?? "").trim(),
+    cantidad: Math.round(cantidad * 1000000) / 1000000,
+    precio: Math.round(precio * 100) / 100,
+    iva_pct: Math.round(ivaPct * 100) / 100,
+    subtotal: t.subtotal,
+    iva_monto: t.iva_monto,
+    total: t.total,
+  };
+}
+
+function idsItemsOriginalesCompra(row) {
+  return getCompraItemsDetalle(row)
+    .map((item) => Number(item?.id_item || 0))
+    .filter((id) => Number.isFinite(id) && id > 0);
+}
+
 function compraPayloadCoincideConRow(payload, row) {
   if (!payload || !row) return false;
   const original = buildFormFromRowCompra(row, {});
@@ -1047,15 +1108,47 @@ function compraPayloadCoincideConRow(payload, row) {
     return Number.isFinite(n) && n > 0 ? n : 0;
   };
   const moneyEq = (a, b, tolerance = 0.01) => Math.abs(safeNumber(a) - safeNumber(b)) <= tolerance;
-  const qtyEq = (a, b) => Math.abs(safeNumber(a) - safeNumber(b)) <= 0.001;
+  const qtyEq = (a, b) => Math.abs(safeNumber(a) - safeNumber(b)) <= 0.000001;
 
+  if (
+    String(payload.fecha || "").slice(0, 10) !== String(original.fecha || "").slice(0, 10) ||
+    id(payload.id_tipo_venta) !== id(original.id_tipo_venta) ||
+    id(payload.id_proveedor) !== id(original.id_proveedor)
+  ) {
+    return false;
+  }
+
+  const originales = getCompraItemsDetalle(row);
+  const enviados = Array.isArray(payload.items) ? payload.items : [];
+  if (enviados.length) {
+    if (enviados.length !== originales.length) return false;
+
+    for (let i = 0; i < originales.length; i += 1) {
+      const a = originales[i] || {};
+      const b = enviados[i] || {};
+      const aArticulo = id(a.id_articulo ?? a.id_stock_producto);
+      const bArticulo = id(b.id_articulo ?? b.id_stock_producto);
+      const aDetalle = id(a.id_detalle);
+      const bDetalle = id(b.id_detalle);
+
+      if (
+        id(a.id_item) !== id(b.id_item) ||
+        aArticulo !== bArticulo ||
+        aDetalle !== bDetalle ||
+        !qtyEq(a.cantidad, b.cantidad) ||
+        !moneyEq(a.precio, b.precio) ||
+        !moneyEq(a.iva_pct, b.iva_pct)
+      ) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  // Compatibilidad con payloads legacy de una sola fila.
   const payloadProductoId = id(payload.id_stock_producto ?? payload.id_detalle);
   const payloadVarianteId = id(payload.id_stock_variante);
-
   return (
-    String(payload.fecha || "").slice(0, 10) === String(original.fecha || "").slice(0, 10) &&
-    id(payload.id_tipo_venta) === id(original.id_tipo_venta) &&
-    id(payload.id_proveedor) === id(original.id_proveedor) &&
     payloadProductoId === id(original.id_detalle) &&
     payloadVarianteId === id(original.id_stock_variante) &&
     qtyEq(payload.cantidad, original.cantidad) &&
@@ -1066,6 +1159,7 @@ function compraPayloadCoincideConRow(payload, row) {
     moneyEq(payload.total ?? payload.monto_total, original.total)
   );
 }
+
 function buildMediosFromRowCompra(row, mediosPagoList) {
   const list = Array.isArray(row?.medios_pago_detalle) ? row.medios_pago_detalle : [];
   const out = [];
@@ -1325,6 +1419,8 @@ export default function ModalEditarCompra({
   const [proveedorFocus, setProveedorFocus] = useState(false);
   const [detalleInput, setDetalleInput] = useState("");
   const [detalleFocus, setDetalleFocus] = useState(false);
+  const [extraItems, setExtraItems] = useState(() => buildExtraItemsFromCompra(row));
+  const [deletedItemIds, setDeletedItemIds] = useState([]);
   const [mediosFilas, setMediosFilas] = useState(() => [buildEmptyMedioPago()]);
 
   const [archivoNuevo, setArchivoNuevo] = useState(null);
@@ -1358,7 +1454,7 @@ export default function ModalEditarCompra({
       ro.disconnect();
       window.removeEventListener("resize", check);
     };
-  }, [open, form]);
+  }, [open, form, extraItems]);
 
   const tipoVentaObj = useMemo(
     () => getTipoVentaObj(tiposVentaUI, form.id_tipo_venta),
@@ -1366,11 +1462,20 @@ export default function ModalEditarCompra({
   );
   const esContado = useMemo(() => isTipoVentaContado(tipoVentaObj), [tipoVentaObj]);
 
-  const resumen = useMemo(() => ({
-    subtotal: safeNumber(form.subtotal),
-    iva: safeNumber(form.iva_monto),
-    total: safeNumber(form.total),
-  }), [form.subtotal, form.iva_monto, form.total]);
+  const resumen = useMemo(() => {
+    const first = calcItemTotals(form.cantidad, form.precio, form.iva_pct);
+    return extraItems.reduce(
+      (acc, item) => {
+        const t = calcItemTotals(item.cantidad, item.precio, item.iva_pct);
+        return {
+          subtotal: Math.round((acc.subtotal + t.subtotal) * 100) / 100,
+          iva: Math.round((acc.iva + t.iva_monto) * 100) / 100,
+          total: Math.round((acc.total + t.total) * 100) / 100,
+        };
+      },
+      { subtotal: first.subtotal, iva: first.iva_monto, total: first.total }
+    );
+  }, [form.cantidad, form.precio, form.iva_pct, extraItems]);
 
   const sumaMediosPago = useMemo(
     () => mediosFilas.reduce((acc, mp) => acc + safeNumber(mp.monto), 0),
@@ -1568,6 +1673,8 @@ export default function ModalEditarCompra({
     const fixedLocal = { idEntrada: findIdByIncludes(merged.tiposMovimiento, "entrada") };
     const built = buildFormFromRowCompra(rowRef.current, fixedLocal);
     setForm(built);
+    setExtraItems(buildExtraItemsFromCompra(rowRef.current));
+    setDeletedItemIds([]);
     setProveedorInput(
       nameById(merged.proveedores, built.id_proveedor) || String(rowRef.current?.proveedor || "").trim()
     );
@@ -1663,6 +1770,76 @@ export default function ModalEditarCompra({
   const onCantidadChange = useCallback((v) => recalcFromItem({ cantidad: v === "" ? "" : Number(v) }), [recalcFromItem]);
   const onPrecioChange = useCallback((v) => recalcFromItem({ precio: v === "" ? "" : Number(v) }), [recalcFromItem]);
   const onIvaPctChange = useCallback((v) => recalcFromItem({ iva_pct: v === "" ? "" : Number(v) }), [recalcFromItem]);
+
+  const updateExtraItem = useCallback((clientId, patch) => {
+    setExtraItems((prev) => prev.map((item) => (
+      item.client_id === clientId ? { ...item, ...patch } : item
+    )));
+  }, []);
+
+  const selectExtraArticulo = useCallback((clientId, rawId) => {
+    const idArticulo = Number(rawId || 0);
+    if (!(idArticulo > 0)) {
+      updateExtraItem(clientId, {
+        id_articulo: NULL_OPTION,
+        id_detalle: NULL_OPTION,
+        descripcion: "",
+      });
+      return;
+    }
+
+    const articulo = (Array.isArray(safeLists.detalles) ? safeLists.detalles : []).find(
+      (item) => Number(getStockProductoIdFromSelection(item) || getGenericId(item) || 0) === idArticulo
+    );
+    const precioSugerido = Math.max(
+      0,
+      safeNumber(
+        articulo?.precio_costo ??
+        articulo?.costo_unitario ??
+        articulo?.precio ??
+        articulo?.precio_venta ??
+        0
+      )
+    );
+    const ivaSugerido = Math.max(0, safeNumber(articulo?.iva_pct ?? articulo?.ivaPct ?? 0));
+
+    updateExtraItem(clientId, {
+      tipo_item: "ARTICULO",
+      id_articulo: String(idArticulo),
+      id_detalle: NULL_OPTION,
+      descripcion: String(articulo?.nombre ?? articulo?.label ?? "").trim(),
+      ...(precioSugerido > 0 ? { precio: precioSugerido } : {}),
+      iva_pct: ivaSugerido,
+    });
+  }, [safeLists.detalles, updateExtraItem]);
+
+  const addExtraItem = useCallback(() => {
+    setExtraItems((prev) => [
+      ...prev,
+      {
+        client_id: `nuevo-${uid()}`,
+        id_item: null,
+        tipo_item: "ARTICULO",
+        id_articulo: NULL_OPTION,
+        id_detalle: NULL_OPTION,
+        descripcion: "",
+        cantidad: 1,
+        precio: 0,
+        iva_pct: 0,
+      },
+    ]);
+  }, []);
+
+  const removeExtraItem = useCallback((clientId) => {
+    const target = extraItems.find((item) => item.client_id === clientId);
+    const persistedId = Number(target?.id_item || 0);
+    if (persistedId > 0) {
+      setDeletedItemIds((ids) => (
+        ids.includes(persistedId) ? ids : [...ids, persistedId]
+      ));
+    }
+    setExtraItems((prev) => prev.filter((item) => item.client_id !== clientId));
+  }, [extraItems]);
 
   const findExactCatalogItem = useCallback((arr, value) => {
     const q = normalizeText(value);
@@ -1764,8 +1941,6 @@ export default function ModalEditarCompra({
     const cantidad = Math.max(0, safeNumber(form.cantidad));
     const precio = Math.max(0, safeNumber(form.precio));
     const iva_pct = Math.max(0, safeNumber(form.iva_pct));
-    const t = calcItemTotals(cantidad, precio, iva_pct);
-
     const mediosPagoPayload = esContado
       ? mediosFilas.flatMap((mp) => {
           const idMp = Number(mp.id_medio_pago || 0);
@@ -1791,6 +1966,20 @@ export default function ModalEditarCompra({
         })
       : [];
 
+    const firstItem = compraItemPayloadDesdeEstado({
+      id_item: form.id_item,
+      tipo_item: "ARTICULO",
+      id_articulo: toNullableId(form.id_detalle),
+      descripcion: detalleInput,
+      cantidad,
+      precio,
+      iva_pct,
+    });
+    const itemsPayload = [
+      firstItem,
+      ...extraItems.map(compraItemPayloadDesdeEstado),
+    ];
+
     return {
       id_movimiento: form.id_movimiento,
       fecha: form.fecha,
@@ -1804,16 +1993,30 @@ export default function ModalEditarCompra({
       cantidad: Math.round(cantidad * 1000000) / 1000000,
       precio: Math.round(precio * 100) / 100,
       iva_pct: Math.round(iva_pct * 100) / 100,
-      subtotal: t.subtotal,
-      iva_monto: t.iva_monto,
-      total: t.total,
-      monto_total: Math.max(0, Math.round(t.total * 100) / 100),
+      subtotal: resumen.subtotal,
+      iva_monto: resumen.iva,
+      total: resumen.total,
+      monto_total: resumen.total,
+      items: itemsPayload,
+      ids_items_originales: idsItemsOriginalesCompra(rowRef.current),
+      ids_items_eliminados: deletedItemIds,
       accion_compra: esContado ? "pagar" : "guardar",
       es_pagada: esContado,
       id_medio_pago: null,
       medios_pago: mediosPagoPayload,
     };
-  }, [form, esContado, mediosFilas, safeLists.mediosPago]);
+  }, [
+    form,
+    detalleInput,
+    extraItems,
+    deletedItemIds,
+    resumen.subtotal,
+    resumen.iva,
+    resumen.total,
+    esContado,
+    mediosFilas,
+    safeLists.mediosPago,
+  ]);
 
   const eliminarComprobanteActual = useCallback(async () => {
     if (!form.id_movimiento) throw new Error("Falta id_movimiento para eliminar el comprobante.");
@@ -2038,6 +2241,21 @@ export default function ModalEditarCompra({
       if (!(cantidad > 0)) throw new Error("La cantidad debe ser mayor a 0.");
       if (!(precio > 0)) throw new Error("El precio debe ser mayor a 0.");
 
+      for (let i = 0; i < extraItems.length; i += 1) {
+        const item = extraItems[i];
+        const itemArticulo = Number(item?.id_articulo || 0);
+        const itemDetalle = Number(item?.id_detalle || 0);
+        if (!(itemArticulo > 0 || itemDetalle > 0)) {
+          throw new Error(`Fila ${i + 2}: seleccioná un artículo válido.`);
+        }
+        if (!(safeNumber(item?.cantidad) > 0)) {
+          throw new Error(`Fila ${i + 2}: la cantidad debe ser mayor a 0.`);
+        }
+        if (!(safeNumber(item?.precio) > 0)) {
+          throw new Error(`Fila ${i + 2}: el precio debe ser mayor a 0.`);
+        }
+      }
+
       if (esContado) {
         if (!payload.medios_pago.length) throw new Error("En compras al contado debés cargar al menos un medio de pago.");
         for (let i = 0; i < mediosFilas.length; i++) {
@@ -2068,6 +2286,18 @@ export default function ModalEditarCompra({
         id_proveedor: Number(proveedorId),
         id_detalle: Number(detalleId),
         id_stock_producto: Number(detalleId),
+        items: (Array.isArray(payload.items) ? payload.items : []).map((item, index) => (
+          index === 0
+            ? {
+                ...item,
+                tipo_item: "ARTICULO",
+                id_articulo: Number(detalleId),
+                id_stock_producto: Number(detalleId),
+                id_detalle: null,
+                descripcion: detalleInput || item.descripcion || "",
+              }
+            : item
+        )),
       };
 
       const habiaArchivo = Boolean(archivoActualUrl || archivoActualId);
@@ -2237,17 +2467,115 @@ export default function ModalEditarCompra({
                     </div>
 
                     <div className="gm-table-cell gm-table-cell--right gm-table-cell--mono gm-table-cell--soft">
-                      {moneyARS(form.iva_monto)}
+                      {moneyARS(calcItemTotals(form.cantidad, form.precio, form.iva_pct).iva_monto)}
                     </div>
                     <div className="gm-table-cell gm-table-cell--right gm-table-cell--mono gm-table-cell--total">
-                      {moneyARS(form.total)}
+                      {moneyARS(calcItemTotals(form.cantidad, form.precio, form.iva_pct).total)}
                     </div>
                     <div className="gm-table-cell gm-table-cell--center" id="delete_cell" />
                   </div>
+
+                  {extraItems.map((item, index) => {
+                    const totals = calcItemTotals(item.cantidad, item.precio, item.iva_pct);
+                    const selectedArticulo = Number(item.id_articulo || 0);
+                    return (
+                      <div className="gm-table-row" key={item.client_id}>
+                        <div className="gm-table-cell gm-table-cell--detail">
+                          <select
+                            className="gm-cell-input gm-cell-input--select"
+                            value={selectedArticulo > 0 ? String(selectedArticulo) : ""}
+                            onChange={(e) => selectExtraArticulo(item.client_id, e.target.value)}
+                            disabled={saving || addUI.open || openVerComp}
+                            title={item.descripcion || "Artículo"}
+                            style={{ width: "100%" }}
+                          >
+                            <option value="">Seleccioná un artículo…</option>
+                            {(Array.isArray(safeLists.detalles) ? safeLists.detalles : []).map((detalle) => {
+                              const did = Number(getStockProductoIdFromSelection(detalle) || getGenericId(detalle) || 0);
+                              if (!(did > 0)) return null;
+                              return (
+                                <option key={did} value={did}>
+                                  {String(detalle?.nombre ?? detalle?.label ?? `Artículo ${did}`)}
+                                </option>
+                              );
+                            })}
+                          </select>
+                        </div>
+
+                        <div className="gm-table-cell gm-table-cell--center stock_cant">
+                          <input
+                            className="gm-cell-input gm-cell-input--center"
+                            type="number"
+                            min="0.001"
+                            step="0.000001"
+                            value={item.cantidad}
+                            onChange={(e) => updateExtraItem(item.client_id, { cantidad: e.target.value === "" ? "" : Number(e.target.value) })}
+                            disabled={saving}
+                          />
+                        </div>
+
+                        <div className="gm-table-cell gm-table-cell--center">
+                          <input
+                            className="gm-cell-input gm-cell-input--right"
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={item.precio}
+                            onChange={(e) => updateExtraItem(item.client_id, { precio: e.target.value === "" ? "" : Number(e.target.value) })}
+                            disabled={saving}
+                          />
+                        </div>
+
+                        <div className="gm-table-cell gm-table-cell--center">
+                          <select
+                            className="gm-cell-input gm-cell-input--center gm-cell-input--select"
+                            value={String(item.iva_pct)}
+                            onChange={(e) => updateExtraItem(item.client_id, { iva_pct: Number(e.target.value) })}
+                            disabled={saving}
+                          >
+                            {IVA_OPTIONS.map((x) => <option key={x.value} value={x.value}>{x.label}</option>)}
+                          </select>
+                        </div>
+
+                        <div className="gm-table-cell gm-table-cell--right gm-table-cell--mono gm-table-cell--soft">
+                          {moneyARS(totals.iva_monto)}
+                        </div>
+                        <div className="gm-table-cell gm-table-cell--right gm-table-cell--mono gm-table-cell--total">
+                          {moneyARS(totals.total)}
+                        </div>
+                        <div className="gm-table-cell gm-table-cell--center" id="delete_cell">
+                          <button
+                            type="button"
+                            className="gm-row-delete"
+                            onClick={() => removeExtraItem(item.client_id)}
+                            disabled={saving || addUI.open || openVerComp}
+                            title={`Eliminar fila ${index + 2}`}
+                            aria-label={`Eliminar fila ${index + 2}`}
+                          >
+                            ×
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
 
                 <div className="gm-table-foot">
                   <div className="gm-foot-actions">
+                    <button
+                      type="button"
+                      className="gm-foot-btn"
+                      onClick={addExtraItem}
+                      disabled={saving || addUI.open || openVerComp}
+                      title="Agregar otro artículo a la compra"
+                    >
+                      <span className="gm-foot-btn__icon">
+                        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M5 1.5V8.5M1.5 5H8.5" stroke="white" strokeWidth="1.6" strokeLinecap="round" />
+                        </svg>
+                      </span>
+                      Agregar fila
+                    </button>
                     <div className="gm-foot-sep" />
                   </div>
                   <div className="gm-summary-chips">

@@ -15,6 +15,7 @@ import ModalNuevaVenta from "./modales/ModalNuevaVenta.jsx";
 import ModalEmitirNotaCreditoVenta from "./modales/ModalEmitirNotaCreditoVenta.jsx";
 import ModalEliminar from "../../Global/Modales/ModalEliminar.jsx";
 import BotonExportar from "../../Global/Boton_Exportar/BotonExportar.jsx";
+import { collectAllExportRows } from "../../Global/Boton_Exportar/exportScopeUtils.js";
 import ModalVerComprobante from "../../Global/Ver_Comprobantes/ModalVerComprobante.jsx";
 import { ModalDetalleMovimientoVenta } from "../../Global/Modales/ModalDetalleMovimiento.jsx";
 
@@ -38,7 +39,7 @@ import * as XLSX from "xlsx";
 import { useListas } from "../../../context/ListasContext.jsx";
 import { useDateRange } from "../../../context/DateRangeContext";
 import { readMovPerfCache, writeMovPerfCache, clearMovPerfCache } from "../_shared/performanceCache.js";
-import { getResumenProductosMovimiento } from "../_shared/detalleMovimiento.js";
+import { getDetalleMovimiento, getResumenProductosMovimiento } from "../_shared/detalleMovimiento.js";
 import { getVentasAuthInfo as getAuthInfo, ventasApiGet as apiGet, ventasApiPostJson as apiPostJson } from "./api/ventasApi.js";
 import useVentasToast from "./hooks/useVentasToast.js";
 import { moneyARS } from "./utils/ventasUtils.js";
@@ -292,7 +293,7 @@ function slugifySheetName(name) { const s = String(name || "Ventas").replace(/[\
 function buildExportRows(rows) {
   return (Array.isArray(rows) ? rows : []).map((r) => ({
     FECHA: safeText(formatFechaDMY(r?.fecha)),
-    DESCRIPCION: productosLabel(r),
+    DESCRIPCION: safeText(getDetalleMovimiento(r)),
     CLIENTE: safeText(r?.cliente),
     TOTAL: Number(r?.monto_total ?? r?.total ?? r?.total_general ?? 0) || 0,
   }));
@@ -513,15 +514,30 @@ export default function Ventas() {
   const gridCols = useMemo(() => Array.isArray(columns) && columns.length ? columns.map((c) => { const n = Number(c.fr); return Number.isFinite(n) && n > 0 ? `${n}fr` : "1fr"; }).join(" ") : `repeat(${columns.length}, minmax(0, 1fr))`, [columns]);
   const dateRangeLabel = useMemo(() => { const { from, to } = dateRange; if (!from && !to) return "Seleccionar fechas"; if (from && to) { if (from.getFullYear() === to.getFullYear() && from.getMonth() === to.getMonth() && from.getDate() === to.getDate()) return formatDateUI(from); return <><span>{formatDateUI(from)}</span><span className="mov-rangeArrow"><FontAwesomeIcon icon={faArrowRightLong} /></span><span>{formatDateUI(to)}</span></>; } if (from) return `Desde ${formatDateUI(from)}`; return `Hasta ${formatDateUI(to)}`; }, [dateRange]);
   const exportBaseName = useMemo(() => { const { from, to } = dateRange; if (from && to) return `ventas_${dateToAPI(from)}_${dateToAPI(to)}`; if (from) return `ventas_desde_${dateToAPI(from)}`; return "ventas_todos"; }, [dateRange]);
-  const getExportData = useCallback(() => { const dataToExport = buildExportRows(filteredRows); if (!dataToExport.length) throw new Error("No hay datos para exportar."); return dataToExport; }, [filteredRows]);
-  const exportToExcel = useCallback(() => { const dataToExport = getExportData(); const wb = XLSX.utils.book_new(); const ws = XLSX.utils.json_to_sheet(dataToExport); const headers = Object.keys(dataToExport[0] || {}); const totalColIndex = headers.findIndex((h) => h === "TOTAL"); if (totalColIndex >= 0 && ws["!ref"]) { const colLetter = XLSX.utils.encode_col(totalColIndex); const range = XLSX.utils.decode_range(ws["!ref"]); for (let r = range.s.r + 1; r <= range.e.r; r++) { const cell = ws[`${colLetter}${r + 1}`]; if (cell && typeof cell.v === "number") cell.z = '"$"#,##0.00'; } } XLSX.utils.book_append_sheet(wb, ws, slugifySheetName("Ventas_Vista")); XLSX.writeFile(wb, `${exportBaseName}.xlsx`); }, [getExportData, exportBaseName]);
-  const exportToCSV = useCallback(() => { const dataToExport = getExportData(); const headers = Object.keys(dataToExport[0] || {}); const lines = [headers.join(";"), ...dataToExport.map((row) => headers.map((h) => escapeCSV(row[h])).join(";"))]; const csvContent = "\uFEFF" + lines.join("\n"); downloadBlob(csvContent, `${exportBaseName}.csv`, "text/csv;charset=utf-8;"); }, [getExportData, exportBaseName]);
-  const exportToTXT = useCallback(() => { const dataToExport = getExportData(); const lines = dataToExport.map((row, index) => [ `REGISTRO ${index + 1}`, `FECHA: ${row.FECHA ?? ""}`, `DESCRIPCION: ${row.DESCRIPCION ?? ""}`, `CLIENTE: ${row.CLIENTE ?? ""}`, `TOTAL: ${row.TOTAL ?? ""}`, "----------------------------------------" ].join("\n")); downloadBlob(lines.join("\n"), `${exportBaseName}.txt`, "text/plain;charset=utf-8;"); }, [getExportData, exportBaseName]);
-  const handleExport = useCallback(async (type) => { try { if (hasMore) { showToast("error", 'Todavía hay más registros sin cargar. Tocá "Cargar 100 más" hasta completar todo.', 5200); return; } if (type === "excel") { exportToExcel(); showToast("exito", "Excel exportado.", 2200); return; } if (type === "csv") { exportToCSV(); showToast("exito", "CSV exportado.", 2200); return; } if (type === "txt") { exportToTXT(); showToast("exito", "TXT exportado.", 2200); } } catch (e) { showToast("error", e?.message || "Error exportando archivo.", 3500); } }, [hasMore, exportToExcel, exportToCSV, exportToTXT, showToast]);
+  const getExportData = useCallback((sourceRows = filteredRows) => { const rowsToUse = Array.isArray(sourceRows) ? sourceRows : filteredRows; const dataToExport = buildExportRows(rowsToUse); if (!dataToExport.length) throw new Error("No hay datos para exportar."); return dataToExport; }, [filteredRows]);
+  const exportToExcel = useCallback((sourceRows = filteredRows) => { const dataToExport = getExportData(sourceRows); const wb = XLSX.utils.book_new(); const ws = XLSX.utils.json_to_sheet(dataToExport); const headers = Object.keys(dataToExport[0] || {}); const totalColIndex = headers.findIndex((h) => h === "TOTAL"); if (totalColIndex >= 0 && ws["!ref"]) { const colLetter = XLSX.utils.encode_col(totalColIndex); const range = XLSX.utils.decode_range(ws["!ref"]); for (let r = range.s.r + 1; r <= range.e.r; r++) { const cell = ws[`${colLetter}${r + 1}`]; if (cell && typeof cell.v === "number") cell.z = '"$"#,##0.00'; } } XLSX.utils.book_append_sheet(wb, ws, slugifySheetName("Ventas_Vista")); XLSX.writeFile(wb, `${exportBaseName}.xlsx`); }, [filteredRows, getExportData, exportBaseName]);
+  const exportToCSV = useCallback((sourceRows = filteredRows) => { const dataToExport = getExportData(sourceRows); const headers = Object.keys(dataToExport[0] || {}); const lines = [headers.join(";"), ...dataToExport.map((row) => headers.map((h) => escapeCSV(row[h])).join(";"))]; const csvContent = "\uFEFF" + lines.join("\n"); downloadBlob(csvContent, `${exportBaseName}.csv`, "text/csv;charset=utf-8;"); }, [filteredRows, getExportData, exportBaseName]);
+  const exportToTXT = useCallback((sourceRows = filteredRows) => { const dataToExport = getExportData(sourceRows); const lines = dataToExport.map((row, index) => [ `REGISTRO ${index + 1}`, `FECHA: ${row.FECHA ?? ""}`, `DESCRIPCION: ${row.DESCRIPCION ?? ""}`, `CLIENTE: ${row.CLIENTE ?? ""}`, `TOTAL: ${row.TOTAL ?? ""}`, "----------------------------------------" ].join("\n")); downloadBlob(lines.join("\n"), `${exportBaseName}.txt`, "text/plain;charset=utf-8;"); }, [filteredRows, getExportData, exportBaseName]);
+  const loadAllRowsForExport = useCallback(() => collectAllExportRows({
+    fetchPage: async (offset) => {
+      const sp = new URLSearchParams(); sp.set("action", "ventas_listar");
+      const fromAPI = dateToAPI(dateRange.from); const toAPI = dateToAPI(dateRange.to);
+      if (fromAPI) sp.set("fecha_desde", fromAPI); if (toAPI) sp.set("fecha_hasta", toAPI); if ((q || "").trim()) sp.set("q", (q || "").trim());
+      sp.set("limit", String(PAGE_SIZE)); sp.set("offset", String(offset));
+      const data = await apiGet(`${API}?${sp.toString()}`); if (!data?.exito) throw new Error(data?.mensaje || "No se pudieron cargar todas las ventas.");
+      const rawArr = Array.isArray(data.ventas) ? data.ventas : Array.isArray(data.movimientos) ? data.movimientos : [];
+      const normalized = rawArr.map(normalizeVentaRow);
+      const pageHasMore = data.has_more !== undefined ? !!data.has_more : normalized.length > PAGE_SIZE;
+      const page = (pageHasMore ? normalized.slice(0, PAGE_SIZE) : normalized).filter((r) => isVentaRow(r) && rowInDateRange(r, dateRange.from, dateRange.to) && rowMatchesQuery(r, q));
+      return { rows: page, hasMore: pageHasMore, nextOffset: data.next_offset !== undefined && data.next_offset !== null ? Number(data.next_offset) : (pageHasMore ? offset + PAGE_SIZE : null) };
+    },
+    getRowKey,
+  }), [API, apiGet, dateRange.from, dateRange.to, q]);
+  const handleExport = useCallback(async (type, sourceRows) => { try { const rowsToExport = Array.isArray(sourceRows) ? sourceRows : filteredRows; if (type === "excel") { exportToExcel(rowsToExport); showToast("exito", "Excel exportado.", 2200); return; } if (type === "csv") { exportToCSV(rowsToExport); showToast("exito", "CSV exportado.", 2200); return; } if (type === "txt") { exportToTXT(rowsToExport); showToast("exito", "TXT exportado.", 2200); } } catch (e) { showToast("error", e?.message || "Error exportando archivo.", 3500); throw e; } }, [filteredRows, exportToExcel, exportToCSV, exportToTXT, showToast]);
   const exportOptions = useMemo(() => [
-    { key: "excel", label: "Exportar Excel (.xlsx)", icon: faFileExcel, onClick: () => handleExport("excel") },
-    { key: "csv", label: "Exportar CSV (.csv)", onClick: () => handleExport("csv") },
-    { key: "txt", label: "Exportar TXT (.txt)", onClick: () => handleExport("txt") },
+    { key: "excel", label: "Excel (.xlsx)", tipo: "excel", icon: faFileExcel, onClick: ({ rows: exportRows } = {}) => handleExport("excel", exportRows) },
+    { key: "csv", label: "CSV (.csv)", tipo: "csv", onClick: ({ rows: exportRows } = {}) => handleExport("csv", exportRows) },
+    { key: "txt", label: "TXT (.txt)", tipo: "txt", onClick: ({ rows: exportRows } = {}) => handleExport("txt", exportRows) },
   ], [handleExport]);
   const reloadVista = useCallback(async () => { cacheRef.current.clear(); clearMovPerfCache(VENTAS_LIST_CACHE_KEY); signedUrlCacheRef.current.clear(); signedUrlInFlightRef.current.clear(); await loadRows({ from: dateRange.from, to: dateRange.to, q, offset: 0, append: false, bypassCache: true }); try { const token = await fetchLiveToken(dateRange.from, dateRange.to, q); liveTokenRef.current = token; } catch {} }, [dateRange.from, dateRange.to, loadRows, q, fetchLiveToken]);
   const confirmDelete = async ({ permitirFiscalAnulada = false } = {}) => {
@@ -702,7 +718,7 @@ export default function Ventas() {
             </div>
           </div>
           <div className="mov-card__actions" style={{ display: "flex", gap: 10, alignItems: "center" }}>
-            <BotonExportar disabled={loadingRows || filteredRows.length === 0} loading={false} label="Exportar" title={filteredRows.length ? "Exportar archivo" : "No hay datos para exportar"} opciones={exportOptions} align="right" />
+            <BotonExportar disabled={loadingRows || filteredRows.length === 0} loading={false} label="Exportar" title={filteredRows.length ? "Exportar archivo" : "No hay datos para exportar"} opciones={exportOptions} align="right" entityLabel="ventas" currentRows={filteredRows} allRows={hasMore ? null : filteredRows} loadAllRows={loadAllRowsForExport} currentCount={filteredRows.length} allCount={hasMore ? null : filteredRows.length} hasMore={hasMore} />
             <button type="button" className="mov-btn mov-btn--primary" onClick={() => { if (loadingListsCtx) showToast?.("cargando", "Cargando listas… podés ir completando igual.", 2400); setOpenAdd(true); }} title="Crear nuevo movimiento"><FontAwesomeIcon icon={faPlus} /> Nueva Venta</button>
           </div>
         </div>

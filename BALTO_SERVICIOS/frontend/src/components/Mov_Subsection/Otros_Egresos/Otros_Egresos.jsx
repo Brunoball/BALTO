@@ -14,6 +14,7 @@ import "../../Global/Calendario/calendario.css";
 
 
 import BotonExportar from "../../Global/Boton_Exportar/BotonExportar.jsx";
+import { collectAllExportRows } from "../../Global/Boton_Exportar/exportScopeUtils.js";
 import ModalVerComprobante from "../../Global/Ver_Comprobantes/ModalVerComprobante.jsx";
 import ModalNuevoEgreso from "./modales/ModalNuevoEgreso.jsx";
 import ModalEditarEgreso from "./modales/ModalEditarEgreso.jsx";
@@ -41,7 +42,7 @@ import * as XLSX from "xlsx";
 import { useListas } from "../../../context/ListasContext.jsx";
 import { useDateRange } from "../../../context/DateRangeContext.jsx";
 import { readMovPerfCache, writeMovPerfCache, clearMovPerfCache } from "../_shared/performanceCache.js";
-import { getResumenItemsMovimiento } from "../_shared/detalleMovimiento.js";
+import { getDetalleMovimiento, getResumenItemsMovimiento } from "../_shared/detalleMovimiento.js";
 
 const MIN_LOADING_MS = 0;
 const FORCE_SHOW_LOADER_DEV = false;
@@ -618,7 +619,7 @@ function slugifySheetName(name) {
 function buildExportRows(rows) {
   return (Array.isArray(rows) ? rows : []).map((r) => ({
     FECHA: safeText(formatFechaDMY(r?.fecha)),
-    DESCRIPCION: productosLabel(r),
+    DESCRIPCION: safeText(getDetalleMovimiento(r)),
     TOTAL: Number(r?.monto_total ?? r?.total ?? r?.total_general ?? 0) || 0,
   }));
 }
@@ -1092,14 +1093,14 @@ export default function OtrosEgresos() {
     return "otros_egresos_todos";
   }, [dateRange]);
 
-  const getExportData = useCallback(() => {
-    const dataToExport = buildExportRows(filteredRows);
+  const getExportData = useCallback((sourceRows = filteredRows) => {
+    const dataToExport = buildExportRows(sourceRows);
     if (!dataToExport.length) throw new Error("No hay datos para exportar.");
     return dataToExport;
   }, [filteredRows]);
 
-  const exportToExcel = useCallback(() => {
-    const dataToExport = getExportData();
+  const exportToExcel = useCallback((sourceRows) => {
+    const dataToExport = getExportData(sourceRows);
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.json_to_sheet(dataToExport);
 
@@ -1120,8 +1121,8 @@ export default function OtrosEgresos() {
     XLSX.writeFile(wb, `${exportBaseName}.xlsx`);
   }, [getExportData, exportBaseName]);
 
-  const exportToCSV = useCallback(() => {
-    const dataToExport = getExportData();
+  const exportToCSV = useCallback((sourceRows) => {
+    const dataToExport = getExportData(sourceRows);
     const headers = Object.keys(dataToExport[0] || {});
     const lines = [
       headers.join(";"),
@@ -1131,8 +1132,8 @@ export default function OtrosEgresos() {
     downloadBlob(csvContent, `${exportBaseName}.csv`, "text/csv;charset=utf-8;");
   }, [getExportData, exportBaseName]);
 
-  const exportToTXT = useCallback(() => {
-    const dataToExport = getExportData();
+  const exportToTXT = useCallback((sourceRows) => {
+    const dataToExport = getExportData(sourceRows);
     const lines = dataToExport.map((row, index) => {
       return [
         `REGISTRO ${index + 1}`,
@@ -1147,54 +1148,94 @@ export default function OtrosEgresos() {
     downloadBlob(txtContent, `${exportBaseName}.txt`, "text/plain;charset=utf-8;");
   }, [getExportData, exportBaseName]);
 
-  const handleExport = useCallback(
-    async (type) => {
-      try {
-        if (hasMore) {
-          showToast("error", 'Faltan registros sin cargar. Tocá "Cargar todos" primero.', 5200);
-          return;
-        }
+  const loadAllRowsForExport = useCallback(async () => {
+    const fromAPI = dateToAPI(dateRange.from);
+    const toAPI = dateToAPI(dateRange.to);
+    const qKey = String(q || "").trim();
 
+    return collectAllExportRows({
+      getRowKey,
+      fetchPage: async (offset) => {
+        const sp = new URLSearchParams();
+        sp.set("action", "otros_egresos_listar");
+        if (fromAPI) sp.set("fecha_desde", fromAPI);
+        if (toAPI) sp.set("fecha_hasta", toAPI);
+        if (qKey) sp.set("q", qKey);
+        sp.set("limit", String(PAGE_SIZE));
+        sp.set("offset", String(offset));
+
+        const data = await apiGet(`${API}?${sp.toString()}`);
+        if (!data?.exito) throw new Error(data?.mensaje || "No se pudieron cargar otros egresos.");
+
+        const rawArr = Array.isArray(data?.otros_egresos)
+          ? data.otros_egresos
+          : Array.isArray(data?.egresos)
+            ? data.egresos
+            : Array.isArray(data?.movimientos)
+              ? data.movimientos
+              : [];
+        const normalizedAll = rawArr.map(normalizeOtroEgresoRow);
+        const pageHasMore = data?.has_more !== undefined ? !!data.has_more : normalizedAll.length > PAGE_SIZE;
+        const page = pageHasMore ? normalizedAll.slice(0, PAGE_SIZE) : normalizedAll;
+        const backendNextOffset = Number(data?.next_offset);
+
+        return {
+          rows: page,
+          hasMore: pageHasMore,
+          nextOffset: Number.isFinite(backendNextOffset) && backendNextOffset > offset
+            ? backendNextOffset
+            : pageHasMore
+              ? offset + page.length
+              : null,
+        };
+      },
+    });
+  }, [API, apiGet, dateRange.from, dateRange.to, q]);
+
+  const handleExport = useCallback(
+    async (type, sourceRows) => {
+      try {
         if (type === "excel") {
-          exportToExcel();
+          exportToExcel(sourceRows);
           showToast("exito", "Excel exportado.", 2200);
           return;
         }
 
         if (type === "csv") {
-          exportToCSV();
+          exportToCSV(sourceRows);
           showToast("exito", "CSV exportado.", 2200);
           return;
         }
 
         if (type === "txt") {
-          exportToTXT();
+          exportToTXT(sourceRows);
           showToast("exito", "TXT exportado.", 2200);
         }
       } catch (e) {
         showToast("error", e?.message || "Error exportando archivo.", 3500);
+        throw e;
       }
     },
-    [hasMore, exportToExcel, exportToCSV, exportToTXT, showToast]
+    [exportToExcel, exportToCSV, exportToTXT, showToast]
   );
 
   const exportOptions = useMemo(
     () => [
       {
         key: "excel",
-        label: "Exportar Excel (.xlsx)",
+        label: "Excel (.xlsx)",
         icon: faFileExcel,
-        onClick: () => handleExport("excel"),
+        onClick: ({ rows: sourceRows } = {}) => handleExport("excel", sourceRows),
       },
       {
         key: "csv",
-        label: "Exportar CSV (.csv)",
-        onClick: () => handleExport("csv"),
+        label: "CSV (.csv)",
+        onClick: ({ rows: sourceRows } = {}) => handleExport("csv", sourceRows),
       },
       {
         key: "txt",
-        label: "Exportar TXT (.txt)",
-        onClick: () => handleExport("txt"),
+        label: "TXT (.txt)",
+        onClick: ({ rows: sourceRows } = {}) => handleExport("txt", sourceRows),
       },
     ],
     [handleExport]
@@ -1824,6 +1865,13 @@ export default function OtrosEgresos() {
               title={filteredRows.length ? "Exportar archivo" : "No hay datos para exportar"}
               opciones={exportOptions}
               align="right"
+              entityLabel="egresos"
+              currentRows={filteredRows}
+              allRows={hasMore ? null : filteredRows}
+              loadAllRows={loadAllRowsForExport}
+              currentCount={filteredRows.length}
+              allCount={hasMore ? null : filteredRows.length}
+              hasMore={hasMore}
             />
 
             <button

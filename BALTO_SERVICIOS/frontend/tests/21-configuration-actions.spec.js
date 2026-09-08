@@ -40,9 +40,28 @@ async function restoreCalendarConfig(page, config) {
 }
 
 test('@configuracion @crud calendario: guardar, persistir y restaurar', async ({ page }) => {
+  // En una corrida completa el DateRangeContext puede terminar de hidratar unas
+  // décimas después de que la tarjeta ya es visible. Damos margen al test para
+  // estabilizar esa hidratación y para restaurar la configuración en el finally.
+  test.setTimeout(120_000);
+
   await requireMutations(test, page);
+
+  // Esperamos explícitamente la lectura que dispara la propia pantalla antes de
+  // tocar el formulario. En una suite larga ese GET puede tardar bastante más que
+  // el render inicial y, si termina después del click, React vuelve a hidratar el
+  // estado anterior y hace desaparecer los cambios pendientes.
+  const uiHydration = page.waitForResponse(
+    (candidate) =>
+      candidate.request().method() === 'GET' &&
+      new URL(candidate.url()).searchParams.get('action') === 'configuracion_calendario_get',
+    { timeout: 45_000 },
+  );
   await page.goto('/panel/configuracion/calendario');
+  const hydrationResponse = await uiHydration;
+  expect(hydrationResponse.status()).toBeLessThan(400);
   await waitForBusyToFinish(page);
+
   const original = await getCalendarConfig(page);
 
   try {
@@ -60,26 +79,44 @@ test('@configuracion @crud calendario: guardar, persistir y restaurar', async ({
     const targetButton = page.getByRole('button', {
       name: targetMode === 'dias_atras' ? /Últimos N días/i : /Mes completo/i,
     });
-    await targetButton.click();
-    await expect(targetButton).toHaveClass(/cal-actionRow--active/, { timeout: 15_000 });
+    const saveButton = page.getByRole('button', { name: /Guardar configuración/i });
+
+    // La tarjeta puede quedar visible antes de que el GET inicial del contexto
+    // termine de aplicar su estado. Si ese GET completa justo después del click,
+    // React vuelve momentáneamente al modo original. Reintentamos la selección
+    // hasta comprobar que permanece estable, en lugar de interpretar ese race
+    // de hidratación como un fallo funcional.
+    let selectionStable = false;
+    for (let attempt = 0; attempt < 3 && !selectionStable; attempt += 1) {
+      await targetButton.click();
+      await expect(targetButton).toHaveClass(/cal-actionRow--active/, { timeout: 15_000 });
+      await expect(saveButton).toBeEnabled({ timeout: 15_000 });
+
+      await page.waitForTimeout(650);
+      const className = await targetButton.getAttribute('class').catch(() => '');
+      selectionStable = /cal-actionRow--active/.test(className || '') &&
+        await saveButton.isEnabled().catch(() => false);
+    }
+    expect(selectionStable, 'El modo elegido debe permanecer estable tras hidratar el calendario').toBeTruthy();
 
     if (targetMode === 'dias_atras') {
       const maxAllowed = Math.max(1, new Date().getDate() - 1);
       const daysInput = page.getByLabel('Cantidad de días hacia atrás');
+      await expect(daysInput).toBeVisible({ timeout: 15_000 });
       await daysInput.fill(String(Math.min(2, maxAllowed)));
       await daysInput.blur();
+      await expect(saveButton).toBeEnabled({ timeout: 15_000 });
     }
 
-    const saveButton = page.getByRole('button', { name: /Guardar configuración/i });
-    await expect(saveButton).toBeEnabled({ timeout: 20_000 });
-    const responsePromise = page.waitForResponse(
-      (response) =>
-        response.request().method() === 'POST' &&
-        new URL(response.url()).searchParams.get('action') === 'configuracion_calendario_set',
-      { timeout: 90_000 },
-    );
-    await saveButton.click();
-    const response = await responsePromise;
+    const [response] = await Promise.all([
+      page.waitForResponse(
+        (candidate) =>
+          candidate.request().method() === 'POST' &&
+          new URL(candidate.url()).searchParams.get('action') === 'configuracion_calendario_set',
+        { timeout: 45_000 },
+      ),
+      saveButton.click(),
+    ]);
     expect(response.status()).toBeLessThan(400);
 
     await expect(page.locator('body')).toContainText(/Configuración guardada correctamente/i);

@@ -921,6 +921,9 @@ export default function ClientesCC() {
                   label="Exportar"
                   opciones={exportOptions}
                   align="right"
+                  entityLabel={isDetailMode ? "movimientos del cliente" : "clientes"}
+                  currentCount={isDetailMode ? detailRows.length : filteredSummaryRows.length}
+                  scopeEnabled={false}
                 />
               </div>
 

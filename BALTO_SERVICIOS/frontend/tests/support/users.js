@@ -51,6 +51,32 @@ function isRetryableLoginStatus(status) {
   return [408, 429, 500, 502, 503, 504].includes(Number(status));
 }
 
+async function sessionCheckWithRetry(request, sessionKey) {
+  let response = null;
+
+  for (let attempt = 1; attempt <= 4; attempt += 1) {
+    try {
+      response = await request.get(commerceSessionEndpoint(), {
+        headers: { 'X-Session': sessionKey, Accept: 'application/json', Connection: 'close' },
+        timeout: 30_000,
+        failOnStatusCode: false,
+      });
+
+      // Un 4xx es una respuesta válida de autenticación y se procesa normalmente.
+      // Reintentamos únicamente caídas/transitorios del servidor o de la red.
+      if (!isRetryableLoginStatus(response.status()) || attempt === 4) {
+        return response;
+      }
+    } catch (error) {
+      if (attempt === 4) return null;
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 350 * attempt));
+  }
+
+  return response;
+}
+
 async function loginWithRetry(request, username, password) {
   let last = null;
 
@@ -130,15 +156,19 @@ export async function ensureAdministratorSession(page) {
   let mustRefresh = !currentKey;
 
   if (currentKey) {
-    const response = await page.context().request.get(commerceSessionEndpoint(), {
-      headers: { 'X-Session': currentKey, Accept: 'application/json', Connection: 'close' },
-      timeout: 30_000,
-      failOnStatusCode: false,
-    });
-    const body = await response.json().catch(() => ({}));
-    mustRefresh = response.status() >= 400
-      || body?.exito === false
-      || authFileNeedsRefresh();
+    const response = await sessionCheckWithRetry(page.context().request, currentKey);
+
+    // Si el endpoint sufrió varios resets consecutivos, no tiramos abajo un test
+    // funcional cualquiera: forzamos una renovación de sesión, que ya cuenta con
+    // su propia política de retry.
+    if (!response) {
+      mustRefresh = true;
+    } else {
+      const body = await response.json().catch(() => ({}));
+      mustRefresh = response.status() >= 400
+        || body?.exito === false
+        || authFileNeedsRefresh();
+    }
   }
 
   if (!mustRefresh) return;

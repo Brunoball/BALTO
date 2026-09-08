@@ -184,6 +184,9 @@ export default function Analisis_Financiero() {
               }
               opciones={exportOptions}
               align="right"
+              entityLabel="registros de análisis"
+              currentCount={mainRows.length + disponibilidades.length}
+              scopeEnabled={false}
             />
           </div>
         </div>

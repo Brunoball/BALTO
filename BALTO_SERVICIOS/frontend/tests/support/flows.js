@@ -87,8 +87,23 @@ export async function deleteUnusedStockProduct(page, productName) {
 }
 
 export async function createPurchaseFixtureViaApi(page, data, options = {}) {
-  const article = await getServiceArticleByName(page, data.productName, { activo: 'todos' });
-  expect(article, `Debe existir ${data.productName} antes de crear la compra fixture`).toBeTruthy();
+  const requestedItems = Array.isArray(data?.items) && data.items.length
+    ? data.items
+    : [{
+        productName: data.productName,
+        quantity: data.quantity,
+        price: data.price,
+        ivaPct: data.ivaPct,
+      }];
+
+  const resolvedItems = [];
+  for (const item of requestedItems) {
+    const productName = String(item?.productName || '').trim();
+    expect(productName, 'Cada renglón de la compra fixture debe indicar productName').not.toBe('');
+    const article = await getServiceArticleByName(page, productName, { activo: 'todos' });
+    expect(article, `Debe existir ${productName} antes de crear la compra fixture`).toBeTruthy();
+    resolvedItems.push({ item, article, productName });
+  }
 
   const listsResult = await authenticatedApi(page, 'global_obtener_listas', {
     query: { contexto: 'compras', include_sin_stock: 1, _: Date.now() },
@@ -115,11 +130,20 @@ export async function createPurchaseFixtureViaApi(page, data, options = {}) {
 
   const idProveedor = Number(provider.id_proveedor || provider.id || 0);
   const idTipoVenta = Number(saleType.id_tipo_venta || saleType.id || 0);
-  const idArticulo = Number(article.id_articulo || 0);
-  const quantity = Number(data.quantity ?? 2);
-  const price = Number(data.price ?? 100);
-  const ivaPct = Number(data.ivaPct ?? article.iva_pct ?? 21);
   const today = new Date().toISOString().slice(0, 10);
+  const itemsPayload = resolvedItems.map(({ item, article }) => {
+    const idArticulo = Number(article.id_articulo || 0);
+    return {
+      fecha: today,
+      id_tipo_venta: idTipoVenta,
+      id_proveedor: idProveedor,
+      id_articulo: idArticulo,
+      id_stock_producto: idArticulo,
+      cantidad: Number(item.quantity ?? 2),
+      precio: Number(item.price ?? 100),
+      iva_pct: Number(item.ivaPct ?? article.iva_pct ?? 21),
+    };
+  });
 
   const body = expectApiSuccess(
     await authenticatedApi(page, 'compras_crear_batch', {
@@ -128,24 +152,26 @@ export async function createPurchaseFixtureViaApi(page, data, options = {}) {
         fecha: today,
         id_tipo_venta: idTipoVenta,
         id_proveedor: idProveedor,
-        items: [{
-          fecha: today,
-          id_tipo_venta: idTipoVenta,
-          id_proveedor: idProveedor,
-          id_articulo: idArticulo,
-          id_stock_producto: idArticulo,
-          cantidad: quantity,
-          precio: price,
-          iva_pct: ivaPct,
-        }],
+        items: itemsPayload,
         medios_pago: Array.isArray(options.payments) ? options.payments : [],
       },
     }),
-    `No se pudo crear la compra fixture de ${data.productName}`,
+    `No se pudo crear la compra fixture de ${resolvedItems.map((row) => row.productName).join(', ')}`,
   );
 
   data.providerName = String(provider.nombre || '').trim();
+  if (!data.productName) data.productName = resolvedItems[0]?.productName || '';
   return body;
+}
+
+export async function getPurchaseFixtureViaApi(page, idMovimiento) {
+  const result = await authenticatedApi(page, 'compras_obtener', {
+    query: { id_movimiento: Number(idMovimiento), _: Date.now() },
+  });
+  const body = expectApiSuccess(result, `No se pudo obtener la compra #${idMovimiento}`);
+  const purchase = body?.compra || body?.data?.compra || null;
+  expect(purchase, `La compra #${idMovimiento} debe existir`).toBeTruthy();
+  return purchase;
 }
 
 export async function createPurchase(page, data) {

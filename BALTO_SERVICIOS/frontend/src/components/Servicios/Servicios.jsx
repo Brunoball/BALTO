@@ -407,8 +407,8 @@ export default function Servicios() {
     return { title: tab === "materiales" ? "BALTO_MATERIALES" : "BALTO_INSUMOS", rows, columns: [...base, { label: "CATEGORÍA", value: (r) => r.categoria_nombre || "", width: 22 }, { label: "UNIDAD", value: (r) => r.unidad_simbolo || "", width: 14 }, { label: "STOCK", value: (r) => Number(r.controla_stock ?? 1) === 1 ? Number(Number(r.stock_actual || 0).toFixed(2)) : "NO CONTROLADO", width: 18 }, { label: "COSTO", value: (r) => r.costo_unitario || 0, width: 16 }, { label: "PRECIO", value: (r) => r.precio_venta ?? "", width: 16 }, { label: "ESTADO", value: (r) => Number(r.activo) === 1 ? "ACTIVO" : "BAJA", width: 12 }] };
   }, [tab, rows]);
   const exportOptions = [
-    { key: "excel", label: "Exportar Excel (.xlsx)", tipo: "excel", onClick: () => exportServiciosExcel(exportDefinition) },
-    { key: "pdf", label: "Exportar PDF (.pdf)", tipo: "pdf", onClick: () => exportServiciosPdf(exportDefinition) },
+    { key: "excel", label: "Excel (.xlsx)", tipo: "excel", onClick: ({ rows: sourceRows } = {}) => exportServiciosExcel({ ...exportDefinition, rows: Array.isArray(sourceRows) ? sourceRows : rows }) },
+    { key: "pdf", label: "PDF (.pdf)", tipo: "pdf", onClick: ({ rows: sourceRows } = {}) => exportServiciosPdf({ ...exportDefinition, rows: Array.isArray(sourceRows) ? sourceRows : rows }) },
   ];
 
   const statusIsActive = Number(statusModal.item?.activo) === 1;
@@ -446,10 +446,10 @@ export default function Servicios() {
           <div className="mov-card__actions servicios-headActions">
             {RESPONSIVE_FOOTER_TABS.has(tab) ? (
               <div className="servicios-headSecondary">
-                <BotonExportar label="Exportar" opciones={exportOptions} disabled={loading || rows.length === 0} />
+                <BotonExportar label="Exportar" opciones={exportOptions} disabled={loading || rows.length === 0} entityLabel={META[tab].title.toLocaleLowerCase("es-AR")} currentRows={visibleRows} allRows={rows} currentCount={visibleRows.length} allCount={rows.length} hasMore={rows.length > visibleRows.length} />
               </div>
             ) : (
-              <BotonExportar label="Exportar" opciones={exportOptions} disabled={loading || rows.length === 0} />
+              <BotonExportar label="Exportar" opciones={exportOptions} disabled={loading || rows.length === 0} entityLabel={META[tab].title.toLocaleLowerCase("es-AR")} currentRows={visibleRows} allRows={rows} currentCount={visibleRows.length} allCount={rows.length} hasMore={rows.length > visibleRows.length} />
             )}
             {META[tab].add && <button type="button" className="mov-btn mov-btn--primary servicios-addBtn" onClick={openNew}><FontAwesomeIcon icon={faPlus} /> {META[tab].add}</button>}
           </div>
@@ -513,7 +513,7 @@ export default function Servicios() {
 
             {RESPONSIVE_FOOTER_TABS.has(tab) && (
               <div className="servicios-bottomActions" aria-label="Acciones de la tabla">
-                <BotonExportar label="Exportar" opciones={exportOptions} disabled={loading || rows.length === 0} />
+                <BotonExportar label="Exportar" opciones={exportOptions} disabled={loading || rows.length === 0} entityLabel={META[tab].title.toLocaleLowerCase("es-AR")} currentRows={visibleRows} allRows={rows} currentCount={visibleRows.length} allCount={rows.length} hasMore={rows.length > visibleRows.length} />
               </div>
             )}
           </div>

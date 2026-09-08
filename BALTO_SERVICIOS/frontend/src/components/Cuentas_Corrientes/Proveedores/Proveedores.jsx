@@ -897,6 +897,9 @@ export default function ProveedoresCC() {
                   label="Exportar"
                   opciones={exportOptions}
                   align="right"
+                  entityLabel={isDetailMode ? "movimientos del proveedor" : "proveedores"}
+                  currentCount={isDetailMode ? detailRows.length : filteredSummaryRows.length}
+                  scopeEnabled={false}
                 />
               </div>
 

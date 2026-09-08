@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { Buffer } from 'node:buffer';
+import { authenticatedApi, expectApiSuccess } from './support/api.js';
 import { uniqueName, uniqueSku } from './support/data.js';
 import { installDiagnostics, assertNoCriticalErrors } from './support/diagnostics.js';
 import {
@@ -55,7 +56,9 @@ test('@crud @critical compra: ingresa stock, edita cantidad y NC de proveedor re
     price: 160,
   });
 
-  await createPurchase(page, { productName, quantity: 3, price: 100 });
+  const purchaseRow = await createPurchase(page, { productName, quantity: 3, price: 100 });
+  const purchaseId = Number(await purchaseRow.getAttribute('data-movement-id') || 0);
+  expect(purchaseId, 'La compra de control debe exponer id_movimiento').toBeGreaterThan(0);
   await editPurchaseQuantity(page, productName, 4);
   await applyPurchaseCreditNote(page, productName, 1);
 
@@ -84,7 +87,32 @@ test('@crud @critical compra: ingresa stock, edita cantidad y NC de proveedor re
     .locator('select')
     .first();
   await expect(await selectOptionValues(ivaSelect)).toEqual(IVA_VALUES);
+  const economicResponsePromise = page.waitForResponse(
+    (response) =>
+      response.request().method() === 'POST' &&
+      new URL(response.url()).searchParams.get('action') === 'compras_nota_credito_crear',
+    { timeout: 90_000 },
+  );
   await clickSaveAndWait(dialog, /Aplicar nota de crédito/i, { timeout: 60_000 });
+  const economicResponse = await economicResponsePromise;
+  const economicBody = await economicResponse.json().catch(() => ({}));
+  expect(economicResponse.status(), JSON.stringify(economicBody)).toBeLessThan(400);
+  expect(creditNoteId(economicBody), 'La NC económica debe devolver un identificador').toBeGreaterThan(0);
+
+  // Regresión del cierre final: $10 con IVA 21% antes podía persistirse como $9,99
+  // al recalcular desde una base redondeada. Se valida el valor realmente guardado
+  // por el backend, no sólo lo que mostró el modal.
+  const persistedPurchase = expectApiSuccess(
+    await authenticatedApi(page, 'compras_obtener', {
+      query: { id_movimiento: purchaseId, _: Date.now() },
+    }),
+    'No se pudo releer la compra después de la NC económica',
+  )?.compra;
+  const exactEconomicNote = (persistedPurchase?.notas_credito_detalle || []).find(
+    (note) => String(note?.motivo || '').toUpperCase() === 'DIFERENCIA_PRECIO',
+  );
+  expect(exactEconomicNote, 'La compra debe exponer la NC económica persistida').toBeTruthy();
+  expect(Number(exactEconomicNote.total), 'La NC solicitada por $10 debe persistirse exactamente en $10,00').toBeCloseTo(10, 2);
 
   await expectServiceStock(page, productName, 13);
 

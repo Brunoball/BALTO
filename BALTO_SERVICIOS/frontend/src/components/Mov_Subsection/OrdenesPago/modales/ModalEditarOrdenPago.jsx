@@ -634,9 +634,11 @@ export default function ModalEditarOrdenPago({
       const perAPI = perUI ? periodoToYYYYMM(perUI) : "";
 
       const item = {
+        id_item: Number(getPrimerItem(row)?.id_item || 0) || undefined,
         id_stock_producto: Number(productoId),
         id_stock_variante: varianteId,
         id_detalle: null,
+        descripcion: String(form.productoInput || "").trim(),
         cantidad,
         precio,
         iva_pct: ivaPct,
@@ -644,6 +646,46 @@ export default function ModalEditarOrdenPago({
         iva_monto: t.iva_monto,
         total: t.total,
       };
+
+      // Este modal edita visualmente el primer renglón de la compra que origina la
+      // orden de pago. Si la compra tiene más ítems, deben viajar completos para que
+      // el backend no los reemplace por accidente al guardar proveedor/fecha/precio.
+      const originales = getMovimientoItems(row);
+      const cantidadEsperada = Math.max(0, safeNumber(row?.cantidad_items ?? row?.cantidadItems ?? 0));
+      if (cantidadEsperada > originales.length) {
+        throw new Error("No se cargaron todos los ítems de la compra. Cerrá el modal, recargá la pantalla e intentá nuevamente.");
+      }
+
+      const itemsPreservados = originales.slice(1).map((original) => {
+        const cantidadOriginal = roundQuantity(Math.max(0, safeNumber(original?.cantidad)));
+        const precioOriginal = round2(Math.max(0, safeNumber(original?.precio)));
+        const ivaOriginal = round2(Math.max(0, safeNumber(original?.iva_pct ?? original?.ivaPct)));
+        const totalesOriginales = calcTotals(cantidadOriginal, precioOriginal, ivaOriginal);
+        const idProductoOriginal = getProductoId(original) || null;
+        const idVarianteOriginal = getProductoVarianteId(original) || null;
+        const idDetalleOriginal = Number(original?.id_detalle ?? original?.idDetalle ?? 0) || null;
+
+        if (!(cantidadOriginal > 0) || !(precioOriginal >= 0) || (!idProductoOriginal && !idDetalleOriginal)) {
+          throw new Error("Hay un ítem original que no pudo validarse. Cerrá el modal, recargá la pantalla e intentá nuevamente.");
+        }
+
+        return {
+          id_item: Number(original?.id_item ?? original?.idItem ?? 0) || undefined,
+          id_stock_producto: idProductoOriginal,
+          id_stock_variante: idVarianteOriginal,
+          id_detalle: idProductoOriginal ? null : idDetalleOriginal,
+          descripcion: String(original?.descripcion ?? original?.detalle ?? original?.nombre ?? "").trim(),
+          cantidad: cantidadOriginal,
+          precio: precioOriginal,
+          iva_pct: ivaOriginal,
+          subtotal: totalesOriginales.subtotal,
+          iva_monto: totalesOriginales.iva_monto,
+          total: totalesOriginales.total,
+        };
+      });
+
+      const itemsCompletos = [item, ...itemsPreservados];
+      const totalCompleto = round2(itemsCompletos.reduce((acc, it) => acc + safeNumber(it.total), 0));
 
       const payloadFinal = {
         id_movimiento: form.id_movimiento,
@@ -660,9 +702,10 @@ export default function ModalEditarOrdenPago({
         iva_pct: ivaPct,
         subtotal: t.subtotal,
         iva_monto: t.iva_monto,
-        total: t.total,
-        monto_total: t.total,
-        items: [item],
+        total: totalCompleto,
+        monto_total: totalCompleto,
+        items_completos: true,
+        items: itemsCompletos,
       };
 
       await onSave?.(payloadFinal);

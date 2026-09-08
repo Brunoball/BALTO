@@ -16,7 +16,7 @@ npx playwright test tests/03-services-catalog-crud.spec.js tests/20-services-inv
 
 # 2. MOVIMIENTOS + INTEGRACIÓN SERVICIOS/STOCK
 # Compras, ventas, presupuestos, otros movimientos, NC, reversión y servicios compuestos.
-npx playwright test tests/04-purchases-credit-note.spec.js tests/05-sales-credit-note.spec.js tests/06-budgets.spec.js tests/07-other-movements.spec.js tests/13-movement-delete-reversal.spec.js tests/14-details-and-cancel.spec.js tests/16-movement-details-integrity.spec.js tests/17-other-income-fiscal.spec.js tests/25-services-movements-integration.spec.js --project=chromium --workers=1 --reporter=list
+npx playwright test tests/04-purchases-credit-note.spec.js tests/05-sales-credit-note.spec.js tests/06-budgets.spec.js tests/07-other-movements.spec.js tests/13-movement-delete-reversal.spec.js tests/14-details-and-cancel.spec.js tests/16-movement-details-integrity.spec.js tests/17-other-income-fiscal.spec.js tests/25-services-movements-integration.spec.js tests/29-final-services-hardening.spec.js --project=chromium --workers=1 --reporter=list
 
 # 3. CUENTAS CORRIENTES + RECIBOS/OP
 npx playwright test tests/08-current-accounts.spec.js tests/19-current-account-entities.spec.js --project=chromium --workers=1 --reporter=list
@@ -37,6 +37,11 @@ npx playwright test tests/02-navigation-smoke.spec.js tests/11-global-guards.spe
 # 8. SUPERFICIE API DE SERVICIOS + SALUD DE BÚSQUEDAS
 # Verifica acciones servicios_* y concentra regresiones SQL de q= en un único test.
 npx playwright test tests/26-services-action-surface.spec.js tests/27-movement-search-health.spec.js tests/28-purchase-ui-health.spec.js --project=chromium --workers=1 --reporter=list
+
+# 9. BLINDAJES FINALES DE CIERRE
+# Compra multiítem, colección incompleta rechazada, delta con stock consumido,
+# OP multiítem y persistencia exacta de notas de crédito.
+npx playwright test tests/29-final-services-hardening.spec.js tests/04-purchases-credit-note.spec.js --project=chromium --workers=1 --reporter=list
 
 # REGRESIÓN COMPLETA
 npx playwright test --project=chromium --workers=1 --reporter=list

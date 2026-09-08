@@ -16,6 +16,7 @@ import ModalPagarRecibos from "./modales/ModalPagarRecibos.jsx";
 import ModalDetalleMovimiento from "../../Global/Modales/ModalDetalleMovimiento.jsx";
 
 import BotonExportar from "../../Global/Boton_Exportar/BotonExportar.jsx";
+import { collectAllExportRows } from "../../Global/Boton_Exportar/exportScopeUtils.js";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -33,7 +34,7 @@ import {
 import * as XLSX from "xlsx";
 import { useListas } from "../../../context/ListasContext.jsx";
 import { useDateRange } from "../../../context/DateRangeContext.jsx";
-import { getResumenProductosMovimiento } from "../_shared/detalleMovimiento.js";
+import { getDetalleMovimiento, getResumenProductosMovimiento } from "../_shared/detalleMovimiento.js";
 import { apiGet, apiPostJson, getAuthInfo } from "./api/recibosApi.js";
 import useRecibosToast from "./hooks/useRecibosToast.js";
 import { moneyARS, safeText, formatFechaDMY, dateToAPI, todayISO, formatDateUI, slugifySheetName, escapeCSV, downloadBlob, isAccionNoValidaErrorMessage } from "./utils/recibosUtils.js";
@@ -167,7 +168,7 @@ function getRowKey(r) {
 function buildExportRows(rows) {
   return (Array.isArray(rows) ? rows : []).map((r) => ({
     FECHA: safeText(formatFechaDMY(r?.fecha)),
-    DESCRIPCION: productosLabel(r),
+    DESCRIPCION: safeText(getDetalleMovimiento(r)),
     CLIENTE: safeText(r?.cliente),
     ESTADO: getEstadoReciboLabel(r),
     SALDO: getMontoVisibleRecibo(r),
@@ -533,116 +534,93 @@ export default function Recibos() {
     return "recibos_pendientes";
   }, [dateRange]);
 
-  const getExportData = useCallback(() => {
-    const dataToExport = buildExportRows(filteredRows);
+  const getExportData = useCallback((sourceRows = filteredRows) => {
+    const rowsToUse = Array.isArray(sourceRows) ? sourceRows : filteredRows;
+    const dataToExport = buildExportRows(rowsToUse);
     if (!dataToExport.length) throw new Error("No hay datos para exportar.");
     return dataToExport;
   }, [filteredRows]);
 
-  const exportToExcel = useCallback(() => {
-    const dataToExport = getExportData();
+  const exportToExcel = useCallback((sourceRows = filteredRows) => {
+    const dataToExport = getExportData(sourceRows);
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.json_to_sheet(dataToExport);
-
     const headers = Object.keys(dataToExport[0] || {});
     const montoColIndex = headers.findIndex((h) => h === "MONTO");
-
     if (montoColIndex >= 0 && ws["!ref"]) {
       const colLetter = XLSX.utils.encode_col(montoColIndex);
       const range = XLSX.utils.decode_range(ws["!ref"]);
-      for (let r = range.s.r + 1; r <= range.e.r; r++) {
+      for (let r = range.s.r + 1; r <= range.e.r; r += 1) {
         const cell = ws[`${colLetter}${r + 1}`];
         if (cell && typeof cell.v === "number") cell.z = '"$"#,##0.00';
       }
     }
-
     XLSX.utils.book_append_sheet(wb, ws, slugifySheetName("Recibos_Pendientes"));
     XLSX.writeFile(wb, `${exportBaseName}.xlsx`);
-  }, [getExportData, exportBaseName]);
+  }, [filteredRows, getExportData, exportBaseName]);
 
-  const exportToCSV = useCallback(() => {
-    const dataToExport = getExportData();
+  const exportToCSV = useCallback((sourceRows = filteredRows) => {
+    const dataToExport = getExportData(sourceRows);
     const headers = Object.keys(dataToExport[0] || {});
-    const lines = [
-      headers.join(";"),
-      ...dataToExport.map((row) => headers.map((h) => escapeCSV(row[h])).join(";")),
-    ];
-    const csvContent = "\uFEFF" + lines.join("\n");
-    downloadBlob(csvContent, `${exportBaseName}.csv`, "text/csv;charset=utf-8;");
-  }, [getExportData, exportBaseName]);
+    const lines = [headers.join(";"), ...dataToExport.map((row) => headers.map((h) => escapeCSV(row[h])).join(";"))];
+    downloadBlob("\uFEFF" + lines.join("\n"), `${exportBaseName}.csv`, "text/csv;charset=utf-8;");
+  }, [filteredRows, getExportData, exportBaseName]);
 
-  const exportToTXT = useCallback(() => {
-    const dataToExport = getExportData();
-    const lines = dataToExport.map((row, index) => {
-      return [
-        `REGISTRO ${index + 1}`,
-        `FECHA: ${row.FECHA ?? ""}`,
-        `DESCRIPCION: ${row.DESCRIPCION ?? ""}`,
-        `CLIENTE: ${row.CLIENTE ?? ""}`,
-        `ESTADO: ${row.ESTADO ?? ""}`,
-        `MONTO: ${row.MONTO ?? ""}`,
-        "----------------------------------------",
-      ].join("\n");
-    });
-    const txtContent = lines.join("\n");
-    downloadBlob(txtContent, `${exportBaseName}.txt`, "text/plain;charset=utf-8;");
-  }, [getExportData, exportBaseName]);
+  const exportToTXT = useCallback((sourceRows = filteredRows) => {
+    const dataToExport = getExportData(sourceRows);
+    const lines = dataToExport.map((row, index) => [
+      `REGISTRO ${index + 1}`,
+      `FECHA: ${row.FECHA ?? ""}`,
+      `DESCRIPCION: ${row.DESCRIPCION ?? ""}`,
+      `CLIENTE: ${row.CLIENTE ?? ""}`,
+      `ESTADO: ${row.ESTADO ?? ""}`,
+      `SALDO: ${row.SALDO ?? ""}`,
+      `MONTO ORIGINAL: ${row.MONTO_ORIGINAL ?? ""}`,
+      `COBRADO: ${row.COBRADO ?? ""}`,
+      "----------------------------------------",
+    ].join("\n"));
+    downloadBlob(lines.join("\n"), `${exportBaseName}.txt`, "text/plain;charset=utf-8;");
+  }, [filteredRows, getExportData, exportBaseName]);
 
-  const handleExport = useCallback(
-    async (type) => {
-      try {
-        if (hasMore) {
-          showToast(
-            "error",
-            'Todavía hay más registros sin cargar. Tocá "Cargar 100 más" hasta completar todo.'
-          );
-          return;
-        }
-
-        if (type === "excel") {
-          exportToExcel();
-          showToast("exito", "Excel exportado.");
-          return;
-        }
-
-        if (type === "csv") {
-          exportToCSV();
-          showToast("exito", "CSV exportado.");
-          return;
-        }
-
-        if (type === "txt") {
-          exportToTXT();
-          showToast("exito", "TXT exportado.");
-        }
-      } catch (e) {
-        showToast("error", e?.message || "Error exportando archivo.");
-      }
+  const loadAllRowsForExport = useCallback(() => collectAllExportRows({
+    fetchPage: async (offset) => {
+      const sp = new URLSearchParams();
+      sp.set("action", "recibos_listar");
+      const fromAPI = dateToAPI(dateRange?.from);
+      const toAPI = dateToAPI(dateRange?.to);
+      if (fromAPI) sp.set("fecha_desde", fromAPI);
+      if (toAPI) sp.set("fecha_hasta", toAPI);
+      if ((q || "").trim()) sp.set("q", (q || "").trim());
+      sp.set("limit", String(PAGE_SIZE));
+      sp.set("offset", String(offset));
+      const data = await apiGet(`${API}?${sp.toString()}`);
+      if (!data?.exito) throw new Error(data?.mensaje || "No se pudieron cargar todos los recibos.");
+      const raw = Array.isArray(data.movimientos) ? data.movimientos : [];
+      const pageHasMore = data.has_more !== undefined ? !!data.has_more : raw.length > PAGE_SIZE;
+      const page = pageHasMore ? raw.slice(0, PAGE_SIZE) : raw;
+      const next = data.next_offset !== undefined && data.next_offset !== null ? Number(data.next_offset) : (pageHasMore ? offset + PAGE_SIZE : null);
+      return { rows: page, hasMore: pageHasMore, nextOffset: next };
     },
-    [hasMore, exportToExcel, exportToCSV, exportToTXT, showToast]
-  );
+    getRowKey,
+  }), [API, apiGet, dateRange?.from, dateRange?.to, q]);
 
-  const exportOptions = useMemo(
-    () => [
-      {
-        key: "excel",
-        label: "Exportar Excel (.xlsx)",
-        icon: faFileExcel,
-        onClick: () => handleExport("excel"),
-      },
-      {
-        key: "csv",
-        label: "Exportar CSV (.csv)",
-        onClick: () => handleExport("csv"),
-      },
-      {
-        key: "txt",
-        label: "Exportar TXT (.txt)",
-        onClick: () => handleExport("txt"),
-      },
-    ],
-    [handleExport]
-  );
+  const handleExport = useCallback(async (type, sourceRows) => {
+    try {
+      const rowsToExport = Array.isArray(sourceRows) ? sourceRows : filteredRows;
+      if (type === "excel") { exportToExcel(rowsToExport); showToast("exito", "Excel exportado."); return; }
+      if (type === "csv") { exportToCSV(rowsToExport); showToast("exito", "CSV exportado."); return; }
+      if (type === "txt") { exportToTXT(rowsToExport); showToast("exito", "TXT exportado."); }
+    } catch (e) {
+      showToast("error", e?.message || "Error exportando archivo.");
+      throw e;
+    }
+  }, [filteredRows, exportToExcel, exportToCSV, exportToTXT, showToast]);
+
+  const exportOptions = useMemo(() => [
+    { key: "excel", label: "Excel (.xlsx)", tipo: "excel", icon: faFileExcel, onClick: ({ rows: exportRows } = {}) => handleExport("excel", exportRows) },
+    { key: "csv", label: "CSV (.csv)", tipo: "csv", onClick: ({ rows: exportRows } = {}) => handleExport("csv", exportRows) },
+    { key: "txt", label: "TXT (.txt)", tipo: "txt", onClick: ({ rows: exportRows } = {}) => handleExport("txt", exportRows) },
+  ], [handleExport]);
 
   const columns = useMemo(() => {
     return [
@@ -1137,6 +1115,13 @@ export default function Recibos() {
               title={filteredRows.length ? "Exportar archivo" : "No hay datos para exportar"}
               opciones={exportOptions}
               align="right"
+              entityLabel="recibos"
+              currentRows={filteredRows}
+              allRows={hasMore ? null : filteredRows}
+              loadAllRows={loadAllRowsForExport}
+              currentCount={filteredRows.length}
+              allCount={hasMore ? null : filteredRows.length}
+              hasMore={hasMore}
             />
           </div>
         </div>
