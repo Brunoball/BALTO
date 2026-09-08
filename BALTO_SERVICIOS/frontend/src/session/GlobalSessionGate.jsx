@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   clearClientSession,
@@ -10,20 +10,63 @@ import {
   validateServicesSession,
 } from "./sessionClient";
 
+/*
+ * La validación MASTER se hace una sola vez por documento/sesión.
+ * Las navegaciones internas no deben desmontar el panel ni mostrar
+ * nuevamente el skeleton global de autenticación.
+ */
+let validatedSessionKey = "";
+
 export default function GlobalSessionGate({ children }) {
   const navigate = useNavigate();
-  const [state, setState] = useState({ status: "checking", message: "" });
+  const navigateRef = useRef(navigate);
+  const verifyingRef = useRef(false);
+
+  const currentSessionKey = getSessionKey();
+  const [state, setState] = useState(() => ({
+    status:
+      currentSessionKey && validatedSessionKey === currentSessionKey
+        ? "ready"
+        : "checking",
+    message: "",
+  }));
+
+  /*
+   * useNavigate puede cambiar de identidad cuando cambia la ubicación.
+   * Guardarlo en un ref evita que eso vuelva a disparar verify() en cada
+   * navegación interna.
+   */
+  useEffect(() => {
+    navigateRef.current = navigate;
+  }, [navigate]);
 
   const leaveServices = useCallback(() => {
+    validatedSessionKey = "";
     clearClientSession();
     redirectToCentralAccess();
   }, []);
 
   const verify = useCallback(async () => {
-    if (!getSessionKey()) {
+    const sessionKey = getSessionKey();
+
+    if (!sessionKey) {
       leaveServices();
       return;
     }
+
+    /*
+     * Si esta sesión ya fue validada en este documento, mantenemos el panel
+     * visible. Cada módulo conserva su propio estado/skeleton de carga.
+     */
+    if (validatedSessionKey === sessionKey) {
+      setState((prev) =>
+        prev.status === "ready" ? prev : { status: "ready", message: "" }
+      );
+      return;
+    }
+
+    if (verifyingRef.current) return;
+    verifyingRef.current = true;
 
     setState({ status: "checking", message: "" });
 
@@ -46,11 +89,12 @@ export default function GlobalSessionGate({ children }) {
       }
 
       storeValidatedUser(result.data?.usuario);
+      validatedSessionKey = sessionKey;
 
       const goToDashboard = consumeDashboardAfterLogin();
       const browserPath = String(window.location.pathname || "").replace(/\/+$/, "");
       if (goToDashboard && !browserPath.endsWith("/panel/dashboard")) {
-        navigate("/panel/dashboard", { replace: true });
+        navigateRef.current("/panel/dashboard", { replace: true });
       }
 
       setState({ status: "ready", message: "" });
@@ -60,8 +104,10 @@ export default function GlobalSessionGate({ children }) {
         message:
           "No se pudo contactar la API de BALTO_SERVICIOS para validar la sesión. Revisá la conexión e intentá nuevamente.",
       });
+    } finally {
+      verifyingRef.current = false;
     }
-  }, [leaveServices, navigate]);
+  }, [leaveServices]);
 
   useEffect(() => {
     verify();
