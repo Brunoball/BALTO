@@ -4,6 +4,7 @@ import ModalVerComprobante from "../../Global/Ver_Comprobantes/ModalVerComproban
 import StockBarcodePanel from "./StockBarcodePanel";
 import "./ModalCargaIndividualProducto.css";
 import { isTopStockModal } from "./modalStackUtils";
+import { canBaltoUseBarcode } from "../../../utils/demoMode";
 import {
   crearCategoriaStock,
   crearProductoStock,
@@ -814,6 +815,7 @@ export default function ModalCargaIndividualProducto({
   const [previewFileName, setPreviewFileName] = useState("");
   const [previewTitle, setPreviewTitle] = useState("Archivo");
   const [form, setForm] = useState(buildEmptyForm);
+  const permiteCodigoBarras = canBaltoUseBarcode();
   const [cargaActiva, setCargaActiva] = useState("producto");
   const [barcodeProductoGuardado, setBarcodeProductoGuardado] = useState(null);
   const [barcodeGuardadoContexto, setBarcodeGuardadoContexto] = useState(null);
@@ -1687,7 +1689,7 @@ export default function ModalCargaIndividualProducto({
         variantesPayload
       );
 
-      const continuarConCodigos = cargaActiva === "codigo_barra";
+      const continuarConCodigos = permiteCodigoBarras && cargaActiva === "codigo_barra";
       const opcionesGuardado = {
         response: data,
         tiendanube_sync: data?.tiendanube_sync ?? data?.data?.tiendanube_sync ?? null,
@@ -1771,24 +1773,28 @@ export default function ModalCargaIndividualProducto({
             >
               <FontAwesomeIcon icon={faCubesStacked} /> Variantes
             </button>
-            <button
-              type="button"
-              className={`cmi-v2-mainTab ${cargaActiva === "codigo_barra" ? "is-active" : ""}`}
-              onClick={() => setCargaActiva("codigo_barra")}
-              role="tab"
-              aria-selected={cargaActiva === "codigo_barra"}
-            >
-              <FontAwesomeIcon icon={faBarcode} /> Código de barra
-            </button>
+            {permiteCodigoBarras ? (
+              <button
+                type="button"
+                className={`cmi-v2-mainTab ${cargaActiva === "codigo_barra" ? "is-active" : ""}`}
+                onClick={() => setCargaActiva("codigo_barra")}
+                role="tab"
+                aria-selected={cargaActiva === "codigo_barra"}
+              >
+                <FontAwesomeIcon icon={faBarcode} /> Código de barra
+              </button>
+            ) : null}
           </div>
 
-          <StockBarcodePanel
-            productoId={barcodeProductoGuardado?.id_stock_producto ?? barcodeProductoGuardado?.id ?? 0}
-            nombreProducto={barcodeProductoGuardado?.nombre || form.nombre}
-            tieneVariantes={barcodeProductoGuardado ? !!barcodeProductoGuardado?.tiene_variantes : !!form.tiene_variantes}
-            variantes={barcodeProductoGuardado?.variantes || form.variantes}
-            onToast={mostrarToast}
-          />
+          {permiteCodigoBarras ? (
+            <StockBarcodePanel
+              productoId={barcodeProductoGuardado?.id_stock_producto ?? barcodeProductoGuardado?.id ?? 0}
+              nombreProducto={barcodeProductoGuardado?.nombre || form.nombre}
+              tieneVariantes={barcodeProductoGuardado ? !!barcodeProductoGuardado?.tiene_variantes : !!form.tiene_variantes}
+              variantes={barcodeProductoGuardado?.variantes || form.variantes}
+              onToast={mostrarToast}
+            />
+          ) : null}
           <section style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             <SectionTitle label="Datos del producto" />
 

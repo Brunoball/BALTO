@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   clearClientSession,
+  consumeDashboardAfterLogin,
   getSessionKey,
   isDefinitiveSessionFailure,
   redirectToCentralAccess,
@@ -9,6 +11,7 @@ import {
 } from "./sessionClient";
 
 export default function GlobalSessionGate({ children }) {
+  const navigate = useNavigate();
   const [state, setState] = useState({ status: "checking", message: "" });
 
   const leaveCommerce = useCallback(() => {
@@ -43,6 +46,12 @@ export default function GlobalSessionGate({ children }) {
       }
 
       storeValidatedUser(result.data?.usuario);
+
+      const goToDashboard = consumeDashboardAfterLogin();
+      if (goToDashboard) {
+        navigate("/panel/dashboard", { replace: true });
+      }
+
       setState({ status: "ready", message: "" });
     } catch {
       setState({
@@ -51,7 +60,7 @@ export default function GlobalSessionGate({ children }) {
           "No se pudo contactar la API de BALTO_COMERCIO para validar la sesión. Revisá la conexión e intentá nuevamente.",
       });
     }
-  }, [leaveCommerce]);
+  }, [leaveCommerce, navigate]);
 
   useEffect(() => {
     verify();

@@ -3,6 +3,7 @@ import { redirectToCentralAccessBridge } from "./localSessionBridge";
 
 const SESSION_KEY = "session_key";
 const USER_KEY = "usuario";
+const FORCE_DASHBOARD_KEY = "balto_force_dashboard_after_login";
 
 export function getSessionKey() {
   try {
@@ -36,6 +37,33 @@ export function storeValidatedUser(usuario) {
   } catch {}
 }
 
+export function markDashboardForNextLogin() {
+  try {
+    localStorage.setItem(FORCE_DASHBOARD_KEY, "1");
+  } catch {}
+
+  try {
+    sessionStorage.setItem(FORCE_DASHBOARD_KEY, "1");
+  } catch {}
+}
+
+export function consumeDashboardAfterLogin() {
+  let shouldRedirect = false;
+
+  try {
+    shouldRedirect = localStorage.getItem(FORCE_DASHBOARD_KEY) === "1";
+    localStorage.removeItem(FORCE_DASHBOARD_KEY);
+  } catch {}
+
+  try {
+    shouldRedirect =
+      sessionStorage.getItem(FORCE_DASHBOARD_KEY) === "1" || shouldRedirect;
+    sessionStorage.removeItem(FORCE_DASHBOARD_KEY);
+  } catch {}
+
+  return shouldRedirect;
+}
+
 export function clearClientSession() {
   try {
     localStorage.removeItem(SESSION_KEY);
@@ -56,6 +84,10 @@ export function clearClientSession() {
 }
 
 export function redirectToCentralAccess() {
+  // Si BALTO Servicios debe volver al Login Global, el próximo ingreso
+  // comienza siempre en Dashboard y no conserva la sección anterior.
+  markDashboardForNextLogin();
+
   if (redirectToCentralAccessBridge()) return;
 
   try {

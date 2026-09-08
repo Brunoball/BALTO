@@ -23,6 +23,7 @@ import {
 import { useDateRange } from "../../context/DateRangeContext";
 import {
   DEMO_BLOCK_MESSAGE,
+  canBaltoUseTiendaNube,
   getBaltoUsuario,
   isBaltoDemoMode,
 } from "../../utils/demoMode";
@@ -65,6 +66,7 @@ function ConfiguracionInicio() {
     "";
 
   const esPlanDemo = isBaltoDemoMode(usuario);
+  const permiteTiendaNube = canBaltoUseTiendaNube(usuario);
   const { toast, setToast, mostrarToast } = useConfiguracionToast({
     defaultDuration: 3800,
   });
@@ -89,7 +91,7 @@ function ConfiguracionInicio() {
   const cargarResumen = useCallback(async () => {
     const tareas = [];
 
-    if (tenantId) {
+    if (tenantId && permiteTiendaNube) {
       tareas.push(
         apiFetch({ action: "tiendanube_status", idTenant: tenantId })
           .then((res) => res.text())
@@ -123,7 +125,7 @@ function ConfiguracionInicio() {
     );
 
     await Promise.allSettled(tareas);
-  }, [tenantId]);
+  }, [tenantId, permiteTiendaNube]);
 
   useEffect(() => {
     cargarResumen();
@@ -167,7 +169,7 @@ function ConfiguracionInicio() {
     };
 
     return [
-      tiendaNubeCard,
+      ...(permiteTiendaNube ? [tiendaNubeCard] : []),
       {
         id: "usuarios",
         title: "Usuarios del sistema",
@@ -250,7 +252,7 @@ function ConfiguracionInicio() {
         icon: <CalendarioIcon />,
       },
     ];
-  }, [tiendanube, datosLegales, calendarConfig, configLoaded, esPlanDemo]);
+  }, [tiendanube, datosLegales, calendarConfig, configLoaded, esPlanDemo, permiteTiendaNube]);
 
   return (
     <>

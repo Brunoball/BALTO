@@ -10,6 +10,7 @@ import "./inicio.css";
 
 const REMEMBER_FLAG = "rememberLogin";
 const REMEMBER_USER = "remember_nombre";
+const REMEMBER_PASSWORD = "remember_contrasena";
 
 function resolverDestinoLogin(data) {
   const sistema = data?.sistema || data?.usuario?.sistema || {};
@@ -88,15 +89,18 @@ export default function Inicio() {
     if (localStorage.getItem(REMEMBER_FLAG) !== "1") return;
     setRemember(true);
     setNombre(localStorage.getItem(REMEMBER_USER) || "");
+    setContrasena(localStorage.getItem(REMEMBER_PASSWORD) || "");
   }, []);
 
-  const persistRemember = (user, enabled) => {
+  const persistRemember = (user, password, enabled) => {
     if (enabled) {
       localStorage.setItem(REMEMBER_FLAG, "1");
       localStorage.setItem(REMEMBER_USER, user);
+      localStorage.setItem(REMEMBER_PASSWORD, password);
     } else {
       localStorage.removeItem(REMEMBER_FLAG);
       localStorage.removeItem(REMEMBER_USER);
+      localStorage.removeItem(REMEMBER_PASSWORD);
     }
   };
 
@@ -176,7 +180,7 @@ export default function Inicio() {
         usuario: usuarioFinal,
         sistema,
       });
-      persistRemember(user, remember);
+      persistRemember(user, pass, remember);
 
       // Si este login fue iniciado por BALTO_COMERCIO o BALTO_SERVICIOS
       // ejecutándose en localhost, devolvemos la sesión directamente al
@@ -308,7 +312,7 @@ export default function Inicio() {
               onChange={(e) => {
                 const checked = e.target.checked;
                 setRemember(checked);
-                if (!checked) persistRemember("", false);
+                if (!checked) persistRemember("", "", false);
               }}
             />
             <span>Recordar cuenta</span>

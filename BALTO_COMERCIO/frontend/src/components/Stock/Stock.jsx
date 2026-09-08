@@ -27,6 +27,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import "./Stock.css";
 import "../Global/Global_css/Global_Section.css";
+import { canBaltoUseBarcode } from "../../utils/demoMode";
 
 import {
   API_URL,
@@ -92,6 +93,7 @@ function renderStockChip(value) {
 }
 
 const Stock = () => {
+  const permiteCodigoBarras = canBaltoUseBarcode();
   const [productosRaw, setProductosRaw] = useState([]);
   const [categorias, setCategorias] = useState([]);
 
@@ -1563,6 +1565,7 @@ const Stock = () => {
   };
 
   const aplicarCodigoEscaneado = useCallback((codigo) => {
+    if (!permiteCodigoBarras) return;
     const valor = String(codigo || "").trim();
     if (valor.length < BARCODE_SCANNER_MIN_LENGTH) return;
 
@@ -1578,9 +1581,11 @@ const Stock = () => {
     window.requestAnimationFrame(() => {
       lectorCapturaRef.current?.focus({ preventScroll: true });
     });
-  }, [descartarPosicionScrollTabla]);
+  }, [descartarPosicionScrollTabla, permiteCodigoBarras]);
 
   useEffect(() => {
+    if (!permiteCodigoBarras) return undefined;
+
     const limpiarBufferLector = () => {
       const lector = lectorCodigoRef.current;
       if (lector.timerId) window.clearTimeout(lector.timerId);
@@ -1693,9 +1698,11 @@ const Stock = () => {
       window.removeEventListener("paste", handlePegadoCodigo, true);
       limpiarBufferLector();
     };
-  }, [aplicarCodigoEscaneado, lectorBloqueadoPorModal]);
+  }, [aplicarCodigoEscaneado, lectorBloqueadoPorModal, permiteCodigoBarras]);
 
   useEffect(() => {
+    if (!permiteCodigoBarras) return undefined;
+
     const capturaLector = lectorCapturaRef.current;
     if (lectorBloqueadoPorModal) {
       if (document.activeElement === capturaLector) capturaLector?.blur();
@@ -1750,7 +1757,7 @@ const Stock = () => {
       timers.forEach((timerId) => window.clearTimeout(timerId));
       timers.clear();
     };
-  }, [lectorBloqueadoPorModal]);
+  }, [lectorBloqueadoPorModal, permiteCodigoBarras]);
 
   const handleCategoriaFiltro = (e) => {
     seleccionarCategoriaFiltro(e.target.value);
@@ -2724,15 +2731,17 @@ const Stock = () => {
   return (
     <>
       <div className="mov-page stock-page">
-        <input
-          ref={lectorCapturaRef}
-          className="stock-barcodeCaptureInput"
-          type="text"
-          tabIndex={-1}
-          aria-label="Captura del lector de códigos de barra"
-          autoComplete="off"
-          data-lpignore="true"
-        />
+        {permiteCodigoBarras ? (
+          <input
+            ref={lectorCapturaRef}
+            className="stock-barcodeCaptureInput"
+            type="text"
+            tabIndex={-1}
+            aria-label="Captura del lector de códigos de barra"
+            autoComplete="off"
+            data-lpignore="true"
+          />
+        ) : null}
 
         {error && (
           <div className="mov-alert" role="alert">
@@ -2767,7 +2776,7 @@ const Stock = () => {
                           className="cc-input cc-input--floating"
                           value={busqueda}
                           onChange={handleBusqueda}
-                          placeholder="Buscar por nombre, SKU, código de barra o variante..."
+                          placeholder={permiteCodigoBarras ? "Buscar por nombre, SKU, código de barra o variante..." : "Buscar por nombre, SKU o variante..."}
                         />
                         <span className="cc-floatingLabel">
                           <FontAwesomeIcon icon={faMagnifyingGlass} /> Búsqueda

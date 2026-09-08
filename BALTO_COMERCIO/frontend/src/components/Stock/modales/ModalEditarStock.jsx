@@ -5,6 +5,7 @@ import "./ModalEditarStock.css";
 import ModalVerComprobante from "../../Global/Ver_Comprobantes/ModalVerComprobante";
 import StockBarcodePanel from "./StockBarcodePanel";
 import { isTopStockModal } from "./modalStackUtils";
+import { canBaltoUseBarcode } from "../../../utils/demoMode";
 import {
   faBoxOpen,
   faTag,
@@ -1036,6 +1037,7 @@ export default function ModalEditarProducto({
   const [dark, setDark] = useState(isTemaOscuro);
 
   const [form, setForm] = useState(buildEmptyForm());
+  const permiteCodigoBarras = canBaltoUseBarcode();
   const [cargaActiva, setCargaActiva] = useState("producto");
   const [barcodeRefreshKey, setBarcodeRefreshKey] = useState(0);
   const [categorias, setCategorias] = useState([]);
@@ -2516,28 +2518,32 @@ export default function ModalEditarProducto({
                   >
                     <FontAwesomeIcon icon={faCubesStacked} /> Variantes
                   </button>
-                  <button
-                    type="button"
-                    className={`cmi-v2-mainTab ${cargaActiva === "codigo_barra" ? "is-active" : ""}`}
-                    onClick={() => setCargaActiva("codigo_barra")}
-                    role="tab"
-                    aria-selected={cargaActiva === "codigo_barra"}
-                    disabled={isLoading}
-                  >
-                    <FontAwesomeIcon icon={faBarcode} /> Código de barra
-                  </button>
+                  {permiteCodigoBarras ? (
+                    <button
+                      type="button"
+                      className={`cmi-v2-mainTab ${cargaActiva === "codigo_barra" ? "is-active" : ""}`}
+                      onClick={() => setCargaActiva("codigo_barra")}
+                      role="tab"
+                      aria-selected={cargaActiva === "codigo_barra"}
+                      disabled={isLoading}
+                    >
+                      <FontAwesomeIcon icon={faBarcode} /> Código de barra
+                    </button>
+                  ) : null}
                 </div>
 
-                <StockBarcodePanel
-                  productoId={productoId}
-                  nombreProducto={form.nombre}
-                  tieneVariantes={!!form.tiene_variantes}
-                  variantes={form.variantes}
-                  onToast={mostrarToast}
-                  onSavePendingChanges={() => handleGuardar({ mantenerAbierto: true })}
-                  productSaving={guardando}
-                  refreshKey={barcodeRefreshKey}
-                />
+                {permiteCodigoBarras ? (
+                  <StockBarcodePanel
+                    productoId={productoId}
+                    nombreProducto={form.nombre}
+                    tieneVariantes={!!form.tiene_variantes}
+                    variantes={form.variantes}
+                    onToast={mostrarToast}
+                    onSavePendingChanges={() => handleGuardar({ mantenerAbierto: true })}
+                    productSaving={guardando}
+                    refreshKey={barcodeRefreshKey}
+                  />
+                ) : null}
                 <FloatingField
                   label="Nombre del producto *"
                   icon={faBoxOpen}

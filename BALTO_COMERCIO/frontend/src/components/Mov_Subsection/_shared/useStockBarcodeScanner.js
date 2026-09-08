@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { fetchFreshBarcodeOptions, lookupBarcode } from "./api/stockBarcodeApi.js";
+import { canBaltoUseBarcode } from "../../../utils/demoMode";
 
 const MAX_FAST_GAP_MS = 95;
 const MAX_AVG_GAP_MS = 45;
@@ -322,9 +323,10 @@ export default function useStockBarcodeScanner({
   onError,
   onBusyChange,
 }) {
+  const featureEnabled = Boolean(enabled && canBaltoUseBarcode());
   const optionsRef = useRef(options);
   const callbackRef = useRef({ refreshOptions, onSelect, onError, onBusyChange });
-  const configRef = useRef({ enabled, allowOutOfStock });
+  const configRef = useRef({ enabled: featureEnabled, allowOutOfStock });
   const busyRef = useRef(false);
   const bufferRef = useRef(freshBuffer(0));
   const abortRef = useRef(null);
@@ -341,11 +343,11 @@ export default function useStockBarcodeScanner({
   }, [refreshOptions, onSelect, onError, onBusyChange]);
 
   useEffect(() => {
-    configRef.current = { enabled, allowOutOfStock };
-  }, [enabled, allowOutOfStock]);
+    configRef.current = { enabled: featureEnabled, allowOutOfStock };
+  }, [featureEnabled, allowOutOfStock]);
 
   useEffect(() => {
-    if (!enabled) return undefined;
+    if (!featureEnabled) return undefined;
 
     const clearIdleTimer = () => {
       if (idleTimerRef.current) {
@@ -541,5 +543,5 @@ export default function useStockBarcodeScanner({
       clearIdleTimer();
       reset();
     };
-  }, [enabled]);
+  }, [featureEnabled]);
 }
