@@ -1059,28 +1059,30 @@ html[data-theme="oscuro"] .mfb-check__input:focus-visible + .mfb-check__box{
   box-shadow: 0 0 0 3px rgba(0,85,187,.35);
 }
 /* =========================
-   Modo oscuro
+   Modo oscuro — Botón Exportar
+   El componente usa su CSS global compacto. Estas reglas sólo
+   aseguran que ningún estilo heredado vuelva a agrandar el icono.
 ========================= */
 html[data-theme="oscuro"] .boton-exportar-trigger,
 body.dark .boton-exportar-trigger {
-  background: linear-gradient(180deg, #11243c 0%, #0c1c31 100%);
-  color: #e5eef9;
-  border-color: rgba(148, 163, 184, 0.16);
-  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.24);
+  background: var(--color-surface);
+  color: var(--color-text);
+  border-color: var(--color-border);
+  box-shadow: none;
 }
 
 html[data-theme="oscuro"] .boton-exportar-trigger:hover:not(:disabled),
 body.dark .boton-exportar-trigger:hover:not(:disabled) {
-  border-color: rgba(96, 165, 250, 0.30);
-  box-shadow:
-    0 14px 28px rgba(0, 0, 0, 0.28),
-    0 0 0 4px rgba(59, 130, 246, 0.12);
+  background: var(--color-primary-soft);
+  border-color: rgba(78, 161, 255, .34);
+  box-shadow: none;
 }
 
 html[data-theme="oscuro"] .boton-exportar-trigger__iconWrap,
 body.dark .boton-exportar-trigger__iconWrap {
-  background: linear-gradient(180deg, rgba(59, 130, 246, 0.22) 0%, rgba(37, 99, 235, 0.18) 100%);
-  color: #93c5fd;
+  background: transparent;
+  color: var(--color-primary);
+  border: 0;
 }
 
 html[data-theme="oscuro"] .boton-exportar-menu,
