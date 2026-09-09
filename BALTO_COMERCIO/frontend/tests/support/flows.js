@@ -52,30 +52,65 @@ export async function createStockProduct(page, product) {
   await dialog.locator('input[name="precio"]').fill(String(product.price ?? 150));
   await dialog.locator('input[name="precio"]').blur();
 
-  // El modal puede cerrarse mientras la grilla todavía está terminando su
-  // refresco optimista. Esperamos la confirmación real del alta y volvemos a
-  // cargar Stock antes de buscar por SKU (más corto y estrictamente único).
-  const createResponsePromise = page.waitForResponse(
-    (response) =>
-      response.request().method() === 'POST' &&
-      new URL(response.url()).searchParams.get('action') === 'stock_productos_crear',
-    { timeout: 120_000 },
-  );
-  const saveButton = dialog.getByRole('button', { name: /Guardar producto/i }).last();
-  await expect(saveButton).toBeEnabled();
-  await saveButton.click();
+  // En corridas remotas largas Hostinger puede devolver un 500 transitorio
+  // mientras rota conexiones/sesiones. Reintentamos únicamente 5xx/429/408.
+  // Si el primer intento llegó a persistir pero falló la respuesta, el segundo
+  // puede responder duplicado: en ese caso verificamos por el SKU único antes
+  // de considerar fallida el alta. Un error funcional 4xx normal NO se oculta.
+  const transientStatuses = new Set([408, 429, 500, 502, 503, 504]);
+  let createResponse = null;
+  let createBody = {};
+  let maybePersisted = false;
 
-  const createResponse = await createResponsePromise;
-  const createBody = await createResponse.json().catch(() => ({}));
-  expect(
-    createResponse.status(),
-    `El alta de ${product.name} respondió HTTP ${createResponse.status()}: ${JSON.stringify(createBody)}`,
-  ).toBeLessThan(400);
-  expect(
-    createBody?.exito !== false && createBody?.success !== false,
-    createBody?.mensaje || createBody?.message || `No se pudo crear ${product.name}`,
-  ).toBeTruthy();
-  await expect(dialog).toBeHidden({ timeout: 120_000 });
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    const createResponsePromise = page.waitForResponse(
+      (response) =>
+        response.request().method() === 'POST' &&
+        new URL(response.url()).searchParams.get('action') === 'stock_productos_crear',
+      { timeout: 120_000 },
+    );
+    const saveButton = dialog.getByRole('button', { name: /Guardar producto/i }).last();
+    await expect(saveButton).toBeEnabled({ timeout: 30_000 });
+    await saveButton.click();
+
+    createResponse = await createResponsePromise;
+    createBody = await createResponse.json().catch(() => ({}));
+    const status = createResponse.status();
+
+    if (status < 400 && createBody?.exito !== false && createBody?.success !== false) {
+      break;
+    }
+
+    if (attempt > 1 && status === 409 && /SKU|DUPLIC|EXIST/i.test(String(createBody?.mensaje || createBody?.message || ''))) {
+      maybePersisted = true;
+      break;
+    }
+
+    if (!transientStatuses.has(status) || attempt === 3) {
+      expect(
+        status,
+        `El alta de ${product.name} respondió HTTP ${status}: ${JSON.stringify(createBody)}`,
+      ).toBeLessThan(400);
+      expect(
+        createBody?.exito !== false && createBody?.success !== false,
+        createBody?.mensaje || createBody?.message || `No se pudo crear ${product.name}`,
+      ).toBeTruthy();
+    }
+
+    await page.waitForTimeout(Math.min(6_000, 1_500 * (2 ** (attempt - 1))));
+  }
+
+  if (!maybePersisted) {
+    expect(
+      createResponse?.status() || 0,
+      `El alta de ${product.name} respondió HTTP ${createResponse?.status() || 0}: ${JSON.stringify(createBody)}`,
+    ).toBeLessThan(400);
+    expect(
+      createBody?.exito !== false && createBody?.success !== false,
+      createBody?.mensaje || createBody?.message || `No se pudo crear ${product.name}`,
+    ).toBeTruthy();
+    await expect(dialog).toBeHidden({ timeout: 120_000 });
+  }
 
   await page.goto('/panel/stock');
   await waitForBusyToFinish(page);
@@ -504,12 +539,36 @@ function purchaseContainsProduct(row, productName) {
   return values.some((value) => String(value ?? '').trim().toUpperCase().includes(expected));
 }
 
+async function ensurePurchasePanelReady(page) {
+  const search = page.getByPlaceholder(/Buscar por descripción, proveedor/i).first();
+
+  for (let attempt = 1; attempt <= 5; attempt += 1) {
+    await page.goto('/panel/compras', { waitUntil: 'domcontentloaded' });
+    await waitForBusyToFinish(page).catch(() => null);
+    if (await search.isVisible().catch(() => false)) return search;
+
+    const sessionError = page.getByRole('heading', { name: /No se pudo validar la sesión/i });
+    if (!(await sessionError.isVisible().catch(() => false))) {
+      await expect(search).toBeVisible({ timeout: 5_000 });
+      return search;
+    }
+
+    // No reinterpretamos un 500 como éxito: sólo damos tiempo a que el backend
+    // remoto se recupere. Si tras cinco intentos sigue en error, el test falla.
+    if (attempt < 5) {
+      await page.waitForTimeout(Math.min(8_000, 1_500 * (2 ** (attempt - 1))));
+    }
+  }
+
+  await expect(search).toBeVisible({ timeout: 10_000 });
+  return search;
+}
+
 async function searchPurchaseRowStrict(page, productName) {
   // La grilla resume los ítems como "1 PRODUCTO", por lo que buscar una fila
   // sólo por su texto visible puede devolver la primera respuesta anterior. Se
   // fuerza una consulta nueva y se cruza el resultado con el ID real del backend.
-  await page.goto('/panel/compras');
-  await waitForBusyToFinish(page);
+  const search = await ensurePurchasePanelReady(page);
 
   await page.evaluate(() => {
     const keys = [];
@@ -519,9 +578,6 @@ async function searchPurchaseRowStrict(page, productName) {
     }
     keys.forEach((key) => sessionStorage.removeItem(key));
   });
-
-  const search = page.getByPlaceholder(/Buscar por descripción, proveedor/i).first();
-  await expect(search).toBeVisible({ timeout: 20_000 });
 
   const listResponsePromise = page.waitForResponse(
     (response) => {

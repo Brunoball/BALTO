@@ -310,7 +310,7 @@ test('@stock @barcode @variants variantes: un BL-V por ID real, guardado sin cer
     // La validación vuelve a Variantes. Completamos la fila y repetimos el flujo válido.
     await expect(dialog.getByRole('tab', { name: /^Variantes$/i })).toHaveAttribute('aria-selected', 'true');
     await thirdCard.getByPlaceholder('SKU', { exact: true }).fill(third.sku);
-    await thirdCard.locator('.fl-field').filter({ hasText: /^Stock/i }).locator('input').first().fill(String(third.stock));
+    await thirdCard.locator('.cmi-floatingField, .fl-field').filter({ hasText: /^Stock/i }).locator('input').first().fill(String(third.stock));
     const priceField = thirdCard.locator('.cmi-floatingField, .fl-field').filter({ hasText: /Precio de venta/i }).first();
     await priceField.locator('input').fill(String(third.price));
     await priceField.locator('input').blur();

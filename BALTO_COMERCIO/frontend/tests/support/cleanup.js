@@ -147,6 +147,38 @@ async function nodeApi(action, { method = 'GET', body = null, query = {}, auth =
   return normalizeResult(result.status, result.text);
 }
 
+function isTransientCleanupStatus(status) {
+  return [408, 429, 500, 502, 503, 504].includes(Number(status));
+}
+
+function cleanupSleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function nodeApiWithRetry(action, options = {}) {
+  const attempts = 6;
+  let lastResult = null;
+  let lastError = null;
+
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      lastResult = await nodeApi(action, options);
+      lastError = null;
+      if (!isTransientCleanupStatus(lastResult.status) || attempt === attempts) {
+        return lastResult;
+      }
+    } catch (error) {
+      lastError = error;
+      if (attempt === attempts) throw error;
+    }
+
+    await cleanupSleep(Math.min(8_000, 1_000 * (2 ** (attempt - 1))));
+  }
+
+  if (lastResult) return lastResult;
+  throw lastError || new Error('[Playwright cleanup] No se pudo completar la limpieza.');
+}
+
 function assertCleanupResult(result, phase) {
   if (!result.ok || result.body?.exito === false) {
     throw new Error(
@@ -198,7 +230,7 @@ export async function cleanupE2EWithPage(
   // storageState del contexto y hacemos la llamada directamente desde Node.
   const state = await page.context().storageState();
   const auth = authFromStorageState(state);
-  const result = await nodeApi(CLEANUP_ACTION, {
+  const result = await nodeApiWithRetry(CLEANUP_ACTION, {
     method: 'POST',
     auth,
     body: {
@@ -216,7 +248,7 @@ export async function cleanupE2EFromStorage(
   if (!shouldRunCleanup()) return null;
   assertSafeMutationConfiguration();
 
-  const result = await nodeApi(CLEANUP_ACTION, {
+  const result = await nodeApiWithRetry(CLEANUP_ACTION, {
     method: 'POST',
     body: {
       confirmacion: CONFIRMATION,
@@ -233,7 +265,7 @@ export async function e2eCleanupStatusFromStorage(
   if (!shouldRunCleanup()) return null;
   assertSafeMutationConfiguration();
 
-  const result = await nodeApi(STATUS_ACTION, {
+  const result = await nodeApiWithRetry(STATUS_ACTION, {
     query: { scope, ...(prefix ? { prefix } : {}) },
   });
 

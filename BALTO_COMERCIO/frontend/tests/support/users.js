@@ -67,7 +67,7 @@ function isRetryableTransportError(error) {
 }
 
 async function validateCommerceSessionWithRetry(request, sessionKey) {
-  const attempts = 4;
+  const attempts = 6;
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     try {
       const response = await request.get(commerceSessionEndpoint(), {
@@ -93,7 +93,7 @@ async function validateCommerceSessionWithRetry(request, sessionKey) {
       if (attempt === attempts) return null;
     }
 
-    await sleep(500 * (2 ** (attempt - 1)));
+    await sleep(Math.min(8_000, 1_000 * (2 ** (attempt - 1))));
   }
 
   return null;
@@ -102,7 +102,7 @@ async function validateCommerceSessionWithRetry(request, sessionKey) {
 async function loginWithRetry(request, username, password) {
   let last = null;
 
-  for (let attempt = 1; attempt <= 5; attempt += 1) {
+  for (let attempt = 1; attempt <= 7; attempt += 1) {
     try {
       const response = await request.post(loginEndpoint(), {
         data: { nombre: username, contrasena: password },
@@ -119,13 +119,13 @@ async function loginWithRetry(request, username, password) {
       }
 
       last = { status: response.status(), body, text };
-      if (!isRetryableLoginStatus(last.status) || attempt === 5) break;
+      if (!isRetryableLoginStatus(last.status) || attempt === 7) break;
     } catch (error) {
       last = { status: 0, body: {}, text: String(error?.message || error) };
-      if (attempt === 5) break;
+      if (attempt === 7) break;
     }
 
-    await new Promise((resolve) => setTimeout(resolve, 500 * (2 ** (attempt - 1))));
+    await sleep(Math.min(8_000, 1_000 * (2 ** (attempt - 1))));
   }
 
   expect(
