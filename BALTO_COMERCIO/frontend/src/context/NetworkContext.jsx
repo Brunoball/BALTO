@@ -209,6 +209,13 @@ export default function NetworkProvider({ children }) {
 
     if (prev === true && offline === false) {
       setToastOk(true);
+
+      // La conexión ya fue validada como estable (varios pings correctos).
+      // Recargamos una sola vez para reconstruir sesión, requests y estado
+      // exactamente igual que un F5. Al iniciar de nuevo, prevOfflineRef
+      // arranca en false si seguimos online, por lo que no genera un bucle.
+      window.location.reload();
+      return;
     }
 
     prevOfflineRef.current = offline;

@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import BuscadorSelector from "../components/BuscadorSelector";
 import { clampText, decimalNumber, decimalText, integerText, money, moneyApiValue, moneyDecimalText, moneyInputValue } from "../utils/serviciosFormUtils";
 import useServiciosGlobalModal from "./useServiciosGlobalModal";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -17,15 +16,197 @@ const EMPTY = {
   iva_pct: "0",
 };
 
-function ArticulosCard({ rows, setRows, catalog }) {
-  const [selected, setSelected] = useState("");
-  const used = new Set(rows.map((r) => Number(r.id_articulo)));
+const percentageInputValue = (value) => {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return "";
 
-  const add = () => {
-    const found = catalog.find((r) => Number(r.id_articulo) === Number(selected));
-    if (!found) return;
-    setRows((prev) => [...prev, { id_articulo: found.id_articulo, cantidad: "1" }]);
-    setSelected("");
+  const rounded = Math.round((number + Number.EPSILON) * 100) / 100;
+  return rounded
+    .toFixed(2)
+    .replace(/\.00$/, "")
+    .replace(/(\.\d)0$/, "$1")
+    .replace(".", ",");
+};
+
+const normalizeSearch = (value) =>
+  String(value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toUpperCase();
+
+function SelectorMultipleRecursos({
+  options = [],
+  getValue,
+  getLabel,
+  label,
+  placeholder,
+  searchPlaceholder,
+  emptyText,
+  onAdd,
+}) {
+  const rootRef = React.useRef(null);
+  const searchRef = React.useRef(null);
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [selectedIds, setSelectedIds] = useState([]);
+
+  const filtered = useMemo(() => {
+    const q = normalizeSearch(query).trim();
+    if (!q) return options;
+    return options.filter((row) => normalizeSearch(getLabel(row)).includes(q));
+  }, [options, query, getLabel]);
+
+  useEffect(() => {
+    if (!open) return undefined;
+
+    const handlePointerDown = (event) => {
+      if (!rootRef.current?.contains(event.target)) {
+        setOpen(false);
+        setQuery("");
+      }
+    };
+
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        setOpen(false);
+        setQuery("");
+      }
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const timer = window.setTimeout(() => searchRef.current?.focus(), 0);
+    return () => window.clearTimeout(timer);
+  }, [open]);
+
+  const selectedSet = useMemo(() => new Set(selectedIds.map(String)), [selectedIds]);
+  const allFilteredSelected = filtered.length > 0 && filtered.every((row) => selectedSet.has(String(getValue(row))));
+
+  const toggle = (row) => {
+    const id = String(getValue(row));
+    setSelectedIds((prev) => prev.includes(id) ? prev.filter((value) => value !== id) : [...prev, id]);
+  };
+
+  const toggleAllFiltered = () => {
+    const filteredIds = filtered.map((row) => String(getValue(row)));
+    if (allFilteredSelected) {
+      const remove = new Set(filteredIds);
+      setSelectedIds((prev) => prev.filter((id) => !remove.has(String(id))));
+      return;
+    }
+
+    setSelectedIds((prev) => {
+      const next = new Set(prev.map(String));
+      filteredIds.forEach((id) => next.add(id));
+      return [...next];
+    });
+  };
+
+  const confirm = () => {
+    if (selectedIds.length === 0) return;
+    onAdd?.(selectedIds);
+    setSelectedIds([]);
+    setQuery("");
+    setOpen(false);
+  };
+
+  return (
+    <div className={`gm-field servicios-multi-select ${open ? "is-open" : ""}`} ref={rootRef}>
+      <button
+        type="button"
+        className="servicios-multi-select__trigger"
+        onClick={() => setOpen((prev) => !prev)}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+      >
+        <span>
+          <strong>{selectedIds.length > 0 ? `${selectedIds.length} seleccionado${selectedIds.length === 1 ? "" : "s"}` : placeholder}</strong>
+          <small>{options.length > 0 ? `${options.length} disponible${options.length === 1 ? "" : "s"}` : emptyText}</small>
+        </span>
+        <span className="servicios-multi-select__chevron" aria-hidden="true">⌄</span>
+      </button>
+      <span className="gm-label gm-label--up">{label}</span>
+
+      {open && (
+        <div className="servicios-multi-select__menu" role="dialog" aria-label={label}>
+          <div className="servicios-multi-select__search">
+            <label className="gm-field">
+              <input
+                ref={searchRef}
+                className="gm-input"
+                type="search"
+                maxLength={120}
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder=" "
+              />
+              <span className="gm-label">{searchPlaceholder}</span>
+            </label>
+          </div>
+
+          <div className="servicios-multi-select__toolbar">
+            <button type="button" onClick={toggleAllFiltered} disabled={filtered.length === 0}>
+              {allFilteredSelected ? "Quitar selección" : query.trim() ? "Seleccionar resultados" : "Seleccionar todos"}
+            </button>
+            <button type="button" onClick={() => setSelectedIds([])} disabled={selectedIds.length === 0}>Limpiar</button>
+          </div>
+
+          <div className="servicios-multi-select__options">
+            {filtered.length === 0 ? (
+              <div className="servicios-multi-select__empty">{emptyText}</div>
+            ) : filtered.map((row) => {
+              const id = String(getValue(row));
+              const checked = selectedSet.has(id);
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  className={checked ? "is-selected" : ""}
+                  onClick={() => toggle(row)}
+                  aria-pressed={checked}
+                >
+                  <span className="servicios-multi-select__check" aria-hidden="true">{checked ? "✓" : ""}</span>
+                  <span>{getLabel(row)}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="servicios-multi-select__footer">
+            <span>{selectedIds.length === 0 ? "Elegí uno o varios recursos" : `${selectedIds.length} listo${selectedIds.length === 1 ? "" : "s"} para agregar`}</span>
+            <button type="button" className="gm-action-btn gm-action-btn--save" onClick={confirm} disabled={selectedIds.length === 0}>
+              Agregar {selectedIds.length > 0 ? `(${selectedIds.length})` : ""}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ArticulosCard({ rows, setRows, catalog }) {
+  const used = new Set(rows.map((r) => Number(r.id_articulo)));
+  const available = catalog.filter((r) => Number(r.activo) === 1 && !used.has(Number(r.id_articulo)));
+
+  const addMany = (ids) => {
+    const selected = new Set(ids.map((id) => Number(id)));
+    const additions = catalog
+      .filter((row) => selected.has(Number(row.id_articulo)) && Number(row.activo) === 1)
+      .map((row) => ({ id_articulo: row.id_articulo, cantidad: "1" }));
+
+    if (additions.length === 0) return;
+    setRows((prev) => {
+      const existing = new Set(prev.map((row) => Number(row.id_articulo)));
+      return [...prev, ...additions.filter((row) => !existing.has(Number(row.id_articulo)))];
+    });
   };
 
   return (
@@ -33,25 +214,23 @@ function ArticulosCard({ rows, setRows, catalog }) {
       <div className="gm-section-head servicios-component-card__title">
         <div>
           <h4>Materiales e insumos</h4>
-          <p>Elementos utilizados para realizar el servicio. El costo se toma del valor vigente del artículo.</p>
+          <p>Seleccioná uno o varios recursos y después ajustá la cantidad utilizada de cada uno.</p>
         </div>
         <strong><span>{rows.length}</span><small>asignados</small></strong>
       </div>
 
       <div className="gm-section-body servicios-component-card__body">
-        <div className="servicios-component-add">
-          <BuscadorSelector
-            options={catalog.filter((r) => Number(r.activo) === 1 && !used.has(Number(r.id_articulo)))}
-            value={selected}
-            onChange={setSelected}
+        <div className="servicios-component-add servicios-component-add--multi">
+          <SelectorMultipleRecursos
+            options={available}
             getValue={(r) => r.id_articulo}
             getLabel={(r) => `${r.tipo === "MATERIAL" ? "MATERIAL" : "INSUMO"} · ${r.nombre} · ${money(r.costo_unitario)} / ${r.unidad_simbolo || "UN"}`}
-            label="Material / Insumo"
-            placeholder="SELECCIONAR MATERIAL O INSUMO"
-            searchPlaceholder="BUSCAR MATERIAL O INSUMO..."
-            emptyText="NO HAY MATERIALES NI INSUMOS"
+            label="Materiales / Insumos"
+            placeholder="SELECCIONAR RECURSOS"
+            searchPlaceholder="Buscar material o insumo"
+            emptyText="NO HAY RECURSOS DISPONIBLES"
+            onAdd={addMany}
           />
-          <button type="button" className="gm-action-btn gm-action-btn--cancel" onClick={add} disabled={!selected}>Agregar</button>
         </div>
 
         <div className="servicios-component-list">
@@ -90,22 +269,24 @@ function ArticulosCard({ rows, setRows, catalog }) {
 }
 
 function TrabajadoresCard({ rows, setRows, catalog }) {
-  const [selected, setSelected] = useState("");
   const used = new Set(rows.map((r) => Number(r.id_trabajador)));
+  const available = catalog.filter((r) => Number(r.activo) === 1 && !used.has(Number(r.id_trabajador)));
 
-  const add = () => {
-    const found = catalog.find((r) => Number(r.id_trabajador) === Number(selected));
-    if (!found) return;
-
-    setRows((prev) => [
-      ...prev,
-      {
-        id_trabajador: found.id_trabajador,
+  const addMany = (ids) => {
+    const selected = new Set(ids.map((id) => Number(id)));
+    const additions = catalog
+      .filter((row) => selected.has(Number(row.id_trabajador)) && Number(row.activo) === 1)
+      .map((row) => ({
+        id_trabajador: row.id_trabajador,
         horas_estimadas: "1",
-        costo_hora_snapshot: found.costo_hora,
-      },
-    ]);
-    setSelected("");
+        costo_hora_snapshot: row.costo_hora,
+      }));
+
+    if (additions.length === 0) return;
+    setRows((prev) => {
+      const existing = new Set(prev.map((row) => Number(row.id_trabajador)));
+      return [...prev, ...additions.filter((row) => !existing.has(Number(row.id_trabajador)))];
+    });
   };
 
   return (
@@ -113,25 +294,23 @@ function TrabajadoresCard({ rows, setRows, catalog }) {
       <div className="gm-section-head servicios-component-card__title">
         <div>
           <h4>Mano de obra</h4>
-          <p>La tarifa queda congelada al asignar al trabajador para que cambios futuros no alteren costos históricos.</p>
+          <p>Seleccioná uno o varios trabajadores y después indicá las horas estimadas de cada uno.</p>
         </div>
         <strong><span>{rows.length}</span><small>asignados</small></strong>
       </div>
 
       <div className="gm-section-body servicios-component-card__body">
-        <div className="servicios-component-add">
-          <BuscadorSelector
-            options={catalog.filter((r) => Number(r.activo) === 1 && !used.has(Number(r.id_trabajador)))}
-            value={selected}
-            onChange={setSelected}
+        <div className="servicios-component-add servicios-component-add--multi">
+          <SelectorMultipleRecursos
+            options={available}
             getValue={(r) => r.id_trabajador}
-            getLabel={(r) => `${r.nombre} · ${money(r.costo_hora)} / H`}
-            label="Trabajador"
-            placeholder="SELECCIONAR TRABAJADOR"
-            searchPlaceholder="BUSCAR TRABAJADOR..."
-            emptyText="NO HAY TRABAJADORES"
+            getLabel={(r) => `${r.nombre} · ${r.rol || "SIN ROL"} · ${money(r.costo_hora)} / H`}
+            label="Trabajadores"
+            placeholder="SELECCIONAR TRABAJADORES"
+            searchPlaceholder="Buscar trabajador"
+            emptyText="NO HAY TRABAJADORES DISPONIBLES"
+            onAdd={addMany}
           />
-          <button type="button" className="gm-action-btn gm-action-btn--cancel" onClick={add} disabled={!selected}>Agregar</button>
         </div>
 
         <div className="servicios-component-list">
@@ -185,10 +364,13 @@ export default function ModalServicio({
   onSave,
   onToast,
   onOpenAgregarCategoria,
+  onOpenAgregarUnidad,
 }) {
   const [form, setForm] = useState(EMPTY);
   const [articleRows, setArticleRows] = useState([]);
   const [workerRows, setWorkerRows] = useState([]);
+  const [marginInput, setMarginInput] = useState("");
+  const [pricingSource, setPricingSource] = useState("price");
 
   useEffect(() => {
     if (!open) return;
@@ -221,6 +403,9 @@ export default function ModalServicio({
         horas_estimadas: String(r.horas_estimadas ?? "1"),
       }))
     );
+
+    setMarginInput("");
+    setPricingSource("price");
   }, [open, item, unidades]);
 
   const { overlayRef, cerrarDesdeFondo } = useServiciosGlobalModal({ open, busy: saving, onClose });
@@ -257,9 +442,58 @@ export default function ModalServicio({
     };
   }, [cost.total, form.precio_venta]);
 
+  useEffect(() => {
+    if (!open || pricingSource !== "price") return;
+
+    const hasPrice = String(form.precio_venta ?? "").trim() !== "";
+    const nextMargin = hasPrice ? percentageInputValue(saleSummary.margin) : "";
+    setMarginInput((prev) => (prev === nextMargin ? prev : nextMargin));
+  }, [open, pricingSource, form.precio_venta, saleSummary.margin]);
+
+  useEffect(() => {
+    if (!open || pricingSource !== "margin" || String(marginInput).trim() === "") return;
+
+    const margin = decimalNumber(marginInput);
+    if (margin < 0 || margin >= 100) return;
+
+    const divisor = 1 - margin / 100;
+    const nextPrice = moneyInputValue(divisor > 0 ? cost.total / divisor : 0);
+
+    setForm((prev) => (
+      prev.precio_venta === nextPrice
+        ? prev
+        : { ...prev, precio_venta: nextPrice }
+    ));
+  }, [open, pricingSource, marginInput, cost.total]);
+
   if (!open) return null;
 
   const set = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
+
+  const changePrice = (value) => {
+    setPricingSource("price");
+    set("precio_venta", moneyDecimalText(value));
+  };
+
+  const changeMargin = (value) => {
+    const normalized = decimalText(value, 2, 3);
+    const nextMargin = normalized.replace(".", ",");
+
+    if (normalized === "") {
+      setMarginInput("");
+      setPricingSource("price");
+      return;
+    }
+
+    setMarginInput(nextMargin);
+    setPricingSource("margin");
+
+    const margin = decimalNumber(normalized);
+    if (margin < 0 || margin >= 100) return;
+
+    const divisor = 1 - margin / 100;
+    set("precio_venta", moneyInputValue(divisor > 0 ? cost.total / divisor : 0));
+  };
 
   const submit = async (event) => {
     event.preventDefault();
@@ -267,6 +501,7 @@ export default function ModalServicio({
     if (!form.nombre.trim()) return onToast?.("error", "Completá el nombre del servicio.", 4200);
     if (!form.id_unidad_cobro) return onToast?.("error", "Seleccioná una unidad de cobro.", 4200);
     if (decimalNumber(form.costo_base) < 0) return onToast?.("error", "Otros costos no puede ser negativo.", 4200);
+    if (pricingSource === "margin" && decimalNumber(marginInput) >= 100) return onToast?.("error", "El margen deseado debe ser menor a 100%.", 4200);
     if (decimalNumber(form.precio_venta) < 0) return onToast?.("error", "Indicá un precio de venta válido.", 4200);
     if (articleRows.some((r) => Number(r.cantidad) <= 0) || workerRows.some((r) => Number(r.horas_estimadas) <= 0)) {
       return onToast?.("error", "Todas las cantidades y horas deben ser mayores a cero.", 4200);
@@ -289,6 +524,11 @@ export default function ModalServicio({
   const categoria = (event) => {
     if (event.target.value === "__ADD__") onOpenAgregarCategoria?.((id) => set("id_categoria", String(id || "")));
     else set("id_categoria", event.target.value);
+  };
+
+  const unidad = (event) => {
+    if (event.target.value === "__ADD__") onOpenAgregarUnidad?.((id) => set("id_unidad_cobro", String(id || "")));
+    else set("id_unidad_cobro", event.target.value);
   };
 
   return createPortal(
@@ -329,7 +569,8 @@ export default function ModalServicio({
                   </label>
 
                   <label className="gm-field servicios-field--span-4">
-                    <select className="gm-input gm-select" value={form.id_unidad_cobro} onChange={(e) => set("id_unidad_cobro", e.target.value)}>
+                    <select className="gm-input gm-select" value={form.id_unidad_cobro} onChange={unidad}>
+                      <option value="__ADD__">+ AGREGAR UNIDAD</option>
                       <option value="">SELECCIONAR UNIDAD</option>
                       {unidades.filter((u) => Number(u.activo) === 1).map((u) => (
                         <option key={u.id_unidad} value={u.id_unidad}>{u.nombre} ({u.simbolo})</option>
@@ -365,12 +606,16 @@ export default function ModalServicio({
               </div>
               <div className="gm-section-body servicios-service-panelBody">
                 <div className="servicios-form-grid servicios-service-priceFields">
-                  <label className="gm-field servicios-field--span-6">
+                  <label className="gm-field servicios-field--span-4">
                     <input className="gm-input" inputMode="decimal" value={form.costo_base} onChange={(e) => set("costo_base", moneyDecimalText(e.target.value))} placeholder="0" />
                     <span className="gm-label gm-label--up">Otros costos</span>
                   </label>
-                  <label className="gm-field servicios-field--span-6">
-                    <input className="gm-input" inputMode="decimal" value={form.precio_venta} onChange={(e) => set("precio_venta", moneyDecimalText(e.target.value))} placeholder="0" />
+                  <label className="gm-field servicios-field--span-4">
+                    <input className="gm-input" inputMode="decimal" value={marginInput} onChange={(e) => changeMargin(e.target.value)} placeholder="0" />
+                    <span className="gm-label gm-label--up">Margen deseado (%)</span>
+                  </label>
+                  <label className="gm-field servicios-field--span-4">
+                    <input className="gm-input" inputMode="decimal" value={form.precio_venta} onChange={(e) => changePrice(e.target.value)} placeholder="0" />
                     <span className="gm-label gm-label--up">Precio de venta</span>
                   </label>
                   <label className="gm-field servicios-field--span-12">

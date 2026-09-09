@@ -384,17 +384,69 @@ export default function Servicios() {
       : "NO CONTROLADO",
   });
 
+  const deleteBlockReason = (row, managementKind) => {
+    const tieneMovimientos = Number(row?.tiene_movimientos || 0) === 1;
+    const servicios = Number(row?.cantidad_servicios || 0);
+    const tieneModelos = Number(row?.tiene_modelos_presupuesto || 0) === 1;
+
+    if (managementKind === "servicios") {
+      if (tieneMovimientos) {
+        return "No se puede eliminar porque este servicio ya fue utilizado en movimientos. Podés darlo de baja.";
+      }
+      if (tieneModelos) {
+        return "No se puede eliminar porque este servicio está utilizado en modelos de presupuesto. Quitalo de esos modelos o dalo de baja.";
+      }
+      return "";
+    }
+
+    // El backend ya protege trabajadores asignados a servicios. Reflejamos esa
+    // misma regla en la interfaz para no ofrecer un borrado que sabemos inválido.
+    if (managementKind === "trabajadores") {
+      if (servicios > 0) {
+        return `No se puede eliminar porque está asignado a ${servicios} ${servicios === 1 ? "servicio" : "servicios"}. Quitalo de esas composiciones o dalo de baja.`;
+      }
+      return "";
+    }
+
+    if (!["materiales", "insumos", "productos_stock"].includes(managementKind)) return "";
+
+    if (tieneMovimientos) {
+      return "No se puede eliminar porque ya fue utilizado en movimientos. Podés darlo de baja.";
+    }
+    if (servicios > 0) {
+      return `No se puede eliminar porque forma parte de ${servicios} ${servicios === 1 ? "servicio" : "servicios"}. Quitalo de esas composiciones o dalo de baja.`;
+    }
+    if (tieneModelos) {
+      return "No se puede eliminar porque está utilizado en modelos de presupuesto. Quitalo de esos modelos o dalo de baja.";
+    }
+    return "";
+  };
+
   const renderActions = (row) => {
     const controlsStock = Number(row.controla_stock ?? 1) === 1;
     const managementKind = tab === "stock" ? stockKindForRow(row) : tab;
     const canManage = Boolean(managementKind);
+    const deleteReason = deleteBlockReason(row, managementKind);
+    const deleteBlocked = Boolean(deleteReason);
     return (
       <div className="mov-actionsInline servicios-actionsInline">
         {INVENTORY_TABS.has(tab) && controlsStock && <button type="button" className="mov-iconBtn" title="Ajustar stock" onClick={() => setEditModal({ kind: "stock", item: row })} disabled={Number(row.activo) !== 1}><FontAwesomeIcon icon={faSliders} /></button>}
         <button type="button" className="mov-iconBtn" title={tab === "stock" && controlsStock ? "Ver historial de stock" : "Ver historial"} onClick={() => openHistory(row)}><FontAwesomeIcon icon={faClockRotateLeft} /></button>
         {canManage && <button type="button" className="mov-iconBtn" title="Editar" onClick={() => openEdit(row)}><FontAwesomeIcon icon={faPenToSquare} /></button>}
         {canManage && <button type="button" className="mov-iconBtn" title={Number(row.activo) === 1 ? "Dar de baja" : "Reactivar"} onClick={() => toggle(row, managementKind)}><FontAwesomeIcon icon={Number(row.activo) === 1 ? faBan : faRotateLeft} /></button>}
-        {canManage && <button type="button" className="mov-iconBtn mov-iconBtn--danger" title="Eliminar" onClick={() => setDeleteModal({ kind: managementKind, item: row })}><FontAwesomeIcon icon={faTrashCan} /></button>}
+        {canManage && (
+          <span className={`servicios-actionHint ${deleteBlocked ? "is-blocked" : ""}`} title={deleteReason || "Eliminar"}>
+            <button
+              type="button"
+              className="mov-iconBtn mov-iconBtn--danger"
+              aria-label={deleteReason || "Eliminar"}
+              onClick={() => setDeleteModal({ kind: managementKind, item: row })}
+              disabled={deleteBlocked}
+            >
+              <FontAwesomeIcon icon={faTrashCan} />
+            </button>
+          </span>
+        )}
       </div>
     );
   };
@@ -520,7 +572,7 @@ export default function Servicios() {
         </div>
       </section>
 
-      <ModalServicio open={editModal.kind === "servicios"} item={editModal.item} categorias={data.categorias_servicios} unidades={data.unidades} articulos={data.articulos} trabajadores={data.trabajadores} saving={saving} onClose={() => setEditModal({ kind: null, item: null })} onSave={save} onToast={notify} onOpenAgregarCategoria={(apply) => openQuickCategory("servicios", apply)} />
+      <ModalServicio open={editModal.kind === "servicios"} item={editModal.item} categorias={data.categorias_servicios} unidades={data.unidades} articulos={data.articulos} trabajadores={data.trabajadores} saving={saving} onClose={() => setEditModal({ kind: null, item: null })} onSave={save} onToast={notify} onOpenAgregarCategoria={(apply) => openQuickCategory("servicios", apply)} onOpenAgregarUnidad={(apply) => setQuickUnit({ open: true, apply })} />
       <ModalMaterial
         open={editModal.kind === "materiales"}
         item={editModal.item}
@@ -596,7 +648,7 @@ export default function Servicios() {
         ]}
       />
 
-      <ModalEliminar open={Boolean(deleteModal.kind)} row={deleteModal.item} loading={saving} onToast={notify} onClose={() => setDeleteModal({ kind: null, item: null })} onConfirm={confirmDelete} title="Eliminar registro" message={`¿Seguro que querés eliminar definitivamente "${deleteModal.item?.nombre || "este registro"}"?`} warning="Si el registro ya tiene relaciones históricas, el backend bloqueará el borrado y podrás darlo de baja." loadingMessage="Eliminando…" successMessage="Registro eliminado." errorMessage="No se pudo eliminar." confirmLabel="Eliminar definitivamente" />
+      <ModalEliminar open={Boolean(deleteModal.kind)} row={deleteModal.item} loading={saving} onToast={notify} onClose={() => setDeleteModal({ kind: null, item: null })} onConfirm={confirmDelete} title="Eliminar registro" message={`¿Seguro que querés eliminar definitivamente "${deleteModal.item?.nombre || "este registro"}"?`} warning="Esta acción es definitiva y sólo está disponible para registros sin relaciones históricas." loadingMessage="Eliminando…" successMessage="Registro eliminado." errorMessage="No se pudo eliminar." confirmLabel="Eliminar definitivamente" hideDefaultCard />
     </section>
   );
 }
