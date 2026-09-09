@@ -1,13 +1,12 @@
 import { expect } from '@playwright/test';
 import fs from 'node:fs';
 import { authenticatedApi, expectApiSuccess } from './api.js';
-import { AUTH_FILE, ENV } from './env.js';
+import { AUTH_FILE, ENV, patchContextNavigation, patchPageNavigation } from './env.js';
 
-const DEFAULT_LOGIN_API = 'https://balto.3devsnet.com/BALTO_LOGIN/api/routes';
 const SESSION_REFRESH_INTERVAL_MS = 15 * 60 * 1000;
 
 function loginEndpoint() {
-  const base = String(process.env.PW_LOGIN_API_URL || DEFAULT_LOGIN_API).trim().replace(/\/+$/, '');
+  const base = String(ENV.loginApiURL || '').trim().replace(/\/+$/, '');
   return `${base}/api.php?action=inicio`;
 }
 
@@ -124,6 +123,7 @@ async function loginWithRetry(request, username, password) {
 }
 
 async function installSession(page, auth, { persist = false } = {}) {
+  patchPageNavigation(page);
   const userJson = JSON.stringify(auth.usuario || {});
 
   await page.addInitScript(
@@ -232,7 +232,9 @@ export async function loginTestUserInNewContext(browser, username, password) {
     baseURL: ENV.baseURL,
     storageState: { cookies: [], origins: [] },
   });
+  patchContextNavigation(context);
   const page = await context.newPage();
+  patchPageNavigation(page);
 
   try {
     const auth = await loginWithRetry(page.context().request, username, password);

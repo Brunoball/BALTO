@@ -82,9 +82,10 @@ function money(value, fallback = '') {
   return Number.isFinite(number) ? number.toFixed(2) : fallback;
 }
 
-function integer(value, fallback = 0) {
+function stockQuantity(value, fallback = 0) {
   const number = Number(value);
-  return Number.isFinite(number) ? String(Math.trunc(number)) : String(fallback);
+  if (!Number.isFinite(number)) return String(fallback);
+  return String(Math.round(number * 1000) / 1000);
 }
 
 function normalizeBody(text) {
@@ -146,11 +147,20 @@ export async function createStockProductFixture(page, product) {
     precio_promo: '',
     margen_promo_porcentaje: '',
     margen_promo_valor: '',
-    stock: integer(product?.stock, 0),
+    stock: stockQuantity(product?.stock, 0),
+    ...(Number(product?.unitId || product?.idStockUnidad || 0) > 0
+      ? { id_stock_unidad: String(Number(product?.unitId || product?.idStockUnidad)) }
+      : {}),
     descripcion: 'PLAYWRIGHT E2E',
     categorias_ids: JSON.stringify(categoryIds),
     id_categoria_stock: primaryCategoryId > 0 ? String(primaryCategoryId) : '',
-    variantes: '[]',
+    variantes: JSON.stringify(
+      (Array.isArray(product?.variants) ? product.variants : []).map((variant) => ({
+        ...variant,
+        stock: stockQuantity(variant?.stock, 0),
+        id_stock_unidad: Number(variant?.id_stock_unidad || variant?.unitId || product?.unitId || product?.idStockUnidad || 0) || undefined,
+      })),
+    ),
     tipos_precio: '[]',
     diferir_sync: '1',
     origen_sync: 'playwright_e2e',

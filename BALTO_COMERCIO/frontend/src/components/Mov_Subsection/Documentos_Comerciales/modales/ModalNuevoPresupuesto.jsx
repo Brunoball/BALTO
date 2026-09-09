@@ -325,6 +325,14 @@ function getDetalleCodigo(d) {
   return upperStr(d?.sku || d?.codigo || d?.codigo_barra || d?.codigo_producto || "");
 }
 
+function getDetalleUnidad(detalle) {
+  return {
+    id_stock_unidad: Number(detalle?.id_stock_unidad ?? detalle?.id_unidad_stock ?? 0) || null,
+    unidad_abreviatura: safeStr(detalle?.unidad_abreviatura || detalle?.unidad || detalle?.unidad_nombre || ""),
+    unidad_permite_decimales: Number(detalle?.unidad_permite_decimales ?? detalle?.permite_decimales ?? 1) === 1 ? 1 : 0,
+  };
+}
+
 function getStockDisponible(detalle) {
   const cand =
     detalle?.stock ??
@@ -702,6 +710,9 @@ function buildEmptyRow() {
     ivaPct: 0,
     stock_disponible: null,
     sinStock: false,
+    id_stock_unidad: null,
+    unidad_abreviatura: "",
+    unidad_permite_decimales: 1,
   };
 }
 
@@ -726,6 +737,9 @@ function buildRowFromModelItem(item) {
     ivaPct: ivaPct >= 0 ? ivaPct : 0,
     stock_disponible: null,
     sinStock: false,
+    id_stock_unidad: Number(raw.id_stock_unidad || 0) || null,
+    unidad_abreviatura: safeStr(raw.unidad_abreviatura || raw.unidad || raw.unidad_nombre || ""),
+    unidad_permite_decimales: Number(raw.unidad_permite_decimales ?? raw.permite_decimales ?? 1) === 1 ? 1 : 0,
     precios_disponibles: [],
     id_tipo_precio_stock: NULL_OPTION,
     precio_tipo_label: "",
@@ -1123,6 +1137,7 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
     const stockDisponible = getStockDisponible(detalle);
     const sinStock = isSinStock(stockDisponible);
     const nombreDetalle = getDetalleNombre(detalle);
+    const unidad = getDetalleUnidad(detalle);
 
     updateRow(rowId, {
       id_detalle: NULL_OPTION,
@@ -1139,6 +1154,9 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
       precios_disponibles: presupuestoPersonalizado ? [] : precios,
       stock_disponible: stockDisponible,
       sinStock,
+      id_stock_unidad: unidad.id_stock_unidad,
+      unidad_abreviatura: unidad.unidad_abreviatura,
+      unidad_permite_decimales: unidad.unidad_permite_decimales,
     });
 
     if (sinStock && !presupuestoPersonalizado) {
@@ -1195,6 +1213,9 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
       precioFocused: false,
       stock_disponible: null,
       sinStock: false,
+      id_stock_unidad: null,
+      unidad_abreviatura: "",
+      unidad_permite_decimales: 1,
     });
   }, [updateRow]);
 
@@ -1365,6 +1386,13 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
       if (!touched) return;
       if (!safeStr(r.detalleText)) problems.push(`Fila ${idx + 1}: falta el detalle.`);
       if (!(r.cantidad > 0)) problems.push(`Fila ${idx + 1}: la cantidad debe ser mayor a 0.`);
+      if (
+        Number(r.id_stock_producto || r.id_stock_variante || 0) > 0 &&
+        Number(r.unidad_permite_decimales ?? 1) === 0 &&
+        Math.abs(Number(r.cantidad || 0) - Math.round(Number(r.cantidad || 0))) > 0.000001
+      ) {
+        problems.push(`Fila ${idx + 1}: la unidad ${r.unidad_abreviatura || "u"} no admite cantidades decimales.`);
+      }
       if (!(r.precio > 0)) problems.push(`Fila ${idx + 1}: el precio debe ser mayor a 0.`);
     });
     return problems[0] || "";
@@ -1381,6 +1409,10 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
         descripcion: upperStr(r.detalleText),
         detalle: upperStr(r.detalleText),
         cantidad: r.cantidad,
+        id_stock_unidad: r.id_stock_unidad || null,
+        unidad_abreviatura: r.unidad_abreviatura || "",
+        unidad_permite_decimales: Number(r.unidad_permite_decimales ?? 1),
+        unidad: r.unidad_abreviatura || "u",
         precio: r.precio,
         precio_unitario: r.precio,
         iva_pct: r.ivaPct,
@@ -1657,8 +1689,12 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
                         <input
                           className="gm-cell-input gm-cell-input--center"
                           type="number"
-                          min={rowSinStock ? undefined : (presupuestoPersonalizado ? "0.01" : "1")}
-                          step={presupuestoPersonalizado ? "0.01" : "1"}
+                          min={
+                            rowSinStock
+                              ? undefined
+                              : (presupuestoPersonalizado || Number(r.unidad_permite_decimales ?? 1) === 1 ? "0.001" : "1")
+                          }
+                          step={presupuestoPersonalizado || Number(r.unidad_permite_decimales ?? 1) === 1 ? "0.001" : "1"}
                           value={rowSinStock ? "" : r.cantidad}
                           onChange={(e) =>
                             handleCantidadChange(r.id, e.target.value === "" ? "" : Number(e.target.value))
@@ -1683,7 +1719,9 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
                               color: rowSinStock ? "#b91c1c" : "#666",
                             }}
                           >
-                            {rowSinStock ? "Sin stock" : `Stock: ${r.stock_disponible}`}
+                            {rowSinStock
+                              ? "Sin stock"
+                              : `Stock: ${r.stock_disponible}${r.unidad_abreviatura ? ` ${r.unidad_abreviatura}` : ""}`}
                           </div>
                         )}
                       </div>

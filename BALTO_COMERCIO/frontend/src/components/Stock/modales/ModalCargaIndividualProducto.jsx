@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import ModalVerComprobante from "../../Global/Ver_Comprobantes/ModalVerComprobante";
 import StockBarcodePanel from "./StockBarcodePanel";
+import StockUnitField from "./StockUnitField";
 import "./ModalCargaIndividualProducto.css";
 import { isTopStockModal } from "./modalStackUtils";
 import { canBaltoUseBarcode } from "../../../utils/demoMode";
@@ -9,6 +10,7 @@ import {
   crearCategoriaStock,
   crearProductoStock,
   crearTipoPrecioStock,
+  listarUnidadesStock,
 } from "../api/stockApi";
 
 import {
@@ -37,6 +39,8 @@ import {
   moneyToApi,
   normalizeMoneyInput,
   onlyNumbers,
+  normalizeStockInput,
+  stockToApi,
   recalculatePricingGroup,
   toUpperCaseValue,
 } from "../utils/stockFormUtils";
@@ -614,6 +618,7 @@ function emptyVariantRow(tiposProducto = []) {
     nombre_variante: "",
     sku: "",
     stock: "0",
+    id_stock_unidad: "",
     categorias_ids: [],
     precio_costo: "",
     precio: "",
@@ -747,7 +752,8 @@ function buildOptimisticProduct(savedProduct, sourceForm, variantesPayload = [])
     descripcion: toCapitalizedText(sourceForm?.descripcion),
     stock: usaVariantes
       ? variantes.reduce((total, variant) => total + Number(variant?.stock || 0), 0)
-      : Number(sourceForm?.stock || 0),
+      : stockToApi(sourceForm?.stock),
+    id_stock_unidad: Number(sourceForm?.id_stock_unidad || 0) || null,
     // Para productos con variantes, la fila padre muestra como resumen los precios
     // de la primera variante, igual que la respuesta consolidada del backend/TN.
     precio_costo: usaVariantes ? varianteResumen?.precio_costo ?? null : moneyToApi(sourceForm?.precio_costo) || null,
@@ -776,6 +782,7 @@ function buildEmptyForm() {
     margen_promo_porcentaje: "",
     margen_promo_valor: "",
     stock: "",
+    id_stock_unidad: "",
     descripcion: "",
     id_categoria_stock: "",
     categorias_ids: [],
@@ -821,6 +828,8 @@ export default function ModalCargaIndividualProducto({
   const [barcodeGuardadoContexto, setBarcodeGuardadoContexto] = useState(null);
   const [errores, setErrores] = useState({});
   const [imagenFile, setImagenFile] = useState(null);
+  const [unidadesStock, setUnidadesStock] = useState([]);
+  const [loadingUnidadesStock, setLoadingUnidadesStock] = useState(false);
 
   const [miniCategoriaOpen, setMiniCategoriaOpen] = useState(false);
   const [miniCategoriaNombre, setMiniCategoriaNombre] = useState("");
@@ -914,6 +923,29 @@ export default function ModalCargaIndividualProducto({
     () => (Array.isArray(tiposPrecio) ? tiposPrecio.filter(Boolean) : []),
     [tiposPrecio]
   );
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    setLoadingUnidadesStock(true);
+    listarUnidadesStock({ activo: "todos" })
+      .then((res) => {
+        if (cancelled) return;
+        const list = res?.unidades || res?.data?.unidades || [];
+        setUnidadesStock(Array.isArray(list) ? list : []);
+        const def = (Array.isArray(list) ? list : []).find((u) => Number(u?.es_default || 0) === 1 && Number(u?.activo ?? 1) === 1);
+        if (def) {
+          setForm((prev) => ({
+            ...prev,
+            id_stock_unidad: prev.id_stock_unidad || String(def.id_stock_unidad || def.id || ""),
+            variantes: (prev.variantes || []).map((v) => ({ ...v, id_stock_unidad: v.id_stock_unidad || String(def.id_stock_unidad || def.id || "") })),
+          }));
+        }
+      })
+      .catch((error) => mostrarToast(error?.message || "No se pudieron cargar las unidades.", "error"))
+      .finally(() => { if (!cancelled) setLoadingUnidadesStock(false); });
+    return () => { cancelled = true; };
+  }, [open]);
 
   useEffect(() => {
     // Después de crear desde la pestaña Código de barra el registro ya existe,
@@ -1013,7 +1045,7 @@ export default function ModalCargaIndividualProducto({
     ) {
       setForm((p) => recalculatePricingFormLive(p, name, value));
     } else if (name === "stock") {
-      setForm((p) => ({ ...p, [name]: onlyNumbers(value) }));
+      setForm((p) => ({ ...p, [name]: normalizeStockInput(value) }));
     } else if (["nombre", "descripcion"].includes(name)) {
       setForm((p) => ({ ...p, [name]: toCapitalizedText(value) }));
     } else if (name === "sku") {
@@ -1615,6 +1647,7 @@ export default function ModalCargaIndividualProducto({
         "stock",
         formNormalizado.tiene_variantes ? "0" : formNormalizado.stock !== "" ? String(formNormalizado.stock) : ""
       );
+      fd.append("id_stock_unidad", String(formNormalizado.id_stock_unidad || ""));
       fd.append("descripcion", toCapitalizedText(formNormalizado.descripcion));
       fd.append("tiene_variantes", formNormalizado.tiene_variantes ? "1" : "0");
 
@@ -1645,7 +1678,8 @@ export default function ModalCargaIndividualProducto({
             .map((variant) => ({
               nombre_variante: toCapitalizedText(variant.nombre_variante),
               sku: toUpperCaseValue(String(variant.sku || "").trim()),
-              stock: Number(variant.stock || 0),
+              stock: stockToApi(variant.stock),
+              id_stock_unidad: Number(variant.id_stock_unidad || formNormalizado.id_stock_unidad || 0) || null,
               categorias_ids: Array.from(new Set((variant.categorias_ids || []).map((id) => Number(normalizeIdValue(id))).filter(Boolean))),
               atributos: (variant.atributos || [])
                 .filter((attr) => String(attr.atributo || "").trim() && String(attr.valor || "").trim())
@@ -1830,9 +1864,20 @@ export default function ModalCargaIndividualProducto({
                   onChange={handleChange}
                   onKeyDown={handleFieldEnter}
                   className="cmi-input"
-                  placeholder="Ej: 25"
-                  inputMode="numeric"
+                  placeholder="Ej: 12,500"
+                  inputMode="decimal"
                   disabled={productoConVariantes}
+                />
+              </FloatingField>
+
+              <FloatingField label="Unidad de stock" icon={faCubesStacked}>
+                <StockUnitField
+                  value={form.id_stock_unidad}
+                  unidades={unidadesStock}
+                  onChange={(id) => setForm((p) => ({ ...p, id_stock_unidad: id }))}
+                  onUnitsChange={setUnidadesStock}
+                  disabled={loadingUnidadesStock}
+                  onToast={(tipo, mensaje) => mostrarToast(mensaje, tipo)}
                 />
               </FloatingField>
 
@@ -2301,7 +2346,7 @@ export default function ModalCargaIndividualProducto({
                       </button>
                     </div>
 
-                    <div className="fl-row" style={{ gridTemplateColumns: "1.3fr 1fr .75fr" }}>
+                    <div className="fl-row" style={{ gridTemplateColumns: "1.2fr .9fr .65fr .9fr" }}>
                       <FloatingField label="Nombre variante *">
                         <input
                           className="cmi-input"
@@ -2323,8 +2368,18 @@ export default function ModalCargaIndividualProducto({
                         <input
                           className="cmi-input"
                           value={variant.stock}
-                          onChange={(e) => updateVariant(variantIdx, { stock: onlyNumbers(e.target.value) })}
-                          inputMode="numeric"
+                          onChange={(e) => updateVariant(variantIdx, { stock: normalizeStockInput(e.target.value) })}
+                          inputMode="decimal"
+                        />
+                      </FloatingField>
+                      <FloatingField label="Unidad *">
+                        <StockUnitField
+                          value={variant.id_stock_unidad || form.id_stock_unidad}
+                          unidades={unidadesStock}
+                          onChange={(id) => updateVariant(variantIdx, { id_stock_unidad: id })}
+                          onUnitsChange={setUnidadesStock}
+                          disabled={loadingUnidadesStock}
+                          onToast={(tipo, mensaje) => mostrarToast(mensaje, tipo)}
                         />
                       </FloatingField>
                     </div>

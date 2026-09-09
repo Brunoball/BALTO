@@ -22,10 +22,12 @@ import useTableScrollGutter from "../../Global/useTableScrollGutter";
 import * as configuracionApi from "../api/configuracionApi";
 import ModalDetalleLista from "./ModalDetalleLista";
 import ModalCategoriaStock from "./ModalCategoriaStock";
+import ModalUnidadStock from "./ModalUnidadStock";
 
 const TABS = [
   { value: "detalles", label: "Detalles", singular: "detalle" },
   { value: "categorias_stock", label: "Categorías de stock", singular: "categoría de stock" },
+  { value: "unidades_stock", label: "Unidades de stock", singular: "unidad de stock" },
 ];
 
 const ESTADOS = [
@@ -34,7 +36,9 @@ const ESTADOS = [
 ];
 
 function rowId(tab, row) {
-  return tab === "detalles" ? row?.id_detalle : row?.id_stock_categoria;
+  if (tab === "detalles") return row?.id_detalle;
+  if (tab === "unidades_stock") return row?.id_stock_unidad;
+  return row?.id_stock_categoria;
 }
 
 function tabMeta(value) {
@@ -53,7 +57,7 @@ export default function ConfiguracionListasCategorias() {
   const [tab, setTab] = useState("detalles");
   const [estado, setEstado] = useState("1");
   const [buscar, setBuscar] = useState("");
-  const [data, setData] = useState({ detalles: [], categorias_stock: [] });
+  const [data, setData] = useState({ detalles: [], categorias_stock: [], unidades_stock: [] });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [modal, setModal] = useState({ kind: null, item: null });
@@ -72,6 +76,7 @@ export default function ConfiguracionListasCategorias() {
       setData({
         detalles: resumen?.detalles || [],
         categorias_stock: resumen?.categorias_stock || [],
+        unidades_stock: resumen?.unidades_stock || [],
       });
     } catch (error) {
       notify("error", error?.message || "No se pudieron cargar las listas y categorías.", 5000);
@@ -89,7 +94,7 @@ export default function ConfiguracionListasCategorias() {
     return (data[tab] || []).filter((row) => {
       if (Number(row.activo) !== Number(estado)) return false;
       if (!q) return true;
-      return [row.nombre, row.descripcion, row.categoria_padre_nombre]
+      return [row.nombre, row.abreviatura, row.descripcion, row.categoria_padre_nombre]
         .some((value) => String(value || "").toLocaleUpperCase("es-AR").includes(q));
     });
   }, [buscar, data, estado, tab]);
@@ -170,6 +175,19 @@ export default function ConfiguracionListasCategorias() {
     } catch {}
   };
 
+  const guardarUnidad = async (payload) => {
+    const editing = Boolean(modal.item?.id_stock_unidad);
+    try {
+      await ejecutar(
+        () => editing ? configuracionApi.actualizarUnidadStockConfiguracion(payload) : configuracionApi.crearUnidadStockConfiguracion(payload),
+        editing ? "Unidad actualizada correctamente." : "Unidad creada correctamente.",
+        (result) => guardarFilaLocal("unidades_stock", result?.unidad)
+      );
+      notifyListsUpdated();
+      setModal({ kind: null, item: null });
+    } catch {}
+  };
+
   const confirmarCambioEstado = async () => {
     const { kind, item } = statusModal;
     if (!kind || !item) return;
@@ -177,15 +195,17 @@ export default function ConfiguracionListasCategorias() {
     const id = rowId(kind, item);
     const operation = kind === "detalles"
       ? (active ? configuracionApi.darBajaDetalleConfiguracion : configuracionApi.reactivarDetalleConfiguracion)
-      : (active ? configuracionApi.darBajaCategoriaStockConfiguracion : configuracionApi.reactivarCategoriaStockConfiguracion);
+      : kind === "unidades_stock"
+        ? (active ? configuracionApi.darBajaUnidadStockConfiguracion : configuracionApi.reactivarUnidadStockConfiguracion)
+        : (active ? configuracionApi.darBajaCategoriaStockConfiguracion : configuracionApi.reactivarCategoriaStockConfiguracion);
 
     await ejecutar(
       () => operation(id),
       null,
-      (result) => actualizarFilaLocal(kind, id, (row) => ({ ...row, ...(result?.detalle || result?.categoria || {}), activo: active ? 0 : 1 })),
+      (result) => actualizarFilaLocal(kind, id, (row) => ({ ...row, ...(result?.detalle || result?.categoria || result?.unidad || {}), activo: active ? 0 : 1 })),
       false
     );
-    if (kind === "categorias_stock") notifyListsUpdated();
+    if (kind === "categorias_stock" || kind === "unidades_stock") notifyListsUpdated();
     setStatusModal({ kind: null, item: null });
   };
 
@@ -195,7 +215,9 @@ export default function ConfiguracionListasCategorias() {
     const id = rowId(kind, item);
     const operation = kind === "detalles"
       ? configuracionApi.eliminarDetalleConfiguracion
-      : configuracionApi.eliminarCategoriaStockConfiguracion;
+      : kind === "unidades_stock"
+        ? configuracionApi.eliminarUnidadStockConfiguracion
+        : configuracionApi.eliminarCategoriaStockConfiguracion;
     await ejecutar(
       () => operation(id),
       null,
@@ -217,20 +239,22 @@ export default function ConfiguracionListasCategorias() {
       },
       false
     );
-    if (kind === "categorias_stock") notifyListsUpdated();
+    if (kind === "categorias_stock" || kind === "unidades_stock") notifyListsUpdated();
     setDeleteModal({ kind: null, item: null });
   };
 
   const currentMeta = tabMeta(tab);
   const isCategory = tab === "categorias_stock";
-  const addLabel = isCategory ? "Agregar categoría" : "Agregar detalle";
-  const searchPlaceholder = isCategory ? "Buscar categoría..." : "Buscar detalle...";
+  const isUnit = tab === "unidades_stock";
+  const addLabel = isCategory ? "Agregar categoría" : isUnit ? "Agregar unidad" : "Agregar detalle";
+  const searchPlaceholder = isCategory ? "Buscar categoría..." : isUnit ? "Buscar unidad..." : "Buscar detalle...";
 
   const statusIsActive = Number(statusModal.item?.activo) === 1;
   const statusLabel = tabMeta(statusModal.kind).singular;
   const statusActionLabel = statusIsActive ? "Dar de baja" : "Reactivar";
 
   const deletingCategory = deleteModal.kind === "categorias_stock";
+  const deletingUnit = deleteModal.kind === "unidades_stock";
   const productos = Number(deleteModal.item?.cantidad_productos || 0);
   const hijas = Number(deleteModal.item?.cantidad_hijas || 0);
   const syncTn = Number(deleteModal.item?.cantidad_sync_tn || 0);
@@ -247,7 +271,11 @@ export default function ConfiguracionListasCategorias() {
     categoryDeleteImpacts.push("Si estaba vinculada con Tienda Nube, la categoría remota no se borrará y BALTO evitará reimportarla automáticamente.");
   }
 
-  const deleteWarning = deletingCategory
+  const deleteWarning = deletingUnit
+    ? (Number(deleteModal.item?.cantidad_productos || 0) + Number(deleteModal.item?.cantidad_variantes || 0) > 0
+        ? "Esta unidad está en uso y no puede eliminarse para evitar cambiar el significado del stock. Reasigná primero esos productos/variantes o dala de baja."
+        : "La unidad se eliminará definitivamente. No se modificará ningún producto ni cantidad de stock.")
+    : deletingCategory
     ? categoryDeleteImpacts.length > 0
       ? categoryDeleteImpacts.join(" ")
       : "La categoría se eliminará definitivamente. No se eliminarán productos ni cantidades de stock."
@@ -255,7 +283,13 @@ export default function ConfiguracionListasCategorias() {
       ? "Los ingresos, egresos y presupuestos que usen este detalle se conservarán, pero quedarán sin detalle asignado."
       : "El detalle se eliminará definitivamente.";
 
-  const deleteDetails = deletingCategory
+  const deleteDetails = deletingUnit
+    ? [
+        { label: "Nombre", value: deleteModal.item?.nombre || "—" },
+        { label: "Abreviatura", value: deleteModal.item?.abreviatura || "—" },
+        { label: "Productos/variantes", value: (Number(deleteModal.item?.cantidad_productos || 0) + Number(deleteModal.item?.cantidad_variantes || 0)).toLocaleString("es-AR") },
+      ]
+    : deletingCategory
     ? [
         { label: "Nombre", value: deleteModal.item?.nombre || "—" },
         { label: "Productos asociados", value: productos.toLocaleString("es-AR") },
@@ -276,7 +310,7 @@ export default function ConfiguracionListasCategorias() {
         <div>
           <span className="cfg-listas-eyebrow">Configuración</span>
           <h1>Listas y categorías</h1>
-          <p>Administrá desde un solo lugar los detalles de Movimientos y las categorías que utiliza Stock.</p>
+          <p>Administrá los detalles de Movimientos, categorías y unidades de medida que utiliza Stock.</p>
         </div>
         <button type="button" className="mov-btn mov-btn--primary" onClick={() => navigate("/panel/configuracion")}>
           <FontAwesomeIcon icon={faArrowLeft} /> Volver
@@ -311,9 +345,9 @@ export default function ConfiguracionListasCategorias() {
 
         <div className="cfg-listas-tableWrap">
           <div
-            className={`cfg-listas-grid ${isCategory ? "is-category" : "is-detail"}`}
+            className={`cfg-listas-grid ${isCategory ? "is-category" : isUnit ? "is-unit" : "is-detail"}`}
             role="table"
-            aria-label={isCategory ? "Categorías de stock" : "Detalles de movimientos"}
+            aria-label={isCategory ? "Categorías de stock" : isUnit ? "Unidades de stock" : "Detalles de movimientos"}
             aria-busy={loading}
           >
             <div className={`cfg-listas-gridHead ${hasRowsScroll ? "has-y-scroll" : ""}`} role="rowgroup">
@@ -322,7 +356,10 @@ export default function ConfiguracionListasCategorias() {
                 {isCategory && <div className="cfg-listas-gridCell cfg-listas-gridCell--head" role="columnheader">Descripción</div>}
                 {isCategory && <div className="cfg-listas-gridCell cfg-listas-gridCell--head is-center" role="columnheader">Productos</div>}
                 {isCategory && <div className="cfg-listas-gridCell cfg-listas-gridCell--head is-center" role="columnheader">Subcategorías</div>}
-                {!isCategory && <div className="cfg-listas-gridCell cfg-listas-gridCell--head is-center" role="columnheader">Usos históricos</div>}
+                {isUnit && <div className="cfg-listas-gridCell cfg-listas-gridCell--head is-center" role="columnheader">Abrev.</div>}
+                {isUnit && <div className="cfg-listas-gridCell cfg-listas-gridCell--head is-center" role="columnheader">Decimales</div>}
+                {isUnit && <div className="cfg-listas-gridCell cfg-listas-gridCell--head is-center" role="columnheader">Usos</div>}
+                {!isCategory && !isUnit && <div className="cfg-listas-gridCell cfg-listas-gridCell--head is-center" role="columnheader">Usos históricos</div>}
                 <div className="cfg-listas-gridCell cfg-listas-gridCell--head is-center" role="columnheader">Estado</div>
                 <div className="cfg-listas-gridCell cfg-listas-gridCell--head is-center" role="columnheader">Acciones</div>
               </div>
@@ -332,26 +369,29 @@ export default function ConfiguracionListasCategorias() {
               <div className="cfg-listas-gridBody" role="rowgroup">
                 {loading ? Array.from({ length: 6 }).map((_, index) => (
                   <div key={index} className="cfg-listas-gridRow is-skeleton" role="row">
-                    <div className="cfg-listas-gridCell cfg-listas-gridCell--skeleton" role="cell" aria-colspan={isCategory ? 6 : 4}><span /></div>
+                    <div className="cfg-listas-gridCell cfg-listas-gridCell--skeleton" role="cell" aria-colspan={isCategory || isUnit ? 6 : 4}><span /></div>
                   </div>
                 )) : rows.map((row) => (
                   <div key={rowId(tab, row)} className={`cfg-listas-gridRow ${Number(row.activo) === 1 ? "" : "is-inactive"}`} role="row">
                     <div className="cfg-listas-gridCell cfg-listas-gridCell--name" role="cell">
                       <strong>{row.nombre}</strong>
-                      <small>{isCategory ? (row.categoria_padre_nombre ? `Subcategoría de ${row.categoria_padre_nombre}` : "Categoría principal") : "Detalle de ingresos / egresos"}</small>
+                      <small>{isCategory ? (row.categoria_padre_nombre ? `Subcategoría de ${row.categoria_padre_nombre}` : "Categoría principal") : isUnit ? (Number(row.es_default || 0) === 1 ? "Unidad predeterminada" : "Unidad de medida") : "Detalle de ingresos / egresos"}</small>
                     </div>
                     {isCategory && <div className="cfg-listas-gridCell cfg-listas-gridCell--description" role="cell">{row.descripcion || "—"}</div>}
                     {isCategory && <div className="cfg-listas-gridCell is-center" role="cell">{Number(row.cantidad_productos || 0).toLocaleString("es-AR")}</div>}
                     {isCategory && <div className="cfg-listas-gridCell is-center" role="cell">{Number(row.cantidad_hijas || 0).toLocaleString("es-AR")}</div>}
-                    {!isCategory && <div className="cfg-listas-gridCell is-center" role="cell">{Number(row.cantidad_usos || 0).toLocaleString("es-AR")}</div>}
+                    {isUnit && <div className="cfg-listas-gridCell is-center" role="cell"><strong>{row.abreviatura || "—"}</strong></div>}
+                    {isUnit && <div className="cfg-listas-gridCell is-center" role="cell">{Number(row.permite_decimales ?? 1) === 1 ? "Sí" : "No"}</div>}
+                    {isUnit && <div className="cfg-listas-gridCell is-center" role="cell">{(Number(row.cantidad_productos || 0) + Number(row.cantidad_variantes || 0)).toLocaleString("es-AR")}</div>}
+                    {!isCategory && !isUnit && <div className="cfg-listas-gridCell is-center" role="cell">{Number(row.cantidad_usos || 0).toLocaleString("es-AR")}</div>}
                     <div className="cfg-listas-gridCell is-center" role="cell">
                       <span className={`cfg-listas-chip ${Number(row.activo) === 1 ? "is-active" : ""}`}>{Number(row.activo) === 1 ? "ACTIVO" : "BAJA"}</span>
                     </div>
                     <div className="cfg-listas-gridCell is-center" role="cell">
                       <div className="cfg-listas-actions">
-                        <button type="button" title="Editar" onClick={() => setModal({ kind: tab, item: row })}><FontAwesomeIcon icon={faPenToSquare} /></button>
-                        <button type="button" title={Number(row.activo) === 1 ? "Dar de baja" : "Reactivar"} onClick={() => setStatusModal({ kind: tab, item: row })}><FontAwesomeIcon icon={Number(row.activo) === 1 ? faBan : faRotateLeft} /></button>
-                        <button type="button" className="is-danger" title="Eliminar" onClick={() => setDeleteModal({ kind: tab, item: row })}><FontAwesomeIcon icon={faTrashCan} /></button>
+                        <button type="button" disabled={isUnit && Number(row.es_default || 0) === 1} title={isUnit && Number(row.es_default || 0) === 1 ? "La unidad predeterminada no se puede modificar" : "Editar"} onClick={() => setModal({ kind: tab, item: row })}><FontAwesomeIcon icon={faPenToSquare} /></button>
+                        <button type="button" disabled={isUnit && Number(row.es_default || 0) === 1} title={Number(row.activo) === 1 ? "Dar de baja" : "Reactivar"} onClick={() => setStatusModal({ kind: tab, item: row })}><FontAwesomeIcon icon={Number(row.activo) === 1 ? faBan : faRotateLeft} /></button>
+                        <button type="button" disabled={isUnit && Number(row.es_default || 0) === 1} className="is-danger" title="Eliminar" onClick={() => setDeleteModal({ kind: tab, item: row })}><FontAwesomeIcon icon={faTrashCan} /></button>
                       </div>
                     </div>
                   </div>
@@ -366,6 +406,7 @@ export default function ConfiguracionListasCategorias() {
 
       <ModalDetalleLista open={modal.kind === "detalles"} item={modal.item} saving={saving} onClose={() => setModal({ kind: null, item: null })} onSave={guardarDetalle} onToast={notify} />
       <ModalCategoriaStock open={modal.kind === "categorias_stock"} item={modal.item} categorias={data.categorias_stock} saving={saving} onClose={() => setModal({ kind: null, item: null })} onSave={guardarCategoria} onToast={notify} />
+      <ModalUnidadStock open={modal.kind === "unidades_stock"} item={modal.item} saving={saving} onClose={() => setModal({ kind: null, item: null })} onSave={guardarUnidad} onToast={notify} />
 
       <ModalEliminar
         open={Boolean(statusModal.kind)}
@@ -402,9 +443,11 @@ export default function ConfiguracionListasCategorias() {
         message={`¿Seguro que querés eliminar definitivamente "${deleteModal.item?.nombre || "este registro"}"?`}
         warning={deleteWarning}
         loadingMessage="Eliminando…"
-        successMessage={deletingCategory
-          ? "Categoría eliminada. Los productos y su stock se conservaron."
-          : "Detalle eliminado. Los movimientos históricos se conservaron."}
+        successMessage={deletingUnit
+          ? "Unidad eliminada correctamente."
+          : deletingCategory
+            ? "Categoría eliminada. Los productos y su stock se conservaron."
+            : "Detalle eliminado. Los movimientos históricos se conservaron."}
         errorMessage="No se pudo eliminar."
         confirmLabel="Eliminar definitivamente"
         details={deleteDetails}

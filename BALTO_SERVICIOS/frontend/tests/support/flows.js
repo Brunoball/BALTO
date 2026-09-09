@@ -1,5 +1,6 @@
 import { expect } from '@playwright/test';
 import { authenticatedApi, expectApiSuccess } from './api.js';
+import { todayISO } from './data.js';
 import {
   createServiceArticleFixture,
   deleteServiceArticleFixture,
@@ -130,7 +131,10 @@ export async function createPurchaseFixtureViaApi(page, data, options = {}) {
 
   const idProveedor = Number(provider.id_proveedor || provider.id || 0);
   const idTipoVenta = Number(saleType.id_tipo_venta || saleType.id || 0);
-  const today = new Date().toISOString().slice(0, 10);
+  // Debe ser la fecha LOCAL del runner, no UTC. En Argentina, después de las
+  // 21:00, toISOString() ya cae en el día siguiente y BALTO rechaza la edición
+  // por considerarla una fecha futura.
+  const today = todayISO();
   const itemsPayload = resolvedItems.map(({ item, article }) => {
     const idArticulo = Number(article.id_articulo || 0);
     return {

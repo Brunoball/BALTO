@@ -1955,6 +1955,9 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
         id_detalle: idStockProducto ? String(idStockProducto) : NULL_OPTION,
         id_stock_producto: idStockProducto ? String(idStockProducto) : NULL_OPTION,
         id_stock_variante: idStockVariante ? String(idStockVariante) : NULL_OPTION,
+        id_stock_unidad: detalle?.id_stock_unidad ?? detalle?.id_unidad_stock ?? null,
+        unidad_abreviatura: detalle?.unidad_abreviatura ?? detalle?.unidad ?? detalle?.unidad_nombre ?? "",
+        unidad_permite_decimales: Number(detalle?.unidad_permite_decimales ?? detalle?.permite_decimales ?? 1),
         detalleText: nombreDetalle,
         precio,
         id_tipo_precio_stock: String(precioInicial?.value ?? NULL_OPTION),
@@ -2594,7 +2597,7 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
           codigo: String(i + 1),
           descripcion: safeStr(r.detalleText),
           cantidad: Number(r.cantidad || 0),
-          unidad: "u",
+          unidad: safeStr(r.unidad_abreviatura || "u"),
           precio_unitario: Number(r.precioLista ?? r.precio ?? 0),
           precio: Number(r.precioLista ?? r.precio ?? 0),
           bonif_pct: Number(r.bonifPctAplicado || 0),
@@ -2670,7 +2673,7 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
           codigo: String(i + 1),
           descripcion: safeStr(r.detalleText),
           cantidad: Number(r.cantidad || 0),
-          unidad: "u",
+          unidad: safeStr(r.unidad_abreviatura || "u"),
           precio_unitario: Number(r.precioLista ?? r.precio ?? 0),
           precio: Number(r.precioLista ?? r.precio ?? 0),
           bonif_pct: Number(r.bonifPctAplicado || 0),
@@ -2869,7 +2872,7 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
           id_detalle: null,
           id_stock_producto: stockId,
           id_stock_variante: Number.isFinite(varianteId) && varianteId > 0 ? varianteId : null,
-          cantidad: Math.round(Number(r.cantidad) * 100) / 100,
+          cantidad: Math.round(Number(r.cantidad) * 1000) / 1000,
           precio: Math.round(Number(r.precio) * 100) / 100,
           precio_lista: Math.round(Number(r.precioLista ?? r.precio) * 100) / 100,
           descuento_monto: Math.round(Number(r.descuentoMonto || 0) * 100) / 100,
@@ -3743,6 +3746,9 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
                                 id_detalle: NULL_OPTION,
                                 id_stock_producto: NULL_OPTION,
                                 id_stock_variante: NULL_OPTION,
+                                id_stock_unidad: null,
+                                unidad_abreviatura: "",
+                                unidad_permite_decimales: 1,
                                 precio: 0,
                                 id_tipo_precio_stock: NULL_OPTION,
                                 precio_tipo_label: "",
@@ -3765,8 +3771,8 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
                           <input
                             className="gm-cell-input gm-cell-input--center"
                             type="number"
-                            min={rowSinStock ? undefined : "1"}
-                            step="1"
+                            min={rowSinStock ? undefined : "0.001"}
+                            step={Number(r.unidad_permite_decimales ?? 1) === 1 ? "0.001" : "1"}
                             value={rowSinStock ? "" : r.cantidad}
                             onChange={(e) =>
                               handleCantidadChange(r.id, e.target.value === "" ? "" : Number(e.target.value))
@@ -3785,7 +3791,7 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
                           />
                           {r.stock_disponible !== null && r.stock_disponible !== undefined && (
                             <div className={`gm-stock-hint ${rowSinStock ? "gm-stock-hint--danger" : ""}`}>
-                              {rowSinStock ? "Sin stock" : `Stock: ${r.stock_disponible}`}
+                              {rowSinStock ? "Sin stock" : `Stock: ${r.stock_disponible}${r.unidad_abreviatura ? ` ${r.unidad_abreviatura}` : ""}`}
                             </div>
                           )}
                         </div>

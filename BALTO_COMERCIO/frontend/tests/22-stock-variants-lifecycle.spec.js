@@ -61,7 +61,7 @@ test('@stock @crud variantes: alta, atributos, baja, reactivación y eliminació
   const variantCard = dialog.locator('.cmi-v2-variantCard').first();
   await variantCard.getByPlaceholder(/TALLE M \/ NEGRO/i).fill(variantName);
   await variantCard.getByPlaceholder('SKU', { exact: true }).fill(variantSku);
-  await variantCard.locator('input[inputmode="numeric"]').first().fill('6');
+  await variantCard.locator('.fl-field').filter({ hasText: /^Stock/i }).locator('input').first().fill('6');
 
   const salePriceField = variantCard.locator('.fl-field').filter({ hasText: /Precio de venta/i }).first();
   await salePriceField.locator('input').fill('250');
@@ -94,7 +94,7 @@ test('@stock @crud variantes: alta, atributos, baja, reactivación y eliminació
     .first();
   await expect(editVariantCard).toBeVisible();
   await editVariantCard.getByPlaceholder(/TALLE M \/ NEGRO/i).fill(variantEditedName);
-  await editVariantCard.locator('input[inputmode="numeric"]').first().fill('8');
+  await editVariantCard.locator('.fl-field').filter({ hasText: /^Stock/i }).locator('input').first().fill('8');
   await waitAction(page, 'stock_productos_actualizar', async () => {
     await editDialog.getByRole('button', { name: /Guardar cambios/i }).click();
   });

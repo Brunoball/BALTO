@@ -1,19 +1,16 @@
 import { test, expect } from './support/test.js';
-import { ENV } from './support/env.js';
+import { ENV, patchContextNavigation, patchPageNavigation } from './support/env.js';
 
-function createPublicContext(browser) {
-  return browser.newContext({
+async function createPublicContext(browser) {
+  const context = await browser.newContext({
+    baseURL: ENV.baseURL,
     storageState: { cookies: [], origins: [] },
   });
+  patchContextNavigation(context);
+  return context;
 }
 
-const CENTRAL_LOGIN_ORIGIN = new URL(
-  String(
-    process.env.PW_BALTO_LOGIN_URL ||
-      process.env.REACT_APP_BALTO_LOGIN_URL ||
-      'https://balto.3devsnet.com/',
-  ).trim(),
-).origin;
+const CENTRAL_LOGIN_ORIGIN = new URL(ENV.loginURL).origin;
 
 async function expectCentralLogin(page, expectedReturnPath) {
   await expect
@@ -55,6 +52,7 @@ async function loginFromPublicPage(page) {
 test('@auth @smoke protege una ruta privada sin sesión', async ({ browser }) => {
   const context = await createPublicContext(browser);
   const page = await context.newPage();
+  patchPageNavigation(page);
 
   await page.goto('/panel/stock');
   await expectCentralLogin(page, '/panel/stock');
@@ -65,6 +63,7 @@ test('@auth @smoke protege una ruta privada sin sesión', async ({ browser }) =>
 test('@auth rechazo de credenciales incorrectas', async ({ browser }) => {
   const context = await createPublicContext(browser);
   const page = await context.newPage();
+  patchPageNavigation(page);
 
   await page.goto('/');
   await page.getByPlaceholder('Usuario').fill(`PW-USUARIO-INEXISTENTE-${Date.now()}`);
@@ -80,6 +79,7 @@ test('@auth rechazo de credenciales incorrectas', async ({ browser }) => {
 test('@auth impide enviar campos vacíos', async ({ browser }) => {
   const context = await createPublicContext(browser);
   const page = await context.newPage();
+  patchPageNavigation(page);
 
   await page.goto('/');
   const usuario = page.getByPlaceholder('Usuario');
@@ -97,6 +97,7 @@ test('@auth impide enviar campos vacíos', async ({ browser }) => {
 test('@auth mostrar contraseña y cerrar sesión', async ({ browser }) => {
   const context = await createPublicContext(browser);
   const page = await context.newPage();
+  patchPageNavigation(page);
 
   await page.goto('/');
   const password = page.getByPlaceholder('Contraseña');

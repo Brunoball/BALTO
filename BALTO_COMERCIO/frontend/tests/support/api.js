@@ -15,6 +15,13 @@ function apiUrl(action, query = {}) {
 }
 
 export async function authenticatedApi(page, action, options = {}) {
+  // Un Page recién creado puede quedar en about:blank cuando el storageState ya
+  // contiene una sesión válida. Chromium bloquea localStorage en ese documento,
+  // así que entramos al origen de BALTO antes de leer las credenciales.
+  if (!/^https?:/i.test(String(page.url() || ''))) {
+    await page.goto('/panel/dashboard', { waitUntil: 'domcontentloaded' });
+  }
+
   const method = String(options.method || (options.body ? 'POST' : 'GET')).toUpperCase();
   const query = { ...(options.query || {}) };
   if (ENV.allowMutations && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {

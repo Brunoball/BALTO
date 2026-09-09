@@ -47,6 +47,14 @@ function numEs(v, dec = 2) {
   });
 }
 
+function qtyEs(v) {
+  const n = safeNumber(v, 0);
+  return n.toLocaleString("es-AR", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 3,
+  });
+}
+
 function moneyEs(v) {
   return numEs(v, 2);
 }
@@ -618,7 +626,7 @@ function drawTableRow(doc, item, idx, cols, y, maxBodyY) {
 
   codeLines.forEach((ln, li) => text(doc, ln, cols.x0 + cols.padL, y + li * lh));
   descLines.forEach((ln, li) => text(doc, ln, cols.x1 + cols.padL, y + li * lh));
-  text(doc, numEs(item.cantidad, 2), cols.x3 - cols.padR, y, { align: "right" });
+  text(doc, qtyEs(item.cantidad), cols.x3 - cols.padR, y, { align: "right" });
   text(doc, s(item.unidad || "u"), cols.x4 - cols.padR, y, { align: "right" });
   text(doc, moneyEs(item.precio), cols.x5 - cols.padR, y, { align: "right" });
   text(doc, numEs(item.ivaPct, 2), cols.x6 - cols.padR, y, { align: "right" });

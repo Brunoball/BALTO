@@ -403,3 +403,9 @@ body.dark .cfg-listas-add:hover {
 .cfg-listas-page {
   height: calc(100vh - 118px);
 }
+
+.cfg-listas-grid.is-unit {
+  --cfg-listas-columns: minmax(220px, 1.45fr) minmax(90px, .55fr) minmax(105px, .65fr) minmax(90px, .55fr) minmax(88px, .6fr) 128px;
+  min-width: 780px;
+}
+.cfg-listas-actions button:disabled { opacity: .4; cursor: not-allowed; }

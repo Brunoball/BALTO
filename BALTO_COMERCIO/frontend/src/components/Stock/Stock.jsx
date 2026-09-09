@@ -76,19 +76,25 @@ const BARCODE_SCANNER_MAX_GAP_MS = 250;
 const BARCODE_SCANNER_IDLE_COMMIT_MS = 320;
 const BARCODE_SCANNER_MIN_LENGTH = 3;
 
-function renderStockChip(value) {
+function renderStockChip(value, unidad = "", unidadesMixtas = false) {
+  if (unidadesMixtas) {
+    return <span className="mov-chip mov-chip--warn">Unidades mixtas</span>;
+  }
+
   const stockNum = Number(value || 0);
   let stockClass = "mov-chip mov-chip--danger";
   let stockLabel = "Sin stock";
 
   if (stockNum > 10) {
     stockClass = "mov-chip mov-chip--ok";
-    stockLabel = stockNum;
+    stockLabel = new Intl.NumberFormat("es-AR", { maximumFractionDigits: 3 }).format(stockNum);
   } else if (stockNum > 0 && stockNum <= 10) {
     stockClass = "mov-chip mov-chip--warn";
-    stockLabel = stockNum;
+    stockLabel = new Intl.NumberFormat("es-AR", { maximumFractionDigits: 3 }).format(stockNum);
   }
 
+  const unit = String(unidad || "").trim();
+  if (stockNum > 0 && unit) stockLabel = `${stockLabel} ${unit}`;
   return <span className={stockClass}>{stockLabel}</span>;
 }
 
@@ -1218,6 +1224,11 @@ const Stock = () => {
       const variantes = aplicarProteccionMutacionVariantes(variantesBase, proteccionMutacion);
       const productoForzadoSimple = proteccionMutacion?.forceNoVariants === true;
       const variantesActivas = variantes.filter((variante) => Number(variante?.activo ?? 1) === 1);
+      const unidadesVariantesActivas = new Set(
+        variantesActivas
+          .map((variante) => Number(variante?.id_stock_unidad || 0))
+          .filter((idUnidad) => idUnidad > 0)
+      );
       const stockVariantesActivas = variantesActivas.reduce((total, variante) => {
         const stock = Number(variante?.stock ?? 0);
         return total + (Number.isFinite(stock) ? stock : 0);
@@ -1243,6 +1254,14 @@ const Stock = () => {
                   ? Number(producto?.stock ?? 0)
                   : stockVariantesActivas,
                 stock_variantes: productoForzadoSimple ? 0 : stockVariantesActivas,
+                unidades_variantes_distintas: productoForzadoSimple ? 0 : unidadesVariantesActivas.size,
+                ...(unidadesVariantesActivas.size === 1 && varianteResumen
+                  ? {
+                      unidad_abreviatura: varianteResumen.unidad_abreviatura || varianteResumen.unidad || producto?.unidad_abreviatura,
+                      unidad_nombre: varianteResumen.unidad_nombre || producto?.unidad_nombre,
+                      unidad_permite_decimales: varianteResumen.unidad_permite_decimales ?? producto?.unidad_permite_decimales,
+                    }
+                  : {}),
                 ...(categoriaFiltro
                   ? {}
                   : {
@@ -2535,7 +2554,7 @@ const Stock = () => {
                       ) : null}
                     </span>
                     <span className="prod-sku">{variant.sku || "—"}</span>
-                    <span>{renderStockChip(variant.stock)}</span>
+                    <span>{renderStockChip(variant.stock, variant.unidad_abreviatura || variant.unidad)}</span>
                     <span>{formatMoney(variant.precio_costo)}</span>
                     <span>{formatMoney(variant.precio)}</span>
                     <span className="prod-promo">{formatMoney(variant.precio_promo)}</span>
@@ -3035,7 +3054,11 @@ const Stock = () => {
                           </div>
 
                           <div className="mov-gridCell is-center" role="cell" data-label="STOCK">
-                            {renderStockChip(prodConImagen.stock)}
+                            {renderStockChip(
+                              prodConImagen.stock,
+                              prodConImagen.unidad_abreviatura || prodConImagen.unidad,
+                              Number(prodConImagen.unidades_variantes_distintas || 0) > 1
+                            )}
                           </div>
 
                           <div

@@ -48,6 +48,14 @@ function numEs(v, dec = 2) {
   });
 }
 
+function qtyEs(v) {
+  const n = safeNumber(v, 0);
+  return n.toLocaleString("es-AR", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 3,
+  });
+}
+
 function ymdToHuman(value) {
   const str = String(value || "").trim();
   if (!str) return "";
@@ -633,7 +641,7 @@ function drawTableRow(doc, item, idx, cols, y, maxBodyY) {
   set(doc, "helvetica", "normal", 9);
   text(doc, s(item.codigo || String(idx + 1)), cols.x0 + cols.padL, y);
   descLines.forEach((ln, li) => text(doc, ln, cols.x1 + cols.padL, y + li * lh));
-  text(doc, numEs(item.cantidad, 2), cols.x3 - cols.padR, y, { align: "right" });
+  text(doc, qtyEs(item.cantidad), cols.x3 - cols.padR, y, { align: "right" });
   text(doc, s(item.unidad || "u"), cols.x4 - cols.padR, y, { align: "right" });
 
   return { y: y + blockH + 4, drawn: true };

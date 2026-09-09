@@ -1,15 +1,15 @@
 import { test as setup, expect } from '@playwright/test';
-import { AUTH_FILE, ENV } from '../support/env.js';
+import { AUTH_FILE, ENV, patchPageNavigation } from '../support/env.js';
+import { cleanupE2EWithPage } from '../support/cleanup.js';
 
-const DEFAULT_LOGIN_API = 'https://balto.3devsnet.com/BALTO_LOGIN/api/routes';
-const EXPECTED_SYSTEM = String(process.env.PW_EXPECTED_SYSTEM || 'COMERCIO').trim().toUpperCase();
+const EXPECTED_SYSTEM = ENV.expectedSystem;
 
 function normalizeBase(value, fallback) {
   return String(value || fallback).trim().replace(/\/+$/, '');
 }
 
 function loginApiURL() {
-  return normalizeBase(process.env.PW_LOGIN_API_URL, DEFAULT_LOGIN_API);
+  return normalizeBase(ENV.loginApiURL, '');
 }
 
 function loginEndpoint() {
@@ -17,7 +17,7 @@ function loginEndpoint() {
 }
 
 function commerceSessionEndpoint() {
-  const base = normalizeBase(ENV.apiURL, 'https://balto.3devsnet.com/BALTO_COMERCIO/api/routes');
+  const base = normalizeBase(ENV.apiURL, '');
   return `${base}/api.php?action=auth_session_check`;
 }
 
@@ -157,6 +157,7 @@ async function validateCommerceSessionWithRetry(request, sessionKey) {
 
 setup('autenticar administrador de Balto', async ({ page, request }) => {
   setup.setTimeout(2 * 60_000);
+  patchPageNavigation(page);
 
   const user = String(ENV.user || process.env.PW_USER || '').trim();
   const password = String(ENV.password || process.env.PW_PASSWORD || '');
@@ -189,7 +190,7 @@ setup('autenticar administrador de Balto', async ({ page, request }) => {
     ? loginData.usuario
     : { nombre: user };
 
-  // localhost/127.0.0.1 es otro origin distinto de balto.3devsnet.com.
+  // localhost/127.0.0.1 es otro origin distinto del backend remoto seleccionado.
   // Sembramos la sesión global ANTES de que cargue React para que App.js no
   // redirija al login central al abrir las rutas internas durante Playwright.
   await page.addInitScript(
@@ -229,4 +230,9 @@ setup('autenticar administrador de Balto', async ({ page, request }) => {
   await page.goto('/panel/dashboard', { waitUntil: 'domcontentloaded' });
   await expect(page).toHaveURL(/\/panel(?:\/|$)/, { timeout: 20_000 });
   await page.context().storageState({ path: AUTH_FILE });
+
+  // Levanta residuos de cualquier corrida anterior interrumpida. La limpieza
+  // sigue siendo segura: el backend sólo acepta entidades con huella PW-/PWMS
+  // y además exige sesión ADMIN + confirmación E2E literal.
+  await cleanupE2EWithPage(page, { scope: 'all', phase: 'inicio de corrida' });
 });

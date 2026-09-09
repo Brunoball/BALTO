@@ -149,3 +149,9 @@ export function actualizarCategoriaStockConfiguracion(body) { return configuraci
 export function darBajaCategoriaStockConfiguracion(id) { return configuracionPost("config_listas_categorias_stock_categoria_dar_baja", { id_stock_categoria: id }); }
 export function reactivarCategoriaStockConfiguracion(id) { return configuracionPost("config_listas_categorias_stock_categoria_reactivar", { id_stock_categoria: id }); }
 export function eliminarCategoriaStockConfiguracion(id) { return configuracionPost("config_listas_categorias_stock_categoria_eliminar", { id_stock_categoria: id }); }
+
+export function crearUnidadStockConfiguracion(body) { return configuracionPost("config_listas_categorias_stock_unidad_crear", body); }
+export function actualizarUnidadStockConfiguracion(body) { return configuracionPost("config_listas_categorias_stock_unidad_actualizar", body); }
+export function darBajaUnidadStockConfiguracion(id) { return configuracionPost("config_listas_categorias_stock_unidad_dar_baja", { id_stock_unidad: id }); }
+export function reactivarUnidadStockConfiguracion(id) { return configuracionPost("config_listas_categorias_stock_unidad_reactivar", { id_stock_unidad: id }); }
+export function eliminarUnidadStockConfiguracion(id) { return configuracionPost("config_listas_categorias_stock_unidad_eliminar", { id_stock_unidad: id }); }

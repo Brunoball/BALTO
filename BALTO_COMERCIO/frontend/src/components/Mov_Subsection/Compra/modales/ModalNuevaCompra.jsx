@@ -1322,6 +1322,9 @@ export default function ModalNuevaCompra({ open, lists, onClose, onToast, onSave
         id_detalle: idStockProducto ? String(idStockProducto) : NULL_OPTION,
         id_stock_producto: idStockProducto ? String(idStockProducto) : NULL_OPTION,
         id_stock_variante: idStockVariante ? String(idStockVariante) : NULL_OPTION,
+        id_stock_unidad: detalle?.id_stock_unidad ?? detalle?.id_unidad_stock ?? null,
+        unidad_abreviatura: detalle?.unidad_abreviatura ?? detalle?.unidad ?? detalle?.unidad_nombre ?? "",
+        unidad_permite_decimales: Number(detalle?.unidad_permite_decimales ?? detalle?.permite_decimales ?? 1),
         detalleText: getDetalleNombre(detalle),
         stock_disponible: stockDisponible,
         sinStock: false,
@@ -1792,7 +1795,7 @@ export default function ModalNuevaCompra({ open, lists, onClose, onToast, onSave
           id_detalle: stockId,
           id_stock_producto: stockId,
           id_stock_variante: Number.isFinite(varianteId) && varianteId > 0 ? varianteId : null,
-          cantidad: Math.round(Number(r.cantidad) * 100) / 100,
+          cantidad: Math.round(Number(r.cantidad) * 1000) / 1000,
           precio: Math.round(Number(r.precio) * 100) / 100,
           iva_pct: Math.round(Number(r.ivaPct) * 100) / 100,
           subtotal: Math.round(Number(r.subtotal) * 100) / 100,
@@ -1926,6 +1929,9 @@ export default function ModalNuevaCompra({ open, lists, onClose, onToast, onSave
                                 id_detalle: NULL_OPTION,
                                 id_stock_producto: NULL_OPTION,
                                 id_stock_variante: NULL_OPTION,
+                                id_stock_unidad: null,
+                                unidad_abreviatura: "",
+                                unidad_permite_decimales: 1,
                                 stock_disponible: null,
                                 sinStock: false,
                               })
@@ -1947,7 +1953,7 @@ export default function ModalNuevaCompra({ open, lists, onClose, onToast, onSave
                             className="gm-cell-input gm-cell-input--center"
                             type="number"
                             min="0"
-                            step="1"
+                            step={Number(r.unidad_permite_decimales ?? 1) === 1 ? "0.001" : "1"}
                             value={r.cantidad}
                             onChange={(e) =>
                               handleCantidadChange(r.id, e.target.value === "" ? "" : Number(e.target.value))
@@ -1965,7 +1971,7 @@ export default function ModalNuevaCompra({ open, lists, onClose, onToast, onSave
                                 color: "#666",
                               }}
                             >
-                              {`Stock: ${r.stock_disponible}`}
+                              {`Stock: ${r.stock_disponible}${r.unidad_abreviatura ? ` ${r.unidad_abreviatura}` : ""}`}
                             </div>
                           )}
                         </div>

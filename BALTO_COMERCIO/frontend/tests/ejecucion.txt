@@ -22,7 +22,7 @@ Remove-Item Env:PW_ALLOW_ARCA -ErrorAction SilentlyContinue
 # notas de crédito, eliminaciones, detalles y cheques.
 # ============================================================
 
-npx playwright test tests/04-purchases-credit-note.spec.js tests/05-sales-credit-note.spec.js tests/06-budgets.spec.js tests/07-other-movements.spec.js tests/13-movement-delete-reversal.spec.js tests/14-details-and-cancel.spec.js tests/15-cheques-lifecycle.spec.js tests/16-movement-details-integrity.spec.js tests/17-other-income-fiscal.spec.js tests/26-barcode-movements.spec.js --project=chromium --workers=1 --reporter=list
+npx playwright test tests/04-purchases-credit-note.spec.js tests/05-sales-credit-note.spec.js tests/06-budgets.spec.js tests/07-other-movements.spec.js tests/13-movement-delete-reversal.spec.js tests/14-details-and-cancel.spec.js tests/15-cheques-lifecycle.spec.js tests/16-movement-details-integrity.spec.js tests/17-other-income-fiscal.spec.js tests/26-barcode-movements.spec.js tests/31-stock-units-fractional.spec.js --project=chromium --workers=1 --reporter=list
 
 
 # ============================================================
@@ -41,8 +41,17 @@ npx playwright test tests/08-current-accounts.spec.js tests/19-current-account-e
 # incluido el lector global de Stock y la búsqueda real mediante ProductoRepository.php.
 # ============================================================
 
-npx playwright test tests/03-stock-crud.spec.js tests/20-stock-lifecycle.spec.js tests/22-stock-variants-lifecycle.spec.js tests/25-stock-barcodes.spec.js tests/28-stock-barcode-search.spec.js tests/29-configuration-lists-categories.spec.js --project=chromium --workers=1 --reporter=list
+npx playwright test tests/03-stock-crud.spec.js tests/20-stock-lifecycle.spec.js tests/22-stock-variants-lifecycle.spec.js tests/25-stock-barcodes.spec.js tests/28-stock-barcode-search.spec.js tests/29-configuration-lists-categories.spec.js tests/31-stock-units-fractional.spec.js tests/32-units-pdf-contract.spec.js --project=chromium --workers=1 --reporter=list
 
+
+
+# ============================================================
+# UNIDADES FRACCIONABLES (QA NUEVO)
+# Contrato UNIDAD/u, kg/g/ml decimales, selector de Stock, Configuración,
+# Ventas, Compras, NC, Otros ingresos, Presupuestos y variantes mixtas.
+# ============================================================
+
+npx playwright test tests/29-configuration-lists-categories.spec.js tests/31-stock-units-fractional.spec.js tests/32-units-pdf-contract.spec.js --project=chromium --workers=1 --reporter=list
 
 # ============================================================
 # 4. CHEQUES
@@ -60,7 +69,7 @@ npx playwright test tests/09-cheques-smoke.spec.js tests/15-cheques-lifecycle.sp
 # No ejecuta ARCA ni Tienda Nube.
 # ============================================================
 
-npx playwright test tests/10-config-accounting.spec.js tests/21-configuration-actions.spec.js tests/24-initial-balances.spec.js tests/29-configuration-lists-categories.spec.js --project=chromium --workers=1 --reporter=list
+npx playwright test tests/10-config-accounting.spec.js tests/21-configuration-actions.spec.js tests/24-initial-balances.spec.js tests/29-configuration-lists-categories.spec.js tests/31-stock-units-fractional.spec.js --project=chromium --workers=1 --reporter=list
 
 
 # ============================================================
@@ -88,6 +97,6 @@ npx playwright test tests/02-navigation-smoke.spec.js tests/11-global-guards.spe
 # porque repetiría prácticamente las mismas pruebas.
 # ============================================================
 
-npx playwright test tests/00-preflight.spec.js tests/01-auth.spec.js tests/02-navigation-smoke.spec.js tests/03-stock-crud.spec.js tests/04-purchases-credit-note.spec.js tests/05-sales-credit-note.spec.js tests/06-budgets.spec.js tests/07-other-movements.spec.js tests/08-current-accounts.spec.js tests/09-cheques-smoke.spec.js tests/10-config-accounting.spec.js tests/11-global-guards.spec.js tests/12-documents-readonly.spec.js tests/13-movement-delete-reversal.spec.js tests/14-details-and-cancel.spec.js tests/15-cheques-lifecycle.spec.js tests/16-movement-details-integrity.spec.js tests/17-other-income-fiscal.spec.js tests/18-auth-actions.spec.js tests/19-current-account-entities.spec.js tests/20-stock-lifecycle.spec.js tests/21-configuration-actions.spec.js tests/22-stock-variants-lifecycle.spec.js tests/23-internal-navigation-smoke.spec.js tests/24-initial-balances.spec.js tests/25-stock-barcodes.spec.js tests/26-barcode-movements.spec.js tests/27-performance-safety.spec.js tests/28-stock-barcode-search.spec.js tests/29-configuration-lists-categories.spec.js tests/example.spec.js --project=chromium --workers=1 --reporter=list
+npx playwright test tests/00-preflight.spec.js tests/01-auth.spec.js tests/02-navigation-smoke.spec.js tests/03-stock-crud.spec.js tests/04-purchases-credit-note.spec.js tests/05-sales-credit-note.spec.js tests/06-budgets.spec.js tests/07-other-movements.spec.js tests/08-current-accounts.spec.js tests/09-cheques-smoke.spec.js tests/10-config-accounting.spec.js tests/11-global-guards.spec.js tests/12-documents-readonly.spec.js tests/13-movement-delete-reversal.spec.js tests/14-details-and-cancel.spec.js tests/15-cheques-lifecycle.spec.js tests/16-movement-details-integrity.spec.js tests/17-other-income-fiscal.spec.js tests/18-auth-actions.spec.js tests/19-current-account-entities.spec.js tests/20-stock-lifecycle.spec.js tests/21-configuration-actions.spec.js tests/22-stock-variants-lifecycle.spec.js tests/23-internal-navigation-smoke.spec.js tests/24-initial-balances.spec.js tests/25-stock-barcodes.spec.js tests/26-barcode-movements.spec.js tests/27-performance-safety.spec.js tests/28-stock-barcode-search.spec.js tests/29-configuration-lists-categories.spec.js tests/31-stock-units-fractional.spec.js tests/32-units-pdf-contract.spec.js tests/example.spec.js --project=chromium --workers=1 --reporter=list
 
 npx playwright test --project=chromium --workers=1 --reporter=list

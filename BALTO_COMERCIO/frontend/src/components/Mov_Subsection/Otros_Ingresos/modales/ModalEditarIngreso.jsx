@@ -1571,9 +1571,9 @@ export default function ModalEditarIngreso({
                             <input
                               className="gm-cell-input gm-cell-input--center"
                               type="number"
-                              min="0.01"
+                              min="0.001"
                               max={it.tipo_item === "producto" && it.stock_disponible !== null ? it.stock_disponible : undefined}
-                              step="0.01"
+                              step="0.001"
                               style={{ width: "100%" }}
                               value={it.cantidad}
                               onChange={(e) =>

@@ -56,8 +56,8 @@ function formatMoney(value) {
 function formatNumber(value) {
   const n = Number(value || 0);
   return n.toLocaleString("es-AR", {
-    minimumFractionDigits: Number.isInteger(n) ? 0 : 2,
-    maximumFractionDigits: 2,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 3,
   });
 }
 
@@ -390,7 +390,7 @@ const ModalReportesStock = ({ open, onClose, onToast, categorias = [] }) => {
         const cell = worksheet[address];
         if (!cell) return;
         if (column.type === "money") cell.z = '$ #,##0.00';
-        if (column.type === "number") cell.z = '#,##0.00';
+        if (column.type === "number") cell.z = '#,##0.###';
       });
     });
 
@@ -403,7 +403,7 @@ const ModalReportesStock = ({ open, onClose, onToast, categorias = [] }) => {
           const cell = worksheet[XLSX.utils.encode_cell({ r: summaryDataIndex, c: index })];
           if (!cell) return;
           if (item.type === "money") cell.z = '$ #,##0.00';
-          if (item.type === "number") cell.z = '#,##0.00';
+          if (item.type === "number") cell.z = '#,##0.###';
         });
       }
     }
@@ -507,9 +507,9 @@ const ModalReportesStock = ({ open, onClose, onToast, categorias = [] }) => {
                   <input
                     type="number"
                     min="0"
-                    step="1"
+                    step="0.001"
                     value={umbral}
-                    onChange={(event) => setUmbral(event.target.value.replace(/[^0-9]/g, ""))}
+                    onChange={(event) => setUmbral(event.target.value)}
                     disabled={loading}
                   />
                 </label>

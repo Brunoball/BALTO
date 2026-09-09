@@ -1495,6 +1495,9 @@ export default function ModalNuevoIngreso({
       id_detalle: NULL_OPTION,
       id_stock_producto: idStockProducto ? String(idStockProducto) : NULL_OPTION,
       id_stock_variante: idStockVariante ? String(idStockVariante) : NULL_OPTION,
+      id_stock_unidad: producto?.id_stock_unidad ?? producto?.id_unidad_stock ?? null,
+      unidad_abreviatura: producto?.unidad_abreviatura ?? producto?.unidad ?? producto?.unidad_nombre ?? "",
+      unidad_permite_decimales: Number(producto?.unidad_permite_decimales ?? producto?.permite_decimales ?? 1),
       detalle: nombre,
       precio: getPrecioVenta(producto),
       stock_disponible: stockDisponible,
@@ -2431,7 +2434,7 @@ export default function ModalNuevoIngreso({
                             />
                           )}
                           {r.tipo_item === "producto" && r.stock_disponible !== null && (
-                            <small className="oi-stock-hint">Stock disponible: {r.stock_disponible}</small>
+                            <small className="oi-stock-hint">Stock disponible: {r.stock_disponible}{r.unidad_abreviatura ? ` ${r.unidad_abreviatura}` : ""}</small>
                           )}
                         </div>
 
@@ -2439,9 +2442,9 @@ export default function ModalNuevoIngreso({
                           <input
                             className="gm-cell-input gm-cell-input--center"
                             type="number"
-                            min="0.01"
+                            min="0.001"
                             max={r.tipo_item === "producto" && r.stock_disponible !== null ? r.stock_disponible : undefined}
-                            step="0.01"
+                            step={r.tipo_item === "producto" && Number(r.unidad_permite_decimales ?? 1) !== 1 ? "1" : "0.001"}
                             value={r.cantidad}
                             onChange={(e) =>
                               handleCantidadChange(

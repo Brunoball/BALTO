@@ -68,6 +68,14 @@ function getCodigo(d) {
   return upperStr(d?.sku || d?.codigo || d?.codigo_barra || "");
 }
 
+function getUnidad(d) {
+  return {
+    id_stock_unidad: Number(d?.id_stock_unidad ?? d?.id_unidad_stock ?? 0) || null,
+    unidad_abreviatura: safeStr(d?.unidad_abreviatura || d?.unidad || d?.unidad_nombre || ""),
+    unidad_permite_decimales: Number(d?.unidad_permite_decimales ?? d?.permite_decimales ?? 1) === 1 ? 1 : 0,
+  };
+}
+
 function getPrecio(d) {
   const candidates = [d?.precio_venta, d?.precio, d?.precio_promocional, d?.precio_mayorista];
   for (const raw of candidates) {
@@ -96,6 +104,9 @@ function emptyRow() {
     cantidad: 1,
     precio: 0,
     iva_pct: 0,
+    id_stock_unidad: null,
+    unidad_abreviatura: "",
+    unidad_permite_decimales: 1,
   };
 }
 
@@ -110,6 +121,9 @@ function rowFromItem(item) {
     cantidad: safeNumber(item?.cantidad) || 1,
     precio: safeNumber(item?.precio ?? item?.precio_unitario),
     iva_pct: safeNumber(item?.iva_pct),
+    id_stock_unidad: Number(item?.id_stock_unidad || 0) || null,
+    unidad_abreviatura: safeStr(item?.unidad_abreviatura || item?.unidad || item?.unidad_nombre || ""),
+    unidad_permite_decimales: Number(item?.unidad_permite_decimales ?? item?.permite_decimales ?? 1) === 1 ? 1 : 0,
   };
 }
 
@@ -250,6 +264,7 @@ export default function ModalModelosPresupuesto({ open, lists, onClose, onToast,
   }, []);
 
   const selectStock = useCallback((localId, option) => {
+    const unidad = getUnidad(option);
     updateRow(localId, {
       id_detalle: null,
       id_stock_producto: getStockProductoId(option),
@@ -257,6 +272,9 @@ export default function ModalModelosPresupuesto({ open, lists, onClose, onToast,
       descripcion: getNombre(option),
       codigo: getCodigo(option),
       precio: getPrecio(option),
+      id_stock_unidad: unidad.id_stock_unidad,
+      unidad_abreviatura: unidad.unidad_abreviatura,
+      unidad_permite_decimales: unidad.unidad_permite_decimales,
     });
   }, [updateRow]);
 
@@ -313,6 +331,10 @@ export default function ModalModelosPresupuesto({ open, lists, onClose, onToast,
           detalle: upperStr(r.descripcion),
           codigo: upperStr(r.codigo),
           cantidad,
+          id_stock_unidad: r.id_stock_unidad || null,
+          unidad_abreviatura: r.unidad_abreviatura || "",
+          unidad_permite_decimales: Number(r.unidad_permite_decimales ?? 1),
+          unidad: r.unidad_abreviatura || "u",
           precio,
           precio_unitario: precio,
           iva_pct: ivaPct,
@@ -332,6 +354,15 @@ export default function ModalModelosPresupuesto({ open, lists, onClose, onToast,
     }
     if (!itemsPayload.length) {
       onToast?.("error", "Agregá al menos un elemento al modelo.", 3500);
+      return;
+    }
+    const filaUnidadInvalida = form.rows.find((r) =>
+      Number(r.id_stock_producto || r.id_stock_variante || 0) > 0 &&
+      Number(r.unidad_permite_decimales ?? 1) === 0 &&
+      Math.abs(safeNumber(r.cantidad) - Math.round(safeNumber(r.cantidad))) > 0.000001
+    );
+    if (filaUnidadInvalida) {
+      onToast?.("error", `La unidad ${filaUnidadInvalida.unidad_abreviatura || "u"} no admite cantidades decimales.`, 4000);
       return;
     }
     setSaving(true);
@@ -598,7 +629,7 @@ export default function ModalModelosPresupuesto({ open, lists, onClose, onToast,
                         <div className="gm-table-cell gm-table-cell--detail">
                           <ProductStockAutocomplete
                             value={row.descripcion}
-                            onChange={(value) => updateRow(row.localId, { descripcion: upperInput(value), id_detalle: null, id_stock_producto: null, id_stock_variante: null, codigo: "" })}
+                            onChange={(value) => updateRow(row.localId, { descripcion: upperInput(value), id_detalle: null, id_stock_producto: null, id_stock_variante: null, codigo: "", id_stock_unidad: null, unidad_abreviatura: "", unidad_permite_decimales: 1 })}
                             onSelect={(option) => selectStock(row.localId, option)}
                             options={stockOptions}
                             allowOutOfStock={form.es_personalizado}
@@ -613,8 +644,8 @@ export default function ModalModelosPresupuesto({ open, lists, onClose, onToast,
                           <input
                             className="gm-cell-input gm-cell-input--center"
                             type="number"
-                            min="0.01"
-                            step="0.01"
+                            min={Number(row.unidad_permite_decimales ?? 1) === 1 ? "0.001" : "1"}
+                            step={Number(row.unidad_permite_decimales ?? 1) === 1 ? "0.001" : "1"}
                             value={row.cantidad}
                             onChange={(e) => updateRow(row.localId, { cantidad: e.target.value })}
                             disabled={saving}

@@ -212,6 +212,8 @@ export default function ModalNotaCreditoProveedor({
         ivaOriginal: Number(item.iva_monto || 0),
         totalOriginal: Number(item.total || 0),
         iva_pct: Number(item.iva_pct || 0),
+        unidad_abreviatura: String(item.unidad_abreviatura || item.unidad || item.unidad_nombre || "u").trim() || "u",
+        unidad_permite_decimales: Number(item.unidad_permite_decimales ?? item.permite_decimales ?? 0) === 1 ? 1 : 0,
         cantidad: "",
       }));
       setCtx(context);
@@ -331,7 +333,9 @@ export default function ModalNotaCreditoProveedor({
   const totalCompraLuego = Math.max(0, Number((disponible - total).toFixed(2)));
   const excede = !esAnulacionTotal && total - disponible > 0.05;
   const cantidadesValidas = selected.every(
-    (item) => item.cantidad <= item.disponible + 0.0001,
+    (item) =>
+      item.cantidad <= item.disponible + 0.0001 &&
+      (Number(item.unidad_permite_decimales ?? 0) === 1 || Math.abs(item.cantidad - Math.round(item.cantidad)) <= 0.000001),
   );
   const contenidoValido = esAnulacionTotal
     ? disponible > 0
@@ -747,7 +751,7 @@ export default function ModalNotaCreditoProveedor({
                                     type="number"
                                     min="0"
                                     max={item.disponible}
-                                    step="0.001"
+                                    step={Number(item.unidad_permite_decimales ?? 0) === 1 ? "0.001" : "1"}
                                     value={item.cantidad}
                                     disabled={
                                       esAnulacionTotal || item.disponible <= 0

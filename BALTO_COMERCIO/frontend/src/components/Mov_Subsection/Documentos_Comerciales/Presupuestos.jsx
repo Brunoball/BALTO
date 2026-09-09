@@ -517,7 +517,7 @@ function buildItemsFacturacionFromPresupuesto(items) {
       codigo: safeStr(it?.codigo || it?.sku || idx + 1),
       descripcion: safeStr(it?.descripcion || it?.detalle || it?.detalle_nombre || it?.producto_nombre || it?.nombre || "Producto / Servicio"),
       cantidad: Number(it?.cantidad || 0),
-      unidad: "u",
+      unidad: safeStr(it?.unidad_abreviatura || it?.unidad || it?.unidad_nombre || "u"),
       precio_unitario: Number(it?.precio ?? it?.precio_unitario ?? 0),
       precio: Number(it?.precio ?? it?.precio_unitario ?? 0),
       bonif_pct: 0,

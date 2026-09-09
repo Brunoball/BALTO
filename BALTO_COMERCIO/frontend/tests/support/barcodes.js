@@ -230,7 +230,7 @@ export async function createVariantStockProduct(page, product) {
     await expect(card).toBeVisible();
     await card.getByPlaceholder(/TALLE M \/ NEGRO/i).fill(variant.name);
     await card.getByPlaceholder('SKU', { exact: true }).fill(variant.sku);
-    await card.locator('input[inputmode="numeric"]').first().fill(String(variant.stock ?? 5));
+    await card.locator('.fl-field').filter({ hasText: /^Stock/i }).locator('input').first().fill(String(variant.stock ?? 5));
     const priceField = card.locator('.cmi-floatingField, .fl-field').filter({ hasText: /Precio de venta/i }).first();
     await priceField.locator('input').fill(String(variant.price ?? 250));
     await priceField.locator('input').blur();

@@ -56,6 +56,14 @@ function numEs(v, dec = 2) {
   });
 }
 
+function qtyEs(v) {
+  const n = safeNumber(v, 0);
+  return n.toLocaleString("es-AR", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 3,
+  });
+}
+
 function moneyEs(v) {
   return numEs(v, 2);
 }
@@ -776,7 +784,7 @@ function drawTableRow(doc, item, idx, cols, y, maxBodyY) {
     text(doc, ln, cols.x1 + cols.padL, y + li * lh);
   });
 
-  text(doc, numEs(item.cantidad ?? 1, 2), cols.x3 - cols.padR, y, {
+  text(doc, qtyEs(item.cantidad ?? 1), cols.x3 - cols.padR, y, {
     align: "right",
   });
   text(doc, s(item.unidad || "u"), cols.x4 - cols.padR, y, {

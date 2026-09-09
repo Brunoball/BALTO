@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './support/test.js';
 import { Buffer } from 'node:buffer';
 import { uniqueName, uniqueSku } from './support/data.js';
 import { installDiagnostics, assertNoCriticalErrors } from './support/diagnostics.js';

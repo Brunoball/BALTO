@@ -102,6 +102,14 @@ function numEs(v, dec = 2) {
   });
 }
 
+function qtyEs(v) {
+  const n = safeNumber(v, 0);
+  return n.toLocaleString("es-AR", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 3,
+  });
+}
+
 function moneyEs(v) {
   return numEs(v, 2);
 }
@@ -1000,7 +1008,7 @@ async function drawPage(doc, pageName, ctx) {
       text(doc, descLines[li], x1 + padL, y + li * lh);
     }
 
-    text(doc, numEs(it.cantidad ?? 1, 2), x3 - padR, y, { align: "right" });
+    text(doc, qtyEs(it.cantidad ?? 1), x3 - padR, y, { align: "right" });
     text(doc, s(it.unidad || "serv."), x4 - padR, y, { align: "right" });
     text(doc, moneyEs(it.precio || 0), x5 - padR, y, { align: "right" });
     text(doc, numEs(it.bonifPct || 0, 2), x6 - padR, y, { align: "right" });

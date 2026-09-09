@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { Buffer } from 'node:buffer';
+import { patchContextNavigation, patchPageNavigation } from './support/env.js';
 import { authenticatedApi, expectApiSuccess } from './support/api.js';
 import { uniqueName, uniqueSku } from './support/data.js';
 import { installDiagnostics, assertNoCriticalErrors } from './support/diagnostics.js';
@@ -23,6 +24,11 @@ import {
   deleteUnusedStockProduct,
 } from './support/flows.js';
 
+
+test.beforeEach(async ({ page, context }) => {
+  patchContextNavigation(context);
+  patchPageNavigation(page);
+});
 const CREDIT_NOTE_MOTIVES = [
   'DEVOLUCION_MERCADERIA',
   'ANULACION_TOTAL',

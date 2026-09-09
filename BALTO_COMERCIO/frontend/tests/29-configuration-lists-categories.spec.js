@@ -343,3 +343,90 @@ test('@configuracion @critical @stock listas y categorías: categoría con produ
   expect(Number(persistedProduct?.id_categoria_stock ?? persistedProduct?.id_stock_categoria ?? 0)).toBe(0);
   expect(Array.isArray(persistedProduct?.categorias) ? persistedProduct.categorias : []).toHaveLength(0);
 });
+
+test('@configuracion @stock @unidades @crud unidades de stock: alta, edición, baja, reactivación y eliminación', async ({ page }) => {
+  await requireMutations(test, page);
+  const unitName = uniqueName('CFG-UNIDAD-FRACCION', 60);
+  const editedName = `${unitName}-EDITADA`.slice(0, 70);
+  const abbreviation = `kg${Date.now().toString(36).slice(-6)}`.slice(0, 20);
+  const editedAbbreviation = `${abbreviation}e`.slice(0, 20);
+
+  await openListsAndCategories(page);
+  await page.getByRole('button', { name: /^Unidades de stock$/i }).click();
+  await expect(page.getByRole('table', { name: 'Unidades de stock' })).toBeVisible();
+
+  // La unidad histórica UNIDAD/u debe existir y estar blindada desde Configuración.
+  const defaultRow = page
+    .getByRole('table', { name: 'Unidades de stock' })
+    .getByRole('row', { name: /UNIDAD\s+Unidad predeterminada\s+u\s+No/i })
+    .first();
+  await expect(defaultRow).toBeVisible();
+  await expect(defaultRow.getByTitle(/predeterminada no se puede modificar/i)).toBeDisabled();
+
+  await page.getByRole('button', { name: /Agregar unidad/i }).click();
+  let dialog = page.getByRole('dialog').filter({ hasText: /Agregar unidad de stock/i }).last();
+  await expect(dialog).toBeVisible();
+  const inputs = dialog.locator('input.gm-input');
+  await inputs.nth(0).fill(unitName);
+  await inputs.nth(1).fill(abbreviation);
+  const decimals = dialog.locator('label').filter({ hasText: /Permitir cantidades decimales/i }).locator('input[type="checkbox"]').first();
+  await expect(decimals).toBeChecked();
+
+  let responsePromise = waitAction(page, 'config_listas_categorias_stock_unidad_crear');
+  await dialog.getByRole('button', { name: /Guardar unidad/i }).click();
+  const createResponse = await responsePromise;
+  expect(createResponse.status()).toBeLessThan(400);
+  await expect(dialog).toBeHidden({ timeout: 30_000 });
+
+  let row = configRow(page, unitName);
+  await expect(row).toBeVisible();
+  await expect(row).toContainText(abbreviation);
+  await expect(row).toContainText('Sí');
+
+  await row.getByTitle('Editar').click();
+  dialog = page.getByRole('dialog').filter({ hasText: /Editar unidad de stock/i }).last();
+  await expect(dialog).toBeVisible();
+  await dialog.locator('input.gm-input').nth(0).fill(editedName);
+  await dialog.locator('input.gm-input').nth(1).fill(editedAbbreviation);
+  responsePromise = waitAction(page, 'config_listas_categorias_stock_unidad_actualizar');
+  await dialog.getByRole('button', { name: /Guardar unidad/i }).click();
+  expect((await responsePromise).status()).toBeLessThan(400);
+  await expect(dialog).toBeHidden({ timeout: 30_000 });
+
+  row = configRow(page, editedName);
+  await expect(row).toBeVisible();
+  await expect(row).toContainText(editedAbbreviation);
+
+  await row.getByTitle('Dar de baja').click();
+  dialog = page.getByRole('dialog').filter({ hasText: /Dar de baja unidad de stock/i }).last();
+  responsePromise = waitAction(page, 'config_listas_categorias_stock_unidad_dar_baja');
+  await dialog.getByRole('button', { name: /^Dar de baja$/i }).click();
+  expect((await responsePromise).status()).toBeLessThan(400);
+  await expect(dialog).toBeHidden({ timeout: 30_000 });
+  await expect(configRow(page, editedName)).toHaveCount(0);
+
+  await page.getByRole('button', { name: /^Bajas$/i }).click();
+  row = configRow(page, editedName);
+  await expect(row).toBeVisible();
+  await expect(row).toContainText('BAJA');
+
+  await row.getByTitle('Reactivar').click();
+  dialog = page.getByRole('dialog').filter({ hasText: /Reactivar unidad de stock/i }).last();
+  responsePromise = waitAction(page, 'config_listas_categorias_stock_unidad_reactivar');
+  await dialog.getByRole('button', { name: /^Reactivar$/i }).click();
+  expect((await responsePromise).status()).toBeLessThan(400);
+  await expect(dialog).toBeHidden({ timeout: 30_000 });
+
+  await page.getByRole('button', { name: /^Activos$/i }).click();
+  row = configRow(page, editedName);
+  await expect(row).toBeVisible();
+
+  await row.getByTitle('Eliminar').click();
+  dialog = page.getByRole('dialog').filter({ hasText: /Eliminar unidad de stock/i }).last();
+  await expect(dialog).toContainText(/se eliminará definitivamente/i);
+  responsePromise = waitAction(page, 'config_listas_categorias_stock_unidad_eliminar');
+  await dialog.getByRole('button', { name: /Eliminar definitivamente/i }).click();
+  expect((await responsePromise).status()).toBeLessThan(400);
+  await expect(dialog).toBeHidden({ timeout: 30_000 });
+  await expect(configRow(page, editedName)).toHaveCount(0);
+});

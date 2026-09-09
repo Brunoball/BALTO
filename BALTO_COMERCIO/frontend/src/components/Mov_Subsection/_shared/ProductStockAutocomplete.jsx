@@ -41,6 +41,18 @@ function getStock(x) {
   return Number.isFinite(n) ? n : null;
 }
 
+function getUnitLabel(x) {
+  return safeStr(x?.unidad_abreviatura || x?.unidad || x?.unidad_nombre || "");
+}
+
+function formatStock(x) {
+  const stock = getStock(x);
+  if (stock === null) return "";
+  const amount = new Intl.NumberFormat("es-AR", { maximumFractionDigits: 3 }).format(stock);
+  const unit = getUnitLabel(x);
+  return unit ? `${amount} ${unit}` : amount;
+}
+
 function getPrecio(x) {
   const raw = x?.precio ?? x?.precio_venta ?? x?.precio_promocional ?? null;
   if (raw === null || raw === undefined || raw === "") return null;
@@ -364,6 +376,7 @@ export default function ProductStockAutocomplete({
             >
               <span className="psa-item-main">
                 <span className="psa-label">{getProductName(product)}</span>
+                {formatStock(product) ? <span className="psa-meta">Stock: {formatStock(product)}</span> : null}
               </span>
               {variants.length ? <span className="psa-arrow">{isExpanded ? "▾" : "▸"}</span> : null}
             </button>
@@ -385,6 +398,7 @@ export default function ProductStockAutocomplete({
                     >
                       <span className="psa-variant-main">
                         <span className="psa-variant-label">{getVariantName(variant) || "Variante"}</span>
+                        {formatStock(variant) ? <span className="psa-variant-meta">Stock: {formatStock(variant)}</span> : null}
                       </span>
                     </button>
                   );

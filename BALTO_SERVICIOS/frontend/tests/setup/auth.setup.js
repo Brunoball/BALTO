@@ -1,15 +1,22 @@
 import { test as setup, expect } from '@playwright/test';
-import { AUTH_FILE, ENV } from '../support/env.js';
+import { AUTH_FILE, ENV, patchPageNavigation } from '../support/env.js';
+import { cleanupE2EWithPage } from '../support/cleanup.js';
 
-const DEFAULT_LOGIN_API = 'https://balto.3devsnet.com/BALTO_LOGIN/api/routes';
-const EXPECTED_SYSTEM = String(process.env.PW_EXPECTED_SYSTEM || 'SERVICIOS').trim().toUpperCase();
+const EXPECTED_SYSTEM = ENV.expectedSystem;
+
+// Este setup hace login + validación remota + una limpieza general de residuos E2E.
+// La limpieza HTTP tiene un timeout propio de hasta 120 s y la validación de sesión
+// también reintenta cortes transitorios. El timeout global por defecto de Playwright
+// (60 s) podía matar el setup mientras la limpieza seguía trabajando correctamente.
+// Se amplía SOLO este archivo/setup; no cambia el timeout de los 164 tests funcionales.
+setup.setTimeout(300_000);
 
 function normalizeBase(value, fallback) {
   return String(value || fallback).trim().replace(/\/+$/, '');
 }
 
 function loginApiURL() {
-  return normalizeBase(process.env.PW_LOGIN_API_URL, DEFAULT_LOGIN_API);
+  return normalizeBase(ENV.loginApiURL, '');
 }
 
 function loginEndpoint() {
@@ -17,7 +24,7 @@ function loginEndpoint() {
 }
 
 function appSessionEndpoint() {
-  const base = normalizeBase(ENV.apiURL, 'https://balto.3devsnet.com/BALTO_SERVICIOS/api/routes');
+  const base = normalizeBase(ENV.apiURL, '');
   return `${base}/api.php?action=auth_session_check`;
 }
 
@@ -110,6 +117,7 @@ async function validateAppSessionWithRetry(request, sessionKey) {
 }
 
 setup('autenticar administrador de Balto', async ({ page, request }) => {
+  patchPageNavigation(page);
   const user = String(ENV.user || process.env.PW_USER || '').trim();
   const password = String(ENV.password || process.env.PW_PASSWORD || '');
 
@@ -150,7 +158,7 @@ setup('autenticar administrador de Balto', async ({ page, request }) => {
     ? loginData.usuario
     : { nombre: user };
 
-  // localhost/127.0.0.1 es otro origin distinto de balto.3devsnet.com.
+  // localhost/127.0.0.1 es otro origin distinto del backend remoto seleccionado.
   // Sembramos la sesión global ANTES de que cargue React para que App.js no
   // redirija al login central al abrir las rutas internas durante Playwright.
   await page.addInitScript(
@@ -189,5 +197,15 @@ setup('autenticar administrador de Balto', async ({ page, request }) => {
 
   await page.goto('/panel/dashboard', { waitUntil: 'domcontentloaded' });
   await expect(page).toHaveURL(/\/panel(?:\/|$)/, { timeout: 20_000 });
+
+  // Levanta residuos PW-* de corridas anteriores que hayan quedado cortadas con
+  // Ctrl+C, cierre de terminal/PC o un crash. El teardown por worker sigue usando
+  // el prefijo exacto de la corrida actual; esta limpieza general ocurre sólo una
+  // vez, antes de que empiecen los tests dependientes de este setup.
+  await cleanupE2EWithPage(page, {
+    scope: 'all',
+    phase: 'inicio de suite',
+  });
+
   await page.context().storageState({ path: AUTH_FILE });
 });

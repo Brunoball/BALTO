@@ -256,6 +256,8 @@ export default function ModalEmitirNotaCreditoVenta({
         ivaMontoOriginal: Number(it.iva_monto || 0),
         totalOriginal: Number(it.total || 0),
         iva_pct: Number(it.iva_pct || 0),
+        unidad_abreviatura: safeStr(it.unidad_abreviatura || it.unidad || it.unidad_nombre || "u") || "u",
+        unidad_permite_decimales: Number(it.unidad_permite_decimales ?? it.permite_decimales ?? 0) === 1 ? 1 : 0,
         cantidad: esEliminacionTotal && Number(it.cantidad_disponible || 0) > 0 ? String(Number(it.cantidad_disponible || 0)) : "",
         tiene_stock: Number(it.id_stock_producto || 0) > 0 || Number(it.id_stock_variante || 0) > 0,
         afecta_stock: Number(it.id_stock_producto || 0) > 0 || Number(it.id_stock_variante || 0) > 0,
@@ -337,7 +339,10 @@ export default function ModalEmitirNotaCreditoVenta({
   );
   const excede = totalSeleccionado - totalDisponible > 0.05;
   const coincideTotalEliminacion = !esEliminacionTotal || Math.abs(totalSeleccionado - totalDisponible) <= 0.05;
-  const puedeContinuar = totalSeleccionado > 0 && !excede && coincideTotalEliminacion && asociacionFiscalValida && itemsSeleccionados.every((it) => it.cantidad <= it.disponible + 0.0001);
+  const puedeContinuar = totalSeleccionado > 0 && !excede && coincideTotalEliminacion && asociacionFiscalValida && itemsSeleccionados.every((it) =>
+    it.cantidad <= it.disponible + 0.0001 &&
+    (Number(it.unidad_permite_decimales ?? 0) === 1 || Math.abs(it.cantidad - Math.round(it.cantidad)) <= 0.000001)
+  );
 
   const payloadBase = useCallback(() => ({
     id_movimiento_origen: Number(row?.id_movimiento),
@@ -359,6 +364,7 @@ export default function ModalEmitirNotaCreditoVenta({
   const itemsFactura = useMemo(() => {
     const out = itemsSeleccionados.map((it) => ({
       codigo: String(it.id_item_origen), descripcion: it.descripcion, cantidad: it.cantidad,
+      unidad: it.unidad_abreviatura || "u",
       precio: Number((it.subtotal / it.cantidad).toFixed(2)), precio_unitario: Number((it.subtotal / it.cantidad).toFixed(2)),
       subtotal: it.subtotal, iva_pct: it.iva_pct, iva_monto: it.iva_monto, total: it.total,
     }));
@@ -792,7 +798,7 @@ export default function ModalEmitirNotaCreditoVenta({
                                     type="number"
                                     min="0"
                                     max={item.disponible}
-                                    step="0.01"
+                                    step={Number(item.unidad_permite_decimales ?? 0) === 1 ? "0.001" : "1"}
                                     value={item.cantidad}
                                     disabled={loading}
                                     aria-label={`Cantidad a acreditar de ${item.descripcion}`}

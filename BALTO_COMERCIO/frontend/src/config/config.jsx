@@ -27,3 +27,7 @@ export default BASE_URL;
 
 
 //npx playwright test --project=chromium --workers=1 --reporter=list
+
+//https://balto.3devsnet.com/BALTO_COMERCIO/api/routes
+
+//https://app.balto.com.ar/BALTO_COMERCIO/api/routes

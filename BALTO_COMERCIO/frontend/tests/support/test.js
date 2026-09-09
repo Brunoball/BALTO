@@ -1,5 +1,5 @@
 import { test as base, expect } from '@playwright/test';
-import { ENV } from './env.js';
+import { ENV, patchContextNavigation, patchPageNavigation } from './env.js';
 import { RUN_PREFIX } from './data.js';
 import { cleanupE2EFromStorage } from './cleanup.js';
 import { ensureAdministratorSession } from './users.js';
@@ -14,7 +14,9 @@ import { ensureAdministratorSession } from './users.js';
  */
 export const test = base.extend({
   _baltoSessionRefresh: [
-    async ({ page }, use) => {
+    async ({ page, context }, use) => {
+      patchContextNavigation(context);
+      patchPageNavigation(page);
       await ensureAdministratorSession(page);
       await use();
     },

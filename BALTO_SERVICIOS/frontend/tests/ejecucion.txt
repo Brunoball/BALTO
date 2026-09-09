@@ -1,47 +1,15 @@
-# ============================================================
-# BALTO SERVICIOS - TESTING PLAYWRIGHT POR LOTES
-# Ejecutar desde el frontend de BALTO_SERVICIOS.
-# ============================================================
+BALTO SERVICIOS - PLAYWRIGHT
+============================
 
-# PREPARAR ENTORNO
-# .env.playwright debe apuntar al API de BALTO_SERVICIOS y usar un ADMIN del tenant.
-# Para pruebas mutables: PW_ALLOW_MUTATIONS=1.
-# ARCA queda fuera de la regresión interna salvo que se habilite explícitamente.
-Remove-Item Env:PW_ALLOW_ARCA -ErrorAction SilentlyContinue
-$env:PW_EXPECTED_SYSTEM="SERVICIOS"
+CAMBIAR ENTORNO = CAMBIAR UNA SOLA LÍNEA EN .env.playwright
 
-# 1. NÚCLEO DE SERVICIOS
-# Catálogo, categorías, unidades, materiales, insumos, stock y trabajadores.
-npx playwright test tests/03-services-catalog-crud.spec.js tests/20-services-inventory-lifecycle.spec.js tests/22-configuration-lists-categories.spec.js --project=chromium --workers=1 --reporter=list
+PRUEBA / STAGING:
+PW_API_URL=https://balto.3devsnet.com/BALTO_SERVICIOS/api/routes
 
-# 2. MOVIMIENTOS + INTEGRACIÓN SERVICIOS/STOCK
-# Compras, ventas, presupuestos, otros movimientos, NC, reversión y servicios compuestos.
-npx playwright test tests/04-purchases-credit-note.spec.js tests/05-sales-credit-note.spec.js tests/06-budgets.spec.js tests/07-other-movements.spec.js tests/13-movement-delete-reversal.spec.js tests/14-details-and-cancel.spec.js tests/16-movement-details-integrity.spec.js tests/17-other-income-fiscal.spec.js tests/25-services-movements-integration.spec.js tests/29-final-services-hardening.spec.js --project=chromium --workers=1 --reporter=list
+PRODUCCIÓN REAL:
+PW_API_URL=https://app.balto.com.ar/BALTO_SERVICIOS/api/routes
 
-# 3. CUENTAS CORRIENTES + RECIBOS/OP
-npx playwright test tests/08-current-accounts.spec.js tests/19-current-account-entities.spec.js --project=chromium --workers=1 --reporter=list
+No cambies usuario ni contraseña: el testing los elige automáticamente.
 
-# 4. CHEQUES / ECHEQ
-npx playwright test tests/09-cheques-smoke.spec.js tests/15-cheques-lifecycle.spec.js --project=chromium --workers=1 --reporter=list
-
-# 5. CONFIGURACIÓN
-# Calendario, tema, usuarios, Listas y categorías y saldos iniciales.
-npx playwright test tests/10-config-accounting.spec.js tests/21-configuration-actions.spec.js tests/22-configuration-lists-categories.spec.js tests/24-initial-balances.spec.js --project=chromium --workers=1 --reporter=list
-
-# 6. AUTENTICACIÓN / SEGURIDAD DE RUTAS
-npx playwright test tests/00-preflight.spec.js tests/01-auth.spec.js tests/18-auth-actions.spec.js --project=chromium --workers=1 --reporter=list
-
-# 7. NAVEGACIÓN Y GUARDS
-npx playwright test tests/02-navigation-smoke.spec.js tests/11-global-guards.spec.js tests/12-documents-readonly.spec.js tests/23-internal-navigation-smoke.spec.js --project=chromium --workers=1 --reporter=list
-
-# 8. SUPERFICIE API DE SERVICIOS + SALUD DE BÚSQUEDAS
-# Verifica acciones servicios_* y concentra regresiones SQL de q= en un único test.
-npx playwright test tests/26-services-action-surface.spec.js tests/27-movement-search-health.spec.js tests/28-purchase-ui-health.spec.js --project=chromium --workers=1 --reporter=list
-
-# 9. BLINDAJES FINALES DE CIERRE
-# Compra multiítem, colección incompleta rechazada, delta con stock consumido,
-# OP multiítem y persistencia exacta de notas de crédito.
-npx playwright test tests/29-final-services-hardening.spec.js tests/04-purchases-credit-note.spec.js --project=chromium --workers=1 --reporter=list
-
-# REGRESIÓN COMPLETA
+Ejecutar:
 npx playwright test --project=chromium --workers=1 --reporter=list

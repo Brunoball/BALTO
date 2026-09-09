@@ -1,10 +1,13 @@
 import { test, expect } from './support/test.js';
-import { ENV } from './support/env.js';
+import { ENV, patchContextNavigation, patchPageNavigation, stripAppPathPrefix } from './support/env.js';
 
-function createPublicContext(browser) {
-  return browser.newContext({
+async function createPublicContext(browser) {
+  const context = await browser.newContext({
+    baseURL: ENV.baseURL,
     storageState: { cookies: [], origins: [] },
   });
+  patchContextNavigation(context);
+  return context;
 }
 
 async function loginFromPublicPage(page) {
@@ -16,6 +19,23 @@ async function loginFromPublicPage(page) {
 }
 
 async function expectCentralServicesBridge(page, expectedReturnPath) {
+  if (ENV.appPathPrefix) {
+    const loginOrigin = new URL(ENV.loginURL).origin;
+    await expect.poll(
+      () => {
+        try {
+          const current = new URL(page.url());
+          const appPath = stripAppPathPrefix(current.pathname);
+          return current.origin === loginOrigin && !/^\/panel(?:\/|$)/i.test(appPath);
+        } catch {
+          return false;
+        }
+      },
+      { timeout: 30_000, message: 'La sesión ausente debe redirigir al Login Global de BALTO' },
+    ).toBe(true);
+    return;
+  }
+
   await expect.poll(
     () => page.url(),
     { timeout: 30_000, message: 'La sesión ausente debe redirigir al acceso central de BALTO' },
@@ -28,12 +48,13 @@ async function expectCentralServicesBridge(page, expectedReturnPath) {
   const returnTo = current.searchParams.get('balto_dev_return') || '';
   expect(returnTo, 'El bridge debe conservar el retorno al frontend local').toBeTruthy();
   const returnUrl = new URL(returnTo);
-  expect(returnUrl.pathname + returnUrl.search).toBe(expectedReturnPath);
+  expect(stripAppPathPrefix(returnUrl.pathname) + returnUrl.search).toBe(expectedReturnPath);
 }
 
 test('@auth @smoke protege una ruta privada sin sesión', async ({ browser }) => {
   const context = await createPublicContext(browser);
   const page = await context.newPage();
+  patchPageNavigation(page);
 
   await page.goto('/panel/servicios?seccion=inventario');
   await expectCentralServicesBridge(page, '/panel/servicios?seccion=inventario');
@@ -44,6 +65,7 @@ test('@auth @smoke protege una ruta privada sin sesión', async ({ browser }) =>
 test('@auth rechazo de credenciales incorrectas', async ({ browser }) => {
   const context = await createPublicContext(browser);
   const page = await context.newPage();
+  patchPageNavigation(page);
 
   await page.goto('/');
   await page.getByPlaceholder('Usuario').fill(`PW-USUARIO-INEXISTENTE-${Date.now()}`);
@@ -59,6 +81,7 @@ test('@auth rechazo de credenciales incorrectas', async ({ browser }) => {
 test('@auth impide enviar campos vacíos', async ({ browser }) => {
   const context = await createPublicContext(browser);
   const page = await context.newPage();
+  patchPageNavigation(page);
 
   await page.goto('/');
   const usuario = page.getByPlaceholder('Usuario');
@@ -76,6 +99,7 @@ test('@auth impide enviar campos vacíos', async ({ browser }) => {
 test('@auth mostrar contraseña y cerrar sesión', async ({ browser }) => {
   const context = await createPublicContext(browser);
   const page = await context.newPage();
+  patchPageNavigation(page);
 
   await page.goto('/');
   const password = page.getByPlaceholder('Contraseña');

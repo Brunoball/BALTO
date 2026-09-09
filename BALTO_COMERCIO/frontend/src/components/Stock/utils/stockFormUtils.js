@@ -67,6 +67,25 @@ export function onlyNumbers(v) {
   return String(v ?? "").replace(/[^\d]/g, "");
 }
 
+export function normalizeStockInput(value, maxDecimals = 3) {
+  let raw = String(value ?? "").replace(/\s+/g, "").replace(/,/g, ".");
+  raw = raw.replace(/[^\d.]/g, "");
+  const firstDot = raw.indexOf(".");
+  if (firstDot >= 0) {
+    raw = raw.slice(0, firstDot + 1) + raw.slice(firstDot + 1).replace(/\./g, "");
+    const [whole, decimals = ""] = raw.split(".");
+    raw = `${whole}.${decimals.slice(0, Math.max(0, maxDecimals))}`;
+  }
+  if (raw.startsWith(".")) raw = `0${raw}`;
+  return raw;
+}
+
+export function stockToApi(value) {
+  const raw = String(value ?? "").trim().replace(/,/g, ".");
+  const n = Number(raw);
+  return Number.isFinite(n) ? Math.round(n * 1000) / 1000 : 0;
+}
+
 export function toUpperCaseValue(value, fieldType = "text") {
   if (fieldType === "money" || fieldType === "number") return value;
   return String(value ?? "").toUpperCase();

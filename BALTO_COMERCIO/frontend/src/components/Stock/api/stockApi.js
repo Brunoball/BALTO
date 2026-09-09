@@ -264,6 +264,12 @@ export const listarCategoriasStock = (params = {}, options = {}) =>
   stockGet("stock_categorias_listar", params, options);
 export const crearCategoriaStock = (body = {}, options = {}) =>
   stockPost("stock_categorias_crear", body, options);
+export const listarUnidadesStock = (params = {}, options = {}) =>
+  stockGet("stock_unidades_listar", params, options);
+export const crearUnidadStock = (body = {}, options = {}) =>
+  stockPost("stock_unidad_crear", body, options);
+export const actualizarUnidadStock = (body = {}, options = {}) =>
+  stockPost("stock_unidad_actualizar", body, options);
 export const listarTiposPrecioStock = (params = {}, options = {}) =>
   stockGet("stock_tipos_precio_listar", params, options);
 export const crearTipoPrecioStock = (body = {}, options = {}) =>

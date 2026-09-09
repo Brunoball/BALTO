@@ -1,13 +1,12 @@
 import { expect } from '@playwright/test';
 import fs from 'node:fs';
 import { authenticatedApi, expectApiSuccess } from './api.js';
-import { AUTH_FILE, ENV } from './env.js';
+import { AUTH_FILE, ENV, patchContextNavigation, patchPageNavigation } from './env.js';
 
-const DEFAULT_LOGIN_API = 'https://balto.3devsnet.com/BALTO_LOGIN/api/routes';
 const SESSION_REFRESH_INTERVAL_MS = 15 * 60 * 1000;
 
 function loginEndpoint() {
-  const base = String(process.env.PW_LOGIN_API_URL || DEFAULT_LOGIN_API).trim().replace(/\/+$/, '');
+  const base = String(ENV.loginApiURL || '').trim().replace(/\/+$/, '');
   return `${base}/api.php?action=inicio`;
 }
 
@@ -49,6 +48,55 @@ function authFileNeedsRefresh() {
 
 function isRetryableLoginStatus(status) {
   return [408, 429, 500, 502, 503, 504].includes(Number(status));
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isRetryableTransportError(error) {
+  const text = String(error?.message || error || '').toUpperCase();
+  return (
+    text.includes('ECONNRESET') ||
+    text.includes('ETIMEDOUT') ||
+    text.includes('ECONNREFUSED') ||
+    text.includes('EPIPE') ||
+    text.includes('SOCKET HANG UP') ||
+    text.includes('FETCH FAILED')
+  );
+}
+
+async function validateCommerceSessionWithRetry(request, sessionKey) {
+  const attempts = 4;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      const response = await request.get(commerceSessionEndpoint(), {
+        headers: {
+          'X-Session': sessionKey,
+          Authorization: `Bearer ${sessionKey}`,
+          Accept: 'application/json',
+          Connection: 'close',
+        },
+        timeout: 30_000,
+        failOnStatusCode: false,
+      });
+
+      if (!isRetryableLoginStatus(response.status()) || attempt === attempts) {
+        return response;
+      }
+
+      await response.dispose().catch(() => null);
+    } catch (error) {
+      if (!isRetryableTransportError(error)) throw error;
+      // Si agotamos los reintentos de validación, devolvemos null para que el
+      // flujo renueve la sesión mediante BALTO_LOGIN (que también tiene retry).
+      if (attempt === attempts) return null;
+    }
+
+    await sleep(500 * (2 ** (attempt - 1)));
+  }
+
+  return null;
 }
 
 async function loginWithRetry(request, username, password) {
@@ -109,7 +157,12 @@ async function installSession(page, auth, { persist = false } = {}) {
     { key: auth.sessionKey, usuario: userJson },
   );
 
-  await page.goto('/panel/dashboard', { waitUntil: 'domcontentloaded' });
+  // La renovación automática puede ocurrir en mitad de una corrida larga.
+  // Esperamos a que la carga inicial del Dashboard quede completamente estable
+  // antes de devolver la página al test siguiente. Así no queda un
+  // dashboard_resumen anterior en vuelo que el test de single-flight pueda
+  // interpretar como una petición duplicada de la navegación que él mismo hace.
+  await page.goto('/panel/dashboard', { waitUntil: 'networkidle', timeout: 45_000 });
   await page.evaluate(
     ({ key, usuario }) => {
       localStorage.setItem('session_key', key);
@@ -130,15 +183,22 @@ export async function ensureAdministratorSession(page) {
   let mustRefresh = !currentKey;
 
   if (currentKey) {
-    const response = await page.context().request.get(commerceSessionEndpoint(), {
-      headers: { 'X-Session': currentKey, Accept: 'application/json', Connection: 'close' },
-      timeout: 30_000,
-      failOnStatusCode: false,
-    });
-    const body = await response.json().catch(() => ({}));
-    mustRefresh = response.status() >= 400
-      || body?.exito === false
-      || authFileNeedsRefresh();
+    const response = await validateCommerceSessionWithRetry(
+      page.context().request,
+      currentKey,
+    );
+
+    if (!response) {
+      // Un corte transitorio agotó la validación de la sesión actual. En vez de
+      // abortar un test sano, renovamos la sesión usando el login con reintentos.
+      mustRefresh = true;
+    } else {
+      const body = await response.json().catch(() => ({}));
+      mustRefresh = response.status() >= 400
+        || body?.exito === false
+        || body?.success === false
+        || authFileNeedsRefresh();
+    }
   }
 
   if (!mustRefresh) return;
@@ -202,7 +262,9 @@ export async function loginTestUserInNewContext(browser, username, password) {
     baseURL: ENV.baseURL,
     storageState: { cookies: [], origins: [] },
   });
+  patchContextNavigation(context);
   const page = await context.newPage();
+  patchPageNavigation(page);
 
   try {
     const auth = await loginWithRetry(page.context().request, username, password);

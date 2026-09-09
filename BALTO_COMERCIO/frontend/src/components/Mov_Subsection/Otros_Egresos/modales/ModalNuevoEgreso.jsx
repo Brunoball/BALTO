@@ -320,7 +320,7 @@ function buildRowFromData(r) {
     id: uid(),
     id_detalle: String(getDetalleId(r) ?? ""),
     detalle: safeStr(r?.detalle ?? r?.descripcion ?? r?.concepto),
-    cantidad: Math.max(1, safeNumber(r?.cantidad || 1)),
+    cantidad: Math.max(0.001, safeNumber(r?.cantidad || 1)),
     precio: safeNumber(r?.precio ?? r?.importe ?? r?.monto ?? 0),
     precioDraft: "",
     precioFocused: false,
@@ -341,7 +341,7 @@ function buildRowsFromInitial(data) {
       id: uid(),
       id_detalle: String(getDetalleId(x) ?? ""),
       detalle: safeStr(x?.detalle ?? x?.descripcion ?? x?.concepto ?? x?.detalle_nombre ?? ""),
-      cantidad: Math.max(1, safeNumber(x?.cantidad || 1)),
+      cantidad: Math.max(0.001, safeNumber(x?.cantidad || 1)),
       precio: safeNumber(x?.precio ?? x?.importe ?? x?.monto ?? 0),
       precioDraft: "",
       precioFocused: false,
@@ -1368,8 +1368,8 @@ export default function ModalNuevoEgreso({
                           <input
                             className="gm-cell-input gm-cell-input--center"
                             type="number"
-                            min="1"
-                            step="1"
+                            min="0.001"
+                            step="0.001"
                             value={r.cantidad}
                             onChange={(e) => handleCantidadChange(r.id, e.target.value === "" ? "" : Number(e.target.value))}
                             disabled={saving}

@@ -4,6 +4,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import "./ModalEditarStock.css";
 import ModalVerComprobante from "../../Global/Ver_Comprobantes/ModalVerComprobante";
 import StockBarcodePanel from "./StockBarcodePanel";
+import StockUnitField from "./StockUnitField";
 import { isTopStockModal } from "./modalStackUtils";
 import { canBaltoUseBarcode } from "../../../utils/demoMode";
 import {
@@ -35,10 +36,12 @@ import {
   getUsuarioAuditData,
   listarCategoriasStock,
   listarTiposPrecioStock,
+  listarUnidadesStock,
   obtenerProductoStock,
   stockBarcodeGet,
   withSessionKey,
 } from "../api/stockApi";
+import { normalizeStockInput, stockToApi } from "../utils/stockFormUtils";
 
 function getProductoImageUrlByArchivoId(archivoId) {
   const id = Number(archivoId || 0);
@@ -491,6 +494,7 @@ function normalizarProducto(data) {
       p.stock !== null && p.stock !== undefined && p.stock !== ""
         ? String(p.stock)
         : "",
+    id_stock_unidad: String(p.id_stock_unidad ?? ""),
     descripcion: toUpperCaseValue(p.descripcion ?? ""),
     imagen_url: p.imagen_url ?? p.imagen ?? "",
     imagen_archivo_id: p.imagen_archivo_id ? Number(p.imagen_archivo_id) : null,
@@ -510,6 +514,7 @@ function normalizarProducto(data) {
             nombre_variante: toUpperCaseValue(variant.nombre_variante || variant.nombre || ""),
             sku: toUpperCaseValue(variant.sku || ""),
             stock: variant.stock !== null && variant.stock !== undefined ? String(variant.stock) : "0",
+            id_stock_unidad: String(variant.id_stock_unidad ?? p.id_stock_unidad ?? ""),
             categorias_ids: Array.isArray(variant.categorias)
               ? variant.categorias
                   .map((cat) => normalizeCategoriaId(cat.id_stock_categoria ?? cat.id ?? cat.id_categoria))
@@ -762,6 +767,7 @@ function emptyVariantRow(tiposProducto = []) {
     nombre_variante: "",
     sku: "",
     stock: "0",
+    id_stock_unidad: "",
     categorias_ids: [],
     precio_costo: "",
     precio: "",
@@ -968,7 +974,8 @@ function buildOptimisticProduct(savedProduct, sourceForm, variantesPayload = [])
     descripcion: toUpperCaseValue(String(sourceForm?.descripcion || "").trim()),
     stock: usaVariantes
       ? variantes.reduce((total, variant) => total + Number(variant?.stock || 0), 0)
-      : Number(sourceForm?.stock || 0),
+      : stockToApi(sourceForm?.stock),
+    id_stock_unidad: Number(sourceForm?.id_stock_unidad || 0) || null,
     // La fila general usa el precio resumen de la primera variante activa. Antes se
     // forzaba a null y sólo reaparecía cuando una recarga/webhook reconstruía la fila.
     precio_costo: usaVariantes
@@ -1006,6 +1013,7 @@ function buildEmptyForm() {
     margen_promo_porcentaje: "",
     margen_promo_valor: "",
     stock: "",
+    id_stock_unidad: "",
     descripcion: "",
     imagen_url: "",
     imagen_archivo_id: null,
@@ -1044,6 +1052,8 @@ export default function ModalEditarProducto({
   const [loadingCategorias, setLoadingCategorias] = useState(false);
   const [tiposPrecio, setTiposPrecio] = useState([]);
   const [loadingTiposPrecio, setLoadingTiposPrecio] = useState(false);
+  const [unidadesStock, setUnidadesStock] = useState([]);
+  const [loadingUnidadesStock, setLoadingUnidadesStock] = useState(false);
 
   const [nuevaImagenFile, setNuevaImagenFile] = useState(null);
   const [nuevaImagenPreview, setNuevaImagenPreview] = useState("");
@@ -1174,11 +1184,13 @@ export default function ModalEditarProducto({
     const fetchCatalogos = async () => {
       setLoadingCategorias(true);
       setLoadingTiposPrecio(true);
+      setLoadingUnidadesStock(true);
 
       try {
-        const [resListas, resTipos] = await Promise.allSettled([
+        const [resListas, resTipos, resUnidades] = await Promise.allSettled([
           listarCategoriasStock(),
           listarTiposPrecioStock(),
+          listarUnidadesStock({ activo: "todos" }),
         ]);
 
         if (!cancelado) {
@@ -1246,11 +1258,26 @@ export default function ModalEditarProducto({
           } else {
             setTiposPrecio([]);
           }
+
+          if (resUnidades.status === "fulfilled") {
+            const rawUnidades = resUnidades.value?.unidades || resUnidades.value?.data?.unidades || [];
+            const unidades = Array.isArray(rawUnidades) ? rawUnidades : [];
+            setUnidadesStock(unidades);
+            const def = unidades.find((u) => Number(u?.es_default || 0) === 1 && Number(u?.activo ?? 1) === 1);
+            if (def) {
+              setForm((prev) => ({
+                ...prev,
+                id_stock_unidad: prev.id_stock_unidad || String(def.id_stock_unidad || def.id || ""),
+                variantes: (prev.variantes || []).map((v) => ({ ...v, id_stock_unidad: v.id_stock_unidad || String(def.id_stock_unidad || def.id || "") })),
+              }));
+            }
+          }
         }
       } finally {
         if (!cancelado) {
           setLoadingCategorias(false);
           setLoadingTiposPrecio(false);
+          setLoadingUnidadesStock(false);
         }
       }
     };
@@ -1407,7 +1434,7 @@ export default function ModalEditarProducto({
     } else if (name === "stock") {
       setForm((prev) => ({
         ...prev,
-        [name]: value.replace(/[^\d]/g, ""),
+        [name]: normalizeStockInput(value),
       }));
     } else if (["nombre", "sku", "descripcion"].includes(name)) {
       setForm((prev) => ({
@@ -2256,6 +2283,7 @@ export default function ModalEditarProducto({
         formNormalizado.tiene_variantes ? "0" : formNormalizado.stock !== "" ? String(formNormalizado.stock) : ""
       );
 
+      fd.append("id_stock_unidad", String(formNormalizado.id_stock_unidad || ""));
       fd.append("descripcion", toUpperCaseValue(formNormalizado.descripcion.trim()));
       fd.append("tiene_variantes", formNormalizado.tiene_variantes ? "1" : "0");
 
@@ -2285,7 +2313,8 @@ export default function ModalEditarProducto({
               activo: variant.activo === false ? 0 : 1,
               nombre_variante: toUpperCaseValue(String(variant.nombre_variante || "").trim()),
               sku: toUpperCaseValue(String(variant.sku || "").trim()),
-              stock: Number(variant.stock || 0),
+              stock: stockToApi(variant.stock),
+              id_stock_unidad: Number(variant.id_stock_unidad || formNormalizado.id_stock_unidad || 0) || null,
               categorias_ids: Array.from(new Set((variant.categorias_ids || []).map((id) => Number(normalizeIdValue(id))).filter(Boolean))),
               atributos: (variant.atributos || [])
                 .filter((attr) => String(attr.atributo || "").trim() && String(attr.valor || "").trim())
@@ -2582,9 +2611,20 @@ export default function ModalEditarProducto({
                       onChange={handleChange}
                       onKeyDown={handleFieldEnter}
                       className="cmi-input"
-                      placeholder="Ej: 25"
-                      inputMode="numeric"
+                      placeholder="Ej: 12,500"
+                      inputMode="decimal"
                       disabled={guardando || productoConVariantes}
+                    />
+                  </FloatingField>
+
+                  <FloatingField label="Unidad de stock" icon={faCubesStacked}>
+                    <StockUnitField
+                      value={form.id_stock_unidad}
+                      unidades={unidadesStock}
+                      onChange={(id) => setForm((prev) => ({ ...prev, id_stock_unidad: id }))}
+                      onUnitsChange={setUnidadesStock}
+                      disabled={guardando || loadingUnidadesStock}
+                      onToast={(tipo, mensaje) => mostrarToast(mensaje, tipo)}
                     />
                   </FloatingField>
 
@@ -3068,7 +3108,7 @@ export default function ModalEditarProducto({
                             </button>
                           </div>
 
-                          <div className="fl-row" style={{ gridTemplateColumns: "1.3fr 1fr .75fr" }}>
+                          <div className="fl-row" style={{ gridTemplateColumns: "1.2fr .9fr .65fr .9fr" }}>
                             <FloatingField label="Nombre variante *">
                               <input className="cmi-input" value={variant.nombre_variante} onChange={(e) => updateVariant(variantIdx, { nombre_variante: toUpperCaseValue(e.target.value) })} disabled={isLoading} placeholder="Ej: TALLE M / NEGRO" />
                             </FloatingField>
@@ -3076,7 +3116,17 @@ export default function ModalEditarProducto({
                               <input className="cmi-input" value={variant.sku} onChange={(e) => updateVariant(variantIdx, { sku: toUpperCaseValue(e.target.value) })} disabled={isLoading} placeholder="SKU" style={{ textTransform: "uppercase" }} />
                             </FloatingField>
                             <FloatingField label="Stock *">
-                              <input className="cmi-input" value={variant.stock} onChange={(e) => updateVariant(variantIdx, { stock: e.target.value.replace(/[^\d]/g, "") })} disabled={isLoading} inputMode="numeric" />
+                              <input className="cmi-input" value={variant.stock} onChange={(e) => updateVariant(variantIdx, { stock: normalizeStockInput(e.target.value) })} disabled={isLoading} inputMode="decimal" />
+                            </FloatingField>
+                            <FloatingField label="Unidad *">
+                              <StockUnitField
+                                value={variant.id_stock_unidad || form.id_stock_unidad}
+                                unidades={unidadesStock}
+                                onChange={(id) => updateVariant(variantIdx, { id_stock_unidad: id })}
+                                onUnitsChange={setUnidadesStock}
+                                disabled={isLoading || loadingUnidadesStock}
+                                onToast={(tipo, mensaje) => mostrarToast(mensaje, tipo)}
+                              />
                             </FloatingField>
                           </div>
 
