@@ -464,6 +464,12 @@ html[data-theme="oscuro"] .cmi-miniModal {
   letter-spacing: -0.01em;
 }
 
+html[data-theme="oscuro"] .cmi-miniModal__head {
+  background: #0A2540;
+  color: #fff;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
 .cmi-miniModal__body {
   padding: 18px;
   display: flex;
