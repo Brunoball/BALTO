@@ -83,6 +83,10 @@ function isStatusColumn(column = {}) {
   return /estado|situacion/.test(getColumnDescriptor(column));
 }
 
+function isUnitColumn(column = {}) {
+  return /unidad/.test(getColumnDescriptor(column));
+}
+
 function isStockQuantityColumn(column = {}) {
   const descriptor = getColumnDescriptor(column);
   return (
@@ -97,21 +101,21 @@ function getVisibleReportColumns(columns = []) {
 }
 
 function getReportGridTemplate(columns = []) {
-  if (!Array.isArray(columns) || columns.length === 0) return "minmax(0, 1fr)";
+  if (!Array.isArray(columns) || columns.length === 0) return "1fr";
 
   return columns
     .map((column) => {
       const descriptor = getColumnDescriptor(column);
 
-      if (column?.type === "money" || column?.type === "number") {
-        return "minmax(105px, .8fr)";
-      }
+      if (/(producto|nombre|descripcion)/.test(descriptor)) return "1.55fr";
+      if (/categor/.test(descriptor)) return "1.15fr";
+      if (/unidad/.test(descriptor)) return ".72fr";
+      if (/\bsku\b|codigo|barra/.test(descriptor)) return ".92fr";
+      if (/(posicion|ranking|puesto)/.test(descriptor)) return ".62fr";
+      if (column?.type === "money") return ".86fr";
+      if (column?.type === "number") return ".7fr";
 
-      if (/(producto|nombre|descripcion|categor)/.test(descriptor)) {
-        return "minmax(165px, 1.4fr)";
-      }
-
-      return "minmax(125px, 1fr)";
+      return "1fr";
     })
     .join(" ");
 }
@@ -591,10 +595,7 @@ const ModalReportesStock = ({ open, onClose, onToast, categorias = [] }) => {
                     aria-label="Detalle del reporte de stock"
                     aria-colcount={columns.length}
                     aria-rowcount={rows.length + 1}
-                    style={{
-                      "--rs-grid-template": reportGridTemplate,
-                      "--rs-column-count": Math.max(columns.length, 1),
-                    }}
+                    style={{ "--rs-grid-template": reportGridTemplate }}
                   >
                     <div className="rs-table__head" role="rowgroup">
                       <div className="rs-table__row rs-table__row--head" role="row">
@@ -602,7 +603,7 @@ const ModalReportesStock = ({ open, onClose, onToast, categorias = [] }) => {
                           <div
                             role="columnheader"
                             key={column.key}
-                            className={`rs-table__cell${column.type === "money" || column.type === "number" ? " is-number" : ""}`}
+                            className={`rs-table__cell${column.type === "money" || column.type === "number" ? " is-number" : ""}${isUnitColumn(column) ? " is-unit" : ""}`}
                           >
                             {column.label}
                           </div>
@@ -628,7 +629,7 @@ const ModalReportesStock = ({ open, onClose, onToast, categorias = [] }) => {
                               <div
                                 role="cell"
                                 key={column.key}
-                                className={`rs-table__cell${column.type === "money" || column.type === "number" ? " is-number" : ""}`}
+                                className={`rs-table__cell${column.type === "money" || column.type === "number" ? " is-number" : ""}${isUnitColumn(column) ? " is-unit" : ""}`}
                               >
                                 {renderReportCell(column, row?.[column.key])}
                               </div>
