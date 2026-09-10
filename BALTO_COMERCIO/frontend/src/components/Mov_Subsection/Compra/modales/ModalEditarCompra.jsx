@@ -1350,8 +1350,11 @@ export default function ModalEditarCompra({
 
   const [openVerComp, setOpenVerComp] = useState(false);
   const [compUrl, setCompUrl] = useState("");
+  const [compLoading, setCompLoading] = useState(false);
+  const [compError, setCompError] = useState("");
 
   const closeBtnRef = useRef(null);
+  const comprobanteRequestRef = useRef(0);
   const fechaRef = useRef(null);
   const proveedorInputRef = useRef(null);
   const detalleInputRef = useRef(null);
@@ -1939,34 +1942,49 @@ export default function ModalEditarCompra({
     return finalUrl;
   }, [archivoActualId, archivoActualUrl]);
 
-  const handleOpenVerComprobante = useCallback(async () => {
+  const handleOpenVerComprobante = useCallback(() => {
     if (!archivoMostrado) return;
+
+    const requestId = ++comprobanteRequestRef.current;
+    setCompError("");
 
     if (archivoMostrado.tipo === "nuevo") {
       const url = URL.createObjectURL(archivoMostrado.file);
       setCompUrl(url);
+      setCompLoading(false);
       setOpenVerComp(true);
       return;
     }
 
-    try {
-      const finalUrl = await obtenerUrlFirmadaComprobanteActual();
-      if (!finalUrl) {
-        showToast("advertencia", "No hay comprobante para visualizar.", 2600);
-        return;
-      }
+    setCompUrl("");
+    setCompLoading(true);
+    setOpenVerComp(true);
 
-      setCompUrl(finalUrl);
-      setOpenVerComp(true);
-    } catch (e) {
-      showToast("error", e?.message || "No se pudo abrir el comprobante.", 4200);
-    }
-  }, [archivoMostrado, obtenerUrlFirmadaComprobanteActual, showToast]);
+    void obtenerUrlFirmadaComprobanteActual()
+      .then((finalUrl) => {
+        if (requestId !== comprobanteRequestRef.current) return;
+        if (!finalUrl) {
+          setCompError("No hay comprobante para visualizar.");
+          return;
+        }
+        setCompUrl(finalUrl);
+      })
+      .catch((e) => {
+        if (requestId !== comprobanteRequestRef.current) return;
+        setCompError(e?.message || "No se pudo abrir el comprobante.");
+      })
+      .finally(() => {
+        if (requestId === comprobanteRequestRef.current) setCompLoading(false);
+      });
+  }, [archivoMostrado, obtenerUrlFirmadaComprobanteActual]);
 
   const handleCloseVerComprobante = useCallback(() => {
+    ++comprobanteRequestRef.current;
     setOpenVerComp(false);
     if (compUrl && compUrl.startsWith("blob:")) URL.revokeObjectURL(compUrl);
     setCompUrl("");
+    setCompLoading(false);
+    setCompError("");
   }, [compUrl]);
 
   useEffect(() => {
@@ -2546,6 +2564,8 @@ export default function ModalEditarCompra({
         url={compUrl}
         mime={archivoNuevo?.type || ""}
         fileName={archivoMostrado ? NOMBRE_COMPROBANTE_GENERICO : ""}
+        loading={compLoading}
+        error={compError}
         onClose={handleCloseVerComprobante}
         title={NOMBRE_COMPROBANTE_GENERICO}
       />

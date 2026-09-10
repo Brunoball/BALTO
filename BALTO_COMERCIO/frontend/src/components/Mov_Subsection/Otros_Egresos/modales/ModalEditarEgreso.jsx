@@ -1168,8 +1168,10 @@ export default function ModalEditarEgreso({
   const [marcarEliminarComprobante, setMarcarEliminarComprobante] = useState(false);
   const [openViewer, setOpenViewer] = useState(false);
   const [viewerData, setViewerData] = useState({ url: "", mime: "", title: NOMBRE_COMPROBANTE_GENERICO });
+  const [viewerError, setViewerError] = useState("");
 
   const closeBtnRef = useRef(null);
+  const viewerRequestRef = useRef(0);
   const inputFileRef = useRef(null);
   const fechaRef = useRef(null);
 
@@ -1369,13 +1371,17 @@ export default function ModalEditarEgreso({
     return "";
   }, [archivoNuevo, marcarEliminarComprobante, comprobanteActual]);
 
-  const abrirViewer = useCallback(async () => {
+  const abrirViewer = useCallback(() => {
+    const requestId = ++viewerRequestRef.current;
+    setViewerError("");
+
     if (archivoNuevo) {
       setViewerData({
         url: URL.createObjectURL(archivoNuevo),
         mime: archivoNuevo.type || "application/octet-stream",
         title: NOMBRE_COMPROBANTE_GENERICO,
       });
+      setLoadingViewer(false);
       setOpenViewer(true);
       return;
     }
@@ -1387,8 +1393,15 @@ export default function ModalEditarEgreso({
 
     if (!idMovimiento && !idComprobante) return;
 
+    setViewerData({
+      url: "",
+      mime: safeText(comprobanteActual?.archivo_mime) || "application/octet-stream",
+      title: NOMBRE_COMPROBANTE_GENERICO,
+    });
     setLoadingViewer(true);
-    try {
+    setOpenViewer(true);
+
+    void (async () => {
       const sp = new URLSearchParams();
       sp.set("action", "otros_egresos_comprobantes_descargar");
 
@@ -1414,30 +1427,35 @@ export default function ModalEditarEgreso({
         throw new Error("El backend no devolvió la URL del comprobante.");
       }
 
+      if (requestId !== viewerRequestRef.current) return;
       setViewerData({
         url: signedUrl,
         mime: safeText(comprobanteActual?.archivo_mime) || "application/octet-stream",
         title: NOMBRE_COMPROBANTE_GENERICO,
       });
-      setOpenViewer(true);
-    } catch (e) {
-      showToast("error", e?.message || "No se pudo abrir el comprobante.", 3200);
-    } finally {
-      setLoadingViewer(false);
-    }
+    })()
+      .catch((e) => {
+        if (requestId !== viewerRequestRef.current) return;
+        setViewerError(e?.message || "No se pudo abrir el comprobante.");
+      })
+      .finally(() => {
+        if (requestId === viewerRequestRef.current) setLoadingViewer(false);
+      });
   }, [
     API,
     form.id_movimiento,
     archivoNuevo,
     comprobanteActual,
     marcarEliminarComprobante,
-    showToast,
   ]);
 
   const cerrarViewer = useCallback(() => {
+    ++viewerRequestRef.current;
     if (viewerData?.url?.startsWith("blob:")) URL.revokeObjectURL(viewerData.url);
     setOpenViewer(false);
     setViewerData({ url: "", mime: "", title: NOMBRE_COMPROBANTE_GENERICO });
+    setLoadingViewer(false);
+    setViewerError("");
   }, [viewerData]);
 
   const seleccionarArchivo = useCallback((e) => {
@@ -2101,6 +2119,8 @@ export default function ModalEditarEgreso({
         url={viewerData.url}
         mime={viewerData.mime}
         title={viewerData.title}
+        loading={loadingViewer}
+        error={viewerError}
         onClose={cerrarViewer}
       />
     </>,

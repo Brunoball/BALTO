@@ -101,6 +101,8 @@ export default function ClientesCC() {
     mime: "",
     title: "Comprobante",
     documents: [],
+    loading: false,
+    error: "",
   });
 
   const [deleteState, setDeleteState] = useState({
@@ -118,6 +120,7 @@ export default function ClientesCC() {
   const { toast, showToast, closeToast } = useCuentasCorrientesToast();
 
   const comprobanteUrlCacheRef = useRef(new Map());
+  const comprobanteRequestRef = useRef(0);
 
   const rangeLabel = useMemo(() => {
     const from = dateRange?.from || null;
@@ -474,49 +477,74 @@ export default function ClientesCC() {
   );
 
   const openComprobante = useCallback(
-    async (row) => {
+    (row) => {
       const candidates = normalizeCCComprobanteDocs(row);
       if (!candidates.length) {
         showToast("advertencia", "Este registro no tiene comprobante asociado.", 2600);
         return;
       }
 
-      try {
-        const docs = await buildComprobantePreviewDocs(row);
-        if (!docs.length) {
-          showToast("advertencia", "Este registro no tiene comprobante asociado.", 2600);
-          return;
-        }
+      const isHistorialMovimiento = row?.tipo_registro === "historial_movimiento";
+      const isNotaCredito = row?.tipo_registro === "nota_credito";
+      const isCobro = !isHistorialMovimiento && !isNotaCredito && Number(row?.credito || 0) > 0;
+      const isMovimiento = isHistorialMovimiento || Number(row?.debito || 0) > 0;
+      const title = isNotaCredito
+        ? row?.comprobante
+          ? `Nota de crédito · ${row.comprobante}`
+          : "Nota de crédito"
+        : isCobro
+        ? row?.comprobante
+          ? `Recibo · ${row.comprobante}`
+          : "Recibo"
+        : isMovimiento
+        ? row?.tipo_registro === "historial_movimiento"
+          ? "Comprobantes del movimiento"
+          : "Comprobantes de Venta"
+        : "Comprobante";
 
-        docs.forEach((doc) => prewarmComprobanteUrl(doc.url, safeText(doc?.mime || doc?.archivo_mime)));
+      const requestId = ++comprobanteRequestRef.current;
+      setPreviewComprobante({
+        open: true,
+        url: "",
+        mime: safeText(row?.comprobante_mime) || candidates[0]?.mime || candidates[0]?.archivo_mime || "application/pdf",
+        title,
+        documents: [],
+        loading: true,
+        error: "",
+      });
 
-        const isHistorialMovimiento = row?.tipo_registro === "historial_movimiento";
-        const isNotaCredito = row?.tipo_registro === "nota_credito";
-        const isCobro = !isHistorialMovimiento && !isNotaCredito && Number(row?.credito || 0) > 0;
-        const isMovimiento = isHistorialMovimiento || Number(row?.debito || 0) > 0;
+      void buildComprobantePreviewDocs(row)
+        .then((docs) => {
+          if (requestId !== comprobanteRequestRef.current) return;
+          if (!docs.length) {
+            setPreviewComprobante((prev) => ({
+              ...prev,
+              loading: false,
+              error: "Este registro no tiene comprobante asociado.",
+            }));
+            return;
+          }
 
-        setPreviewComprobante({
-          open: true,
-          url: docs[0]?.url || "",
-          mime: docs[0]?.mime || docs[0]?.archivo_mime || safeText(row?.comprobante_mime) || "application/pdf",
-          title: isNotaCredito
-          ? row?.comprobante
-            ? `Nota de crédito · ${row.comprobante}`
-            : "Nota de crédito"
-          : isCobro
-          ? row?.comprobante
-            ? `Recibo · ${row.comprobante}`
-            : "Recibo"
-          : isMovimiento
-          ? row?.tipo_registro === "historial_movimiento"
-            ? "Comprobantes del movimiento"
-            : "Comprobantes de Venta"
-          : "Comprobante",
-          documents: docs,
+          docs.forEach((doc) => prewarmComprobanteUrl(doc.url, safeText(doc?.mime || doc?.archivo_mime)));
+
+          setPreviewComprobante({
+            open: true,
+            url: docs[0]?.url || "",
+            mime: docs[0]?.mime || docs[0]?.archivo_mime || safeText(row?.comprobante_mime) || "application/pdf",
+            title,
+            documents: docs,
+            loading: false,
+            error: "",
+          });
+        })
+        .catch((e) => {
+          if (requestId !== comprobanteRequestRef.current) return;
+          setPreviewComprobante((prev) => ({
+            ...prev,
+            loading: false,
+            error: e?.message || "No se pudieron abrir los comprobantes.",
+          }));
         });
-      } catch (e) {
-        showToast("error", e?.message || "No se pudieron abrir los comprobantes.", 3200);
-      }
     },
     [buildComprobantePreviewDocs, showToast]
   );
@@ -540,12 +568,15 @@ export default function ClientesCC() {
   }, []);
 
   const closePreviewComprobante = useCallback(() => {
+    ++comprobanteRequestRef.current;
     setPreviewComprobante({
       open: false,
       url: "",
       mime: "",
       title: "Comprobante",
       documents: [],
+      loading: false,
+      error: "",
     });
   }, []);
 
@@ -740,6 +771,8 @@ export default function ClientesCC() {
         mime={previewComprobante.mime}
         documents={previewComprobante.documents}
         title={previewComprobante.title}
+        loading={previewComprobante.loading}
+        error={previewComprobante.error}
         onClose={closePreviewComprobante}
       />
 

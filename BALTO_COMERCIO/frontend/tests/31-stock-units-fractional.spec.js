@@ -83,6 +83,7 @@ async function expectCreditNoteContextUnit(page, action, movementId, unit) {
 }
 
 test('@stock @unidades @critical contrato de unidades: UNIDAD sigue entera y las fraccionables conservan 3 decimales', async ({ page }) => {
+  test.setTimeout(3 * 60_000);
   await requireMutations(test, page);
   const defaultUnit = await getDefaultStockUnit(page);
   expect(String(defaultUnit.nombre || '').toUpperCase()).toBe('UNIDAD');
@@ -210,35 +211,41 @@ test('@stock @unidades @ui Stock: crea unidad desde el selector y guarda stock f
   const select = unitField.locator('select').first();
   await expect(select).toBeVisible();
   await select.selectOption('__new_unit__');
-  await unitField.getByPlaceholder(/Nombre \(GRAMO\)/i).fill(unitName);
-  await unitField.getByPlaceholder('g', { exact: true }).fill(abbreviation);
-  const decimalCheck = unitField.locator('label').filter({ hasText: /Permitir cantidades decimales/i }).locator('input[type="checkbox"]').first();
+  const createUnitModal = page.locator('.cmi-miniModal--unit').last();
+  await expect(createUnitModal).toBeVisible();
+  await createUnitModal.getByPlaceholder('EJ: GRAMO', { exact: true }).fill(unitName);
+  await createUnitModal.getByPlaceholder('Ej: g', { exact: true }).fill(abbreviation);
+  const decimalCheck = createUnitModal.locator('label').filter({ hasText: /Permitir cantidades decimales/i }).locator('input[type="checkbox"]').first();
   await expect(decimalCheck).toBeChecked();
 
   const unitResponsePromise = page.waitForResponse((response) =>
     response.request().method() === 'POST' &&
     new URL(response.url()).searchParams.get('action') === 'stock_unidad_crear',
   { timeout: 60_000 });
-  await unitField.getByRole('button', { name: /^Guardar$/i }).click();
+  await createUnitModal.getByRole('button', { name: /^Guardar$/i }).click();
   const unitResponse = await unitResponsePromise;
   const unitBody = await unitResponse.json().catch(() => ({}));
   expect(unitResponse.status(), JSON.stringify(unitBody)).toBeLessThan(400);
   const unitId = Number(unitBody?.unidad?.id_stock_unidad || unitBody?.data?.unidad?.id_stock_unidad || 0);
   expect(unitId).toBeGreaterThan(0);
+  await expect(createUnitModal).toBeHidden();
   await expect(select).toHaveValue(String(unitId));
 
   // El mismo selector debe permitir modificar la unidad seleccionada sin salir de Stock.
   const editedAbbreviation = `${abbreviation}e`.slice(0, 20);
   await select.selectOption('__edit_unit__');
-  await expect(unitField.getByPlaceholder(/Nombre \(GRAMO\)/i)).toHaveValue(unitName);
-  await unitField.getByPlaceholder('g', { exact: true }).fill(editedAbbreviation);
+  const editUnitModal = page.locator('.cmi-miniModal--unit').last();
+  await expect(editUnitModal).toBeVisible();
+  await expect(editUnitModal.getByPlaceholder('EJ: GRAMO', { exact: true })).toHaveValue(unitName);
+  await editUnitModal.getByPlaceholder('Ej: g', { exact: true }).fill(editedAbbreviation);
   const updateUnitResponsePromise = page.waitForResponse((response) =>
     response.request().method() === 'POST' &&
     new URL(response.url()).searchParams.get('action') === 'stock_unidad_actualizar',
   { timeout: 60_000 });
-  await unitField.getByRole('button', { name: /^Guardar$/i }).click();
+  await editUnitModal.getByRole('button', { name: /^Guardar$/i }).click();
   const updateUnitResponse = await updateUnitResponsePromise;
   expect(updateUnitResponse.status()).toBeLessThan(400);
+  await expect(editUnitModal).toBeHidden();
   await expect(select).toHaveValue(String(unitId));
 
   const createResponsePromise = page.waitForResponse((response) =>

@@ -126,7 +126,7 @@ function deriveTarget(values) {
     PW_ALLOW_PRODUCTION: isProduction ? '1' : '0',
     PW_ENVIRONMENT: isProduction ? 'production' : 'staging',
     PW_USER: 'admin_servicios',
-    PW_PASSWORD: isProduction ? '@CrServicios_2026' : '1234',
+    PW_PASSWORD: isProduction ? '@Cr3devs2026' : '1234',
   };
 }
 

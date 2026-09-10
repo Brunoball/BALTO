@@ -566,6 +566,8 @@ export default function Presupuestos() {
   const [comprobanteUrl, setComprobanteUrl] = useState("");
   const [comprobanteMime, setComprobanteMime] = useState("application/pdf");
   const [comprobanteTitle, setComprobanteTitle] = useState("Comprobante");
+  const [comprobanteLoading, setComprobanteLoading] = useState(false);
+  const [comprobanteError, setComprobanteError] = useState("");
   const [openDetalleMovimiento, setOpenDetalleMovimiento] = useState(false);
   const [loadingDetalleId, setLoadingDetalleId] = useState(null);
   const offsetRef = useRef(0);
@@ -575,6 +577,7 @@ export default function Presupuestos() {
   const liveTimerRef = useRef(null);
   const liveTokenRef = useRef("");
   const signedUrlCacheRef = useRef(new Map());
+  const comprobanteRequestRef = useRef(0);
   const cacheRef = useRef(new Map());
 
   const buildHeadersGET = useCallback(() => {
@@ -1095,22 +1098,43 @@ export default function Presupuestos() {
     );
   }, []);
 
-  const handleVerComprobante = useCallback(async (row, overrideTitle = "Presupuesto") => {
+  const handlePrewarmComprobante = useCallback((row) => {
+    const id = getComprobanteId(row);
+    if (!id) return;
+    void getComprobanteSignedUrl(id).catch(() => {});
+  }, [getComprobanteSignedUrl]);
+
+  const handleVerComprobante = useCallback((row, overrideTitle = "Presupuesto") => {
     const id = getComprobanteId(row);
     if (!id) {
       showToast("error", "Este documento todavía no tiene PDF vinculado.", 3500);
       return;
     }
-    try {
-      const url = await getComprobanteSignedUrl(id);
-      if (!url) throw new Error("No se pudo obtener la URL del comprobante.");
-      setComprobanteUrl(url);
-      setComprobanteMime(getComprobanteMime(row) || "application/pdf");
-      setComprobanteTitle(overrideTitle || documentLabel(row?.tipo) || "Comprobante");
-      setOpenVerComprobante(true);
-    } catch (e) {
-      showToast("error", e?.message || "No se pudo abrir el comprobante.", 4500);
-    }
+
+    const requestId = ++comprobanteRequestRef.current;
+    setComprobanteUrl("");
+    setComprobanteMime(getComprobanteMime(row) || "application/pdf");
+    setComprobanteTitle(overrideTitle || documentLabel(row?.tipo) || "Comprobante");
+    setComprobanteError("");
+    setComprobanteLoading(true);
+    setOpenVerComprobante(true);
+
+    void getComprobanteSignedUrl(id)
+      .then((url) => {
+        if (requestId !== comprobanteRequestRef.current) return;
+        if (!url) {
+          setComprobanteError("No se pudo obtener la URL del comprobante.");
+          return;
+        }
+        setComprobanteUrl(url);
+      })
+      .catch((e) => {
+        if (requestId !== comprobanteRequestRef.current) return;
+        setComprobanteError(e?.message || "No se pudo abrir el comprobante.");
+      })
+      .finally(() => {
+        if (requestId === comprobanteRequestRef.current) setComprobanteLoading(false);
+      });
   }, [getComprobanteSignedUrl, showToast]);
 
   const confirmConvertirVenta = useCallback(async () => {
@@ -1365,7 +1389,7 @@ export default function Presupuestos() {
                         return (
                           <div key={c.key} className="mov-gridCell mov-gridCell--actions is-center" role="cell" data-label={c.label}>
                             <div className="mov-actionsInline">
-                              <button type="button" className={["mov-iconBtn", tieneComprobante ? "mov-iconBtn--comprobante" : "mov-iconBtn--disabled"].join(" ")} title={tieneComprobante ? "Ver presupuesto PDF" : "Sin presupuesto PDF"} disabled={!tieneComprobante || isAnyLoading} onClick={() => handleVerComprobante(r, "Presupuesto")} style={{ opacity: tieneComprobante ? 1 : 0.35, cursor: tieneComprobante ? "pointer" : "not-allowed" }}>
+                              <button type="button" className={["mov-iconBtn", tieneComprobante ? "mov-iconBtn--comprobante" : "mov-iconBtn--disabled"].join(" ")} title={tieneComprobante ? "Ver presupuesto PDF" : "Sin presupuesto PDF"} disabled={!tieneComprobante || isAnyLoading} onMouseEnter={() => { if (tieneComprobante) handlePrewarmComprobante(r); }} onPointerEnter={() => { if (tieneComprobante) handlePrewarmComprobante(r); }} onFocus={() => { if (tieneComprobante) handlePrewarmComprobante(r); }} onClick={() => handleVerComprobante(r, "Presupuesto")} style={{ opacity: tieneComprobante ? 1 : 0.35, cursor: tieneComprobante ? "pointer" : "not-allowed" }}>
                                 <FontAwesomeIcon icon={faEye} />
                               </button>
                               <button type="button" className="mov-iconBtn" title="Ver información completa del presupuesto" disabled={isAnyLoading || loadingLists || loadingDetalleId === r.id_movimiento} onClick={() => handleVerDetallePresupuesto(r)}>
@@ -1488,7 +1512,23 @@ export default function Presupuestos() {
         }}
       />
 
-      <ModalVerComprobante open={openVerComprobante} url={comprobanteUrl} mime={comprobanteMime} title={comprobanteTitle} onClose={() => { setOpenVerComprobante(false); setComprobanteUrl(""); setComprobanteMime("application/pdf"); setComprobanteTitle("Comprobante"); }} />
+      <ModalVerComprobante
+        open={openVerComprobante}
+        url={comprobanteUrl}
+        mime={comprobanteMime}
+        title={comprobanteTitle}
+        loading={comprobanteLoading}
+        error={comprobanteError}
+        onClose={() => {
+          ++comprobanteRequestRef.current;
+          setOpenVerComprobante(false);
+          setComprobanteUrl("");
+          setComprobanteMime("application/pdf");
+          setComprobanteTitle("Comprobante");
+          setComprobanteLoading(false);
+          setComprobanteError("");
+        }}
+      />
     </div>
   );
 }

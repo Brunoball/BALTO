@@ -398,6 +398,8 @@ export default function ModalVerComprobante({
   documents = null,
   onClose,
   title = "Comprobante",
+  loading: externalLoading = false,
+  error: externalError = "",
 }) {
   const closeBtnRef = useRef(null);
   const overlayRef = useRef(null);
@@ -438,6 +440,7 @@ export default function ModalVerComprobante({
   const activeTitle = activeDoc?.title || activeDoc?.label || title;
 
   const modalTitle = useMemo(() => resolveFixedModalTitle(title), [title]);
+  const normalizedExternalError = safeText(externalError);
 
   const initialKind = useMemo(() => {
     return guessKindFromUrlOrMime(activeUrl, activeMime);
@@ -722,7 +725,21 @@ export default function ModalVerComprobante({
         <div className="mi-modal__body gm-view-body">
           <div className="gm-view-content">
             <div className="gm-view-card">
-              {!activeUrl && <div className="mov-emptyRow">No hay comprobante.</div>}
+              {!activeUrl && externalLoading && (
+                <div className="mov-emptyRow" style={{ padding: 18 }} role="status" aria-live="polite">
+                  Cargando comprobante...
+                </div>
+              )}
+
+              {!activeUrl && !externalLoading && !!normalizedExternalError && (
+                <div className="mov-emptyRow" style={{ padding: 18, color: "#b91c1c" }}>
+                  {normalizedExternalError}
+                </div>
+              )}
+
+              {!activeUrl && !externalLoading && !normalizedExternalError && (
+                <div className="mov-emptyRow">No hay comprobante.</div>
+              )}
 
               {!!activeUrl && loading && (
                 <div className="mov-emptyRow" style={{ padding: 18 }}>
@@ -922,7 +939,7 @@ export default function ModalVerComprobante({
               type="button"
               className="mit-btn mit-btn--solid gm-view-action-btn gm-view-action-btn--open"
               onClick={handleOpen}
-              disabled={!blobUrl && !activeUrl}
+              disabled={externalLoading || (!blobUrl && !activeUrl)}
               title={`Abrir ${displayFileName} en nueva pestaña`}
             >
               <FontAwesomeIcon icon={faUpRightFromSquare} className="gm-view-action-btn__icon" />

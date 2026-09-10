@@ -198,8 +198,11 @@ function DocumentosClientePanel({
   const [comprobanteUrl, setComprobanteUrl] = useState("");
   const [comprobanteMime, setComprobanteMime] = useState("application/pdf");
   const [comprobanteTitle, setComprobanteTitle] = useState("Comprobante");
+  const [comprobanteLoading, setComprobanteLoading] = useState(false);
+  const [comprobanteError, setComprobanteError] = useState("");
   const mountedRef = useRef(true);
   const signedUrlCacheRef = useRef(new Map());
+  const comprobanteRequestRef = useRef(0);
   const documentActions = useMemo(() => getDocumentActions(grupo), [grupo]);
   const gridCols = "1.15fr 0.85fr 1.65fr 0.95fr 0.95fr 0.8fr";
   const documentoHeader = documentoSingular.charAt(0).toUpperCase() + documentoSingular.slice(1);
@@ -425,32 +428,68 @@ function DocumentosClientePanel({
   );
   const showTablePanel = Boolean(selectedCliente) || showPanelSkeleton;
 
-  const handleVerDocumento = async (doc) => {
+  const handlePrewarmDocumento = useCallback((doc) => {
+    const id = Number(doc?.id_comprobante || 0);
+    if (!id || signedUrlCacheRef.current.has(String(id))) return;
+
+    void apiGetJson(
+      buildDocumentosUrl("ventas_comprobantes_descargar", { id_comprobante: id })
+    )
+      .then((data) => {
+        const url = data?.url || data?.archivo_url || data?.download_url || "";
+        if (url) signedUrlCacheRef.current.set(String(id), url);
+      })
+      .catch(() => {});
+  }, []);
+
+  const handleVerDocumento = (doc) => {
     const id = Number(doc?.id_comprobante || 0);
     if (!id) {
       setError("Este documento no tiene comprobante asociado.");
       return;
     }
 
-    try {
-      setError("");
-      let url = signedUrlCacheRef.current.get(String(id)) || "";
-      if (!url) {
-        const data = await apiGetJson(
-          buildDocumentosUrl("ventas_comprobantes_descargar", { id_comprobante: id })
-        );
-        url = data?.url || data?.archivo_url || data?.download_url || "";
-        if (url) signedUrlCacheRef.current.set(String(id), url);
-      }
-      if (!url) throw new Error("No se pudo obtener el enlace del PDF.");
+    const requestId = ++comprobanteRequestRef.current;
+    const mime = safeText(doc?.archivo_mime, "application/pdf");
+    const title = safeText(doc?.numero_visual || doc?.documento_label, "Comprobante");
 
-      setComprobanteUrl(url);
-      setComprobanteMime(safeText(doc?.archivo_mime, "application/pdf"));
-      setComprobanteTitle(safeText(doc?.numero_visual || doc?.documento_label, "Comprobante"));
-      setOpenVerComprobante(true);
-    } catch (err) {
-      setError(err?.message || "No se pudo abrir el comprobante.");
+    setError("");
+    setComprobanteUrl("");
+    setComprobanteMime(mime);
+    setComprobanteTitle(title);
+    setComprobanteError("");
+    setComprobanteLoading(true);
+    setOpenVerComprobante(true);
+
+    const cachedUrl = signedUrlCacheRef.current.get(String(id)) || "";
+    if (cachedUrl) {
+      setComprobanteUrl(cachedUrl);
+      setComprobanteLoading(false);
+      return;
     }
+
+    void apiGetJson(
+      buildDocumentosUrl("ventas_comprobantes_descargar", { id_comprobante: id })
+    )
+      .then((data) => {
+        if (requestId !== comprobanteRequestRef.current) return;
+
+        const url = data?.url || data?.archivo_url || data?.download_url || "";
+        if (!url) {
+          setComprobanteError("No se pudo obtener el enlace del PDF.");
+          return;
+        }
+
+        signedUrlCacheRef.current.set(String(id), url);
+        setComprobanteUrl(url);
+      })
+      .catch((err) => {
+        if (requestId !== comprobanteRequestRef.current) return;
+        setComprobanteError(err?.message || "No se pudo abrir el comprobante.");
+      })
+      .finally(() => {
+        if (requestId === comprobanteRequestRef.current) setComprobanteLoading(false);
+      });
   };
 
   const handleAbrirNuevaPestana = async (doc) => {
@@ -692,7 +731,15 @@ function DocumentosClientePanel({
                           </div>
                           <div className="mov-gridCell mov-gridCell--actions is-center" role="cell" data-label="PDF">
                             <div className="mov-actionsInline doccom-actions">
-                              <button type="button" className="mov-iconBtn" title="Ver PDF" onClick={() => handleVerDocumento(doc)}>
+                              <button
+                                type="button"
+                                className="mov-iconBtn"
+                                title="Ver PDF"
+                                onMouseEnter={() => handlePrewarmDocumento(doc)}
+                                onPointerEnter={() => handlePrewarmDocumento(doc)}
+                                onFocus={() => handlePrewarmDocumento(doc)}
+                                onClick={() => handleVerDocumento(doc)}
+                              >
                                 <FontAwesomeIcon icon={faEye} />
                               </button>
                               <button type="button" className="mov-iconBtn" title="Abrir PDF" onClick={() => handleAbrirNuevaPestana(doc)}>
@@ -728,11 +775,16 @@ function DocumentosClientePanel({
         url={comprobanteUrl}
         mime={comprobanteMime}
         title={comprobanteTitle}
+        loading={comprobanteLoading}
+        error={comprobanteError}
         onClose={() => {
+          ++comprobanteRequestRef.current;
           setOpenVerComprobante(false);
           setComprobanteUrl("");
           setComprobanteMime("application/pdf");
           setComprobanteTitle("Comprobante");
+          setComprobanteLoading(false);
+          setComprobanteError("");
         }}
       />
     </div>
