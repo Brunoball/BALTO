@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { clampText, decimalNumber, decimalText, integerText, money, moneyApiValue, moneyDecimalText, moneyInputValue } from "../utils/serviciosFormUtils";
 import useServiciosGlobalModal from "./useServiciosGlobalModal";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faBriefcase, faCircleInfo, faDollarSign, faLayerGroup } from "@fortawesome/free-solid-svg-icons";
+import { faBriefcase, faChevronDown, faCircleInfo, faDollarSign, faLayerGroup } from "@fortawesome/free-solid-svg-icons";
 
 const EMPTY = {
   nombre: "",
@@ -26,6 +26,11 @@ const percentageInputValue = (value) => {
     .replace(/\.00$/, "")
     .replace(/(\.\d)0$/, "$1")
     .replace(".", ",");
+};
+
+const compositionDecimalInputValue = (value, fallback = "1,00") => {
+  if (value == null || String(value).trim() === "") return fallback;
+  return decimalNumber(value).toFixed(2).replace(".", ",");
 };
 
 const normalizeSearch = (value) =>
@@ -119,75 +124,79 @@ function SelectorMultipleRecursos({
   };
 
   return (
-    <div className={`gm-field servicios-multi-select ${open ? "is-open" : ""}`} ref={rootRef}>
+    <div className={`servicios-multi-select ${open ? "is-open" : ""}`} ref={rootRef}>
+      <div className="gm-field servicios-multi-select__field">
+        <button
+          type="button"
+          className="servicios-multi-select__trigger"
+          onClick={() => setOpen((prev) => !prev)}
+          aria-haspopup="dialog"
+          aria-expanded={open}
+        >
+          <span>
+            <strong>{selectedIds.length > 0 ? `${selectedIds.length} seleccionado${selectedIds.length === 1 ? "" : "s"}` : placeholder}</strong>
+            <small>{options.length > 0 ? `${options.length} disponible${options.length === 1 ? "" : "s"}` : emptyText}</small>
+          </span>
+          <FontAwesomeIcon className="servicios-multi-select__chevron" icon={faChevronDown} aria-hidden="true" />
+        </button>
+        <span className="gm-label gm-label--up">{label}</span>
+
+        {open && (
+          <div className="servicios-multi-select__menu" role="dialog" aria-label={label}>
+            <div className="servicios-multi-select__search">
+              <label className="gm-field">
+                <input
+                  ref={searchRef}
+                  className="gm-input"
+                  type="search"
+                  maxLength={120}
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder=" "
+                />
+                <span className="gm-label">{searchPlaceholder}</span>
+              </label>
+            </div>
+
+            <div className="servicios-multi-select__toolbar">
+              <button type="button" onClick={toggleAllFiltered} disabled={filtered.length === 0}>
+                {allFilteredSelected ? "Quitar selección" : query.trim() ? "Seleccionar resultados" : "Seleccionar todos"}
+              </button>
+              <button type="button" onClick={() => setSelectedIds([])} disabled={selectedIds.length === 0}>Limpiar</button>
+            </div>
+
+            <div className="servicios-multi-select__options">
+              {filtered.length === 0 ? (
+                <div className="servicios-multi-select__empty">{emptyText}</div>
+              ) : filtered.map((row) => {
+                const id = String(getValue(row));
+                const checked = selectedSet.has(id);
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    className={checked ? "is-selected" : ""}
+                    onClick={() => toggle(row)}
+                    aria-pressed={checked}
+                  >
+                    <span className="servicios-multi-select__option-label">{getLabel(row)}</span>
+                    <span className="servicios-multi-select__check" aria-hidden="true">{checked ? "✓" : ""}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+
       <button
         type="button"
-        className="servicios-multi-select__trigger"
-        onClick={() => setOpen((prev) => !prev)}
-        aria-haspopup="dialog"
-        aria-expanded={open}
+        className="gm-action-btn gm-action-btn--save servicios-multi-select__add"
+        onClick={confirm}
+        disabled={selectedIds.length === 0}
       >
-        <span>
-          <strong>{selectedIds.length > 0 ? `${selectedIds.length} seleccionado${selectedIds.length === 1 ? "" : "s"}` : placeholder}</strong>
-          <small>{options.length > 0 ? `${options.length} disponible${options.length === 1 ? "" : "s"}` : emptyText}</small>
-        </span>
-        <span className="servicios-multi-select__chevron" aria-hidden="true">⌄</span>
+        Agregar {selectedIds.length > 0 ? `(${selectedIds.length})` : ""}
       </button>
-      <span className="gm-label gm-label--up">{label}</span>
-
-      {open && (
-        <div className="servicios-multi-select__menu" role="dialog" aria-label={label}>
-          <div className="servicios-multi-select__search">
-            <label className="gm-field">
-              <input
-                ref={searchRef}
-                className="gm-input"
-                type="search"
-                maxLength={120}
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder=" "
-              />
-              <span className="gm-label">{searchPlaceholder}</span>
-            </label>
-          </div>
-
-          <div className="servicios-multi-select__toolbar">
-            <button type="button" onClick={toggleAllFiltered} disabled={filtered.length === 0}>
-              {allFilteredSelected ? "Quitar selección" : query.trim() ? "Seleccionar resultados" : "Seleccionar todos"}
-            </button>
-            <button type="button" onClick={() => setSelectedIds([])} disabled={selectedIds.length === 0}>Limpiar</button>
-          </div>
-
-          <div className="servicios-multi-select__options">
-            {filtered.length === 0 ? (
-              <div className="servicios-multi-select__empty">{emptyText}</div>
-            ) : filtered.map((row) => {
-              const id = String(getValue(row));
-              const checked = selectedSet.has(id);
-              return (
-                <button
-                  key={id}
-                  type="button"
-                  className={checked ? "is-selected" : ""}
-                  onClick={() => toggle(row)}
-                  aria-pressed={checked}
-                >
-                  <span className="servicios-multi-select__check" aria-hidden="true">{checked ? "✓" : ""}</span>
-                  <span>{getLabel(row)}</span>
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="servicios-multi-select__footer">
-            <span>{selectedIds.length === 0 ? "Elegí uno o varios recursos" : `${selectedIds.length} listo${selectedIds.length === 1 ? "" : "s"} para agregar`}</span>
-            <button type="button" className="gm-action-btn gm-action-btn--save" onClick={confirm} disabled={selectedIds.length === 0}>
-              Agregar {selectedIds.length > 0 ? `(${selectedIds.length})` : ""}
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -200,7 +209,7 @@ function ArticulosCard({ rows, setRows, catalog }) {
     const selected = new Set(ids.map((id) => Number(id)));
     const additions = catalog
       .filter((row) => selected.has(Number(row.id_articulo)) && Number(row.activo) === 1)
-      .map((row) => ({ id_articulo: row.id_articulo, cantidad: "1" }));
+      .map((row) => ({ id_articulo: row.id_articulo, cantidad: "1,00" }));
 
     if (additions.length === 0) return;
     setRows((prev) => {
@@ -252,7 +261,8 @@ function ArticulosCard({ rows, setRows, catalog }) {
                     className="gm-input servicios-component-quantity__input"
                     inputMode="decimal"
                     value={row.cantidad}
-                    onChange={(e) => setRows((prev) => prev.map((x) => Number(x.id_articulo) === id ? { ...x, cantidad: decimalText(e.target.value, 6) } : x))}
+                    onChange={(e) => setRows((prev) => prev.map((x) => Number(x.id_articulo) === id ? { ...x, cantidad: decimalText(e.target.value, 2).replace(".", ",") } : x))}
+                    onBlur={() => setRows((prev) => prev.map((x) => Number(x.id_articulo) === id ? { ...x, cantidad: compositionDecimalInputValue(x.cantidad) } : x))}
                     placeholder=" "
                   />
                   <span className="gm-label gm-label--up">Cantidad</span>
@@ -278,7 +288,7 @@ function TrabajadoresCard({ rows, setRows, catalog }) {
       .filter((row) => selected.has(Number(row.id_trabajador)) && Number(row.activo) === 1)
       .map((row) => ({
         id_trabajador: row.id_trabajador,
-        horas_estimadas: "1",
+        horas_estimadas: "1,00",
         costo_hora_snapshot: row.costo_hora,
       }));
 
@@ -294,7 +304,7 @@ function TrabajadoresCard({ rows, setRows, catalog }) {
       <div className="gm-section-head servicios-component-card__title">
         <div>
           <h4>Mano de obra</h4>
-          <p>Seleccioná uno o varios trabajadores y después indicá las horas estimadas de cada uno.</p>
+          <p>Seleccioná trabajadores y después indicá las horas estimadas de cada uno.</p>
         </div>
         <strong><span>{rows.length}</span><small>asignados</small></strong>
       </div>
@@ -336,7 +346,8 @@ function TrabajadoresCard({ rows, setRows, catalog }) {
                     className="gm-input servicios-component-quantity__input"
                     inputMode="decimal"
                     value={row.horas_estimadas}
-                    onChange={(e) => setRows((prev) => prev.map((x) => Number(x.id_trabajador) === Number(row.id_trabajador) ? { ...x, horas_estimadas: decimalText(e.target.value, 4) } : x))}
+                    onChange={(e) => setRows((prev) => prev.map((x) => Number(x.id_trabajador) === Number(row.id_trabajador) ? { ...x, horas_estimadas: decimalText(e.target.value, 2).replace(".", ",") } : x))}
+                    onBlur={() => setRows((prev) => prev.map((x) => Number(x.id_trabajador) === Number(row.id_trabajador) ? { ...x, horas_estimadas: compositionDecimalInputValue(x.horas_estimadas) } : x))}
                     placeholder=" "
                   />
                   <span className="gm-label gm-label--up">Horas</span>
@@ -371,6 +382,7 @@ export default function ModalServicio({
   const [workerRows, setWorkerRows] = useState([]);
   const [marginInput, setMarginInput] = useState("");
   const [pricingSource, setPricingSource] = useState("price");
+  const [activeTab, setActiveTab] = useState("main");
 
   useEffect(() => {
     if (!open) return;
@@ -393,19 +405,20 @@ export default function ModalServicio({
     setArticleRows(
       (item?.articulos || item?.composicion?.articulos || []).map((r) => ({
         ...r,
-        cantidad: String(r.cantidad ?? "1"),
+        cantidad: compositionDecimalInputValue(r.cantidad),
       }))
     );
 
     setWorkerRows(
       (item?.trabajadores || item?.composicion?.trabajadores || []).map((r) => ({
         ...r,
-        horas_estimadas: String(r.horas_estimadas ?? "1"),
+        horas_estimadas: compositionDecimalInputValue(r.horas_estimadas),
       }))
     );
 
     setMarginInput("");
     setPricingSource("price");
+    setActiveTab("main");
   }, [open, item, unidades]);
 
   const { overlayRef, cerrarDesdeFondo } = useServiciosGlobalModal({ open, busy: saving, onClose });
@@ -544,6 +557,28 @@ export default function ModalServicio({
         </header>
 
         <div className="gm-modal-content servicios-modal__content servicios-service-content">
+          <div className="servicios-service-tabs" role="tablist" aria-label="Secciones del servicio">
+            <button
+              type="button"
+              className={`servicios-service-tab ${activeTab === "main" ? "is-active" : ""}`}
+              onClick={() => setActiveTab("main")}
+              role="tab"
+              aria-selected={activeTab === "main"}
+            >
+              <span>Información principal</span>
+            </button>
+            <button
+              type="button"
+              className={`servicios-service-tab ${activeTab === "composition" ? "is-active" : ""}`}
+              onClick={() => setActiveTab("composition")}
+              role="tab"
+              aria-selected={activeTab === "composition"}
+            >
+              <span>Composición del servicio</span>
+            </button>
+          </div>
+
+          {activeTab === "main" && (
           <div className="servicios-service-overview">
             <section className="gm-section servicios-form-section servicios-service-panel servicios-service-panel--identity">
               <div className="gm-section-head servicios-service-sectionHead">
@@ -606,19 +641,19 @@ export default function ModalServicio({
               </div>
               <div className="gm-section-body servicios-service-panelBody">
                 <div className="servicios-form-grid servicios-service-priceFields">
-                  <label className="gm-field servicios-field--span-4">
+                  <label className="gm-field servicios-service-priceField">
                     <input className="gm-input" inputMode="decimal" value={form.costo_base} onChange={(e) => set("costo_base", moneyDecimalText(e.target.value))} placeholder="0" />
                     <span className="gm-label gm-label--up">Otros costos</span>
                   </label>
-                  <label className="gm-field servicios-field--span-4">
+                  <label className="gm-field servicios-service-priceField">
                     <input className="gm-input" inputMode="decimal" value={marginInput} onChange={(e) => changeMargin(e.target.value)} placeholder="0" />
                     <span className="gm-label gm-label--up">Margen deseado (%)</span>
                   </label>
-                  <label className="gm-field servicios-field--span-4">
+                  <label className="gm-field servicios-service-priceField">
                     <input className="gm-input" inputMode="decimal" value={form.precio_venta} onChange={(e) => changePrice(e.target.value)} placeholder="0" />
                     <span className="gm-label gm-label--up">Precio de venta</span>
                   </label>
-                  <label className="gm-field servicios-field--span-12">
+                  <label className="gm-field servicios-service-priceField">
                     <select className="gm-input gm-select" value={form.iva_pct} onChange={(e) => set("iva_pct", e.target.value)}>
                       {["0", "10.5", "21", "27"].map((v) => <option key={v} value={v}>{v} %</option>)}
                     </select>
@@ -638,7 +673,9 @@ export default function ModalServicio({
               </div>
             </section>
           </div>
+          )}
 
+          {activeTab === "composition" && (
           <section className="gm-section servicios-composition servicios-service-panel servicios-service-panel--composition">
             <div className="gm-section-head servicios-composition__head servicios-service-sectionHead">
               <div className="servicios-composition__heading">
@@ -654,14 +691,27 @@ export default function ModalServicio({
                 <TrabajadoresCard rows={workerRows} setRows={setWorkerRows} catalog={trabajadores} />
               </div>
 
-              <div className="servicios-composition__totals">
-                <span>Materiales / Insumos: <strong>{money(cost.articulos)}</strong></span>
-                <span>Mano de obra: <strong>{money(cost.manoObra)}</strong></span>
-                <span>Otros costos: <strong>{money(cost.otros)}</strong></span>
-                <span className="servicios-composition__grandTotal">Total costo: <strong>{money(cost.total)}</strong></span>
+              <div className="gm-summary-chips">
+                <div className="gm-summary-chip gm-summary-chip--sub">
+                  <span>Materiales / Insumos</span>
+                  <b>{money(cost.articulos)}</b>
+                </div>
+                <div className="gm-summary-chip gm-summary-chip--labor">
+                  <span>Mano de obra</span>
+                  <b>{money(cost.manoObra)}</b>
+                </div>
+                <div className="gm-summary-chip gm-summary-chip--iva">
+                  <span>Otros costos</span>
+                  <b>{money(cost.otros)}</b>
+                </div>
+                <div className="gm-summary-chip gm-summary-chip--total">
+                  <span>Total costo</span>
+                  <b>{money(cost.total)}</b>
+                </div>
               </div>
             </div>
           </section>
+          )}
         </div>
 
         <footer className="gm-modal-footer gm-view-footer-actions">

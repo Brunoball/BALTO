@@ -412,18 +412,6 @@
   line-height: 1;
 }
 
-.servicios-composition__totals {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 8px 16px;
-  margin: 0 2px;
-  padding-top: 11px;
-  border-top: 1px solid var(--gm-border);
-  font-size: 10px;
-  text-transform: uppercase;
-  opacity: .75;
-}
 
 @media (max-width: 860px) {
   .servicios-composition-grid {
@@ -1335,11 +1323,6 @@ body.dark .servicios-field__counter {
   line-height: 1.25;
 }
 
-.servicios-component-add > .gm-action-btn {
-  padding-inline: 12px;
-  font-size: 12px;
-  font-weight: 500;
-}
 
 .servicios-searchable-select__options button,
 .servicios-searchable-select__empty,
@@ -1367,16 +1350,6 @@ body.dark .servicios-field__counter {
   opacity: 1;
 }
 
-.servicios-composition__totals {
-  color: var(--gm-muted);
-  font-weight: 400;
-  opacity: 1;
-}
-
-.servicios-composition__totals strong {
-  color: var(--gm-text);
-  font-weight: 600;
-}
 
 body.dark .servicios-modal.gm-modal-container {
   color: rgba(255, 255, 255, .92);
@@ -1384,8 +1357,7 @@ body.dark .servicios-modal.gm-modal-container {
 
 body.dark .servicios-component-card__title h4,
 body.dark .servicios-searchable-select__trigger,
-body.dark .servicios-component-row__name strong,
-body.dark .servicios-composition__totals strong {
+body.dark .servicios-component-row__name strong {
   color: rgba(255, 255, 255, .92);
 }
 
@@ -1393,8 +1365,7 @@ body.dark .servicios-component-card__title p,
 body.dark .servicios-searchable-select__empty,
 body.dark .servicios-component-empty,
 body.dark .servicios-component-row__name small,
-body.dark .servicios-component-unit,
-body.dark .servicios-composition__totals {
+body.dark .servicios-component-unit {
   color: rgba(210, 220, 235, .76);
 }
 
@@ -1515,6 +1486,75 @@ body.dark .servicios-component-card {
    MODAL SERVICIO · EXPERIENCIA GUIADA
    Conserva la base global gm-* y suma jerarquía visual propia.
 ========================================================= */
+.servicios-service-tabs {
+  display: inline-flex;
+  align-items: flex-end;
+  flex-wrap: nowrap;
+  width: max-content;
+  max-width: 100%;
+  min-height: 30px;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  border-bottom: 1px solid var(--gm-border);
+  border-radius: 0;
+  background: transparent;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+
+.servicios-service-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.servicios-service-tab {
+  position: relative;
+  flex: 0 0 auto;
+  min-width: 0;
+  min-height: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px 9px;
+  border: 1px solid transparent;
+  border-bottom: 0;
+  border-radius: 10px 10px 0 0;
+  background: transparent;
+  color: var(--gm-muted);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 520;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color .18s ease, background .18s ease, border-color .18s ease;
+}
+
+.servicios-service-tab:hover {
+  color: #0055bb;
+  background: rgba(0, 85, 187, .05);
+}
+
+.servicios-service-tab.is-active {
+  color: #0055bb;
+  background: var(--gm-bg);
+  border-color: var(--gm-border);
+  border-bottom-color: var(--gm-bg);
+  box-shadow: none;
+}
+
+.servicios-service-tab.is-active::after {
+  content: "";
+  position: absolute;
+  left: 11px;
+  right: 11px;
+  bottom: 0;
+  height: 2px;
+  border-radius: 999px 999px 0 0;
+  background: #0055bb;
+}
+
 .servicios-service-content.gm-modal-content {
   gap: 16px;
   padding: 18px 20px 20px;
@@ -1626,7 +1666,13 @@ body.dark .servicios-component-card {
 }
 
 .servicios-service-priceFields {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px 10px;
+}
+
+.servicios-service-priceFields .servicios-service-priceField {
+  grid-column: auto;
+  min-width: 0;
 }
 
 .servicios-service-financialSummary {
@@ -1737,12 +1783,6 @@ body.dark .servicios-component-card {
   box-shadow: 0 4px 12px rgba(15, 23, 42, .045);
 }
 
-.servicios-composition__grandTotal {
-  padding: 5px 9px;
-  border-radius: 8px;
-  background: rgba(109, 40, 217, .085);
-  color: #6d28d9;
-}
 
 .servicios-service-footerHelp {
   margin-right: auto;
@@ -1779,10 +1819,27 @@ body.dark .servicios-service-financialSummary .is-negative strong {
 }
 
 html[data-theme="oscuro"] .servicios-service-panel--composition .servicios-composition__cost strong,
-body.dark .servicios-service-panel--composition .servicios-composition__cost strong,
-html[data-theme="oscuro"] .servicios-composition__grandTotal,
-body.dark .servicios-composition__grandTotal {
+body.dark .servicios-service-panel--composition .servicios-composition__cost strong {
   color: #c4b5fd;
+}
+
+html[data-theme="oscuro"] .servicios-service-tab:hover,
+body.dark .servicios-service-tab:hover {
+  color: #8ec5ff;
+  background: rgba(78, 161, 255, .06);
+}
+
+html[data-theme="oscuro"] .servicios-service-tab.is-active,
+body.dark .servicios-service-tab.is-active {
+  border-color: rgba(148, 163, 184, .22);
+  border-bottom-color: var(--gm-bg);
+  background: var(--gm-bg);
+  color: #8ec5ff;
+}
+
+html[data-theme="oscuro"] .servicios-service-tab.is-active::after,
+body.dark .servicios-service-tab.is-active::after {
+  background: #4ea1ff;
 }
 
 html[data-theme="oscuro"] .servicios-component-card--materials .servicios-component-card__title > strong,
@@ -1808,6 +1865,41 @@ body.dark .servicios-component-card--labor .servicios-component-card__title > st
 @media (max-width: 640px) {
   .servicios-service-content.gm-modal-content {
     padding: 12px;
+  }
+
+  /* Mantener las pestañas siempre visibles dentro del modal en pantallas chicas. */
+  .servicios-service-tabs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+    max-width: none;
+    flex: 0 0 auto;
+    position: sticky;
+    top: 0;
+    z-index: 8;
+    gap: 0;
+    overflow: visible;
+    background: var(--gm-bg-soft, #f8fafc);
+  }
+
+  .servicios-service-tab {
+    width: 100%;
+    min-width: 0;
+    min-height: 40px;
+    padding: 8px 6px 9px;
+    font-size: 11px;
+    line-height: 1.15;
+    white-space: normal;
+    text-align: center;
+  }
+
+  .servicios-service-tab.is-active::after {
+    left: 8px;
+    right: 8px;
+  }
+
+  .servicios-service-priceFields {
+    grid-template-columns: 1fr;
   }
 
   .servicios-service-panel--pricing .servicios-service-financialSummary {
@@ -3235,8 +3327,23 @@ body.dark .servicios-history-modal--material.is-full-skeleton .servicios-history
 }
 
 .servicios-multi-select {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: stretch;
+  gap: 8px;
+  min-width: 0;
+}
+
+.servicios-multi-select__field {
   position: relative;
   min-width: 0;
+}
+
+.servicios-multi-select__add {
+  align-self: center;
+  min-width: 138px;
+  padding-inline: 20px;
+  white-space: nowrap;
 }
 
 .servicios-multi-select__trigger {
@@ -3295,9 +3402,13 @@ body.dark .servicios-history-modal--material.is-full-skeleton .servicios-history
 .servicios-multi-select__chevron {
   flex: 0 0 auto;
   color: var(--gm-muted);
-  font-size: 18px;
-  line-height: 1;
-  transform: translateY(-2px);
+  font-size: 12px;
+  transition: transform .18s ease, color .18s ease;
+}
+
+.servicios-multi-select.is-open .servicios-multi-select__chevron {
+  color: var(--servicios-component-accent);
+  transform: rotate(180deg);
 }
 
 .servicios-multi-select__menu {
@@ -3359,9 +3470,9 @@ body.dark .servicios-history-modal--material.is-full-skeleton .servicios-history
 .servicios-multi-select__options > button {
   width: 100%;
   display: grid;
-  grid-template-columns: 22px minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) 22px;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   border: 0;
   border-radius: 8px;
   padding: 8px 9px;
@@ -3384,7 +3495,14 @@ body.dark .servicios-history-modal--material.is-full-skeleton .servicios-history
   background: color-mix(in srgb, var(--servicios-component-accent) 11%, var(--gm-bg-soft));
 }
 
+.servicios-multi-select__option-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .servicios-multi-select__check {
+  justify-self: end;
   width: 20px;
   height: 20px;
   display: inline-flex;
@@ -3411,30 +3529,6 @@ body.dark .servicios-history-modal--material.is-full-skeleton .servicios-history
   text-transform: uppercase;
 }
 
-.servicios-multi-select__footer {
-  min-height: 54px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 8px 10px;
-  border-top: 1px solid var(--gm-border);
-  background: var(--gm-bg-soft);
-}
-
-.servicios-multi-select__footer > span {
-  color: var(--gm-muted);
-  font-size: 9px;
-  font-weight: 550;
-}
-
-.servicios-multi-select__footer .gm-action-btn {
-  min-width: 112px;
-  min-height: 36px;
-  height: 36px;
-  padding: 0 13px;
-  font-size: 10px;
-}
 
 html[data-theme="oscuro"] .servicios-multi-select__menu,
 body.dark .servicios-multi-select__menu {
@@ -3444,14 +3538,5 @@ body.dark .servicios-multi-select__menu {
 @media (max-width: 640px) {
   .servicios-multi-select__menu {
     min-width: 100%;
-  }
-
-  .servicios-multi-select__footer {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .servicios-multi-select__footer .gm-action-btn {
-    width: 100%;
   }
 }

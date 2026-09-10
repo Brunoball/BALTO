@@ -521,6 +521,12 @@ html[data-theme="oscuro"] .gm-movement-side .gm-actions {
 .gm-summary-chip--sub::before { background: rgba(29, 66, 138, .85); }
 .gm-summary-chip--sub b { color: rgba(29, 66, 138, .98); }
 
+.gm-summary-chip--labor {
+  border-color: rgba(124, 58, 237, .30);
+}
+.gm-summary-chip--labor::before { background: rgba(124, 58, 237, .88); }
+.gm-summary-chip--labor b { color: rgba(109, 40, 217, .98); }
+
 .gm-summary-chip--iva {
   border-color: rgba(245, 158, 11, .35);
 }
@@ -553,6 +559,10 @@ html[data-theme="oscuro"] .gm-summary-chip b {
 
 html[data-theme="oscuro"] .gm-summary-chip--sub {
   border-color: rgba(0, 85, 187, .35);
+}
+
+html[data-theme="oscuro"] .gm-summary-chip--labor {
+  border-color: rgba(124, 58, 237, .35);
 }
 
 html[data-theme="oscuro"] .gm-summary-chip--iva {
