@@ -1,6 +1,6 @@
 import { test, expect } from './support/test.js';
 import { authenticatedApi, expectApiSuccess } from './support/api.js';
-import { uniqueName } from './support/data.js';
+import { todayISO, uniqueName } from './support/data.js';
 import {
   fillMovementRow,
   fillPayment,
@@ -266,24 +266,89 @@ test.describe('BALTO Servicios <-> Movimientos', () => {
       const selected = await selectFirstNonEmpty(typeSelect, /CUENTA\s*CORRIENTE/i);
       if (/CONTADO/i.test(selected.text)) await fillPayment(saleDialog);
 
-      const responsePromise = page.waitForResponse(
-        (response) => {
-          if (response.request().method() !== 'POST') return false;
-          const action = new URL(response.url()).searchParams.get('action');
-          return action === 'ventas_crear_batch' || action === 'ventas_crear';
-        },
-        { timeout: 60_000 },
-      );
-      const save = saleDialog.getByRole('button', { name: /Guardar venta/i }).last();
-      await expect(save).toBeEnabled();
-      await save.click();
+      // La composición nueva debe arrancar CERRADA aunque ya exista un faltante.
+      // El resumen avisa el problema sin desplegar todo el detalle.
+      const compositionToggle = saleDialog.getByRole('button', { name: /Materiales\s*\/\s*insumos\s*\(1\)/i }).first();
+      await expect(compositionToggle).toBeVisible();
+      await expect(compositionToggle).toContainText(/1 con stock insuficiente/i);
+      await expect(saleDialog.locator('.ssc__body')).toHaveCount(0);
 
-      const response = await responsePromise;
-      const body = await response.json().catch(() => ({}));
-      expect(response.status()).toBe(409);
-      expect(body?.exito ?? body?.success).toBe(false);
-      expect(String(body?.mensaje || body?.message || '')).toMatch(/Stock insuficiente/i);
-      await expect(saleDialog).toBeVisible();
+      await compositionToggle.click();
+      const compositionBody = saleDialog.locator('.ssc__body').first();
+      await expect(compositionBody).toBeVisible();
+      await expect(compositionBody).toContainText(articleName);
+      await expect(compositionBody).toContainText(/Faltan\s+1/i);
+      await compositionToggle.click();
+      await expect(saleDialog.locator('.ssc__body')).toHaveCount(0);
+
+      // El frontend actual corta antes del POST: no esperamos un 409 de red como
+      // hacía el test viejo, porque ese request ya NO debe salir del navegador.
+      const createRequests = [];
+      const captureCreate = (request) => {
+        if (request.method() !== 'POST') return;
+        const action = new URL(request.url()).searchParams.get('action');
+        if (action === 'ventas_crear_batch' || action === 'ventas_crear') createRequests.push(request);
+      };
+      page.on('request', captureCreate);
+      try {
+        const save = saleDialog.getByRole('button', { name: /Guardar venta/i }).last();
+        await expect(save).toBeEnabled();
+        await save.click();
+        await expect(saleDialog).toBeVisible();
+        await expect(
+          page.getByText(/Stock insuficiente.*Disponible.*1.*necesario.*2/i).first(),
+        ).toBeVisible({ timeout: 10_000 });
+        await page.waitForTimeout(350);
+        expect(createRequests, 'Con faltante de receta el frontend no debe enviar ventas_crear*').toHaveLength(0);
+      } finally {
+        page.off('request', captureCreate);
+      }
+
+      // Defensa en profundidad: aunque alguien saltee el frontend y llame al API,
+      // el backend vuelve a validar el mismo snapshot dentro de la transacción.
+      const listsBody = expectApiSuccess(
+        await authenticatedApi(page, 'global_obtener_listas', { query: { _: Date.now() } }),
+        'No se pudieron obtener clientes/tipos de venta para validar el guard del backend',
+      );
+      const lists = listsBody?.listas || listsBody;
+      const client = (lists?.clientes || []).find((row) => Number(row?.activo ?? 1) !== 0);
+      const accountType = (lists?.tipos_venta || []).find((row) => /CUENTA\s*CORRIENTE/i.test(String(row?.nombre || '')));
+      expect(client, 'Debe existir un cliente activo para la prueba de backend').toBeTruthy();
+      expect(accountType, 'Debe existir la forma de venta CUENTA CORRIENTE').toBeTruthy();
+
+      const backendAttempt = await authenticatedApi(page, 'ventas_crear_batch', {
+        method: 'POST',
+        body: {
+          fecha: todayISO(),
+          id_cliente: Number(client.id_cliente || client.id),
+          id_tipo_venta: Number(accountType.id_tipo_venta || accountType.id),
+          items: [{
+            fecha: todayISO(),
+            id_cliente: Number(client.id_cliente || client.id),
+            cliente_nombre: client.nombre,
+            id_tipo_venta: Number(accountType.id_tipo_venta || accountType.id),
+            tipo_item: 'SERVICIO',
+            id_servicio: serviceId,
+            descripcion: serviceName,
+            cantidad: 1,
+            precio: 100,
+            iva_pct: 21,
+            // El validator de ventas exige un total positivo en el payload de
+            // entrada aunque luego el servicio recalcule los importes en servidor.
+            // Si falta, responde 422 antes de llegar al guard de stock y la prueba
+            // deja de validar lo que realmente pretende validar.
+            subtotal: 100,
+            iva_monto: 21,
+            total: 121,
+            monto_total: 121,
+            consumos_snapshot: [{ id_articulo: articleId, cantidad_por_unidad: 2 }],
+          }],
+          medios_pago: [],
+        },
+      });
+      expect(backendAttempt.status).toBe(409);
+      expect(backendAttempt.body?.exito ?? backendAttempt.body?.success).toBe(false);
+      expect(String(backendAttempt.body?.mensaje || backendAttempt.body?.message || '')).toMatch(/Stock insuficiente/i);
       await expectServiceStock(page, articleName, 1);
     } finally {
       // Si el frontend quedó con el modal abierto por el 409, lo cerramos antes de limpiar.
@@ -391,6 +456,44 @@ test.describe('BALTO Servicios <-> Movimientos', () => {
       });
       serviceId = Number(created.id_servicio || created.data?.id_servicio || 0);
       expect(serviceId).toBeGreaterThan(0);
+
+      // El servicio NO tiene stock propio, pero su catálogo de Movimientos debe
+      // transportar la composición completa, incluso este insumo sin control.
+      const refreshedLists = expectApiSuccess(
+        await authenticatedApi(page, 'global_obtener_listas', { query: { _: Date.now() } }),
+        'No se pudieron refrescar las listas después de crear el servicio',
+      );
+      const refreshedCatalog = refreshedLists?.listas || refreshedLists;
+      const serviceCatalogRow = (refreshedCatalog?.servicios_movimiento || refreshedCatalog?.serviciosMovimiento || refreshedCatalog?.servicios || []).find(
+        (row) => Number(row?.id_servicio || 0) === serviceId,
+      );
+      expect(serviceCatalogRow, 'El servicio debe aparecer en el catálogo de Movimientos').toBeTruthy();
+      expect(serviceCatalogRow.stock).toBeNull();
+      expect(serviceCatalogRow.stock_disponible).toBeNull();
+      expect(
+        (serviceCatalogRow.componentes_servicio || []).some(
+          (row) => Number(row?.id_articulo || 0) === articleId && Number(row?.controla_stock) === 0,
+        ),
+        'La composición debe incluir también recursos sin control de stock',
+      ).toBe(true);
+
+      // Y esa composición debe verse en la UI: cerrada por defecto, expandible y
+      // marcada explícitamente como "Sin control de stock".
+      await page.goto('/panel/ventas');
+      await waitForBusyToFinish(page);
+      await page.getByRole('button', { name: /Nueva Venta/i }).click();
+      const serviceDialog = await waitDialog(page, 'Nueva Venta');
+      await fillMovementRow(serviceDialog, { serviceName, quantity: 3 });
+      const serviceToggle = serviceDialog.getByRole('button', { name: /Materiales\s*\/\s*insumos\s*\(1\)/i }).first();
+      await expect(serviceToggle).toBeVisible();
+      await expect(serviceDialog.locator('.ssc__body')).toHaveCount(0);
+      await serviceToggle.click();
+      const serviceComposition = serviceDialog.locator('.ssc__body').first();
+      await expect(serviceComposition).toContainText(articleName);
+      await expect(serviceComposition).toContainText(/Sin control de stock/i);
+      await expect(serviceComposition).toContainText(/Necesario total/i);
+      await serviceDialog.getByRole('button', { name: /Cerrar/i }).last().click();
+      await expect(serviceDialog).toBeHidden();
 
       await createSale(page, { serviceName, quantity: 3, price: 120 });
       saleCreated = true;

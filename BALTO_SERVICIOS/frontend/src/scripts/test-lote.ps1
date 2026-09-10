@@ -13,10 +13,8 @@ param(
 $batches = Get-BaltoTestBatches
 $normalized = $Lote.Trim().ToLowerInvariant()
 
-if ($normalized -eq 'interno' -or $normalized -eq 'completo-interno') {
-  $files = Get-BaltoInternalTests
-} elseif ($normalized -eq 'todo') {
-  $files = Get-UniqueOrderedItems (@($batches['actuales-93']) + @(Get-BaltoInternalTests))
+if ($normalized -eq 'interno' -or $normalized -eq 'completo-interno' -or $normalized -eq 'todo') {
+  $files = Get-BaltoAllCurrentTests
 } elseif ($batches.Contains($normalized)) {
   $files = $batches[$normalized]
 } else {

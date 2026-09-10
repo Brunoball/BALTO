@@ -5,30 +5,12 @@ param(
 
 . "$PSScriptRoot\_balto-playwright-common.ps1"
 
-$batches = Get-BaltoTestBatches
-$sequence = @(
-  'auth',
-  'stock',
-  'movimientos',
-  'cuentas-corrientes',
-  'cheques',
-  'configuracion',
-  'navegacion'
-)
-
-$seen = New-Object 'System.Collections.Generic.HashSet[string]' ([System.StringComparer]::OrdinalIgnoreCase)
-
-foreach ($batch in $sequence) {
-  $remaining = @($batches[$batch] | Where-Object { $seen.Add($_) })
-  if ($remaining.Count -eq 0) {
-    Write-Host "Lote '$batch': todos sus archivos ya fueron ejecutados como dependencia." -ForegroundColor DarkGray
-    continue
-  }
-
-  Write-Host ''
-  Write-Host "================ LOTE: $batch ================" -ForegroundColor Magenta
-  Invoke-BaltoPlaywright -Files $remaining -Visible:$Visible -Workers $Workers
-}
+# Una sola corrida con todos los specs existentes. Antes este script recorría
+# lotes incompletos y omitía varios archivos nuevos de Servicios/Documentos.
+$files = Get-BaltoAllCurrentTests
+Write-Host ''
+Write-Host '================ SUITE COMPLETA ACTUAL ================' -ForegroundColor Magenta
+Invoke-BaltoPlaywright -Files $files -Visible:$Visible -Workers $Workers
 
 Write-Host ''
-Write-Host 'Todos los lotes internos finalizaron correctamente, sin repetir archivos.' -ForegroundColor Green
+Write-Host 'Suite completa finalizada correctamente.' -ForegroundColor Green

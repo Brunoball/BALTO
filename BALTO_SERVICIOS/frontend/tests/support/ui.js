@@ -425,6 +425,35 @@ async function fillControlledDecimal(input, value) {
     .toBeCloseTo(expected, 2);
 }
 
+function servicePricePattern(kind) {
+  const normalized = String(kind || 'sale').trim().toLowerCase();
+  if (['cost', 'costo', 'precio-costo', 'precio_de_costo'].includes(normalized)) {
+    return /P\.\s*de\s*COSTO|PRECIO\s+DE\s+COSTO/i;
+  }
+  return /P\.\s*VENTA|PRECIO\s+DE\s+VENTA/i;
+}
+
+export async function selectServicePriceInMovementRow(row, kind = 'sale') {
+  const priceCell = row.locator('.gm-table-cell').nth(2);
+  const button = priceCell.locator('button').first();
+  await expect(button, 'El servicio debe exponer el selector de precio en la tercera columna').toBeVisible({ timeout: 15_000 });
+  await expect(button).toBeEnabled();
+
+  const expected = servicePricePattern(kind);
+  const matches = async () => expected.test(String(await button.innerText()).replace(/\s+/g, ' '));
+  if (await matches()) return button;
+
+  // El selector de Ventas/Presupuestos implementa ArrowLeft/ArrowRight para
+  // cambiar de precio sin depender de estilos internos del menú desplegable.
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    await button.press('ArrowRight');
+    await expect.poll(matches, { timeout: 3_000, intervals: [50, 100, 200] }).toBeTruthy().catch(() => null);
+    if (await matches()) return button;
+  }
+
+  throw new Error(`No se pudo seleccionar el precio de servicio "${kind}". Opciones visibles: ${await priceCell.innerText()}`);
+}
+
 export async function fillMovementRow(dialog, data) {
   const row = dialog.locator('.gm-table-body .gm-table-row').first();
   await expect(row).toBeVisible();
@@ -444,6 +473,10 @@ export async function fillMovementRow(dialog, data) {
   if (await qty.isVisible().catch(() => false)) {
     await qty.fill(String(data.quantity ?? 1));
     await qty.blur();
+  }
+
+  if (data.serviceName && data.servicePriceKind) {
+    await selectServicePriceInMovementRow(row, data.servicePriceKind);
   }
 
   if (data.price !== undefined) {

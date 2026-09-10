@@ -54,6 +54,75 @@ export async function ensureActiveServiceUnit(page) {
   };
 }
 
+export async function createServiceFixture(page, options = {}) {
+  const unit = options.idUnit
+    ? { id_unidad: Number(options.idUnit) }
+    : await ensureActiveServiceUnit(page);
+  const name = String(options.name || uniqueName('SERVICIO-E2E', 120)).trim();
+
+  const body = expectApiSuccess(
+    await serviciosApi(page, 'servicios_servicio_crear', {
+      method: 'POST',
+      body: {
+        nombre: name,
+        id_categoria: Number(options.categoryId || 0) || null,
+        id_unidad_cobro: Number(unit.id_unidad),
+        descripcion: options.description || `FIXTURE ${name}`,
+        costo_base: Number(options.baseCost ?? 0),
+        duracion_estimada_minutos: Number(options.durationMinutes ?? 60),
+        precio_venta: Number(options.price ?? 100),
+        iva_pct: Number(options.ivaPct ?? 0),
+        composicion: {
+          articulos: Array.isArray(options.articles) ? options.articles : [],
+          trabajadores: Array.isArray(options.workers) ? options.workers : [],
+        },
+      },
+    }),
+    `No se pudo crear el servicio ${name}`,
+  );
+
+  const id = Number(body?.id_servicio || body?.data?.id_servicio || body?.servicio?.id_servicio || 0);
+  expect(id, `El alta de ${name} debe devolver id_servicio`).toBeGreaterThan(0);
+  return { id_servicio: id, nombre: name, body };
+}
+
+export async function deleteServiceFixture(page, idServicio, { tolerateHistoricalUse = true } = {}) {
+  const id = Number(idServicio || 0);
+  if (!id) return { deleted: true, missing: true };
+
+  try {
+    await serviciosApi(page, 'servicios_composicion_guardar', {
+      method: 'POST',
+      body: { id_servicio: id, composicion: { articulos: [], trabajadores: [] } },
+    });
+  } catch {
+    // Si el servicio ya no existe, el delete siguiente decidirá el resultado.
+  }
+
+  const result = await serviciosApi(page, 'servicios_servicio_eliminar', {
+    method: 'POST',
+    body: { id_servicio: id },
+  });
+  if (result.status < 400 && result.body?.exito !== false) {
+    return { deleted: true, id_servicio: id, body: result.body };
+  }
+
+  if (!tolerateHistoricalUse || result.status !== 409) {
+    expectApiSuccess(result, `No se pudo eliminar el servicio #${id}`);
+  }
+
+  const down = await serviciosApi(page, 'servicios_servicio_dar_baja', {
+    method: 'POST',
+    body: { id_servicio: id },
+  });
+  if (down.status < 400 && down.body?.exito !== false) {
+    return { deleted: false, deactivated: true, id_servicio: id, body: down.body };
+  }
+
+  if (down.status !== 409) expectApiSuccess(down, `No se pudo dar de baja el servicio #${id}`);
+  return { deleted: false, deactivated: false, historical: true, id_servicio: id };
+}
+
 export async function createServiceArticleFixture(page, options = {}) {
   const unit = options.idUnit
     ? { id_unidad: Number(options.idUnit) }

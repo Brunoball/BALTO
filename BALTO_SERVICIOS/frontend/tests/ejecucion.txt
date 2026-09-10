@@ -11,8 +11,52 @@ PW_API_URL=https://app.balto.com.ar/BALTO_SERVICIOS/api/routes
 
 No cambies usuario ni contraseña: el testing los elige automáticamente.
 
-Ejecutar:
+SUITE COMPLETA
+--------------
 npx playwright test --project=chromium --workers=1 --reporter=list
+
+También podés usar:
+powershell -ExecutionPolicy Bypass -File src/scripts/test-lote.ps1 todo
+powershell -ExecutionPolicy Bypass -File src/scripts/test-lotes-todos.ps1
+
+Los scripts ya NO tienen una lista vieja congelada: "todo" descubre automáticamente
+todos los tests/*.spec.js actuales (excepto example.spec.js). Al agregar un spec nuevo,
+queda incluido sin tener que editar el runner.
+
+LOTES ÚTILES
+------------
+powershell -ExecutionPolicy Bypass -File src/scripts/test-lote.ps1 servicios
+powershell -ExecutionPolicy Bypass -File src/scripts/test-lote.ps1 stock
+powershell -ExecutionPolicy Bypass -File src/scripts/test-lote.ps1 movimientos
+powershell -ExecutionPolicy Bypass -File src/scripts/test-lote.ps1 documentos
+powershell -ExecutionPolicy Bypass -File src/scripts/test-lote.ps1 exportaciones
+powershell -ExecutionPolicy Bypass -File src/scripts/test-lote.ps1 configuracion
+powershell -ExecutionPolicy Bypass -File src/scripts/test-lote.ps1 smoke
+
+SEGÚN ARCHIVOS MODIFICADOS
+--------------------------
+powershell -ExecutionPolicy Bypass -File src/scripts/test-segun-cambios.ps1
+
+El selector reconoce específicamente los cambios nuevos de BALTO Servicios:
+ServiceStockComposition, ProductStockAutocomplete, Servicios, StockImpactService,
+MovimientoRepository, Ventas, Presupuestos, Otros ingresos y builders de PDF.
+Si cambia infraestructura transversal, helpers del testing o listas globales,
+ejecuta la suite completa en vez de dejar módulos afuera.
+
+COBERTURA NUEVA DE SERVICIOS / MOVIMIENTOS
+------------------------------------------
+- El servicio no tiene stock propio.
+- La composición muestra todos los Materiales/Insumos, incluso sin control de stock.
+- Composición cerrada por defecto y expandible.
+- Edición manual de cantidades/componentes por movimiento.
+- Snapshot congelado en la venta.
+- Sólo componentes con controla_stock=1 descuentan/reponen inventario.
+- Stock insuficiente: bloqueo preventivo frontend + validación backend.
+- Cantidad de servicio entera en UI y backend.
+- Selector Precio de venta / Precio de costo en Ventas, Presupuestos y Otros ingresos.
+- Presupuesto no consume stock; al asignarlo como venta sí.
+- Contrato de PDFs/remitos: nombre del servicio + "Incluye" sin precios internos,
+  y nombre del servicio incorporado al nombre del archivo.
 
 LIMPIEZA AUTOMÁTICA
 -------------------

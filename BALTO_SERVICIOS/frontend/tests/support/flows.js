@@ -323,6 +323,7 @@ export async function createSale(page, data) {
     productName: data.productName,
     quantity: data.quantity ?? 2,
     price: data.price ?? 150,
+    servicePriceKind: data.servicePriceKind,
   });
   const requestedClient = String(data.clientName || data.clientSearch || '').trim();
   data.clientName = await selectFirstAutocomplete(dialog, 'Cliente', requestedClient);
@@ -558,9 +559,11 @@ export async function prepareBudget(page, data) {
   const dialog = await waitDialog(page, 'Nuevo presupuesto');
 
   const itemRow = await fillMovementRow(dialog, {
+    serviceName: data.serviceName,
     productName: data.productName,
     quantity: data.quantity ?? 1,
     price: data.price ?? 150,
+    servicePriceKind: data.servicePriceKind,
   });
 
   const ivaSelect = itemRow.locator('select.gm-cell-input--select').first();
@@ -575,7 +578,7 @@ export async function prepareBudget(page, data) {
 export async function createBudget(page, data) {
   const { dialog } = await prepareBudget(page, data);
   await clickSaveAndWait(dialog, /^Guardar$/i, { timeout: 60_000 });
-  return searchRow(page, data.productName, /Buscar por descripción/i);
+  return searchRow(page, data.serviceName || data.productName, /Buscar por descripción/i);
 }
 
 export async function prepareBudgetConversion(page, productName) {
