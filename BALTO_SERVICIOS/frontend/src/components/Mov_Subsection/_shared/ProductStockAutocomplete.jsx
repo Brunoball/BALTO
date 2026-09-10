@@ -89,14 +89,9 @@ function filterAvailableProduct(product, allowOutOfStock = false) {
   if (!product) return null;
   const kind = getItemKind(product);
 
-  // Un servicio sin receta no tiene límite de stock calculable (null) y sigue
-  // siendo vendible. Si usa insumos, el backend informa cuántos servicios pueden
-  // realizarse con el stock actual y allí sí respetamos el 0.
-  if (kind === "service") {
-    const stock = getStock(product);
-    if (!allowOutOfStock && stock !== null && stock <= 0) return null;
-    return { ...product, variantes: [], tiene_variantes: 0 };
-  }
+  // Un SERVICIO no es inventario: siempre puede seleccionarse. El stock se
+  // valida sobre sus materiales/insumos visibles en la composición del movimiento.
+  if (kind === "service") return { ...product, variantes: [], tiene_variantes: 0 };
 
   // El selector "Stock" representa exclusivamente inventario real. Un Material/Insumo
   // con controla_stock=0 puede seguir usándose dentro de la composición de Servicios,

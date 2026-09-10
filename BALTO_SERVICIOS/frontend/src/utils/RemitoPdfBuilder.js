@@ -758,7 +758,8 @@ export async function buildRemitoPdf({ data = {} } = {}) {
 export async function saveRemitoPdf({ data = {}, download = true, filename = "" } = {}) {
   const doc = await buildRemitoPdf({ data });
   const cliente = data?.cliente_facturacion?.razon_social || data?.labelCliente || "CLIENTE";
-  const finalName = filename || `remito_${safeFilePart(cliente, "CLIENTE")}_${nowStamp()}.pdf`;
+  const servicio = safeFilePart(data?.nombre_servicio_archivo || "", "");
+  const finalName = filename || `remito_${safeFilePart(cliente, "CLIENTE")}${servicio ? `_${servicio}` : ""}_${nowStamp()}.pdf`;
 
   const blob = doc.output("blob");
 

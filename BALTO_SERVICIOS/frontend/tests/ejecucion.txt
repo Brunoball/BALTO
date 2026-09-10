@@ -13,3 +13,13 @@ No cambies usuario ni contraseña: el testing los elige automáticamente.
 
 Ejecutar:
 npx playwright test --project=chromium --workers=1 --reporter=list
+
+LIMPIEZA AUTOMÁTICA
+-------------------
+- Al iniciar la suite se eliminan residuos PW-* de corridas anteriores.
+- Al terminar cada worker se eliminan todos los datos PW-* de esa corrida, incluso si un test falla.
+- También se eliminan relaciones, movimientos, modelos de presupuesto, historial y archivos físicos adjuntos creados por Playwright.
+- Si la limpieza deja aunque sea un registro o no puede borrar un archivo físico, la corrida falla y lo informa.
+
+Si una corrida se corta por Ctrl+C, cierre de terminal/PC o un crash, podés limpiar manualmente con:
+node tests/cleanup-now.mjs

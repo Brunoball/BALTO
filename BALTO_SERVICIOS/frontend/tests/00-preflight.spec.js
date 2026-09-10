@@ -1,4 +1,7 @@
 import { test, expect } from './support/test.js';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { ENV, assertExpectedTenant, assertSafeMutationConfiguration } from './support/env.js';
 import { assertFrontendUsesConfiguredBackend } from './support/ui.js';
 
@@ -28,3 +31,29 @@ test('@smoke preflight: las mutaciones no apuntan accidentalmente a producción'
     expect(host).not.toBe('www.app.balto.com.ar');
   }
 });
+
+test('@smoke preflight: todos los specs usan el wrapper con cleanup automático', async () => {
+  const testsDir = path.dirname(fileURLToPath(import.meta.url));
+  const specs = fs.readdirSync(testsDir).filter((name) => name.endsWith('.spec.js'));
+  const bypass = [];
+
+  for (const name of specs) {
+    const source = fs.readFileSync(path.join(testsDir, name), 'utf8');
+    if (!source.includes("from './support/test.js'") && !source.includes('from "./support/test.js"')) {
+      bypass.push(name);
+    }
+  }
+
+  expect(
+    bypass,
+    'Todo *.spec.js debe importar test/expect desde ./support/test.js para que el teardown automático siempre se ejecute.',
+  ).toEqual([]);
+
+  if (ENV.allowMutations) {
+    expect(
+      ENV.cleanup,
+      'PW_CLEANUP debe quedar habilitado cuando la suite permite mutaciones; de lo contrario podrían quedar registros/archivos PW-*.',
+    ).toBe(true);
+  }
+});
+

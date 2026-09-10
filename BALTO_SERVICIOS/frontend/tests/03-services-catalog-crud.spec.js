@@ -88,8 +88,10 @@ test.describe('BALTO Servicios - catálogo principal', () => {
     await page.getByRole('button', { name: 'Agregar servicio', exact: true }).click();
     const serviceDialog = await waitDialog(page, 'Agregar servicio');
     const serviceCategory = serviceDialog.getByRole('combobox', { name: 'Categoría', exact: true });
+    const serviceUnit = serviceDialog.getByRole('combobox', { name: 'Unidad de cobro', exact: true });
     await expect(serviceCategory.getByRole('option', { name: '+ AGREGAR CATEGORÍA', exact: true })).toHaveCount(1);
     await expect(serviceCategory.getByRole('option', { name: 'SIN CATEGORÍA', exact: true })).toHaveCount(1);
+    await expect(serviceUnit.getByRole('option', { name: '+ AGREGAR UNIDAD', exact: true })).toHaveCount(1);
 
     // La administración completa sigue en Configuración; desde el formulario sólo
     // debe existir el alta rápida solicitada en el desplegable.
@@ -98,6 +100,15 @@ test.describe('BALTO Servicios - catálogo principal', () => {
     await expect(quickCategoryDialog.getByRole('textbox', { name: 'Nombre de la categoría', exact: true })).toBeVisible();
     await quickCategoryDialog.getByRole('button', { name: 'Cancelar', exact: true }).click();
     await expect(quickCategoryDialog).toBeHidden();
+
+    // La unidad de cobro también permite alta rápida sin salir del servicio.
+    await serviceUnit.selectOption('__ADD__');
+    const quickUnitDialog = await waitDialog(page, 'Agregar unidad');
+    await expect(quickUnitDialog.getByRole('textbox', { name: 'Nombre', exact: true })).toBeVisible();
+    await expect(quickUnitDialog.getByRole('textbox', { name: 'Símbolo', exact: true })).toBeVisible();
+    await quickUnitDialog.getByRole('button', { name: 'Cancelar', exact: true }).click();
+    await expect(quickUnitDialog).toBeHidden();
+
     await serviceDialog.getByRole('button', { name: 'Cerrar' }).click();
     await page.getByRole('tablist').getByRole('button', { name: /^Trabajadores$/ }).click();
     await expect(page.getByPlaceholder('Buscar trabajador o rol...')).toBeVisible();
@@ -371,9 +382,13 @@ test.describe('BALTO Servicios - catálogo principal', () => {
       await page.waitForTimeout(450);
       const workerRow = page.locator('.mov-gridTable--row:visible:not(.mov-row--skeleton)').filter({ hasText: workerName }).first();
       await expect(workerRow).toBeVisible({ timeout: 20_000 });
-      for (const title of ['Ver historial', 'Editar', 'Dar de baja', 'Eliminar']) {
+      for (const title of ['Ver historial', 'Editar', 'Dar de baja']) {
         await expect(workerRow.getByTitle(title)).toBeVisible();
       }
+      const workerDelete = workerRow.locator('button[aria-label^="No se puede eliminar porque está asignado a"]');
+      await expect(workerDelete).toBeVisible();
+      await expect(workerDelete).toBeDisabled();
+      await expect(workerDelete.locator('xpath=..')).toHaveAttribute('title', /asignado a 1 servicio/i);
     } finally {
       if (serviceId) {
         await bestEffortPost(page, 'servicios_composicion_guardar', {

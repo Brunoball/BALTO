@@ -5,6 +5,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlus, faFileInvoiceDollar, faEye, faTrash, faUpload, faMoneyCheckDollar, faCheck } from "@fortawesome/free-solid-svg-icons";
 import GlobalAutocomplete from "../../../Global/GlobalAutocomplete/GlobalAutocomplete.jsx";
 import ProductStockAutocomplete from "../../_shared/ProductStockAutocomplete.jsx";
+import ServiceStockComposition, { firstServiceStockShortageMessage, normalizeServiceStockComponents, serializeServiceStockComponents } from "../../_shared/ServiceStockComposition.jsx";
 import BASE_URL from "../../../../config/config";
 import ModalNuevoCheque from "../../../Global/Modales/ModalNuevoCheque.jsx";
 import ModalClienteFiscalArca from "../../../Global/Modales/ModalClienteFiscalArca.jsx";
@@ -273,6 +274,54 @@ function getPrecioVenta(d) {
   const n = Number(venta?.monto ?? venta?.precio ?? d?.precio_venta ?? d?.precio ?? d?.precio_promocional ?? 0);
   return Number.isFinite(n) ? Math.max(0, n) : 0;
 }
+
+function getServicioPreciosDisponibles(d) {
+  if (!d || typeof d !== "object") return [];
+
+  const out = [];
+  const seen = new Set();
+  const raw = Array.isArray(d?.precios) ? d.precios : [];
+
+  const pushPrecio = (tipo, monto, valueHint = "") => {
+    const n = Number(monto);
+    if (!Number.isFinite(n) || n < 0) return;
+    const nombre = safeStr(tipo || "PRECIO").toUpperCase();
+    const key = `${normalizeText(nombre)}|${Math.round(n * 100) / 100}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    out.push({
+      value: valueHint || `servicio_precio_${out.length + 1}`,
+      tipo_precio: nombre,
+      monto: n,
+      label: `${nombre} - ${moneyARS(n)}`,
+    });
+  };
+
+  raw.forEach((p, i) => {
+    pushPrecio(
+      p?.tipo_precio ?? p?.nombre ?? `PRECIO ${i + 1}`,
+      p?.monto ?? p?.precio,
+      `servicio_precio_${i + 1}`
+    );
+  });
+
+  const tieneVenta = out.some((p) => ["precio de venta", "precio venta", "venta"].includes(normalizeText(p.tipo_precio)));
+  const tieneCosto = out.some((p) => ["precio de costo", "precio costo", "costo"].includes(normalizeText(p.tipo_precio)));
+
+  if (!tieneVenta) pushPrecio("PRECIO DE VENTA", d?.precio_venta ?? d?.precio ?? 0, "servicio_precio_venta");
+  if (!tieneCosto) pushPrecio("PRECIO DE COSTO", d?.costo_estimado ?? d?.precio_costo ?? 0, "servicio_precio_costo");
+
+  return out;
+}
+
+function getServicioPrecioSeleccionado(servicio, precioActual) {
+  const precios = getServicioPreciosDisponibles(servicio);
+  if (!precios.length) return "";
+  const actual = Number(precioActual);
+  const exacto = precios.find((p) => Number.isFinite(actual) && Math.abs(Number(p.monto) - actual) < 0.005);
+  return String((exacto || precios[0]).value);
+}
+
 function getMedioPagoId(c) {
   const cand = c?.id ?? c?.id_medio_pago ?? c?.idMedioPago ?? c?.medio_pago_id ?? null;
   const n = Number(cand);
@@ -481,8 +530,10 @@ function normalizeLists(lists) {
     pick("articulosStock").length ? pick("articulosStock") :
     pick("stock_productos").length ? pick("stock_productos") :
     pick("productos_stock").length ? pick("productos_stock") : [];
+  const componentes_stock =
+    pick("articulos_stock_todos").length ? pick("articulos_stock_todos") : productos;
 
-  return { clientes: pick("clientes"), medios_pago, detalles, servicios, productos };
+  return { clientes: pick("clientes"), medios_pago, detalles, servicios, productos, componentes_stock };
 }
 
 // ─── Detección de cheque desde medio de pago ───────────────────────────────────
@@ -513,6 +564,7 @@ function buildEmptyRow(tipoItem = "servicio") {
     ivaPct: 0,
     stock_disponible: null,
     sinStock: false,
+    consumos_snapshot: [],
   };
 }
 
@@ -552,8 +604,9 @@ function buildRowsFromInitialData(data) {
       cantidad,
       precio,
       ivaPct,
-      stock_disponible: getStockDisponible(it),
+      stock_disponible: tipoInicial === "servicio" ? null : getStockDisponible(it),
       sinStock: false,
+      consumos_snapshot: tipoInicial === "servicio" ? normalizeServiceStockComponents(it) : [],
     };
   }).filter((r) => safeStr(r.detalle) || Number(r.id_servicio) > 0 || Number(r.id_articulo) > 0 || Number(r.id_detalle) > 0 || Number(r.id_stock_producto) > 0 || r.precio > 0);
 
@@ -1077,6 +1130,10 @@ export default function ModalNuevoIngreso({
     () => (Array.isArray(localLists.productos) ? localLists.productos : []),
     [localLists.productos]
   );
+  const componentesStockList = useMemo(
+    () => (Array.isArray(localLists.componentes_stock) ? localLists.componentes_stock : []),
+    [localLists.componentes_stock]
+  );
   const clientesList = useMemo(
     () => (Array.isArray(localLists.clientes) ? localLists.clientes : []),
     [localLists.clientes]
@@ -1418,6 +1475,7 @@ export default function ModalNuevoIngreso({
         precioFocused: false,
         stock_disponible: null,
         sinStock: false,
+        consumos_snapshot: [],
       });
     },
     [updateRow]
@@ -1471,6 +1529,7 @@ export default function ModalNuevoIngreso({
             precio,
             stock_disponible: null,
             sinStock: false,
+            consumos_snapshot: [],
             cantidad: 1,
           });
           showToast("exito", "Descripción creada y seleccionada correctamente.");
@@ -1504,6 +1563,7 @@ export default function ModalNuevoIngreso({
         precio,
         stock_disponible: null,
         sinStock: false,
+        consumos_snapshot: [],
         cantidad: 1,
       });
     },
@@ -1512,7 +1572,6 @@ export default function ModalNuevoIngreso({
 
   const handleSelectServicio = useCallback((servicio, rowId) => {
     const idServicio = getServicioId(servicio);
-    const stockDisponible = getStockDisponible(servicio);
     const nombre = getProductoNombre(servicio);
     updateRow(rowId, {
       tipo_item: "servicio",
@@ -1521,12 +1580,13 @@ export default function ModalNuevoIngreso({
       id_detalle: NULL_OPTION,
       id_stock_producto: NULL_OPTION,
       id_stock_variante: NULL_OPTION,
-      mueve_stock: Number(servicio?.mueve_stock ?? 0) ? 1 : 0,
+      mueve_stock: Number(normalizeServiceStockComponents(servicio).length > 0),
       detalle: nombre,
       precio: getPrecioVenta(servicio),
-      stock_disponible: stockDisponible,
-      sinStock: stockDisponible !== null && stockDisponible <= 0,
-      cantidad: stockDisponible !== null && stockDisponible <= 0 ? "" : 1,
+      stock_disponible: null,
+      sinStock: false,
+      consumos_snapshot: normalizeServiceStockComponents(servicio),
+      cantidad: 1,
     });
   }, [updateRow]);
 
@@ -1550,6 +1610,7 @@ export default function ModalNuevoIngreso({
       precio: getPrecioVenta(producto),
       stock_disponible: stockDisponible,
       sinStock: stockDisponible !== null && stockDisponible <= 0,
+      consumos_snapshot: [],
       cantidad: stockDisponible !== null && stockDisponible <= 0 ? "" : 1,
     });
   }, [updateRow]);
@@ -1561,6 +1622,9 @@ export default function ModalNuevoIngreso({
       if (!row) return;
       let cantidadFinal = newCantidad === "" ? "" : Number(newCantidad);
       if (typeof cantidadFinal === "number" && cantidadFinal < 0) cantidadFinal = 0;
+      if (row.tipo_item === "servicio" && typeof cantidadFinal === "number" && Number.isFinite(cantidadFinal)) {
+        cantidadFinal = Math.trunc(cantidadFinal);
+      }
       if (
         row.tipo_item === "producto" &&
         cantidadFinal !== "" &&
@@ -1739,11 +1803,15 @@ export default function ModalNuevoIngreso({
       }
       if (!(safeNumber(r.cantidad) > 0)) issues.push("la cantidad debe ser > 0");
       if (
-        r.tipo_item !== "detalle" &&
+        r.tipo_item === "producto" &&
         r.stock_disponible !== null &&
         safeNumber(r.cantidad) > Number(r.stock_disponible) + 0.0001
       ) {
         issues.push(`la cantidad supera el stock disponible (${r.stock_disponible})`);
+      }
+      if (r.tipo_item === "servicio" && Number(r.id_servicio || 0) > 0 && safeNumber(r.cantidad) > 0) {
+        const stockMsg = firstServiceStockShortageMessage(r.consumos_snapshot, r.cantidad, componentesStockList);
+        if (stockMsg) issues.push(stockMsg);
       }
       if (!(safeNumber(r.precio) > 0)) issues.push("el importe debe ser > 0");
       if (!(safeNumber(r.total) > 0)) issues.push("el total queda en 0");
@@ -1771,7 +1839,7 @@ export default function ModalNuevoIngreso({
       };
     }
     return { ok: true, usable };
-  }, [fecha, selectedClienteId, mediosFilas, mediosPagoList, sumaMediosPago, resumen.total, rowsCalc]);
+  }, [fecha, selectedClienteId, mediosFilas, mediosPagoList, sumaMediosPago, resumen.total, rowsCalc, componentesStockList]);
 
   // ─── Build payload ────────────────────────────────────────────────────────────
   const buildPayload = useCallback(() => {
@@ -1856,6 +1924,9 @@ export default function ModalNuevoIngreso({
         subtotal: safeNumber(x.subtotal),
         iva_monto: safeNumber(x.ivaMonto),
         total: safeNumber(x.total),
+        consumos_snapshot: x.tipo_item === "servicio"
+          ? serializeServiceStockComponents(x.consumos_snapshot)
+          : undefined,
       })),
     };
   }, [rowsCalc, fecha, selectedClienteId, selectedClienteNombre, mediosFilas, mediosPagoList]);
@@ -2384,6 +2455,10 @@ export default function ModalNuevoIngreso({
                   className={`gm-table-body${hasScroll ? " has-scroll" : ""}`}
                 >
                   {rowsCalc.map((r, rowIndex) => {
+                    const servicioPrecio = r.tipo_item === "servicio"
+                      ? serviciosList.find((s) => Number(getServicioId(s) || 0) === Number(r.id_servicio || 0)) || null
+                      : null;
+                    const preciosServicio = getServicioPreciosDisponibles(servicioPrecio);
                     return (
                       <div
                         key={r.id}
@@ -2404,7 +2479,7 @@ export default function ModalNuevoIngreso({
                           {r.tipo_item === "servicio" ? (
                             <ProductStockAutocomplete
                               value={r.detalle}
-                              onChange={(val) => updateRow(r.id, { detalle: val, id_servicio: NULL_OPTION, mueve_stock: 0, precio: 0, stock_disponible: null, sinStock: false })}
+                              onChange={(val) => updateRow(r.id, { detalle: val, id_servicio: NULL_OPTION, mueve_stock: 0, precio: 0, stock_disponible: null, sinStock: false, consumos_snapshot: [] })}
                               onSelect={(item) => handleSelectServicio(item, r.id)}
                               options={serviciosList}
                               catalogKind="service"
@@ -2429,6 +2504,7 @@ export default function ModalNuevoIngreso({
                                   precio: 0,
                                   stock_disponible: null,
                                   sinStock: false,
+                                  consumos_snapshot: [],
                                 })
                               }
                               onSelect={(item) => handleSelectProducto(item, r.id)}
@@ -2455,6 +2531,7 @@ export default function ModalNuevoIngreso({
                                   id_stock_variante: NULL_OPTION,
                                   stock_disponible: null,
                                   sinStock: false,
+                                  consumos_snapshot: [],
                                 })
                               }
                               onSelect={(item) => handleSelectDetalle(item, r.id)}
@@ -2468,7 +2545,7 @@ export default function ModalNuevoIngreso({
                               inputClassName="gm-cell-input"
                             />
                           )}
-                          {r.tipo_item !== "detalle" && r.stock_disponible !== null && (
+                          {r.tipo_item === "producto" && r.stock_disponible !== null && (
                             <small className="oi-stock-hint">Stock disponible: {r.stock_disponible}</small>
                           )}
                         </div>
@@ -2477,9 +2554,9 @@ export default function ModalNuevoIngreso({
                           <input
                             className="gm-cell-input gm-cell-input--center"
                             type="number"
-                            min="0.01"
-                            max={r.tipo_item !== "detalle" && r.stock_disponible !== null ? r.stock_disponible : undefined}
-                            step="0.000001"
+                            min={r.tipo_item === "servicio" ? "1" : "0.01"}
+                            max={r.tipo_item === "producto" && r.stock_disponible !== null ? r.stock_disponible : undefined}
+                            step={r.tipo_item === "servicio" ? "1" : "0.000001"}
                             value={r.cantidad}
                             onChange={(e) =>
                               handleCantidadChange(
@@ -2487,7 +2564,7 @@ export default function ModalNuevoIngreso({
                                 e.target.value === "" ? "" : Number(e.target.value)
                               )
                             }
-                            disabled={saving || Boolean(r.tipo_item !== "detalle" && r.sinStock)}
+                            disabled={saving || Boolean(r.tipo_item === "producto" && r.sinStock)}
                             placeholder=""
                             title=""
                             style={{ width: "100%" }}
@@ -2495,47 +2572,65 @@ export default function ModalNuevoIngreso({
                         </div>
 
                         <div className="gm-table-cell gm-table-cell--right">
-                          <input
-                            className="gm-cell-input gm-cell-input--right"
-                            type="text"
-                            inputMode="decimal"
-                            value={
-                              r.precioFocused
-                                ? r.precioDraft ?? ""
-                                : formatMoneyInputARS(r.precio)
-                            }
-                            onFocus={(e) => {
-                              updateRow(r.id, {
-                                precioFocused: true,
-                                precioDraft: formatEditableMoney(r.precio),
-                              });
-                              setTimeout(() => e.target.select(), 0);
-                            }}
-                            onChange={(e) => {
-                              const cleaned = e.target.value.replace(/[^\d,.\-]/g, "");
-                              updateRow(r.id, {
-                                precioDraft: cleaned,
-                                precio: parseMoneyInputARS(cleaned),
-                              });
-                            }}
-                            onBlur={() => {
-                              const parsed = parseMoneyInputARS(r.precioDraft);
-                              updateRow(r.id, {
-                                precio: parsed,
-                                precioDraft: "",
-                                precioFocused: false,
-                              });
-                            }}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") {
-                                e.preventDefault();
-                                e.currentTarget.blur();
+                          {r.tipo_item === "servicio" && Number(r.id_servicio || 0) > 0 && preciosServicio.length > 0 ? (
+                            <select
+                              className="gm-cell-input gm-cell-input--right gm-cell-input--select"
+                              value={getServicioPrecioSeleccionado(servicioPrecio, r.precio)}
+                              onChange={(e) => {
+                                const selected = preciosServicio.find((p) => String(p.value) === String(e.target.value));
+                                if (selected) updateRow(r.id, { precio: Number(selected.monto || 0), precioDraft: "", precioFocused: false });
+                              }}
+                              disabled={saving}
+                              style={{ width: "100%" }}
+                              aria-label={`Precio del servicio fila ${rowIndex + 1}`}
+                            >
+                              {preciosServicio.map((p) => (
+                                <option key={p.value} value={p.value}>{p.label}</option>
+                              ))}
+                            </select>
+                          ) : (
+                            <input
+                              className="gm-cell-input gm-cell-input--right"
+                              type="text"
+                              inputMode="decimal"
+                              value={
+                                r.precioFocused
+                                  ? r.precioDraft ?? ""
+                                  : formatMoneyInputARS(r.precio)
                               }
-                            }}
-                            placeholder="$ 0,00"
-                            disabled={saving}
-                            style={{ width: "100%" }}
-                          />
+                              onFocus={(e) => {
+                                updateRow(r.id, {
+                                  precioFocused: true,
+                                  precioDraft: formatEditableMoney(r.precio),
+                                });
+                                setTimeout(() => e.target.select(), 0);
+                              }}
+                              onChange={(e) => {
+                                const cleaned = e.target.value.replace(/[^\d,.\-]/g, "");
+                                updateRow(r.id, {
+                                  precioDraft: cleaned,
+                                  precio: parseMoneyInputARS(cleaned),
+                                });
+                              }}
+                              onBlur={() => {
+                                const parsed = parseMoneyInputARS(r.precioDraft);
+                                updateRow(r.id, {
+                                  precio: parsed,
+                                  precioDraft: "",
+                                  precioFocused: false,
+                                });
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  e.currentTarget.blur();
+                                }
+                              }}
+                              placeholder="$ 0,00"
+                              disabled={saving}
+                              style={{ width: "100%" }}
+                            />
+                          )}
                         </div>
 
                         <div className="gm-table-cell gm-table-cell--center">
@@ -2573,6 +2668,17 @@ export default function ModalNuevoIngreso({
                             ×
                           </button>
                         </div>
+                        {r.tipo_item === "servicio" && Number(r.id_servicio || 0) > 0 ? (
+                          <ServiceStockComposition
+                            components={r.consumos_snapshot}
+                            stockOptions={componentesStockList}
+                            serviceQuantity={r.cantidad}
+                            serviceName={r.detalle}
+                            serviceId={r.id_servicio}
+                            disabled={saving}
+                            onChange={(next) => updateRow(r.id, { consumos_snapshot: next, mueve_stock: next.length ? 1 : 0 })}
+                          />
+                        ) : null}
                       </div>
                     );
                   })}

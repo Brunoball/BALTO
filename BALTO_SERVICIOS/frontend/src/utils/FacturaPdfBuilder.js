@@ -1039,7 +1039,7 @@ export async function saveBaltoInvoicePdf({
       data?.cliente ||
       "CLIENTE"
   );
-  const sys = safe(data?.labelSistema || data?.sistema || "SISTEMA");
+  const sys = safe(data?.nombre_servicio_archivo || data?.labelSistema || data?.sistema || "SISTEMA");
 
   const filename = filenameIn || `FACTURA_${pv}-${nro}_${cli}_${sys}.pdf`;
 

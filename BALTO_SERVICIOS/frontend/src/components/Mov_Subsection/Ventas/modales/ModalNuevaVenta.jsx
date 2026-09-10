@@ -11,6 +11,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFileInvoiceDollar, faPlus, faMoneyCheckDollar } from "@fortawesome/free-solid-svg-icons";
 import GlobalAutocomplete from "../../../Global/GlobalAutocomplete/GlobalAutocomplete.jsx";
 import ProductStockAutocomplete from "../../_shared/ProductStockAutocomplete.jsx";
+import ServiceStockComposition, { firstServiceStockShortageMessage, normalizeServiceStockComponents, serializeServiceStockComponents } from "../../_shared/ServiceStockComposition.jsx";
 import ModalNuevoCheque from "../../../Global/Modales/ModalNuevoCheque.jsx";
 import ModalClienteFiscalArca from "../../../Global/Modales/ModalClienteFiscalArca.jsx";
 import {
@@ -109,6 +110,33 @@ function getStockVarianteId(d) {
 function getDetalleNombre(d) {
   return safeStr(d?.nombre || d?.descripcion || d?.detalle || d?.producto || d?.label || "");
 }
+function formatQtyPdf(v) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return "";
+  return n.toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 6 });
+}
+function buildServiceDocumentDescription(row) {
+  const nombre = safeStr(row?.detalleText) || "Servicio";
+  if (!(Number(row?.id_servicio || 0) > 0)) return nombre;
+  const componentes = normalizeServiceStockComponents(row?.consumos_snapshot);
+  if (!componentes.length) return nombre;
+  const detalle = componentes.map((c) => {
+    const qty = formatQtyPdf(c?.cantidad_por_unidad);
+    const unidad = safeStr(c?.unidad_simbolo);
+    const recurso = safeStr(c?.nombre) || "Material / insumo";
+    return `${recurso}${qty ? ` x ${qty}${unidad ? ` ${unidad}` : ""}` : ""}`;
+  }).join(" · ");
+  return `${nombre} | Incluye: ${detalle}`;
+}
+function getServiceFilenameLabel(rows) {
+  const nombres = Array.from(new Set((Array.isArray(rows) ? rows : [])
+    .filter((r) => Number(r?.id_servicio || 0) > 0)
+    .map((r) => safeStr(r?.detalleText))
+    .filter(Boolean)));
+  if (nombres.length === 1) return nombres[0];
+  if (nombres.length > 1) return "VARIOS SERVICIOS";
+  return "";
+}
 function getClienteId(c) {
   const cand = c?.id ?? c?.id_cliente ?? c?.idCliente ?? c?.cliente_id ?? c?.idcliente ?? null;
   const n = Number(cand);
@@ -193,7 +221,7 @@ function pickDetallePrecioInicial(precios) {
   return precios[0] ?? null;
 }
 
-const SAFE_LISTS = { clientes: [], detalles: [], medios_pago: [], tipos_venta: [], cuentas_corrientes: [] };
+const SAFE_LISTS = { clientes: [], detalles: [], componentes_stock: [], medios_pago: [], tipos_venta: [], cuentas_corrientes: [] };
 const ADD_CLIENTE_OPTION = { __action: "add_cliente", id: "__add_cliente__", nombre: "➕ Agregar cliente" };
 
 function isAddClienteOption(option) {
@@ -228,6 +256,9 @@ function normalizeLists(lists) {
   return {
     clientes: pick("clientes"),
     detalles: pick("detalles"),
+    componentes_stock: pick("articulos_stock_todos").length
+      ? pick("articulos_stock_todos")
+      : (pick("articulos_stock").length ? pick("articulos_stock") : pick("stock_productos")),
     medios_pago: Array.isArray(mediosPago) ? mediosPago : [],
     cuentas_corrientes: Array.isArray(cuentas) ? cuentas : [],
     tipos_venta: Array.isArray(tiposVenta) ? tiposVenta : [],
@@ -737,6 +768,7 @@ function buildEmptyRow() {
     ivaPct: 0,
     stock_disponible: null,
     sinStock: false,
+    consumos_snapshot: [],
   };
 }
 
@@ -1521,6 +1553,10 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
     () => (Array.isArray(localLists.detalles) ? localLists.detalles : []),
     [localLists.detalles]
   );
+  const componentesStockList = useMemo(
+    () => (Array.isArray(localLists.componentes_stock) ? localLists.componentes_stock : []),
+    [localLists.componentes_stock]
+  );
   const clientesList = useMemo(
     () => (Array.isArray(localLists.clientes) ? localLists.clientes : []),
     [localLists.clientes]
@@ -1952,8 +1988,9 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
       const preciosDisponibles = getDetallePreciosDisponibles(detalle);
       const precioInicial = pickDetallePrecioInicial(preciosDisponibles);
       const precio = Number(precioInicial?.monto ?? detalle?.precio ?? 0);
-      const stockDisponible = getStockDisponible(detalle);
-      const sinStock = isSinStock(stockDisponible);
+      const esServicio = Boolean(idServicio);
+      const stockDisponible = esServicio ? null : getStockDisponible(detalle);
+      const sinStock = esServicio ? false : isSinStock(stockDisponible);
       const nombreDetalle = getDetalleNombre(detalle);
 
       updateRow(rowId, {
@@ -1970,6 +2007,7 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
         precios_disponibles: preciosDisponibles,
         stock_disponible: stockDisponible,
         sinStock,
+        consumos_snapshot: esServicio ? normalizeServiceStockComponents(detalle) : [],
         cantidad: sinStock ? "" : 1,
       });
 
@@ -2003,15 +2041,20 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
       const row = rows.find((r) => r.id === rowId);
       if (!row) return;
 
-      if (row.sinStock || isSinStock(row.stock_disponible)) {
+      const esServicio = Number(row.id_servicio || 0) > 0;
+      const esArticulo = !esServicio;
+      if (esArticulo && (row.sinStock || isSinStock(row.stock_disponible))) {
         updateRow(rowId, { cantidad: "" });
         return;
       }
 
-      const stockDisponible = row.stock_disponible;
+      const stockDisponible = esArticulo ? row.stock_disponible : null;
       let cantidadFinal = newCantidad === "" ? "" : Number(newCantidad);
 
       if (typeof cantidadFinal === "number" && cantidadFinal < 0) cantidadFinal = 0;
+      if (esServicio && typeof cantidadFinal === "number" && Number.isFinite(cantidadFinal)) {
+        cantidadFinal = Math.trunc(cantidadFinal);
+      }
 
       if (
         stockDisponible !== null &&
@@ -2457,10 +2500,22 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
     }
 
     const problems = [];
+    const stockProblems = [];
     rowsCalc.forEach((r, i) => {
       const p = describeLineProblem(r, i + 1);
       if (p) problems.push(p);
+      if (Number(r.id_servicio || 0) > 0 && safeNumber(r.cantidad) > 0) {
+        const stockMsg = firstServiceStockShortageMessage(r.consumos_snapshot, r.cantidad, componentesStockList);
+        if (stockMsg) stockProblems.push(`Fila ${i + 1}: ${stockMsg}`);
+      }
     });
+
+    if (stockProblems.length) {
+      return {
+        ok: false,
+        msg: stockProblems.slice(0, 2).join(" ") + (stockProblems.length > 2 ? ` (y ${stockProblems.length - 2} más)` : ""),
+      };
+    }
 
     const usable = rowsCalc.filter(isUsableSaleRow);
 
@@ -2474,7 +2529,7 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
     }
 
     return { ok: true, warn: problems.length > 0 };
-  }, [cliInput, selectedClienteId, filters, isContado, fecha, usuarioBasicoVentas, rowsCalc, mediosFilas, mediosPagoList, resumen, sumaMediosPago]);
+  }, [cliInput, selectedClienteId, filters, isContado, fecha, usuarioBasicoVentas, rowsCalc, mediosFilas, mediosPagoList, resumen, sumaMediosPago, componentesStockList]);
 
   const buildResumenFacturaPayload = useCallback(
     (clienteFiscalResuelto, cfg, clienteOverride = null) => {
@@ -2482,7 +2537,7 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
         .filter(isUsableSaleRow)
         .map((r, i) => ({
           codigo: String(i + 1),
-          descripcion: safeStr(r.detalleText),
+          descripcion: buildServiceDocumentDescription(r),
           cantidad: Number(r.cantidad || 0),
           unidad: "u",
           precio_unitario: Number(r.precioLista ?? r.precio ?? 0),
@@ -2508,6 +2563,7 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
         id_sistema: null,
         labelCliente: labelClienteFinal,
         labelSistema: "Nueva venta",
+        nombre_servicio_archivo: getServiceFilenameLabel(rowsCalc),
         config_facturacion: cfg || {},
         ...emisorPdf,
         cliente_facturacion: {
@@ -2550,7 +2606,7 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
           id: r.id,
           id_detalle: Number(getSelectedSaleItemId(r) || 0),
           codigo: String(i + 1),
-          descripcion: safeStr(r.detalleText),
+          descripcion: buildServiceDocumentDescription(r),
           cantidad: Number(r.cantidad || 0),
           unidad: "u",
           precio_unitario: Number(r.precioLista ?? r.precio ?? 0),
@@ -2574,6 +2630,7 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
         id_sistema: null,
         labelCliente: nombreCliente,
         labelSistema: "Nueva venta",
+        nombre_servicio_archivo: getServiceFilenameLabel(rowsCalc),
         cliente_facturacion: buildClienteFiscalPdf(clienteFiscal, clienteResolvedFromInput, nombreCliente),
         config_facturacion: cfg || {},
         ...emisorPdf,
@@ -2755,6 +2812,9 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
           iva_monto: Math.round(Number(r.ivaMonto) * 100) / 100,
           total: Math.round(Number(r.total) * 100) / 100,
           monto_total: Math.round(Number(r.total) * 100) / 100,
+          consumos_snapshot: Number.isFinite(idServicio) && idServicio > 0
+            ? serializeServiceStockComponents(r.consumos_snapshot)
+            : undefined,
           accion_venta: accionFinal,
           es_facturada: esFacturadaFinal,
           cliente_fiscal: esFacturadaFinal ? clienteFiscalResuelto : null,
@@ -3602,7 +3662,8 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
                       r.stock_disponible !== null && r.stock_disponible !== undefined
                         ? Number(r.stock_disponible)
                         : null;
-                    const rowSinStock = r.sinStock || isSinStock(stockNum);
+                    const esServicio = Number(r.id_servicio || 0) > 0;
+                    const rowSinStock = !esServicio && (r.sinStock || isSinStock(stockNum));
 
                     return (
                       <div key={r.id} className={`gm-table-row ${rowSinStock ? "nv-row--sin-stock" : ""}`}>
@@ -3623,6 +3684,7 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
                                 precios_disponibles: [],
                                 stock_disponible: null,
                                 sinStock: false,
+                                consumos_snapshot: [],
                               })
                             }
                             onSelect={(d) => handleSelectDetalle(d, r.id)}
@@ -3639,8 +3701,8 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
                           <input
                             className="gm-cell-input gm-cell-input--center"
                             type="number"
-                            min={rowSinStock ? undefined : "0.000001"}
-                            step="0.000001"
+                            min={rowSinStock ? undefined : (esServicio ? "1" : "0.000001")}
+                            step={esServicio ? "1" : "0.000001"}
                             value={rowSinStock ? "" : r.cantidad}
                             onChange={(e) =>
                               handleCantidadChange(r.id, e.target.value === "" ? "" : Number(e.target.value))
@@ -3657,7 +3719,7 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
                               opacity: rowSinStock ? 0.9 : 1,
                             }}
                           />
-                          {r.stock_disponible !== null && r.stock_disponible !== undefined && (
+                          {!esServicio && r.stock_disponible !== null && r.stock_disponible !== undefined && (
                             <div className={`gm-stock-hint ${rowSinStock ? "gm-stock-hint--danger" : ""}`}>
                               {rowSinStock ? "Sin stock" : `Stock: ${r.stock_disponible}`}
                             </div>
@@ -3723,6 +3785,17 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
                             ×
                           </button>
                         </div>
+                        {esServicio ? (
+                          <ServiceStockComposition
+                            components={r.consumos_snapshot}
+                            stockOptions={componentesStockList}
+                            serviceQuantity={r.cantidad}
+                            serviceName={r.detalleText}
+                            serviceId={r.id_servicio}
+                            disabled={saving || addUI.open}
+                            onChange={(next) => updateRow(r.id, { consumos_snapshot: next })}
+                          />
+                        ) : null}
                       </div>
                     );
                   })}

@@ -7,6 +7,7 @@ import "./ModalPresupuesto.css";
 import "./ModalPresupuestosChecklist.css";
 import GlobalAutocomplete from "../../../Global/GlobalAutocomplete/GlobalAutocomplete.jsx";
 import ProductStockAutocomplete from "../../_shared/ProductStockAutocomplete.jsx";
+import ServiceStockComposition, { normalizeServiceStockComponents, serializeServiceStockComponents } from "../../_shared/ServiceStockComposition.jsx";
 import ModalClienteFiscalArca from "../../../Global/Modales/ModalClienteFiscalArca.jsx";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -709,10 +710,11 @@ function buildEmptyRow() {
     ivaPct: 0,
     stock_disponible: null,
     sinStock: false,
+    consumos_snapshot: [],
   };
 }
 
-function buildRowFromModelItem(item) {
+function buildRowFromModelItem(item, catalogo = []) {
   const raw = item && typeof item === "object" ? item : {};
   const idDetalle = Number(raw.id_detalle || 0);
   const idServicio = Number(raw.id_servicio || 0);
@@ -721,6 +723,14 @@ function buildRowFromModelItem(item) {
   const cantidad = safeNumber(raw.cantidad);
   const precio = safeNumber(raw.precio ?? raw.precio_unitario);
   const ivaPct = safeNumber(raw.iva_pct ?? raw.ivaPct);
+
+  const snapshotModelo = normalizeServiceStockComponents(raw);
+  const servicioCatalogo = idServicio > 0
+    ? (Array.isArray(catalogo) ? catalogo.find((x) => Number(getServicioId(x) || 0) === idServicio) : null)
+    : null;
+  const consumosServicio = idServicio > 0
+    ? (snapshotModelo.length ? snapshotModelo : normalizeServiceStockComponents(servicioCatalogo))
+    : [];
 
   return {
     ...buildEmptyRow(),
@@ -737,6 +747,7 @@ function buildRowFromModelItem(item) {
     ivaPct: ivaPct >= 0 ? ivaPct : 0,
     stock_disponible: null,
     sinStock: false,
+    consumos_snapshot: consumosServicio,
     precios_disponibles: [],
     id_tipo_precio_stock: NULL_OPTION,
     precio_tipo_label: "",
@@ -776,6 +787,7 @@ function normalizeLists(lists) {
     clientes: pick("clientes"),
     // Un presupuesto no reserva stock: debe poder cotizar también artículos hoy agotados.
     detalles: catalogoCompleto.length ? catalogoCompleto : pick("detalles"),
+    componentes_stock: articulos,
   };
 }
 
@@ -854,6 +866,7 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
   const normalizedLists = useMemo(() => normalizeLists(lists), [lists]);
   const clientesBaseList = normalizedLists.clientes;
   const detallesList = normalizedLists.detalles;
+  const componentesStockList = normalizedLists.componentes_stock;
   const [localClientes, setLocalClientes] = useState(() => (Array.isArray(clientesBaseList) ? clientesBaseList : []));
   const clientesList = localClientes;
   const clientesOptions = useMemo(() => [ADD_CLIENTE_OPTION, ...clientesList], [clientesList]);
@@ -937,13 +950,13 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
     const modelItems = Array.isArray(modelo.items) ? modelo.items : [];
     setObservaciones(upperInput(modelo.observaciones || modelo.notas));
     setCondiciones(buildCondicionesFromModel(modelo));
-    setRows(modelItems.length ? modelItems.map(buildRowFromModelItem) : [buildEmptyRow()]);
+    setRows(modelItems.length ? modelItems.map((item) => buildRowFromModelItem(item, detallesList)) : [buildEmptyRow()]);
     setPresupuestoPersonalizado(Number(modelo.es_personalizado ?? 1) === 1);
     setModeloOrigen(modelo);
     setGuardarComoModelo(false);
     setModeloNombre("");
     setModeloDescripcion("");
-  }, [initialModel, open]);
+  }, [detallesList, initialModel, open]);
 
   const updateRow = useCallback((rowId, patch) => {
     setRows((prev) => prev.map((r) => (r.id === rowId ? { ...r, ...patch } : r)));
@@ -1136,8 +1149,9 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
     const idStockVariante = idServicio ? null : getStockVarianteId(detalle);
     const precios = getDetallePreciosDisponibles(detalle);
     const inicial = pickDetallePrecioInicial(precios);
-    const stockDisponible = getStockDisponible(detalle);
-    const sinStock = isSinStock(stockDisponible);
+    const esServicio = Boolean(idServicio);
+    const stockDisponible = esServicio ? null : getStockDisponible(detalle);
+    const sinStock = esServicio ? false : isSinStock(stockDisponible);
     const nombreDetalle = getDetalleNombre(detalle);
 
     updateRow(rowId, {
@@ -1158,6 +1172,7 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
       precios_disponibles: presupuestoPersonalizado ? [] : precios,
       stock_disponible: stockDisponible,
       sinStock,
+      consumos_snapshot: esServicio ? normalizeServiceStockComponents(detalle) : [],
     });
 
     if (sinStock) {
@@ -1182,6 +1197,7 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
       precioFocused: false,
       stock_disponible: null,
       sinStock: false,
+      consumos_snapshot: [],
     });
   }, [updateRow]);
 
@@ -1190,11 +1206,16 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
     if (!row) return;
 
 
+    const esServicio = Number(row.id_servicio || 0) > 0;
     let cantidadFinal = newCantidad === "" ? "" : Number(newCantidad);
     if (typeof cantidadFinal === "number" && cantidadFinal < 0) cantidadFinal = 0;
+    if (esServicio && typeof cantidadFinal === "number" && Number.isFinite(cantidadFinal)) {
+      cantidadFinal = Math.trunc(cantidadFinal);
+    }
 
     if (
       !presupuestoPersonalizado &&
+      !esServicio &&
       row.stock_disponible !== null &&
       row.stock_disponible !== undefined &&
       row.stock_disponible !== "" &&
@@ -1375,6 +1396,9 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
         total: r.total,
         id_tipo_precio_stock: r.id_tipo_precio_stock || null,
         tipo_precio: r.precio_tipo_label || "",
+        consumos_snapshot: Number(r.id_servicio || 0) > 0
+          ? serializeServiceStockComponents(r.consumos_snapshot)
+          : undefined,
       }));
   }, [computedRows]);
 
@@ -1644,8 +1668,8 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
                         <input
                           className="gm-cell-input gm-cell-input--center"
                           type="number"
-                          min={rowSinStock ? undefined : (presupuestoPersonalizado ? "0.01" : "1")}
-                          step={presupuestoPersonalizado ? "0.01" : "1"}
+                          min={rowSinStock ? undefined : (Number(r.id_servicio || 0) > 0 ? "1" : (presupuestoPersonalizado ? "0.01" : "1"))}
+                          step={Number(r.id_servicio || 0) > 0 ? "1" : (presupuestoPersonalizado ? "0.01" : "1")}
                           value={rowSinStock ? "" : r.cantidad}
                           onChange={(e) =>
                             handleCantidadChange(r.id, e.target.value === "" ? "" : Number(e.target.value))
@@ -1662,7 +1686,7 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
                             opacity: rowSinStock ? 0.9 : 1,
                           }}
                         />
-                        {r.stock_disponible !== null && r.stock_disponible !== undefined && (
+                        {!(Number(r.id_servicio || 0) > 0) && r.stock_disponible !== null && r.stock_disponible !== undefined && (
                           <div
                             style={{
                               fontSize: "10px",
@@ -1732,6 +1756,17 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
                         ×
                       </button>
                     </div>
+                    {Number(r.id_servicio || 0) > 0 ? (
+                      <ServiceStockComposition
+                        components={r.consumos_snapshot}
+                        stockOptions={componentesStockList}
+                        serviceQuantity={r.cantidad}
+                        serviceName={r.detalleText}
+                        serviceId={r.id_servicio}
+                        disabled={saving}
+                        onChange={(next) => updateRow(r.id, { consumos_snapshot: next })}
+                      />
+                    ) : null}
                     </div>
                   );
                 })}

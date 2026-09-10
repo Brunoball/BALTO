@@ -940,7 +940,8 @@ export async function saveVentaNoFacturadaPdf({
   );
 
   const fecha = safeFilePart(data?.fecha_cbte_iso || data?.fecha || nowStamp(), nowStamp());
-  const filename = filenameIn || `VENTA_NO_FACTURADA_${fecha}_${cliente}.pdf`;
+  const servicio = safeFilePart(data?.nombre_servicio_archivo || "", "");
+  const filename = filenameIn || `VENTA_NO_FACTURADA_${fecha}_${cliente}${servicio ? `_${servicio}` : ""}.pdf`;
 
   if (download) {
     const url = URL.createObjectURL(blob);

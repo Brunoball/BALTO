@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './support/test.js';
 import { Buffer } from 'node:buffer';
 import { patchContextNavigation, patchPageNavigation } from './support/env.js';
 import { authenticatedApi, expectApiSuccess } from './support/api.js';
