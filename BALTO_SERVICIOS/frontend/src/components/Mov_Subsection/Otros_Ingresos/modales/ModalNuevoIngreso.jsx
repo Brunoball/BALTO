@@ -2675,6 +2675,7 @@ export default function ModalNuevoIngreso({
                             serviceQuantity={r.cantidad}
                             serviceName={r.detalle}
                             serviceId={r.id_servicio}
+                            tableLayout
                             disabled={saving}
                             onChange={(next) => updateRow(r.id, { consumos_snapshot: next, mueve_stock: next.length ? 1 : 0 })}
                           />

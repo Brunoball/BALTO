@@ -1,7 +1,6 @@
 import { test, expect } from './support/test.js';
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { ENV, assertExpectedTenant, assertSafeMutationConfiguration } from './support/env.js';
 import { assertFrontendUsesConfiguredBackend } from './support/ui.js';
 
@@ -33,7 +32,7 @@ test('@smoke preflight: las mutaciones no apuntan accidentalmente a producción'
 });
 
 test('@smoke preflight: todos los specs usan el wrapper con cleanup automático', async () => {
-  const testsDir = path.dirname(fileURLToPath(import.meta.url));
+  const testsDir = __dirname;
   const specs = fs.readdirSync(testsDir).filter((name) => name.endsWith('.spec.js'));
   const bypass = [];
 

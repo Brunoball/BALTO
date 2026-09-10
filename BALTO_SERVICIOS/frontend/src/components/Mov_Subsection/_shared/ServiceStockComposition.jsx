@@ -144,6 +144,7 @@ export default function ServiceStockComposition({
   serviceName = "",
   serviceId = null,
   stockLabel = "Stock actual",
+  tableLayout = false,
 }) {
   const normalized = useMemo(() => normalizeServiceStockComponents(components), [components]);
   const options = useMemo(
@@ -207,6 +208,7 @@ export default function ServiceStockComposition({
       required,
       controlaStock,
       insufficient: controlaStock && stock !== null && required > stock + EPS,
+      sufficient: controlaStock && stock !== null && required <= stock + EPS,
       unidad_simbolo: text(current?.unidad_simbolo ?? component.unidad_simbolo),
     };
   });
@@ -215,7 +217,7 @@ export default function ServiceStockComposition({
   const canAdd = options.some((x) => !usedIds.has(articleId(x)));
 
   return (
-    <div className={`ssc ${shortages.length ? "ssc--danger" : ""}`}>
+    <div className={`ssc ${shortages.length ? "ssc--danger" : ""} ${tableLayout ? "ssc--table-layout" : ""}`}>
       <button type="button" className="ssc__toggle" onClick={() => setOpen((v) => !v)} disabled={disabled && !normalized.length}>
         <span>{open ? "▾" : "▸"} Materiales / insumos ({normalized.length})</span>
         {shortages.length ? <strong>{shortages.length} con stock insuficiente</strong> : <span>Detalle del servicio</span>}
@@ -226,58 +228,125 @@ export default function ServiceStockComposition({
           {serviceName ? <div className="ssc__intro">Composición usada para <strong>{serviceName}</strong>. Podés ajustar estas cantidades sólo para este movimiento.</div> : null}
           {!enriched.length ? <div className="ssc__empty">Este servicio no tiene materiales/insumos cargados.</div> : null}
 
-          {enriched.map((component, idx) => (
-            <div className={`ssc__row ${component.insufficient ? "ssc__row--danger" : ""}`} key={`${component.id_articulo}-${idx}`}>
-              <div className="ssc__resource">
-                <label>Material / insumo</label>
-                <select value={component.id_articulo} onChange={(e) => changeArticle(idx, e.target.value)} disabled={disabled}>
-                  {!optionsById.has(component.id_articulo) ? (
-                    <option value={component.id_articulo}>{component.nombre}</option>
-                  ) : null}
-                  {options.map((option) => {
-                    const id = articleId(option);
-                    const duplicate = usedIds.has(id) && id !== component.id_articulo;
-                    return <option key={id} value={id} disabled={duplicate}>{text(option?.nombre) || `Artículo #${id}`}</option>;
-                  })}
-                </select>
-                <small>{component.articulo_tipo || "MATERIAL / INSUMO"}{component.unidad_simbolo ? ` · ${component.unidad_simbolo}` : ""}</small>
+          {tableLayout && enriched.length ? (
+            <div className="ssc__excel-table">
+              <div className="ssc__excel-head" aria-hidden="true">
+                <div className="ssc__excel-th ssc__excel-th--resource">Material / insumo</div>
+                <div className="ssc__excel-th">Cant. por servicio</div>
+                <div className="ssc__excel-th">Necesario total</div>
+                <div className="ssc__excel-th">{stockLabel}</div>
+                <div className="ssc__excel-th">Acción</div>
               </div>
 
-              <div className="ssc__qty">
-                <label>Cant. por servicio</label>
-                <input
-                  type="number"
-                  min="0.000001"
-                  step="0.000001"
-                  value={component.cantidad_por_unidad}
-                  onChange={(e) => updateAt(idx, { cantidad_por_unidad: Math.max(0.000001, Number(e.target.value) || 0.000001) })}
-                  disabled={disabled}
-                />
-              </div>
+              {enriched.map((component, idx) => (
+                <div className={`ssc__excel-row ${component.insufficient ? "ssc__excel-row--danger" : component.sufficient ? "ssc__excel-row--ok" : ""}`} key={`${component.id_articulo}-${idx}`}>
+                  <div className="ssc__excel-cell ssc__excel-cell--resource">
+                    <span className="ssc__excel-mobile-label">Material / insumo</span>
+                    <select value={component.id_articulo} onChange={(e) => changeArticle(idx, e.target.value)} disabled={disabled}>
+                      {!optionsById.has(component.id_articulo) ? (
+                        <option value={component.id_articulo}>{component.nombre}</option>
+                      ) : null}
+                      {options.map((option) => {
+                        const id = articleId(option);
+                        const duplicate = usedIds.has(id) && id !== component.id_articulo;
+                        return <option key={id} value={id} disabled={duplicate}>{text(option?.nombre) || `Artículo #${id}`}</option>;
+                      })}
+                    </select>
+                    <small>{component.articulo_tipo || "MATERIAL / INSUMO"}{component.unidad_simbolo ? ` · ${component.unidad_simbolo}` : ""}</small>
+                  </div>
 
-              <div className="ssc__metric">
-                <label>Necesario total</label>
-                <strong>{formatQty(component.required)}{component.unidad_simbolo ? ` ${component.unidad_simbolo}` : ""}</strong>
-              </div>
+                  <div className="ssc__excel-cell ssc__excel-cell--center">
+                    <span className="ssc__excel-mobile-label">Cant. por servicio</span>
+                    <input
+                      type="number"
+                      min="0.000001"
+                      step="0.000001"
+                      value={component.cantidad_por_unidad}
+                      onChange={(e) => updateAt(idx, { cantidad_por_unidad: Math.max(0.000001, Number(e.target.value) || 0.000001) })}
+                      disabled={disabled}
+                    />
+                  </div>
 
-              <div className="ssc__metric">
-                <label>{component.controlaStock ? stockLabel : "Stock"}</label>
-                {component.controlaStock ? (
-                  <>
-                    <strong>{component.stock === null ? "—" : `${formatQty(component.stock)}${component.unidad_simbolo ? ` ${component.unidad_simbolo}` : ""}`}</strong>
-                    {component.insufficient ? <small className="ssc__missing">Faltan {formatQty(component.required - component.stock)}{component.unidad_simbolo ? ` ${component.unidad_simbolo}` : ""}</small> : <small className="ssc__ok">Disponible</small>}
-                  </>
-                ) : (
-                  <>
-                    <strong>—</strong>
-                    <small>Sin control de stock</small>
-                  </>
-                )}
-              </div>
+                  <div className="ssc__excel-cell ssc__excel-cell--metric">
+                    <span className="ssc__excel-mobile-label">Necesario total</span>
+                    <strong>{formatQty(component.required)}{component.unidad_simbolo ? ` ${component.unidad_simbolo}` : ""}</strong>
+                  </div>
 
-              <button type="button" className="ssc__remove" onClick={() => removeAt(idx)} disabled={disabled} aria-label="Quitar material o insumo">×</button>
+                  <div className="ssc__excel-cell ssc__excel-cell--metric">
+                    <span className="ssc__excel-mobile-label">{component.controlaStock ? stockLabel : "Stock"}</span>
+                    {component.controlaStock ? (
+                      <>
+                        <strong>{component.stock === null ? "—" : `${formatQty(component.stock)}${component.unidad_simbolo ? ` ${component.unidad_simbolo}` : ""}`}</strong>
+                        {component.insufficient ? <small className="ssc__missing">Faltan {formatQty(component.required - component.stock)}{component.unidad_simbolo ? ` ${component.unidad_simbolo}` : ""}</small> : <small className="ssc__ok">Disponible</small>}
+                      </>
+                    ) : (
+                      <>
+                        <strong>—</strong>
+                        <small>Sin control de stock</small>
+                      </>
+                    )}
+                  </div>
+
+                  <div className="ssc__excel-cell ssc__excel-cell--action">
+                    <button type="button" className="ssc__remove" onClick={() => removeAt(idx)} disabled={disabled} aria-label="Quitar material o insumo">×</button>
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
+          ) : (
+            enriched.map((component, idx) => (
+              <div className={`ssc__row ${component.insufficient ? "ssc__row--danger" : ""}`} key={`${component.id_articulo}-${idx}`}>
+                <div className="ssc__resource">
+                  <label>Material / insumo</label>
+                  <select value={component.id_articulo} onChange={(e) => changeArticle(idx, e.target.value)} disabled={disabled}>
+                    {!optionsById.has(component.id_articulo) ? (
+                      <option value={component.id_articulo}>{component.nombre}</option>
+                    ) : null}
+                    {options.map((option) => {
+                      const id = articleId(option);
+                      const duplicate = usedIds.has(id) && id !== component.id_articulo;
+                      return <option key={id} value={id} disabled={duplicate}>{text(option?.nombre) || `Artículo #${id}`}</option>;
+                    })}
+                  </select>
+                  <small>{component.articulo_tipo || "MATERIAL / INSUMO"}{component.unidad_simbolo ? ` · ${component.unidad_simbolo}` : ""}</small>
+                </div>
+
+                <div className="ssc__qty">
+                  <label>Cant. por servicio</label>
+                  <input
+                    type="number"
+                    min="0.000001"
+                    step="0.000001"
+                    value={component.cantidad_por_unidad}
+                    onChange={(e) => updateAt(idx, { cantidad_por_unidad: Math.max(0.000001, Number(e.target.value) || 0.000001) })}
+                    disabled={disabled}
+                  />
+                </div>
+
+                <div className="ssc__metric">
+                  <label>Necesario total</label>
+                  <strong>{formatQty(component.required)}{component.unidad_simbolo ? ` ${component.unidad_simbolo}` : ""}</strong>
+                </div>
+
+                <div className="ssc__metric">
+                  <label>{component.controlaStock ? stockLabel : "Stock"}</label>
+                  {component.controlaStock ? (
+                    <>
+                      <strong>{component.stock === null ? "—" : `${formatQty(component.stock)}${component.unidad_simbolo ? ` ${component.unidad_simbolo}` : ""}`}</strong>
+                      {component.insufficient ? <small className="ssc__missing">Faltan {formatQty(component.required - component.stock)}{component.unidad_simbolo ? ` ${component.unidad_simbolo}` : ""}</small> : <small className="ssc__ok">Disponible</small>}
+                    </>
+                  ) : (
+                    <>
+                      <strong>—</strong>
+                      <small>Sin control de stock</small>
+                    </>
+                  )}
+                </div>
+
+                <button type="button" className="ssc__remove" onClick={() => removeAt(idx)} disabled={disabled} aria-label="Quitar material o insumo">×</button>
+              </div>
+            ))
+          )}
 
           <button type="button" className="ssc__add" onClick={addComponent} disabled={disabled || !canAdd}>+ Agregar material / insumo</button>
         </div>

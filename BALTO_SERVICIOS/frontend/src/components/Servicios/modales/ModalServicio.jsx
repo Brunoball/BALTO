@@ -426,13 +426,13 @@ export default function ModalServicio({
   const cost = useMemo(() => {
     const articulosCosto = articleRows.reduce((sum, row) => {
       const found = articulos.find((a) => Number(a.id_articulo) === Number(row.id_articulo));
-      return sum + Number(row.cantidad || 0) * Number(found?.costo_unitario ?? row.costo_unitario ?? 0);
+      return sum + decimalNumber(row.cantidad) * Number(found?.costo_unitario ?? row.costo_unitario ?? 0);
     }, 0);
 
     const manoObra = workerRows.reduce((sum, row) => {
       const found = trabajadores.find((t) => Number(t.id_trabajador) === Number(row.id_trabajador));
       const costoAplicado = Number(row.costo_hora_snapshot ?? found?.costo_hora ?? 0);
-      return sum + Number(row.horas_estimadas || 0) * costoAplicado;
+      return sum + decimalNumber(row.horas_estimadas) * costoAplicado;
     }, 0);
 
     const otros = decimalNumber(form.costo_base);
@@ -516,7 +516,7 @@ export default function ModalServicio({
     if (decimalNumber(form.costo_base) < 0) return onToast?.("error", "Otros costos no puede ser negativo.", 4200);
     if (pricingSource === "margin" && decimalNumber(marginInput) >= 100) return onToast?.("error", "El margen deseado debe ser menor a 100%.", 4200);
     if (decimalNumber(form.precio_venta) < 0) return onToast?.("error", "Indicá un precio de venta válido.", 4200);
-    if (articleRows.some((r) => Number(r.cantidad) <= 0) || workerRows.some((r) => Number(r.horas_estimadas) <= 0)) {
+    if (articleRows.some((r) => decimalNumber(r.cantidad) <= 0) || workerRows.some((r) => decimalNumber(r.horas_estimadas) <= 0)) {
       return onToast?.("error", "Todas las cantidades y horas deben ser mayores a cero.", 4200);
     }
 
@@ -528,8 +528,14 @@ export default function ModalServicio({
       id_categoria: form.id_categoria || null,
       duracion_estimada_minutos: form.duracion_estimada_minutos || null,
       composicion: {
-        articulos: articleRows,
-        trabajadores: workerRows,
+        articulos: articleRows.map((row) => ({
+          ...row,
+          cantidad: decimalNumber(row.cantidad),
+        })),
+        trabajadores: workerRows.map((row) => ({
+          ...row,
+          horas_estimadas: decimalNumber(row.horas_estimadas),
+        })),
       },
     });
   };

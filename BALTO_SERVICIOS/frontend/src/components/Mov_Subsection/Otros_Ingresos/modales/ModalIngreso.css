@@ -69,6 +69,12 @@ html[data-theme="oscuro"] .oi-item-kind {
   background: rgba(255, 255, 255, .06);
   border-color: rgba(255, 255, 255, .14);
   color: rgba(255, 255, 255, .92);
+  color-scheme: dark;
+}
+
+html[data-theme="oscuro"] .oi-item-kind option {
+  background: var(--gm-bg, #101820);
+  color: var(--gm-text, #f3f4f6);
 }
 
 /* Buscador de cliente: mismo comportamiento visual que Nueva Venta. */

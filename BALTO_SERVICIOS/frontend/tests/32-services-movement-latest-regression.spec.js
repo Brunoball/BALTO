@@ -262,23 +262,23 @@ test.describe('BALTO Servicios - regresión de los últimos cambios en Movimient
       await toggle.click();
       const body = dialog.locator('.ssc__body').first();
 
-      const materialRow = body.locator('.ssc__row').filter({ hasText: materialName }).first();
-      const materialQty = materialRow.locator('.ssc__qty input').first();
+      const materialRow = body.locator('.ssc__excel-row').filter({ hasText: materialName }).first();
+      const materialQty = materialRow.getByRole('spinbutton').first();
       await materialQty.fill('1.5');
       await materialQty.blur();
-      await expect(materialRow.locator('.ssc__metric').first()).toContainText(/Necesario total\s*3(?:\D|$)/i); // 2 servicios x 1,5.
+      await expect(materialRow.locator('.ssc__excel-cell--metric').first()).toContainText(/Necesario total\s*3(?:\D|$)/i); // 2 servicios x 1,5.
 
       await body.getByRole('button', { name: /Agregar material \/ insumo/i }).click();
-      const addedRow = body.locator('.ssc__row').last();
-      const addedSelect = addedRow.locator('.ssc__resource select');
+      const addedRow = body.locator('.ssc__excel-row').last();
+      const addedSelect = addedRow.locator('.ssc__excel-cell--resource select');
       const extraOption = addedSelect.locator('option').filter({ hasText: extraName }).first();
       const extraValue = await extraOption.getAttribute('value');
       await addedSelect.selectOption(String(extraValue));
-      const addedQty = addedRow.locator('.ssc__qty input').first();
+      const addedQty = addedRow.getByRole('spinbutton').first();
       await addedQty.fill('4');
       await addedQty.blur();
       await expect(addedRow).toContainText(extraName);
-      await expect(addedRow.locator('.ssc__metric').first()).toContainText(/Necesario total\s*8(?:\D|$)/i); // 2 servicios x 4.
+      await expect(addedRow.locator('.ssc__excel-cell--metric').first()).toContainText(/Necesario total\s*8(?:\D|$)/i); // 2 servicios x 4.
 
       const requestedClient = await selectFirstAutocomplete(dialog, 'Cliente', '');
       expect(requestedClient).not.toBe('');

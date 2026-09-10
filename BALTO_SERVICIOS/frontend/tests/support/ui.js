@@ -33,6 +33,19 @@ export async function waitDialog(page, title) {
   return dialog;
 }
 
+export function dialogByHeading(page, title, { exact = true } = {}) {
+  return page
+    .getByRole('dialog')
+    .filter({ has: page.getByRole('heading', { name: title, exact }) })
+    .last();
+}
+
+export async function waitDialogByHeading(page, title, options = {}) {
+  const dialog = dialogByHeading(page, title, options);
+  await expect(dialog).toBeVisible();
+  return dialog;
+}
+
 
 function actionFromUrl(url) {
   try {

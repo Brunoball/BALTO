@@ -1,7 +1,7 @@
 import { test, expect } from './support/test.js';
 import { authenticatedApi, expectApiSuccess } from './support/api.js';
 import { uniqueName } from './support/data.js';
-import { requireMutations, waitDialog, waitForBusyToFinish } from './support/ui.js';
+import { requireMutations, waitDialog, waitDialogByHeading, waitForBusyToFinish } from './support/ui.js';
 import {
   createServiceArticleFixture,
   deleteServiceArticleFixture,
@@ -103,7 +103,7 @@ test.describe('BALTO Servicios - catálogo principal', () => {
 
     // La unidad de cobro también permite alta rápida sin salir del servicio.
     await serviceUnit.selectOption('__ADD__');
-    const quickUnitDialog = await waitDialog(page, 'Agregar unidad');
+    const quickUnitDialog = await waitDialogByHeading(page, 'Agregar unidad');
     await expect(quickUnitDialog.getByRole('textbox', { name: 'Nombre', exact: true })).toBeVisible();
     await expect(quickUnitDialog.getByRole('textbox', { name: 'Símbolo', exact: true })).toBeVisible();
     await quickUnitDialog.getByRole('button', { name: 'Cancelar', exact: true }).click();

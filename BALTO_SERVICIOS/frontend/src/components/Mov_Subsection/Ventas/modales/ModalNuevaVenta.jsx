@@ -3792,6 +3792,7 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
                             serviceQuantity={r.cantidad}
                             serviceName={r.detalleText}
                             serviceId={r.id_servicio}
+                            tableLayout
                             disabled={saving || addUI.open}
                             onChange={(next) => updateRow(r.id, { consumos_snapshot: next })}
                           />

@@ -1,13 +1,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 
 // Selector único de entorno para Playwright.
 // En .env.playwright sólo se cambia PW_API_URL.
 // El resto de URLs y banderas se calculan automáticamente acá.
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 const frontendRoot = path.resolve(__dirname, '../..');
 const envFile = path.join(frontendRoot, '.env.playwright');
 

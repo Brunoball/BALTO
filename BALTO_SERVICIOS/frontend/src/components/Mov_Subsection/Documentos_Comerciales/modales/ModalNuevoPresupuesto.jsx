@@ -1763,6 +1763,7 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
                         serviceQuantity={r.cantidad}
                         serviceName={r.detalleText}
                         serviceId={r.id_servicio}
+                        tableLayout
                         disabled={saving}
                         onChange={(next) => updateRow(r.id, { consumos_snapshot: next })}
                       />

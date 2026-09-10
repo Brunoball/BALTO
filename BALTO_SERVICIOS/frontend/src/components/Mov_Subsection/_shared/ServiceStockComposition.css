@@ -103,3 +103,338 @@ body.tema-oscuro .ssc__metric strong { color: #eef2f7; }
   .ssc__resource { grid-column: 1 / -1; }
   .ssc__remove { justify-self: end; }
 }
+
+/* =========================================================
+   VARIANTE TABLA — Nuevo Ingreso
+   Mantiene el componente compartido sin alterar la vista usada
+   por otros movimientos. Se activa con la prop tableLayout.
+========================================================= */
+.ssc--table-layout {
+  background: var(--gm-bg, #fff);
+  border-color: var(--gm-border, #d8dee9);
+}
+
+.ssc--table-layout.ssc--danger {
+  border-color: var(--color-danger, #e13d45);
+}
+
+.ssc--table-layout .ssc__toggle {
+  min-height: 40px;
+  background: var(--gm-bg-soft, #f8fafc);
+  color: var(--gm-text, #334155);
+  padding: 8px 12px;
+}
+
+.ssc--table-layout .ssc__body {
+  background: var(--gm-bg, #fff);
+  border-top-color: var(--gm-border, #e2e8f0);
+  padding: 10px;
+  gap: 9px;
+}
+
+.ssc--table-layout .ssc__intro,
+.ssc--table-layout .ssc__empty {
+  color: var(--gm-muted, #64748b);
+  line-height: 1.35;
+}
+
+.ssc--table-layout .ssc__excel-table {
+  overflow: hidden;
+  border: 1px solid var(--gm-border, #e2e8f0);
+  border-radius: 8px;
+  background: var(--gm-bg, #fff);
+}
+
+.ssc--table-layout .ssc__excel-head,
+.ssc--table-layout .ssc__excel-row {
+  display: grid;
+  grid-template-columns: minmax(250px, 2.3fr) minmax(120px, .9fr) minmax(130px, .95fr) minmax(150px, 1fr) 52px;
+  align-items: stretch;
+}
+
+.ssc--table-layout .ssc__excel-head {
+  min-height: 36px;
+  background: var(--gm-bg-soft, #f8fafc);
+  color: var(--gm-muted, #64748b);
+}
+
+.ssc--table-layout .ssc__excel-th {
+  min-width: 0;
+  padding: 0 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  white-space: nowrap;
+}
+
+.ssc--table-layout .ssc__excel-th--resource {
+  justify-content: flex-start;
+  text-align: left;
+}
+
+.ssc--table-layout .ssc__excel-th:not(:first-child),
+.ssc--table-layout .ssc__excel-cell:not(:first-child) {
+  border-left: 1px solid var(--gm-border, #e2e8f0);
+}
+
+.ssc--table-layout .ssc__excel-row {
+  min-height: 66px;
+  border-top: 1px solid var(--gm-border, #e2e8f0);
+  background: var(--gm-bg, #fff);
+  transition: background .12s ease;
+}
+
+.ssc--table-layout .ssc__excel-row:nth-child(odd) {
+  background: var(--gm-bg-soft, #f8fafc);
+}
+
+.ssc--table-layout .ssc__excel-row:hover {
+  background: var(--color-primary-soft, rgba(0, 85, 187, .08));
+}
+
+.ssc--table-layout .ssc__excel-row--danger {
+  box-shadow: inset 3px 0 0 var(--color-danger, #e13d45);
+  background: var(--color-danger-soft, #fff7f7);
+}
+
+.ssc--table-layout .ssc__excel-row--danger:hover {
+  background: var(--color-danger-soft, #fff7f7);
+}
+
+.ssc--table-layout .ssc__excel-row--ok {
+  box-shadow: inset 3px 0 0 var(--color-success, #22AD5C);
+  background: var(--color-success-soft, rgba(34, 173, 92, .12));
+}
+
+.ssc--table-layout .ssc__excel-row--ok:hover {
+  background: var(--color-success-soft, rgba(34, 173, 92, .12));
+}
+
+.ssc--table-layout .ssc__excel-cell {
+  min-width: 0;
+  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ssc--table-layout .ssc__excel-cell--resource {
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  gap: 4px;
+}
+
+.ssc--table-layout .ssc__excel-cell--metric {
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+  gap: 3px;
+}
+
+.ssc--table-layout .ssc__excel-cell--action {
+  padding-left: 7px;
+  padding-right: 7px;
+}
+
+.ssc--table-layout .ssc__excel-cell select,
+.ssc--table-layout .ssc__excel-cell input {
+  width: 100%;
+  min-height: 34px;
+  border: 1px solid var(--color-border-strong, var(--gm-border, #cbd5e1));
+  border-radius: 7px;
+  background: var(--gm-bg, #fff);
+  color: var(--gm-text, #0f172a);
+  padding: 5px 8px;
+  font-size: 12px;
+  outline: none;
+}
+
+.ssc--table-layout .ssc__excel-cell input {
+  max-width: 118px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.ssc--table-layout .ssc__excel-cell select:focus,
+.ssc--table-layout .ssc__excel-cell input:focus {
+  border-color: var(--color-primary, #0055bb);
+  box-shadow: 0 0 0 3px var(--color-primary-soft, rgba(0, 85, 187, .10));
+}
+
+.ssc--table-layout .ssc__excel-cell--resource small,
+.ssc--table-layout .ssc__excel-cell--metric small {
+  display: block;
+  margin: 0;
+  font-size: 10px;
+  line-height: 1.2;
+  color: var(--gm-muted, #64748b);
+}
+
+.ssc--table-layout .ssc__excel-cell--metric strong {
+  display: block;
+  color: var(--gm-text, #0f172a);
+  font-size: 12px;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+
+.ssc--table-layout .ssc__remove {
+  width: 34px;
+  height: 34px;
+  margin: 0;
+  align-self: auto;
+  justify-self: auto;
+  display: grid;
+  place-items: center;
+  border-radius: 7px;
+  background: var(--gm-bg, #fff);
+}
+
+.ssc--table-layout .ssc__excel-mobile-label {
+  display: none;
+}
+
+html[data-theme="oscuro"] .ssc--table-layout,
+html[data-theme="oscuro"] .ssc--table-layout .ssc__body,
+html[data-theme="oscuro"] .ssc--table-layout .ssc__excel-table,
+html[data-theme="oscuro"] .ssc--table-layout .ssc__excel-row {
+  background: var(--gm-bg);
+  border-color: var(--gm-border);
+}
+
+html[data-theme="oscuro"] .ssc--table-layout .ssc__toggle,
+html[data-theme="oscuro"] .ssc--table-layout .ssc__excel-head {
+  background: var(--gm-bg-soft);
+  color: var(--gm-muted);
+}
+
+html[data-theme="oscuro"] .ssc--table-layout .ssc__excel-row:nth-child(odd) {
+  background: rgba(255, 255, 255, .025);
+}
+
+html[data-theme="oscuro"] .ssc--table-layout .ssc__excel-row:hover {
+  background: var(--color-primary-soft);
+}
+
+html[data-theme="oscuro"] .ssc--table-layout .ssc__excel-row--danger,
+html[data-theme="oscuro"] .ssc--table-layout .ssc__excel-row--danger:hover {
+  background: var(--color-danger-soft);
+}
+
+html[data-theme="oscuro"] .ssc--table-layout .ssc__excel-row--ok,
+html[data-theme="oscuro"] .ssc--table-layout .ssc__excel-row--ok:hover {
+  background: var(--color-success-soft);
+}
+
+html[data-theme="oscuro"] .ssc--table-layout .ssc__excel-th:not(:first-child),
+html[data-theme="oscuro"] .ssc--table-layout .ssc__excel-cell:not(:first-child),
+html[data-theme="oscuro"] .ssc--table-layout .ssc__excel-row,
+html[data-theme="oscuro"] .ssc--table-layout .ssc__body {
+  border-color: var(--gm-border);
+}
+
+html[data-theme="oscuro"] .ssc--table-layout .ssc__excel-cell select,
+html[data-theme="oscuro"] .ssc--table-layout .ssc__excel-cell input,
+html[data-theme="oscuro"] .ssc--table-layout .ssc__remove {
+  background: var(--gm-bg);
+  color: var(--gm-text);
+  border-color: var(--color-border-strong, var(--gm-border));
+  color-scheme: dark;
+}
+
+html[data-theme="oscuro"] .ssc--table-layout .ssc__remove {
+  color: var(--color-danger, #e13d45);
+}
+
+@media (max-width: 900px) {
+  .ssc--table-layout .ssc__excel-head,
+  .ssc--table-layout .ssc__excel-row {
+    grid-template-columns: minmax(210px, 2fr) minmax(105px, .85fr) minmax(115px, .9fr) minmax(125px, 1fr) 46px;
+  }
+
+  .ssc--table-layout .ssc__excel-th,
+  .ssc--table-layout .ssc__excel-cell {
+    padding-left: 7px;
+    padding-right: 7px;
+  }
+}
+
+@media (max-width: 720px) {
+  .ssc--table-layout .ssc__excel-table {
+    border: 0;
+    border-radius: 0;
+    overflow: visible;
+    background: transparent;
+  }
+
+  .ssc--table-layout .ssc__excel-head {
+    display: none;
+  }
+
+  .ssc--table-layout .ssc__excel-row,
+  .ssc--table-layout .ssc__excel-row:nth-child(odd) {
+    grid-template-columns: 1fr 1fr;
+    border: 1px solid var(--gm-border, #e2e8f0);
+    border-radius: 8px;
+    margin-bottom: 8px;
+    overflow: hidden;
+    background: var(--gm-bg, #fff);
+  }
+
+  .ssc--table-layout .ssc__excel-row:last-child {
+    margin-bottom: 0;
+  }
+
+  .ssc--table-layout .ssc__excel-cell {
+    min-height: 66px;
+    border-left: 0 !important;
+    border-top: 1px solid var(--gm-border, #e2e8f0);
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .ssc--table-layout .ssc__excel-cell:nth-child(1),
+  .ssc--table-layout .ssc__excel-cell:nth-child(2) {
+    border-top: 0;
+  }
+
+  .ssc--table-layout .ssc__excel-cell:nth-child(even) {
+    border-left: 1px solid var(--gm-border, #e2e8f0) !important;
+  }
+
+  .ssc--table-layout .ssc__excel-cell--resource {
+    grid-column: 1 / -1;
+    border-right: 0;
+  }
+
+  .ssc--table-layout .ssc__excel-cell--resource + .ssc__excel-cell {
+    border-left: 0 !important;
+  }
+
+  .ssc--table-layout .ssc__excel-cell--action {
+    grid-column: 1 / -1;
+    min-height: 48px;
+    border-left: 0 !important;
+  }
+
+  .ssc--table-layout .ssc__excel-mobile-label {
+    display: block;
+    width: 100%;
+    color: var(--gm-muted, #64748b);
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    text-align: center;
+  }
+
+  .ssc--table-layout .ssc__excel-cell--resource .ssc__excel-mobile-label {
+    text-align: left;
+  }
+}

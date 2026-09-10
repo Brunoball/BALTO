@@ -9,7 +9,7 @@ import {
   getTypedServiceArticleByName,
   serviciosApi,
 } from './support/services.js';
-import { requireMutations, waitDialog, waitForBusyToFinish } from './support/ui.js';
+import { requireMutations, waitDialog, waitDialogByHeading, waitForBusyToFinish } from './support/ui.js';
 
 async function post(page, action, body = {}, label = action) {
   return expectApiSuccess(
@@ -152,7 +152,9 @@ async function assertEnabledDelete(row) {
 async function addFilteredMultiSelection(dialog, cardSelector, searchText, expectedNames) {
   const card = dialog.locator(cardSelector);
   const trigger = card.locator('.servicios-multi-select__trigger');
+  const addButton = card.locator('.servicios-multi-select__add');
   await expect(trigger).toBeVisible();
+  await expect(addButton).toBeDisabled();
   await trigger.click();
 
   const picker = pageDialogWithinCard(card);
@@ -165,8 +167,9 @@ async function addFilteredMultiSelection(dialog, cardSelector, searchText, expec
   }
 
   await picker.getByRole('button', { name: 'Seleccionar resultados', exact: true }).click();
-  await expect(picker.getByRole('button', { name: `Agregar (${expectedNames.length})`, exact: true })).toBeEnabled();
-  await picker.getByRole('button', { name: `Agregar (${expectedNames.length})`, exact: true }).click();
+  await expect(addButton).toBeEnabled();
+  await expect(addButton).toHaveText(`Agregar (${expectedNames.length})`);
+  await addButton.click();
   await expect(picker).toBeHidden();
 }
 
@@ -239,7 +242,7 @@ test.describe('BALTO Servicios - UX nueva, rentabilidad y blindaje de borrado', 
       await expect(unitSelect.getByRole('option', { name: '+ AGREGAR UNIDAD', exact: true })).toHaveCount(1);
       await unitSelect.selectOption('__ADD__');
 
-      const unitDialog = await waitDialog(page, 'Agregar unidad');
+      const unitDialog = await waitDialogByHeading(page, 'Agregar unidad');
       const nameField = unitDialog.locator('.gm-field').filter({ hasText: /^Nombre$/ }).locator('input').first();
       const symbolField = unitDialog.locator('.gm-field').filter({ hasText: /Símbolo/ }).locator('input').first();
       await nameField.fill(quickUnitName);
@@ -258,6 +261,12 @@ test.describe('BALTO Servicios - UX nueva, rentabilidad y blindaje de borrado', 
       const createdUnit = exactByName(units, quickUnitName);
       expect(createdUnit, 'La unidad creada desde el servicio debe existir').toBeTruthy();
       unitId = Number(createdUnit.id_unidad);
+
+      // La unidad recién creada queda disponible en el selector, pero la UI actual
+      // no la selecciona automáticamente. La elegimos explícitamente antes de
+      // continuar con el alta del servicio.
+      await expect(unitSelect.locator(`option[value="${unitId}"]`)).toHaveCount(1);
+      await unitSelect.selectOption(String(unitId));
       await expect(unitSelect).toHaveValue(String(unitId));
 
       await dialog.getByRole('textbox', { name: 'Nombre del servicio', exact: true }).fill(serviceName);
@@ -265,6 +274,10 @@ test.describe('BALTO Servicios - UX nueva, rentabilidad y blindaje de borrado', 
       const margin = dialog.getByRole('textbox', { name: 'Margen deseado (%)', exact: true });
       const salePrice = dialog.getByRole('textbox', { name: 'Precio de venta', exact: true });
       await otherCost.fill('100');
+
+      const compositionTab = dialog.getByRole('tab', { name: 'Composición del servicio', exact: true });
+      await compositionTab.click();
+      await expect(compositionTab).toHaveAttribute('aria-selected', 'true');
 
       await addFilteredMultiSelection(
         dialog,
@@ -286,7 +299,9 @@ test.describe('BALTO Servicios - UX nueva, rentabilidad y blindaje de borrado', 
       await materialPicker.locator('input[type="search"]').fill(resourceTag);
       await expect(materialPicker.locator('.servicios-multi-select__options button')).toHaveCount(0);
       await expect(materialPicker).toContainText('NO HAY RECURSOS DISPONIBLES');
-      await page.keyboard.press('Escape');
+      // Cerramos sólo el selector de materiales. No usamos Escape porque
+      // el modal principal también responde a ESC y se cerraría completo.
+      await materialCard.locator('.servicios-multi-select__trigger').click();
       await expect(materialPicker).toBeHidden();
 
       await addFilteredMultiSelection(
@@ -301,6 +316,10 @@ test.describe('BALTO Servicios - UX nueva, rentabilidad y blindaje de borrado', 
       await expect(workerBRow).toHaveCount(1);
       await workerARow.locator('.servicios-component-quantity__input').fill('2');
       await workerBRow.locator('.servicios-component-quantity__input').fill('3');
+
+      const mainTab = dialog.getByRole('tab', { name: 'Información principal', exact: true });
+      await mainTab.click();
+      await expect(mainTab).toHaveAttribute('aria-selected', 'true');
 
       // El margen sobre venta no puede llegar a 100%: el precio tendería a infinito.
       // El formulario debe rechazarlo antes de llamar al backend y permanecer abierto.
