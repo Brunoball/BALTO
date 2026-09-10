@@ -790,10 +790,13 @@ export default function ModalEditarIngreso({
   const [marcarEliminarComprobante, setMarcarEliminarComprobante] = useState(false);
   const [openViewer, setOpenViewer] = useState(false);
   const [viewerData, setViewerData] = useState({ url: "", mime: "", title: "Comprobante" });
+  const [loadingViewer, setLoadingViewer] = useState(false);
+  const [viewerError, setViewerError] = useState("");
   const [openNuevaDescripcionModal, setOpenNuevaDescripcionModal] = useState(false);
   const [currentRowIdForNewDesc, setCurrentRowIdForNewDesc] = useState(null);
 
   const closeBtnRef = useRef(null);
+  const viewerRequestRef = useRef(0);
   const inputFileRef = useRef(null);
   const fechaRef = useRef(null);
 
@@ -1163,9 +1166,12 @@ export default function ModalEditarIngreso({
     return "";
   }, [archivoNuevo, marcarEliminarComprobante, comprobanteActual]);
 
-  const abrirViewer = useCallback(async () => {
+  const abrirViewer = useCallback(() => {
     const idMovimiento = Number(form.id_movimiento || 0);
     if (!(idMovimiento > 0)) return;
+
+    const requestId = ++viewerRequestRef.current;
+    setViewerError("");
 
     if (archivoNuevo) {
       setViewerData({
@@ -1173,14 +1179,22 @@ export default function ModalEditarIngreso({
         mime: archivoNuevo.type || "application/octet-stream",
         title: "Comprobante adjunto",
       });
+      setLoadingViewer(false);
       setOpenViewer(true);
       return;
     }
 
     if (!comprobanteActual || marcarEliminarComprobante) return;
 
-    setLoadingComprobante(true);
-    try {
+    setViewerData({
+      url: "",
+      mime: safeText(comprobanteActual?.archivo_mime) || "application/octet-stream",
+      title: "Comprobante del ingreso",
+    });
+    setLoadingViewer(true);
+    setOpenViewer(true);
+
+    void (async () => {
       const idComprobante = Number(
         comprobanteActual?.id_comprobante ??
           comprobanteActual?.comprobante_id ??
@@ -1208,23 +1222,29 @@ export default function ModalEditarIngreso({
         throw new Error("El backend no devolvió la URL del comprobante.");
       }
 
+      if (requestId !== viewerRequestRef.current) return;
       setViewerData({
         url: signedUrl,
         mime: safeText(comprobanteActual?.archivo_mime) || safeText(data?.mime) || "application/octet-stream",
         title: "Comprobante del ingreso",
       });
-      setOpenViewer(true);
-    } catch (err) {
-      showToast("error", err?.message || "No se pudo abrir el comprobante.");
-    } finally {
-      setLoadingComprobante(false);
-    }
-  }, [API, form.id_movimiento, archivoNuevo, comprobanteActual, marcarEliminarComprobante, showToast]);
+    })()
+      .catch((err) => {
+        if (requestId !== viewerRequestRef.current) return;
+        setViewerError(err?.message || "No se pudo abrir el comprobante.");
+      })
+      .finally(() => {
+        if (requestId === viewerRequestRef.current) setLoadingViewer(false);
+      });
+  }, [API, form.id_movimiento, archivoNuevo, comprobanteActual, marcarEliminarComprobante]);
 
   const cerrarViewer = useCallback(() => {
+    ++viewerRequestRef.current;
     if (viewerData?.url?.startsWith("blob:")) URL.revokeObjectURL(viewerData.url);
     setOpenViewer(false);
     setViewerData({ url: "", mime: "", title: "Comprobante" });
+    setLoadingViewer(false);
+    setViewerError("");
   }, [viewerData]);
 
   const seleccionarArchivo = useCallback((e) => {
@@ -2141,6 +2161,8 @@ export default function ModalEditarIngreso({
         url={viewerData.url}
         mime={viewerData.mime}
         title={viewerData.title}
+        loading={loadingViewer}
+        error={viewerError}
         onClose={cerrarViewer}
       />
     </>,

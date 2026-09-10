@@ -4,14 +4,14 @@
  */
 const BASE_URL = String(
   process.env.REACT_APP_API_URL ||
-    "https://app.balto.com.ar/BALTO_SERVICIOS/api/routes"
+    "https://balto.3devsnet.com/BALTO_SERVICIOS/api/routes"
 ).replace(/\/+$/, "");
 
 /**
  * Entrada central de BALTO.
  */
 export const BALTO_ACCESS_URL = String(
-  process.env.REACT_APP_BALTO_ACCESS_URL || "https://app.balto.com.ar/"
+  process.env.REACT_APP_BALTO_ACCESS_URL || "https://balto.3devsnet.com/"
 ).trim();
 
 /**

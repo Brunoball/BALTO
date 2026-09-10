@@ -691,6 +691,8 @@ export default function OtrosEgresos() {
     mime: "",
     title: "Comprobante",
   });
+  const [comprobanteLoading, setComprobanteLoading] = useState(false);
+  const [comprobanteError, setComprobanteError] = useState("");
 
   const { toast, showToast, closeToast } = useOtrosEgresosToast();
 
@@ -716,6 +718,7 @@ export default function OtrosEgresos() {
   // Caches para signed URLs
   const signedUrlCacheRef = useRef(new Map());
   const signedUrlInFlightRef = useRef(new Set());
+  const comprobanteRequestRef = useRef(0);
 
   const showSkeleton = loadingRows;
 
@@ -1572,7 +1575,7 @@ export default function OtrosEgresos() {
   );
 
   const handleOpenComprobante = useCallback(
-    async (row) => {
+    (row) => {
       const idComprobante = getEgresoIdComprobante(row);
       const idMovimiento = Number(row?.id_movimiento ?? 0);
 
@@ -1582,47 +1585,64 @@ export default function OtrosEgresos() {
 
       if (!tieneComprobante) return;
 
-      try {
-        const signedUrl = await getComprobanteSignedUrl(idComprobante, idMovimiento);
-        if (!signedUrl) {
-          showToast("error", "No se pudo obtener el comprobante.", 3000);
-          return;
-        }
+      const detalle = String(row?.detalle ?? row?.descripcion ?? row?.concepto ?? "").trim();
+      const fecha = formatFechaDMY(row?.fecha);
+      const esComprobanteCheque = ["CHEQUE", "ECHEQ", "ECHEQUE"].includes(
+        String(row?.comprobante_tipo ?? "").trim().toUpperCase()
+      );
+      const title = esComprobanteCheque
+        ? detalle
+          ? `Comprobante de cheque - ${detalle} - ${fecha}`
+          : `Comprobante de cheque - ${fecha}`
+        : detalle
+        ? `Comprobante de egreso - ${detalle} - ${fecha}`
+        : `Comprobante de egreso - ${fecha}`;
 
-        const detalle = String(row?.detalle ?? row?.descripcion ?? row?.concepto ?? "").trim();
-        const fecha = formatFechaDMY(row?.fecha);
+      const requestId = ++comprobanteRequestRef.current;
+      setComprobanteView({
+        url: "",
+        mime: String(row?.archivo_mime ?? "").trim() || "application/octet-stream",
+        title,
+      });
+      setComprobanteError("");
+      setComprobanteLoading(true);
+      setOpenViewComprobante(true);
 
-        const esComprobanteCheque = ["CHEQUE", "ECHEQ", "ECHEQUE"].includes(
-          String(row?.comprobante_tipo ?? "").trim().toUpperCase()
-        );
+      void getComprobanteSignedUrl(idComprobante, idMovimiento)
+        .then((signedUrl) => {
+          if (requestId !== comprobanteRequestRef.current) return;
+          if (!signedUrl) {
+            setComprobanteError("No se pudo obtener el comprobante.");
+            return;
+          }
 
-        setComprobanteView({
-          url: signedUrl,
-          mime: String(row?.archivo_mime ?? "").trim() || "application/octet-stream",
-          title: esComprobanteCheque
-            ? detalle
-              ? `Comprobante de cheque - ${detalle} - ${fecha}`
-              : `Comprobante de cheque - ${fecha}`
-            : detalle
-            ? `Comprobante de egreso - ${detalle} - ${fecha}`
-            : `Comprobante de egreso - ${fecha}`,
+          setComprobanteView({
+            url: signedUrl,
+            mime: String(row?.archivo_mime ?? "").trim() || "application/octet-stream",
+            title,
+          });
+        })
+        .catch((e) => {
+          if (requestId !== comprobanteRequestRef.current) return;
+          setComprobanteError(e?.message || "No se pudo abrir el comprobante.");
+        })
+        .finally(() => {
+          if (requestId === comprobanteRequestRef.current) setComprobanteLoading(false);
         });
-
-        setOpenViewComprobante(true);
-      } catch (e) {
-        showToast("error", e?.message || "No se pudo abrir el comprobante.", 3200);
-      }
     },
-    [getComprobanteSignedUrl, showToast]
+    [getComprobanteSignedUrl]
   );
 
   const closeComprobanteModal = useCallback(() => {
+    ++comprobanteRequestRef.current;
     setOpenViewComprobante(false);
     setComprobanteView({
       url: "",
       mime: "",
       title: "Comprobante",
     });
+    setComprobanteLoading(false);
+    setComprobanteError("");
   }, []);
 
   const isAnyLoading = loadingRows || loadingMore || loadingAll || !!loadingEditDataId;
@@ -2200,6 +2220,8 @@ export default function OtrosEgresos() {
         url={comprobanteView.url}
         mime={comprobanteView.mime}
         title={comprobanteView.title}
+        loading={comprobanteLoading}
+        error={comprobanteError}
         onClose={closeComprobanteModal}
       />
     </div>

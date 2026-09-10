@@ -381,6 +381,8 @@ export default function OtrosIngresos() {
     title: "Comprobante",
     documents: [],
   });
+  const [comprobanteLoading, setComprobanteLoading] = useState(false);
+  const [comprobanteError, setComprobanteError] = useState("");
 
   const [openMediosPago, setOpenMediosPago] = useState(false);
   const [selectedMediosRow, setSelectedMediosRow] = useState(null);
@@ -389,6 +391,7 @@ export default function OtrosIngresos() {
 
   const signedUrlCacheRef = useRef(new Map());
   const signedUrlInFlightRef = useRef(new Set());
+  const comprobanteRequestRef = useRef(0);
 
   useEffect(() => {
     if (errorListsCtx) showToast("error", errorListsCtx, 4200);
@@ -1234,7 +1237,7 @@ export default function OtrosIngresos() {
   );
 
   const handleOpenComprobante = useCallback(
-    async (row) => {
+    (row) => {
       const docsDetalle = normalizeIngresoComprobantes(row);
       const idComprobante = getIngresoIdComprobante(row);
       const idMovimiento = Number(row?.id_movimiento ?? 0);
@@ -1246,47 +1249,71 @@ export default function OtrosIngresos() {
 
       if (!tieneComprobante) return;
 
-      try {
-        const candidates = docsDetalle.length
-          ? docsDetalle
-          : [{
-              id_comprobante: idComprobante,
-              label: "Comprobante de ingreso",
-              title: "Comprobante de ingreso",
-              mime: String(row?.archivo_mime ?? "").trim() || "application/octet-stream",
-            }];
-        const documents = (
-          await Promise.all(candidates.map(async (doc) => ({
-            ...doc,
-            url: await getComprobanteSignedUrl(doc.id_comprobante, idMovimiento),
-          })))
-        ).filter((doc) => String(doc.url || "").trim());
-        if (!documents.length) {
-          showToast("error", "No se pudo obtener el comprobante.", 3000);
-          return;
-        }
+      const candidates = docsDetalle.length
+        ? docsDetalle
+        : [{
+            id_comprobante: idComprobante,
+            label: "Comprobante de ingreso",
+            title: "Comprobante de ingreso",
+            mime: String(row?.archivo_mime ?? "").trim() || "application/octet-stream",
+          }];
 
-        const detalle = String(row?.detalle ?? row?.descripcion ?? row?.concepto ?? "").trim();
-        const fecha = formatFechaDMY(row?.fecha);
+      const detalle = String(row?.detalle ?? row?.descripcion ?? row?.concepto ?? "").trim();
+      const fecha = formatFechaDMY(row?.fecha);
+      const title = detalle
+        ? `Comprobantes de ingreso - ${detalle} - ${fecha}`
+        : `Comprobantes de ingreso - ${fecha}`;
 
-        setComprobanteView({
-          url: documents[0].url,
-          mime: documents[0].mime || "application/octet-stream",
-          title: detalle
-            ? `Comprobantes de ingreso - ${detalle} - ${fecha}`
-            : `Comprobantes de ingreso - ${fecha}`,
-          documents,
+      const requestId = ++comprobanteRequestRef.current;
+      setComprobanteView({
+        url: "",
+        mime: candidates[0]?.mime || "application/octet-stream",
+        title,
+        documents: [],
+      });
+      setComprobanteError("");
+      setComprobanteLoading(true);
+      setOpenViewComprobante(true);
+
+      void Promise.allSettled(
+        candidates.map(async (doc) => ({
+          ...doc,
+          url: await getComprobanteSignedUrl(doc.id_comprobante, idMovimiento),
+        }))
+      )
+        .then((results) => {
+          if (requestId !== comprobanteRequestRef.current) return;
+
+          const documents = results
+            .filter((result) => result.status === "fulfilled")
+            .map((result) => result.value)
+            .filter((doc) => String(doc?.url || "").trim());
+
+          if (!documents.length) {
+            setComprobanteError("No se pudo obtener el comprobante.");
+            return;
+          }
+
+          setComprobanteView({
+            url: documents[0]?.url || "",
+            mime: documents[0]?.mime || "application/octet-stream",
+            title,
+            documents,
+          });
+        })
+        .catch((e) => {
+          if (requestId !== comprobanteRequestRef.current) return;
+          setComprobanteError(e?.message || "No se pudo abrir el comprobante.");
+        })
+        .finally(() => {
+          if (requestId === comprobanteRequestRef.current) setComprobanteLoading(false);
         });
-
-        setOpenViewComprobante(true);
-      } catch (e) {
-        showToast("error", e?.message || "No se pudo abrir el comprobante.", 3200);
-      }
     },
-    [getComprobanteSignedUrl, showToast]
+    [getComprobanteSignedUrl]
   );
 
   const closeComprobanteModal = useCallback(() => {
+    ++comprobanteRequestRef.current;
     setOpenViewComprobante(false);
     setComprobanteView({
       url: "",
@@ -1294,6 +1321,8 @@ export default function OtrosIngresos() {
       title: "Comprobante",
       documents: [],
     });
+    setComprobanteLoading(false);
+    setComprobanteError("");
   }, []);
 
   const deleteEsFiscal = useMemo(() => hasFacturaFiscal(rowToDelete), [rowToDelete]);
@@ -2024,6 +2053,8 @@ export default function OtrosIngresos() {
         mime={comprobanteView.mime}
         title={comprobanteView.title}
         documents={comprobanteView.documents}
+        loading={comprobanteLoading}
+        error={comprobanteError}
         onClose={closeComprobanteModal}
       />
     </div>

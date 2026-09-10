@@ -36,10 +36,7 @@
     "test:run": "vitest run",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
-    "eject": "react-scripts eject",
-    "balto:sync": "node ../../BALTO_CONFIG/sync-env.cjs --quiet",
-    "prebuild": "npm run balto:sync",
-    "prestart": "npm run balto:sync"
+    "eject": "react-scripts eject"
   },
   "eslintConfig": {
     "extends": [

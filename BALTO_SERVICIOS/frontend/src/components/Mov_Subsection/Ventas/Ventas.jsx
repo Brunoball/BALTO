@@ -50,8 +50,6 @@ const PAGE_SIZE = 100;
 const PROBE_LIMIT = PAGE_SIZE + 1;
 const SKELETON_ROWS = 10;
 const LIVE_POLL_MS = 5000;
-const PREWARM_BATCH_SIZE = 8;
-const PREWARM_DELAY_MS = 60;
 const VENTAS_LIST_CACHE_KEY = "ventas:listar:cc-medios-r2-v12-nc-trazabilidad";
 
 function safeText(v) { const s = String(v ?? "").trim(); return s ? s : "—"; }
@@ -327,9 +325,11 @@ export default function Ventas() {
   const [comprobanteUrl, setComprobanteUrl] = useState("");
   const [comprobanteMime, setComprobanteMime] = useState("");
   const [comprobanteDocs, setComprobanteDocs] = useState([]);
+  const [loadingComprobante, setLoadingComprobante] = useState(false);
+  const [comprobanteError, setComprobanteError] = useState("");
+  const comprobanteRequestRef = useRef(0);
   const signedUrlCacheRef = useRef(new Map());
   const signedUrlInFlightRef = useRef(new Set());
-  const prewarmCancelRef = useRef(false);
   const { toast, showToast, closeToast } = useVentasToast();
   const cacheRef = useRef(new Map());
   const reqIdRef = useRef(0);
@@ -341,7 +341,7 @@ export default function Ventas() {
   const liveBusyRef = useRef(false);
   const liveTokenRef = useRef(null);
   const liveToastCooldownRef = useRef(0);
-  useEffect(() => () => { if (searchTimerRef.current) clearTimeout(searchTimerRef.current); if (liveTimerRef.current) clearTimeout(liveTimerRef.current); prewarmCancelRef.current = true; }, []);
+  useEffect(() => () => { if (searchTimerRef.current) clearTimeout(searchTimerRef.current); if (liveTimerRef.current) clearTimeout(liveTimerRef.current); comprobanteRequestRef.current += 1; }, []);
   useEffect(() => {
     ["ventas:listar:cc-medios-v2", "ventas:listar:cc-medios-v3", "ventas:listar:cc-medios-r2-v4", "ventas:listar:cc-medios-r2-v5", "ventas:listar:cc-medios-r2-v6", "ventas:listar:cc-medios-r2-v7", "ventas:listar:cc-medios-r2-v8-tn"].forEach((key) => clearMovPerfCache(key));
   }, []);
@@ -367,25 +367,6 @@ export default function Ventas() {
       signedUrlCacheRef.current.set(cacheKey, finalUrl); return finalUrl;
     } finally { signedUrlInFlightRef.current.delete(cacheKey); }
   }, [API, apiGet]);
-  const prewarmAllComprobantes = useCallback(async (rowsToWarm) => {
-    prewarmCancelRef.current = true; await new Promise((r) => setTimeout(r, 0)); prewarmCancelRef.current = false;
-    const docs = [];
-    for (const row of rowsToWarm) {
-      for (const doc of buildComprobanteCandidatesFromRow(row)) {
-        const cacheKey = `${doc.id_comprobante}:${String(doc.cacheSalt || "")}`;
-        if (doc.id_comprobante && !signedUrlCacheRef.current.has(cacheKey)) docs.push(doc);
-      }
-    }
-    const seen = new Set();
-    const uniqueDocs = docs.filter((doc) => { const k = `${doc.id_comprobante}:${String(doc.cacheSalt || "")}`; if (seen.has(k)) return false; seen.add(k); return true; });
-    if (!uniqueDocs.length) return;
-    for (let i = 0; i < uniqueDocs.length; i += PREWARM_BATCH_SIZE) {
-      if (prewarmCancelRef.current) return;
-      const batch = uniqueDocs.slice(i, i + PREWARM_BATCH_SIZE);
-      await Promise.allSettled(batch.map((doc) => getComprobanteSignedUrl(doc.id_comprobante, doc.cacheSalt).catch(() => {})));
-      if (i + PREWARM_BATCH_SIZE < uniqueDocs.length && !prewarmCancelRef.current) await new Promise((r) => setTimeout(r, PREWARM_DELAY_MS));
-    }
-  }, [getComprobanteSignedUrl]);
   const refreshPeriodos = useCallback(async () => { try { await refreshLists(); } catch {} }, [refreshLists]);
   const fetchLiveToken = useCallback(async (fromParam, toParam, qParam) => {
     const fromDate = fromParam !== undefined ? fromParam : dateRange.from;
@@ -414,7 +395,7 @@ export default function Ventas() {
       if (!bypassCache && !append && offset === 0 && cacheRef.current.has(cacheKey) && !FORCE_SHOW_LOADER_DEV) {
         if (rowsReqIdRef.current !== myReqId) return null;
         const cached = cacheRef.current.get(cacheKey); const cachedRows = Array.isArray(cached?.rows) ? cached.rows : [];
-        rowsRef.current = cachedRows; setRows(cachedRows); setHasMore(!!cached?.hasMore); setNextOffset(cached?.nextOffset ?? null); if (rowsReqIdRef.current === myReqId) setLoadingRows(false); prewarmAllComprobantes(cachedRows); return { hasMore: !!cached?.hasMore, nextOffset: cached?.nextOffset ?? null, received: cachedRows.length };
+        rowsRef.current = cachedRows; setRows(cachedRows); setHasMore(!!cached?.hasMore); setNextOffset(cached?.nextOffset ?? null); if (rowsReqIdRef.current === myReqId) setLoadingRows(false); return { hasMore: !!cached?.hasMore, nextOffset: cached?.nextOffset ?? null, received: cachedRows.length };
       }
       const sp = new URLSearchParams(); sp.set("action", "ventas_listar"); if (fromAPI) sp.set("fecha_desde", fromAPI); if (toAPI) sp.set("fecha_hasta", toAPI); if (qKey) sp.set("q", qKey); sp.set("limit", String(PAGE_SIZE)); sp.set("offset", String(offset));
       const data = await apiGet(`${API}?${sp.toString()}`); if (!data?.exito) throw new Error(data?.mensaje || "No se pudieron cargar ventas.");
@@ -435,13 +416,13 @@ export default function Ventas() {
             const add = page.filter((x) => { const k = getRowKey(x); return k && !seen.has(k); });
             const merged = [...base, ...add]; rowsRef.current = merged; setRows(merged);
             if (add.length === 0) { newHasMore = false; newNextOffset = null; }
-            setHasMore(newHasMore); setNextOffset(newNextOffset); if (moreReqIdRef.current === myReqId) setLoadingMore(false); prewarmAllComprobantes(add);
+            setHasMore(newHasMore); setNextOffset(newNextOffset); if (moreReqIdRef.current === myReqId) setLoadingMore(false);
           } else {
             rowsRef.current = page; setRows(page); setHasMore(newHasMore); setNextOffset(newNextOffset); if (offset === 0) {
               const cachePayload = { rows: page, hasMore: newHasMore, nextOffset: newNextOffset };
               cacheRef.current.set(cacheKey, cachePayload);
               writeMovPerfCache(VENTAS_LIST_CACHE_KEY, cacheKey, cachePayload);
-            } if (rowsReqIdRef.current === myReqId) setLoadingRows(false); prewarmAllComprobantes(page);
+            } if (rowsReqIdRef.current === myReqId) setLoadingRows(false);
           }
           resolve({ hasMore: newHasMore, nextOffset: newNextOffset, received: page.length });
         };
@@ -459,7 +440,7 @@ export default function Ventas() {
         }, remaining);
       });
     }
-  }, [API, apiGet, dateRange, q, prewarmAllComprobantes]);
+  }, [API, apiGet, dateRange, q]);
   useEffect(() => { let alive = true; (async () => { try { await ensureListsLoaded({ force: false, background: true }); } catch {} if (!alive) return; await loadRows({ from: dateRange.from, to: dateRange.to, q: "", offset: 0, append: false, bypassCache: true }); try { const token = await fetchLiveToken(dateRange.from, dateRange.to, ""); if (alive) liveTokenRef.current = token; } catch {} })(); return () => { alive = false; }; }, []); // eslint-disable-line
   useEffect(() => { liveTokenRef.current = null; }, [dateRange.from, dateRange.to, q]);
   useEffect(() => {
@@ -592,7 +573,7 @@ export default function Ventas() {
     }
   };
   const handleLoadMore = useCallback(async () => { if (!hasMore || loadingMore || loadingRows || loadingListsCtx || nextOffset === null) return; try { await loadRows({ from: dateRange.from, to: dateRange.to, q: (q || "").trim(), offset: nextOffset, append: true }); try { const token = await fetchLiveToken(dateRange.from, dateRange.to, q); liveTokenRef.current = token; } catch {} } catch (e) { showToast("error", e?.message || "Error cargando más ventas.", 4200); } }, [hasMore, loadingMore, loadingRows, loadingListsCtx, nextOffset, dateRange, q, loadRows, showToast, fetchLiveToken]);
-  const handleVerComprobante = useCallback(async (r) => {
+  const handleVerComprobante = useCallback((r) => {
     const candidates = buildComprobanteCandidatesFromRow(r);
 
     if (!candidates.length) {
@@ -600,28 +581,43 @@ export default function Ventas() {
       return;
     }
 
-    try {
-      const docs = (
-        await Promise.all(
-          candidates.map(async (doc) => ({
-            ...doc,
-            url: await getComprobanteSignedUrl(doc.id_comprobante, doc.cacheSalt),
-          }))
-        )
-      ).filter((doc) => String(doc.url || "").trim());
+    // UX: el modal se abre YA. La URL firmada y el PDF se resuelven adentro,
+    // sin dejar el clic del ojo esperando una llamada a backend/R2.
+    const requestId = ++comprobanteRequestRef.current;
+    setComprobanteDocs([]);
+    setComprobanteUrl("");
+    setComprobanteMime(candidates[0]?.mime || "application/pdf");
+    setComprobanteError("");
+    setLoadingComprobante(true);
+    setOpenVerComprobante(true);
+
+    void Promise.allSettled(
+      candidates.map(async (doc) => ({
+        ...doc,
+        url: await getComprobanteSignedUrl(doc.id_comprobante, doc.cacheSalt),
+      }))
+    ).then((results) => {
+      if (requestId !== comprobanteRequestRef.current) return;
+
+      const docs = results
+        .filter((result) => result.status === "fulfilled")
+        .map((result) => result.value)
+        .filter((doc) => String(doc?.url || "").trim());
 
       if (!docs.length) {
-        showToast("error", "No se pudieron obtener los comprobantes.", 3000);
+        setComprobanteError("No se pudieron obtener los comprobantes.");
         return;
       }
 
       setComprobanteDocs(docs);
       setComprobanteUrl(docs[0]?.url || "");
       setComprobanteMime(docs[0]?.mime || "application/pdf");
-      setOpenVerComprobante(true);
-    } catch (e) {
-      showToast("error", e?.message || "No se pudieron abrir los comprobantes.", 3200);
-    }
+    }).catch((e) => {
+      if (requestId !== comprobanteRequestRef.current) return;
+      setComprobanteError(e?.message || "No se pudieron abrir los comprobantes.");
+    }).finally(() => {
+      if (requestId === comprobanteRequestRef.current) setLoadingComprobante(false);
+    });
   }, [getComprobanteSignedUrl, showToast]);
   const handlePrewarmComprobante = useCallback(async (r) => {
     buildComprobanteCandidatesFromRow(r).forEach((doc) => getComprobanteSignedUrl(doc.id_comprobante, doc.cacheSalt).catch(() => {}));
@@ -816,7 +812,24 @@ export default function Ventas() {
           if (!openDel) setSelectedRow(null);
         }}
       />
-      <ModalVerComprobante open={openVerComprobante} url={comprobanteUrl} mime={comprobanteMime} documents={comprobanteDocs} title="Comprobantes de Venta" onClose={() => { setOpenVerComprobante(false); setComprobanteUrl(""); setComprobanteMime(""); setComprobanteDocs([]); }} />
+      <ModalVerComprobante
+        open={openVerComprobante}
+        url={comprobanteUrl}
+        mime={comprobanteMime}
+        documents={comprobanteDocs}
+        title="Comprobantes de Venta"
+        loading={loadingComprobante}
+        error={comprobanteError}
+        onClose={() => {
+          comprobanteRequestRef.current += 1;
+          setOpenVerComprobante(false);
+          setLoadingComprobante(false);
+          setComprobanteError("");
+          setComprobanteUrl("");
+          setComprobanteMime("");
+          setComprobanteDocs([]);
+        }}
+      />
     </div>
   );
 }

@@ -533,6 +533,8 @@ export default function Compras() {
   const [compUrl, setCompUrl] = useState("");
   const [compMime, setCompMime] = useState("");
   const [compDocs, setCompDocs] = useState([]);
+  const [compLoading, setCompLoading] = useState(false);
+  const [compError, setCompError] = useState("");
 
   const [selectedRow, setSelectedRow] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
@@ -545,6 +547,7 @@ export default function Compras() {
   const skipSearchRef = useRef(false);
   const comprobanteUrlCacheRef = useRef(new Map());
   const signedUrlCacheRef = useRef(new Map());
+  const comprobanteRequestRef = useRef(0);
 
   const skelTimerRef = useRef(null);
   const [showSkeleton, setShowSkeleton] = useState(false);
@@ -1198,42 +1201,63 @@ export default function Compras() {
   );
 
   const openComprobanteModal = useCallback(
-    async (r) => {
+    (r) => {
       const candidates = normalizeCompraComprobanteDocs(r);
       if (!candidates.length) {
         showToast("error", "No se encontraron comprobantes para esta compra.", 3000);
         return;
       }
 
-      try {
-        const documents = (
-          await Promise.all(candidates.map(async (doc) => ({
-            ...doc,
-            url: await getComprobanteSignedUrl(doc.id_comprobante),
-          })))
-        ).filter((doc) => String(doc.url || "").trim());
+      const requestId = ++comprobanteRequestRef.current;
+      setCompDocs([]);
+      setCompUrl("");
+      setCompMime(candidates[0]?.mime || "application/pdf");
+      setCompError("");
+      setCompLoading(true);
+      setOpenVerComp(true);
 
-        if (!documents.length) {
-          showToast("error", "No se pudieron obtener los comprobantes.", 3000);
-          return;
-        }
+      void Promise.allSettled(
+        candidates.map(async (doc) => ({
+          ...doc,
+          url: await getComprobanteSignedUrl(doc.id_comprobante),
+        }))
+      )
+        .then((results) => {
+          if (requestId !== comprobanteRequestRef.current) return;
 
-        setCompDocs(documents);
-        setCompUrl(documents[0]?.url || "");
-        setCompMime(documents[0]?.mime || "application/pdf");
-        setOpenVerComp(true);
-      } catch (e) {
-        showToast("error", e?.message || "No se pudieron abrir los comprobantes.", 3200);
-      }
+          const documents = results
+            .filter((result) => result.status === "fulfilled")
+            .map((result) => result.value)
+            .filter((doc) => String(doc?.url || "").trim());
+
+          if (!documents.length) {
+            setCompError("No se pudieron obtener los comprobantes.");
+            return;
+          }
+
+          setCompDocs(documents);
+          setCompUrl(documents[0]?.url || "");
+          setCompMime(documents[0]?.mime || "application/pdf");
+        })
+        .catch((e) => {
+          if (requestId !== comprobanteRequestRef.current) return;
+          setCompError(e?.message || "No se pudieron abrir los comprobantes.");
+        })
+        .finally(() => {
+          if (requestId === comprobanteRequestRef.current) setCompLoading(false);
+        });
     },
     [getComprobanteSignedUrl, showToast]
   );
-  
+
   const closeComprobanteModal = () => {
+    ++comprobanteRequestRef.current;
     setOpenVerComp(false);
     setCompUrl("");
     setCompMime("");
     setCompDocs([]);
+    setCompLoading(false);
+    setCompError("");
   };
 
   const refreshAfterSave = useCallback(async () => {
@@ -1873,6 +1897,8 @@ export default function Compras() {
         url={compUrl}
         mime={compMime}
         documents={compDocs}
+        loading={compLoading}
+        error={compError}
         onClose={closeComprobanteModal}
         title="Comprobantes de compra"
       />

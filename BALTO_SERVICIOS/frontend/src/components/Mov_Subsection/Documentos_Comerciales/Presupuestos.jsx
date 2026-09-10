@@ -584,6 +584,8 @@ export default function Presupuestos() {
   const [comprobanteUrl, setComprobanteUrl] = useState("");
   const [comprobanteMime, setComprobanteMime] = useState("application/pdf");
   const [comprobanteTitle, setComprobanteTitle] = useState("Comprobante");
+  const [comprobanteLoading, setComprobanteLoading] = useState(false);
+  const [comprobanteError, setComprobanteError] = useState("");
   const [openDetalleMovimiento, setOpenDetalleMovimiento] = useState(false);
   const [loadingDetalleId, setLoadingDetalleId] = useState(null);
   const offsetRef = useRef(0);
@@ -593,6 +595,7 @@ export default function Presupuestos() {
   const liveTimerRef = useRef(null);
   const liveTokenRef = useRef("");
   const signedUrlCacheRef = useRef(new Map());
+  const comprobanteRequestRef = useRef(0);
   const cacheRef = useRef(new Map());
 
   const buildHeadersGET = useCallback(() => {
@@ -1113,22 +1116,37 @@ export default function Presupuestos() {
     );
   }, []);
 
-  const handleVerComprobante = useCallback(async (row, overrideTitle = "Presupuesto") => {
+  const handleVerComprobante = useCallback((row, overrideTitle = "Presupuesto") => {
     const id = getComprobanteId(row);
     if (!id) {
       showToast("error", "Este documento todavía no tiene PDF vinculado.", 3500);
       return;
     }
-    try {
-      const url = await getComprobanteSignedUrl(id);
-      if (!url) throw new Error("No se pudo obtener la URL del comprobante.");
-      setComprobanteUrl(url);
-      setComprobanteMime(getComprobanteMime(row) || "application/pdf");
-      setComprobanteTitle(overrideTitle || documentLabel(row?.tipo) || "Comprobante");
-      setOpenVerComprobante(true);
-    } catch (e) {
-      showToast("error", e?.message || "No se pudo abrir el comprobante.", 4500);
-    }
+
+    const requestId = ++comprobanteRequestRef.current;
+    setComprobanteUrl("");
+    setComprobanteMime(getComprobanteMime(row) || "application/pdf");
+    setComprobanteTitle(overrideTitle || documentLabel(row?.tipo) || "Comprobante");
+    setComprobanteError("");
+    setComprobanteLoading(true);
+    setOpenVerComprobante(true);
+
+    void getComprobanteSignedUrl(id)
+      .then((url) => {
+        if (requestId !== comprobanteRequestRef.current) return;
+        if (!url) {
+          setComprobanteError("No se pudo obtener la URL del comprobante.");
+          return;
+        }
+        setComprobanteUrl(url);
+      })
+      .catch((e) => {
+        if (requestId !== comprobanteRequestRef.current) return;
+        setComprobanteError(e?.message || "No se pudo abrir el comprobante.");
+      })
+      .finally(() => {
+        if (requestId === comprobanteRequestRef.current) setComprobanteLoading(false);
+      });
   }, [getComprobanteSignedUrl, showToast]);
 
   const confirmConvertirVenta = useCallback(async () => {
@@ -1506,7 +1524,23 @@ export default function Presupuestos() {
         }}
       />
 
-      <ModalVerComprobante open={openVerComprobante} url={comprobanteUrl} mime={comprobanteMime} title={comprobanteTitle} onClose={() => { setOpenVerComprobante(false); setComprobanteUrl(""); setComprobanteMime("application/pdf"); setComprobanteTitle("Comprobante"); }} />
+      <ModalVerComprobante
+        open={openVerComprobante}
+        url={comprobanteUrl}
+        mime={comprobanteMime}
+        title={comprobanteTitle}
+        loading={comprobanteLoading}
+        error={comprobanteError}
+        onClose={() => {
+          ++comprobanteRequestRef.current;
+          setOpenVerComprobante(false);
+          setComprobanteUrl("");
+          setComprobanteMime("application/pdf");
+          setComprobanteTitle("Comprobante");
+          setComprobanteLoading(false);
+          setComprobanteError("");
+        }}
+      />
     </div>
   );
 }
