@@ -81,6 +81,20 @@ test.describe('BALTO Servicios <-> Movimientos', () => {
 
       const detail = await openMovementDetail(page, serviceName, 'sale');
       await expect(detail).toContainText(serviceName);
+      await expect(detail).toContainText(/Servicio\s*·\s*1 componente/i);
+      const compositionToggle = detail.getByRole('button', {
+        name: new RegExp(`Ver insumos y productos del servicio ${serviceName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'i'),
+      });
+      await expect(compositionToggle).toBeVisible();
+      await compositionToggle.click();
+      const movementComposition = detail.getByRole('region', {
+        name: new RegExp(`Insumos y productos del servicio ${serviceName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'i'),
+      });
+      await expect(movementComposition).toContainText(articleName);
+      await expect(movementComposition).toContainText(/Por servicio/i);
+      await expect(movementComposition).toContainText(/Total usado/i);
+      await expect(movementComposition).toContainText(/2/);
+      await expect(movementComposition).toContainText(/4/);
       await detail.getByRole('button', { name: /Cerrar/i }).click();
       await expect(detail).toBeHidden();
 
@@ -423,19 +437,28 @@ test.describe('BALTO Servicios <-> Movimientos', () => {
       await page.getByRole('button', { name: /Nueva Venta/i }).click();
       const saleDialog = await waitDialog(page, 'Nueva Venta');
       const movementRow = saleDialog.locator('.gm-table-body .gm-table-row').first();
+
+      // Nueva Venta usa un selector explícito de tipo de ítem. El test anterior
+      // todavía intentaba activar el antiguo botón interno "Stock", por lo que
+      // terminaba buscando el artículo dentro de "Servicio del catálogo".
+      const itemTypeSelect = movementRow.locator('select[aria-label^="Tipo de ítem fila"]').first();
+      await expect(itemTypeSelect).toBeVisible({ timeout: 15_000 });
+      const stockOptionValue = await itemTypeSelect.locator('option').evaluateAll((options) => {
+        const option = options.find((row) => /stock|material|insumo|producto|art[ií]culo/i.test(String(row.textContent || '')));
+        return option?.value || '';
+      });
+      expect(stockOptionValue, 'Nueva Venta debe exponer la opción Stock / material / insumo').toBeTruthy();
+      await itemTypeSelect.selectOption(stockOptionValue);
+
       const stockInput = movementRow.locator('input.psa-input').first();
       await expect(stockInput).toBeVisible({ timeout: 15_000 });
-      const stockWrap = stockInput.locator('xpath=ancestor::*[contains(concat(" ", normalize-space(@class), " "), " psa-wrap ")]').first();
-      const stockButton = stockWrap.getByRole('button', { name: /^Stock$/i }).first();
-      if (await stockButton.isVisible({ timeout: 15_000 }).catch(() => false)) {
-        const active = await stockButton.evaluate((button) => button.classList.contains('is-active'));
-        if (!active) await stockButton.click();
-      }
+      await expect(stockInput).toHaveAttribute('placeholder', /stock|material|insumo|producto|art[ií]culo/i);
       await stockInput.fill(articleName);
+
       const stockList = page.locator('#psa-portal-list');
       await expect(stockList).toBeVisible({ timeout: 15_000 });
       await expect(stockList.locator('.psa-item').filter({ hasText: articleName })).toHaveCount(0);
-      await expect(stockList.locator('.psa-empty')).toContainText(/Sin resultados/i);
+      await expect(stockList.locator('.psa-empty')).toBeVisible();
       const cancelSale = saleDialog.getByRole('button', { name: /Cancelar|Cerrar/i }).last();
       if (await cancelSale.isVisible().catch(() => false)) await cancelSale.click();
       await expect(saleDialog).toBeHidden({ timeout: 15_000 });

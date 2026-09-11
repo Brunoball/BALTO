@@ -314,6 +314,23 @@ export async function selectFirstAutocomplete(scope, labelText, preferredText = 
 }
 
 async function selectCatalogItem(scope, itemName, kind, options = {}) {
+  // Ventas y Otros Ingresos exponen un selector explícito de tipo de ítem.
+  // Elegimos primero la categoría para que el input/autocomplete correcto esté montado.
+  const typeSelect = scope.locator('select[aria-label^="Tipo de ítem fila"]').first();
+  if (await typeSelect.isVisible().catch(() => false)) {
+    const desiredValue = await typeSelect.locator('option').evaluateAll((opts, requestedKind) => {
+      const matcher = String(requestedKind || '').toLowerCase() === 'servicio'
+        ? /servicio/i
+        : /stock|material|insumo|producto|art[ií]culo/i;
+      const match = opts.find((opt) => matcher.test(String(opt.textContent || '')));
+      return match?.value || '';
+    }, kind);
+
+    if (desiredValue) {
+      await typeSelect.selectOption(desiredValue);
+    }
+  }
+
   const productInput = scope
     .locator([
       'input.psa-input',
@@ -476,9 +493,19 @@ export async function fillMovementRow(dialog, data) {
   } else if (data.productName) {
     await selectProduct(row, data.productName);
   } else if (data.description) {
+    const typeSelect = row.locator('select[aria-label^="Tipo de ítem fila"]').first();
+    if (await typeSelect.isVisible().catch(() => false)) {
+      const manualValue = await typeSelect.locator('option').evaluateAll((opts) => {
+        const match = opts.find((opt) => /detalle manual|detalle|descripci[oó]n/i.test(String(opt.textContent || '')));
+        return match?.value || '';
+      });
+      if (manualValue) await typeSelect.selectOption(manualValue);
+    }
+
     const input = row
       .locator('input[placeholder*="descripción" i], input[placeholder*="detalle" i]')
       .first();
+    await expect(input).toBeVisible({ timeout: 10_000 });
     await input.fill(data.description);
   }
 

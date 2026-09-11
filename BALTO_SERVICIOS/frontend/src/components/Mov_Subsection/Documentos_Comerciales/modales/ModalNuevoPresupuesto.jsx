@@ -116,6 +116,31 @@ function upperStr(v) {
   return upperInput(v).trim();
 }
 
+function formatQtyPdf(v) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return "";
+  return n.toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 6 });
+}
+
+function buildServiceDocumentDescription(row) {
+  const nombre = safeStr(row?.detalleText) || "Servicio";
+  if (!(Number(row?.id_servicio || 0) > 0)) return nombre;
+
+  const componentes = normalizeServiceStockComponents(row?.consumos_snapshot);
+  if (!componentes.length) return nombre;
+
+  const detalle = componentes
+    .map((c) => {
+      const qty = formatQtyPdf(c?.cantidad_por_unidad);
+      const unidad = safeStr(c?.unidad_simbolo);
+      const recurso = safeStr(c?.nombre) || "Material / insumo";
+      return `${recurso}${qty ? ` x ${qty}${unidad ? ` ${unidad}` : ""}` : ""}`;
+    })
+    .join(" · ");
+
+  return `${nombre} | Incluye: ${detalle}`;
+}
+
 function normalizeText(v) {
   return String(v ?? "")
     .toLowerCase()
@@ -1402,6 +1427,40 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
       }));
   }, [computedRows]);
 
+  // El payload persistido conserva la descripción corta para no cambiar datos del
+  // movimiento. El PDF, en cambio, debe ser descriptivo: si la fila es un servicio
+  // se imprime la composición vigente elegida en el presupuesto (materiales e insumos).
+  const buildPdfItemsPayload = useCallback(() => {
+    return computedRows
+      .filter((r) => safeStr(r.detalleText) && r.cantidad > 0 && r.precio > 0)
+      .map((r) => {
+        const descripcionPdf = upperStr(buildServiceDocumentDescription(r));
+        return {
+          tipo_item: r.id_servicio ? "SERVICIO" : (r.id_articulo || r.id_stock_producto ? "ARTICULO" : "MANUAL"),
+          id_servicio: r.id_servicio || null,
+          id_articulo: r.id_articulo || r.id_stock_producto || null,
+          id_detalle: null,
+          id_stock_producto: r.id_articulo || r.id_stock_producto || null,
+          id_stock_variante: null,
+          codigo: r.codigo || "",
+          descripcion: descripcionPdf,
+          detalle: descripcionPdf,
+          cantidad: r.cantidad,
+          precio: r.precio,
+          precio_unitario: r.precio,
+          iva_pct: r.ivaPct,
+          subtotal: r.subtotal,
+          iva_monto: r.iva_monto,
+          total: r.total,
+          id_tipo_precio_stock: r.id_tipo_precio_stock || null,
+          tipo_precio: r.precio_tipo_label || "",
+          consumos_snapshot: Number(r.id_servicio || 0) > 0
+            ? serializeServiceStockComponents(r.consumos_snapshot)
+            : undefined,
+        };
+      });
+  }, [computedRows]);
+
   const uploadPresupuestoPdf = useCallback(async ({ idMovimiento, payload, items }) => {
     const clienteNombre = upperStr(getClienteNombre(clienteSel) || cliInput);
     const idCliente = getClienteId(clienteSel);
@@ -1498,6 +1557,7 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
 
     const idCliente = getClienteId(clienteSel);
     const items = buildItemsPayload();
+    const pdfItems = buildPdfItemsPayload();
     const detallePresupuesto = items.map((it) => safeStr(it.descripcion || it.detalle)).filter(Boolean).join(", ");
     const fechaEnvio = String(fecha || "").slice(0, 10);
     const condicionesPayload = normalizeCondicionesPresupuesto(condiciones, fechaEnvio);
@@ -1540,7 +1600,7 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
       const creado = await apiPostJson(`${API}?action=presupuestos_crear`, payload);
       const idMovimiento = Number(creado?.id_movimiento || creado?.movimiento?.id_movimiento || 0);
       if (!idMovimiento) throw new Error("El presupuesto se guardó, pero el backend no devolvió id_movimiento.");
-      await uploadPresupuestoPdf({ idMovimiento, payload, items });
+      await uploadPresupuestoPdf({ idMovimiento, payload, items: pdfItems });
       const modeloGuardado = creado?.modelo_guardado || creado?.modelo || null;
       onToast?.(
         "exito",
@@ -1555,7 +1615,7 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
     } finally {
       setSaving(false);
     }
-  }, [API, buildItemsPayload, clienteSel, cliInput, fecha, observaciones, condiciones, guardarComoModelo, modeloDescripcion, modeloNombre, modeloOrigen, onSaved, onToast, presupuestoPersonalizado, totals, uploadPresupuestoPdf, validate]);
+  }, [API, buildItemsPayload, buildPdfItemsPayload, clienteSel, cliInput, fecha, observaciones, condiciones, guardarComoModelo, modeloDescripcion, modeloNombre, modeloOrigen, onSaved, onToast, presupuestoPersonalizado, totals, uploadPresupuestoPdf, validate]);
 
   if (!open) return null;
 

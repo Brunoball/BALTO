@@ -130,6 +130,11 @@ test.describe('BALTO Servicios - regresión de los últimos cambios en Movimient
       await waitForBusyToFinish(page);
       await page.getByRole('button', { name: /Nueva Venta/i }).click();
       const saleDialog = await waitDialog(page, 'Nueva Venta');
+      const saleTypeSelect = saleDialog.getByLabel('Tipo de ítem fila 1');
+      await expect(saleTypeSelect).toBeVisible();
+      expect((await saleTypeSelect.locator('option').allTextContents()).join(' ')).toMatch(
+        /Servicio del catálogo.*Stock \/ material \/ insumo.*Detalle manual/i,
+      );
       const saleRow = await fillMovementRow(saleDialog, { serviceName, quantity: 1 });
 
       const qty = saleRow.locator('input[type="number"]').first();

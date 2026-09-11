@@ -13,6 +13,7 @@ import {
   faBoxOpen,
   faFileInvoiceDollar,
   faArrowRightLong,
+  faChevronRight,
 } from "@fortawesome/free-solid-svg-icons";
 
 function moneyARS(value) {
@@ -163,6 +164,92 @@ function getItemName(item) {
   }
 
   return safeText(nombreCompuesto || nombreExplicito);
+}
+
+function positiveId(...values) {
+  for (const value of values) {
+    const n = Number(value);
+    if (Number.isFinite(n) && n > 0) return n;
+  }
+  return 0;
+}
+
+function isServiceItem(item) {
+  const tipoDb = String(item?.tipo_item_db ?? item?.tipoItemDb ?? "").trim().toUpperCase();
+  if (tipoDb === "SERVICIO") return true;
+  if (["ARTICULO", "PRODUCTO", "STOCK", "CONSUMO_ARTICULO"].includes(tipoDb)) return false;
+
+  const tipo = String(item?.tipo_item ?? item?.tipoItem ?? item?.tipo ?? "").trim().toUpperCase();
+  if (["SERVICIO", "SERVICE"].includes(tipo)) return true;
+  if (["ARTICULO", "PRODUCTO", "STOCK", "CONSUMO_ARTICULO"].includes(tipo)) return false;
+
+  if (positiveId(item?.id_servicio, item?.idServicio, item?.servicio_id) > 0) return true;
+
+  const servicioNombre = firstText(item?.servicio_nombre, item?.servicioNombre);
+  const productoNombre = firstText(
+    item?.articulo_nombre,
+    item?.stock_producto_nombre,
+    item?.producto_nombre,
+    item?.productoNombre
+  );
+  return Boolean(servicioNombre && !productoNombre);
+}
+
+function getServiceComponents(item) {
+  const candidates = [
+    item?.consumos_snapshot,
+    item?.componentes_stock,
+    item?.componentes_servicio,
+    item?.componentes,
+  ];
+
+  for (const candidate of candidates) {
+    const arr = toArray(candidate);
+    if (arr.length) return arr;
+  }
+
+  return [];
+}
+
+function getServiceComponentName(component) {
+  return safeText(firstText(
+    component?.nombre,
+    component?.articulo_nombre,
+    component?.producto_nombre,
+    component?.descripcion,
+    component?.detalle
+  ));
+}
+
+function getServiceComponentType(component) {
+  const value = firstText(component?.articulo_tipo, component?.tipo_articulo, component?.tipo).toUpperCase();
+  if (value === "MATERIAL") return "Material";
+  if (value === "INSUMO") return "Insumo";
+  if (value === "PRODUCTO") return "Producto";
+  return value ? humanizeCreditValue(value, "Componente") : "Componente";
+}
+
+function getServiceComponentUnit(component) {
+  return firstText(component?.unidad_simbolo, component?.unidad_nombre);
+}
+
+function getServiceComponentQtyPerUnit(component) {
+  return Math.max(0, firstFiniteNumber(component?.cantidad_por_unidad, component?.cantidadPorUnidad, component?.cantidad));
+}
+
+function getServiceComponentTotalQty(component, serviceItem) {
+  const snapshot = firstFiniteNumber(component?.cantidad_total_snapshot, component?.cantidad_total, component?.cantidadTotal);
+  if (snapshot > 0) return snapshot;
+  return Math.max(0, getServiceComponentQtyPerUnit(component) * Math.max(0, toFiniteNumber(serviceItem?.cantidad)));
+}
+
+function getServiceItemKey(item, index) {
+  return String(
+    item?.id_item ??
+    item?.id_movimiento_item ??
+    item?.id_item_movimiento ??
+    `service-${positiveId(item?.id_servicio, item?.idServicio, item?.servicio_id) || "row"}-${index}`
+  );
 }
 
 function getItemsDescription(items) {
@@ -361,6 +448,7 @@ export default function ModalDetalleMovimiento({
   creditTraceEntity = "venta",
 }) {
   const [creditTraceExpanded, setCreditTraceExpanded] = useState(false);
+  const [expandedServiceItems, setExpandedServiceItems] = useState(() => new Set());
 
   const currentItems = useMemo(() => {
     const arr = toArray(row?.items_detalle || row?.items);
@@ -522,6 +610,19 @@ export default function ModalDetalleMovimiento({
   useEffect(() => {
     if (open) setCreditTraceExpanded(false);
   }, [open, row?.id_movimiento]);
+
+  useEffect(() => {
+    if (open) setExpandedServiceItems(new Set());
+  }, [open, row?.id_movimiento, row?.id]);
+
+  const toggleServiceItem = (itemKey) => {
+    setExpandedServiceItems((current) => {
+      const next = new Set(current);
+      if (next.has(itemKey)) next.delete(itemKey);
+      else next.add(itemKey);
+      return next;
+    });
+  };
 
   if (!open) return null;
 
@@ -794,21 +895,104 @@ export default function ModalDetalleMovimiento({
                       <span>Total</span>
                     </div>
 
-                    {items.map((item, index) => (
-                      <div
-                        className="mdm-table__row"
-                        key={item?.id_item || `${getItemName(item)}-${index}`}
-                      >
-                        <span className="mdm-product-cell" title={getItemName(item)}>
-                          <span className="mdm-product-name">{getItemName(item)}</span>
-                        </span>
-                        <span>{formatNumber(item?.cantidad)}</span>
-                        <span>{moneyARS(item?.precio)}</span>
-                        <span>{formatNumber(item?.iva_pct)}%</span>
-                        <span>{moneyARS(item?.iva_monto)}</span>
-                        <span className="is-strong">{moneyARS(item?.total)}</span>
-                      </div>
-                    ))}
+                    {items.map((item, index) => {
+                      const serviceItem = isServiceItem(item);
+                      const components = serviceItem ? getServiceComponents(item) : [];
+                      const itemKey = getServiceItemKey(item, index);
+                      const serviceExpanded = serviceItem && expandedServiceItems.has(itemKey);
+                      const itemName = getItemName(item);
+
+                      return (
+                        <React.Fragment key={itemKey}>
+                          <div className={["mdm-table__row", serviceItem ? "mdm-table__row--service" : ""].filter(Boolean).join(" ")}>
+                            <span className="mdm-product-cell" title={itemName}>
+                              <span className="mdm-product-line">
+                                {serviceItem ? (
+                                  <button
+                                    type="button"
+                                    className={["mdm-service-toggle", serviceExpanded ? "is-expanded" : ""].filter(Boolean).join(" ")}
+                                    onClick={() => toggleServiceItem(itemKey)}
+                                    aria-expanded={serviceExpanded}
+                                    aria-label={`${serviceExpanded ? "Ocultar" : "Ver"} insumos y productos del servicio ${itemName}`}
+                                    title={serviceExpanded ? "Ocultar insumos y productos del servicio" : "Ver insumos y productos del servicio"}
+                                  >
+                                    <FontAwesomeIcon icon={faChevronRight} aria-hidden="true" />
+                                  </button>
+                                ) : null}
+
+                                <span className="mdm-product-main">
+                                  <span className="mdm-product-name">{itemName}</span>
+                                  {serviceItem ? (
+                                    <span className="mdm-service-badge">
+                                      Servicio{components.length > 0 ? ` · ${components.length} ${components.length === 1 ? "componente" : "componentes"}` : ""}
+                                    </span>
+                                  ) : null}
+                                </span>
+                              </span>
+                            </span>
+                            <span>{formatNumber(item?.cantidad)}</span>
+                            <span>{moneyARS(item?.precio)}</span>
+                            <span>{formatNumber(item?.iva_pct)}%</span>
+                            <span>{moneyARS(item?.iva_monto)}</span>
+                            <span className="is-strong">{moneyARS(item?.total)}</span>
+                          </div>
+
+                          {serviceItem && serviceExpanded ? (
+                            <div
+                              className="mdm-service-components"
+                              role="region"
+                              aria-label={`Insumos y productos del servicio ${itemName}`}
+                            >
+                              <div className="mdm-service-components__head">
+                                <div>
+                                  <strong>Insumos / productos del servicio</strong>
+                                  <span>Composición utilizada en este movimiento.</span>
+                                </div>
+                                <span className="mdm-service-components__count">
+                                  {components.length} {components.length === 1 ? "componente" : "componentes"}
+                                </span>
+                              </div>
+
+                              {components.length > 0 ? (
+                                <div className="mdm-service-components__list">
+                                  {components.map((component, componentIndex) => {
+                                  const perUnit = getServiceComponentQtyPerUnit(component);
+                                  const totalQty = getServiceComponentTotalQty(component, item);
+                                  const unit = getServiceComponentUnit(component);
+                                  const suffix = unit ? ` ${unit}` : "";
+                                  return (
+                                    <div
+                                      className="mdm-service-component"
+                                      key={`${positiveId(component?.id_articulo, component?.idArticulo, component?.articulo_id) || getServiceComponentName(component)}-${componentIndex}`}
+                                    >
+                                      <div className="mdm-service-component__name">
+                                        <strong>{getServiceComponentName(component)}</strong>
+                                        <span>{getServiceComponentType(component)}{unit ? ` · ${unit}` : ""}</span>
+                                      </div>
+                                      <div className="mdm-service-component__qty">
+                                        <span>
+                                          <small>Por servicio</small>
+                                          <strong>{formatNumber(perUnit)}{suffix}</strong>
+                                        </span>
+                                        <span>
+                                          <small>Total usado</small>
+                                          <strong>{formatNumber(totalQty)}{suffix}</strong>
+                                        </span>
+                                      </div>
+                                    </div>
+                                  );
+                                  })}
+                                </div>
+                              ) : (
+                                <div className="mdm-service-components__empty">
+                                  Este servicio no tiene insumos o productos asociados en este movimiento.
+                                </div>
+                              )}
+                            </div>
+                          ) : null}
+                        </React.Fragment>
+                      );
+                    })}
                   </div>
                 </div>
               )}
