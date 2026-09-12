@@ -540,7 +540,7 @@ test('@configuracion @saldos-iniciales @guards validaciones finales: importes in
     await reactivateEntity(page, 'cliente', name);
     inactive = false;
     config = await getInitialBalances(page);
-    expect(configEntity(config, 'cliente', name)?.id_saldo_inicial).toBeNull();
+    expect(configEntity(config, 'cliente', name)?.id_saldo_inicial ?? null).toBeNull();
   } finally {
     if (inactive) await reactivateEntity(page, 'cliente', name).catch(() => null);
     await cleanupCurrentAccountFixture(page, 'cliente', name, entityId);

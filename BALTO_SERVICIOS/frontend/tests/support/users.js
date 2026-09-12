@@ -32,10 +32,29 @@ function storageAuth(state) {
     const sessionKey = String(
       values.get('session_key') || values.get('sessionKey') || values.get('X-Session') || '',
     ).trim();
-    if (sessionKey) return sessionKey;
+
+    if (!sessionKey) continue;
+
+    let usuario = {};
+    try {
+      const parsed = JSON.parse(String(values.get('usuario') || '{}'));
+      if (parsed && typeof parsed === 'object') usuario = parsed;
+    } catch {}
+
+    return {
+      sessionKey,
+      usuario,
+      origin: origin.origin,
+      isPreferredOrigin: origin.origin === preferredOrigin,
+    };
   }
 
-  return '';
+  return {
+    sessionKey: '',
+    usuario: {},
+    origin: '',
+    isPreferredOrigin: false,
+  };
 }
 
 function authFileNeedsRefresh() {
@@ -152,7 +171,8 @@ async function installSession(page, auth, { persist = false } = {}) {
 
 export async function ensureAdministratorSession(page) {
   const state = await page.context().storageState();
-  const currentKey = storageAuth(state);
+  const storedAuth = storageAuth(state);
+  const currentKey = storedAuth.sessionKey;
   let mustRefresh = !currentKey;
 
   if (currentKey) {
@@ -171,7 +191,21 @@ export async function ensureAdministratorSession(page) {
     }
   }
 
-  if (!mustRefresh) return;
+  if (!mustRefresh) {
+    // El storageState puede conservar una sesión válida únicamente en el origen
+    // remoto de BALTO_LOGIN. BALTO_SERVICIOS corre en 127.0.0.1 durante Playwright,
+    // por lo que ese localStorage NO se comparte entre orígenes. Si no copiamos la
+    // sesión al origin local antes de cargar React, Servicios redirige al login
+    // central y todos los smoke/navigation fallan aunque la session_key sea válida.
+    if (!storedAuth.isPreferredOrigin) {
+      await installSession(
+        page,
+        { sessionKey: currentKey, usuario: storedAuth.usuario },
+        { persist: true },
+      );
+    }
+    return;
+  }
 
   const auth = await loginWithRetry(page.context().request, ENV.user, ENV.password);
   await installSession(page, auth, { persist: true });
