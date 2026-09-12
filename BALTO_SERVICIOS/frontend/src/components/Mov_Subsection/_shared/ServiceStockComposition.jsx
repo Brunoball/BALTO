@@ -145,6 +145,8 @@ export default function ServiceStockComposition({
   serviceId = null,
   stockLabel = "Stock actual",
   tableLayout = false,
+  open: controlledOpen,
+  onOpenChange,
 }) {
   const normalized = useMemo(() => normalizeServiceStockComponents(components), [components]);
   const options = useMemo(
@@ -161,10 +163,21 @@ export default function ServiceStockComposition({
     () => getServiceStockShortages(normalized, serviceQuantity, options),
     [normalized, serviceQuantity, options]
   );
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isOpenControlled = typeof controlledOpen === "boolean";
+  const open = isOpenControlled ? controlledOpen : internalOpen;
+
+  const setOpen = (nextValue) => {
+    const nextOpen = typeof nextValue === "function" ? Boolean(nextValue(open)) : Boolean(nextValue);
+    if (!isOpenControlled) setInternalOpen(nextOpen);
+    onOpenChange?.(nextOpen);
+  };
 
   useEffect(() => {
-    setOpen(false);
+    if (isOpenControlled) onOpenChange?.(false);
+    else setInternalOpen(false);
+    // El cambio de servicio debe cerrar su composición, igual que antes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [serviceId]);
 
   const emit = (next) => onChange?.(normalizeServiceStockComponents(next));
@@ -218,7 +231,7 @@ export default function ServiceStockComposition({
 
   return (
     <div className={`ssc ${shortages.length ? "ssc--danger" : ""} ${tableLayout ? "ssc--table-layout" : ""}`}>
-      <button type="button" className="ssc__toggle" onClick={() => setOpen((v) => !v)} disabled={disabled && !normalized.length}>
+      <button type="button" className="ssc__toggle" onClick={() => setOpen((v) => !v)} disabled={disabled && !normalized.length} aria-expanded={open}>
         <span>{open ? "▾" : "▸"} Materiales / insumos ({normalized.length})</span>
         {shortages.length ? <strong>{shortages.length} con stock insuficiente</strong> : <span>Detalle del servicio</span>}
       </button>

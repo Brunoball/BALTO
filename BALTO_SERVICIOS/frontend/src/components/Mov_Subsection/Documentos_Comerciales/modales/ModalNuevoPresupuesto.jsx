@@ -902,6 +902,7 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
   const [clienteSel, setClienteSel] = useState(null);
   const [observaciones, setObservaciones] = useState("");
   const [condiciones, setCondiciones] = useState(buildDefaultCondicionesPresupuesto);
+  const [activeAccordion, setActiveAccordion] = useState(null);
   const [rows, setRows] = useState([buildEmptyRow()]);
   const [presupuestoPersonalizado, setPresupuestoPersonalizado] = useState(false);
   const [modeloOrigen, setModeloOrigen] = useState(null);
@@ -946,6 +947,7 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
     setClienteSel(null);
     setObservaciones("");
     setCondiciones(buildDefaultCondicionesPresupuesto());
+    setActiveAccordion(null);
     setRows([buildEmptyRow()]);
     setPresupuestoPersonalizado(false);
     setModeloOrigen(null);
@@ -1686,7 +1688,14 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
           </div>
 
           <div className="gm-movement-layout">
-            <section className="gm-table gm-table--movement gm-movement-main dc-presupuesto-table">
+            <div
+              className={[
+                "gm-movement-main",
+                "dc-presupuesto-main",
+                activeAccordion === "terms" ? "dc-presupuesto-main--terms-open" : "",
+              ].filter(Boolean).join(" ")}
+            >
+              <section className="gm-table gm-table--movement dc-presupuesto-table">
               <div className="gm-table-head">
                 <div className="gm-table-th" style={{ paddingLeft: 10 }}>Detalle</div>
                 <div className="gm-table-th">{presupuestoPersonalizado ? "Cant./medida" : "Cant."}</div>
@@ -1825,6 +1834,11 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
                         serviceId={r.id_servicio}
                         tableLayout
                         disabled={saving}
+                        open={activeAccordion === `materials-${r.id}`}
+                        onOpenChange={(nextOpen) => {
+                          const panelId = `materials-${r.id}`;
+                          setActiveAccordion((current) => (nextOpen ? panelId : (current === panelId ? null : current)));
+                        }}
                         onChange={(next) => updateRow(r.id, { consumos_snapshot: next })}
                       />
                     ) : null}
@@ -1833,104 +1847,124 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
                 })}
               </div>
 
-              <div className="presupuesto-terms" aria-label="Condiciones comerciales del presupuesto">
-                <div className="presupuesto-terms__title">Condiciones comerciales</div>
-                <div className="presupuesto-terms__row">
-                  <div className="gm-field presupuesto-terms__field presupuesto-terms__field--small">
-                    <input
-                      className="gm-input"
-                      type="number"
-                      min="0"
-                      max="3650"
-                      placeholder=" "
-                      value={condiciones.validezDias}
-                      onChange={(e) => updateCondicion("validezDias", e.target.value)}
-                      disabled={saving}
-                    />
-                    <label className="gm-label">Validez (días)</label>
+            </section>
+
+              <div
+                className={`presupuesto-terms ${activeAccordion === "terms" ? "is-open" : ""}`}
+                aria-label="Condiciones comerciales del presupuesto"
+              >
+                <button
+                  type="button"
+                  className="presupuesto-terms__toggle"
+                  onClick={() => setActiveAccordion((current) => (current === "terms" ? null : "terms"))}
+                  disabled={saving}
+                  aria-expanded={activeAccordion === "terms"}
+                  aria-controls="presupuesto-condiciones-body"
+                >
+                  <span>{activeAccordion === "terms" ? "▾" : "▸"} Condiciones comerciales</span>
+                  <small>{activeAccordion === "terms" ? "Ocultar" : "Configurar"}</small>
+                </button>
+
+                {activeAccordion === "terms" ? (
+                  <div className="presupuesto-terms__body" id="presupuesto-condiciones-body">
+                    <div className="presupuesto-terms__row">
+                      <div className="gm-field presupuesto-terms__field presupuesto-terms__field--small">
+                        <input
+                          className="gm-input"
+                          type="number"
+                          min="0"
+                          max="3650"
+                          placeholder=" "
+                          value={condiciones.validezDias}
+                          onChange={(e) => updateCondicion("validezDias", e.target.value)}
+                          disabled={saving}
+                        />
+                        <label className="gm-label">Validez (días)</label>
+                      </div>
+                      <div className="presupuesto-terms__hint">
+                        {condicionesPreview.fecha_validez
+                          ? `Válido hasta ${formatFechaCorta(condicionesPreview.fecha_validez)}`
+                          : "Sin vencimiento informado"}
+                      </div>
+                    </div>
+
+                    <div className="gm-field presupuesto-terms__field">
+                      <textarea
+                        className="gm-input presupuesto-terms__textarea"
+                        rows={2}
+                        placeholder=" "
+                        value={condiciones.plazoEntrega}
+                        onChange={(e) => updateCondicion("plazoEntrega", e.target.value)}
+                        disabled={saving}
+                      />
+                      <label className="gm-label">Plazo de entrega / ejecución</label>
+                    </div>
+
+                    <div className="presupuesto-terms__row presupuesto-terms__row--split">
+                      <div className="gm-field presupuesto-terms__field">
+                        <textarea
+                          className="gm-input presupuesto-terms__textarea"
+                          rows={2}
+                          placeholder=" "
+                          value={condiciones.lugarEntrega}
+                          onChange={(e) => updateCondicion("lugarEntrega", e.target.value)}
+                          disabled={saving}
+                        />
+                        <label className="gm-label">Lugar de entrega / instalación</label>
+                      </div>
+                      <div className="gm-field presupuesto-terms__field">
+                        <textarea
+                          className="gm-input presupuesto-terms__textarea"
+                          rows={2}
+                          placeholder=" "
+                          value={condiciones.garantia}
+                          onChange={(e) => updateCondicion("garantia", e.target.value)}
+                          disabled={saving}
+                        />
+                        <label className="gm-label">Garantía / soporte</label>
+                      </div>
+                    </div>
+
+                    <div className="gm-field presupuesto-terms__field">
+                      <textarea
+                        className="gm-input presupuesto-terms__textarea"
+                        rows={3}
+                        placeholder=" "
+                        value={condiciones.formaPago}
+                        onChange={(e) => updateCondicion("formaPago", e.target.value)}
+                        disabled={saving}
+                      />
+                      <label className="gm-label">Forma de pago</label>
+                    </div>
+
+                    <div className="gm-field presupuesto-terms__field">
+                      <textarea
+                        className="gm-input presupuesto-terms__textarea"
+                        rows={3}
+                        placeholder=" "
+                        value={condiciones.condicionesComerciales}
+                        onChange={(e) => updateCondicion("condicionesComerciales", e.target.value)}
+                        disabled={saving}
+                      />
+                      <label className="gm-label">Aclaraciones / condiciones</label>
+                    </div>
+
+                    <div className="gm-field presupuesto-terms__field">
+                      <textarea
+                        className="gm-input presupuesto-terms__textarea"
+                        rows={2}
+                        placeholder=" "
+                        value={condiciones.notas}
+                        onChange={(e) => updateCondicion("notas", e.target.value)}
+                        disabled={saving}
+                      />
+                      <label className="gm-label">Notas adicionales</label>
+                    </div>
                   </div>
-                  <div className="presupuesto-terms__hint">
-                    {condicionesPreview.fecha_validez
-                      ? `Válido hasta ${formatFechaCorta(condicionesPreview.fecha_validez)}`
-                      : "Sin vencimiento informado"}
-                  </div>
-                </div>
-
-                <div className="gm-field presupuesto-terms__field">
-                  <textarea
-                    className="gm-input presupuesto-terms__textarea"
-                    rows={2}
-                    placeholder=" "
-                    value={condiciones.plazoEntrega}
-                    onChange={(e) => updateCondicion("plazoEntrega", e.target.value)}
-                    disabled={saving}
-                  />
-                  <label className="gm-label">Plazo de entrega / ejecución</label>
-                </div>
-
-                <div className="presupuesto-terms__row presupuesto-terms__row--split">
-                  <div className="gm-field presupuesto-terms__field">
-                    <textarea
-                      className="gm-input presupuesto-terms__textarea"
-                      rows={2}
-                      placeholder=" "
-                      value={condiciones.lugarEntrega}
-                      onChange={(e) => updateCondicion("lugarEntrega", e.target.value)}
-                      disabled={saving}
-                    />
-                    <label className="gm-label">Lugar de entrega / instalación</label>
-                  </div>
-                  <div className="gm-field presupuesto-terms__field">
-                    <textarea
-                      className="gm-input presupuesto-terms__textarea"
-                      rows={2}
-                      placeholder=" "
-                      value={condiciones.garantia}
-                      onChange={(e) => updateCondicion("garantia", e.target.value)}
-                      disabled={saving}
-                    />
-                    <label className="gm-label">Garantía / soporte</label>
-                  </div>
-                </div>
-
-                <div className="gm-field presupuesto-terms__field">
-                  <textarea
-                    className="gm-input presupuesto-terms__textarea"
-                    rows={3}
-                    placeholder=" "
-                    value={condiciones.formaPago}
-                    onChange={(e) => updateCondicion("formaPago", e.target.value)}
-                    disabled={saving}
-                  />
-                  <label className="gm-label">Forma de pago</label>
-                </div>
-
-                <div className="gm-field presupuesto-terms__field">
-                  <textarea
-                    className="gm-input presupuesto-terms__textarea"
-                    rows={3}
-                    placeholder=" "
-                    value={condiciones.condicionesComerciales}
-                    onChange={(e) => updateCondicion("condicionesComerciales", e.target.value)}
-                    disabled={saving}
-                  />
-                  <label className="gm-label">Aclaraciones / condiciones</label>
-                </div>
-
-                <div className="gm-field presupuesto-terms__field">
-                  <textarea
-                    className="gm-input presupuesto-terms__textarea"
-                    rows={2}
-                    placeholder=" "
-                    value={condiciones.notas}
-                    onChange={(e) => updateCondicion("notas", e.target.value)}
-                    disabled={saving}
-                  />
-                  <label className="gm-label">Notas adicionales</label>
-                </div>
+                ) : null}
               </div>
 
-              <div className="gm-table-foot">
+              <div className="gm-table-foot dc-presupuesto-foot">
                 <div className="gm-foot-actions">
                   <button type="button" className="gm-foot-btn" onClick={addRow} disabled={saving}>
                     <span className="gm-foot-btn__icon">
@@ -1958,8 +1992,7 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
                   </div>
                 </div>
               </div>
-
-            </section>
+            </div>
 
             <div className="gm-movement-side">
               <aside className="gm-aside">

@@ -166,6 +166,20 @@ function wrapByWidth(doc, value, maxW) {
   return lines;
 }
 
+function drawWrappedClampedText(doc, value, x, y, maxW, maxLines = 2, lineH = 9) {
+  const lines = wrapByWidth(doc, value, maxW);
+  if (!lines.length) return;
+
+  const visible = lines.slice(0, maxLines);
+  if (lines.length > maxLines) {
+    visible[maxLines - 1] = lines.slice(maxLines - 1).join(" ");
+  }
+
+  visible.forEach((lineText, index) => {
+    text(doc, clampToWidth(doc, lineText, maxW), x, y + index * lineH);
+  });
+}
+
 function buildApiUrl(paramsObj) {
   const baseRaw = String(BASE_URL || "").trim();
   const base = baseRaw.replace(/\/+$/, "") + "/";
@@ -623,15 +637,38 @@ function drawHeader(doc, data, logoDataUrl) {
   const ly = headerY + 72;
   drawLogoOrFallback(doc, logoDataUrl, em, B, headerY, splitX - B);
 
+  const razonValueX = leftX + 78;
+  const domicilioValueX = leftX + 90;
+  const condicionIvaValueX = leftX + 130;
+  const leftHeaderRightPadding = 10;
+
   set(doc, "helvetica", "bold", 9);
   text(doc, "Razón Social:", leftX, ly + 18);
   text(doc, "Domicilio Comercial:", leftX, ly + 38);
   text(doc, "Condición frente al IVA:", leftX, ly + 58);
 
   set(doc, "helvetica", "normal", 9);
-  text(doc, clampToWidth(doc, em.razon || "-", splitX - leftX - 12), leftX + 78, ly + 18);
-  text(doc, clampToWidth(doc, em.domComercial || "-", splitX - leftX - 12), leftX + 90, ly + 38);
-  text(doc, clampToWidth(doc, em.iva || "-", splitX - leftX - 12), leftX + 130, ly + 58);
+  text(
+    doc,
+    clampToWidth(doc, em.razon || "-", Math.max(20, splitX - razonValueX - leftHeaderRightPadding)),
+    razonValueX,
+    ly + 18
+  );
+  drawWrappedClampedText(
+    doc,
+    em.domComercial || "-",
+    domicilioValueX,
+    ly + 38,
+    Math.max(20, splitX - domicilioValueX - leftHeaderRightPadding),
+    2,
+    9
+  );
+  text(
+    doc,
+    clampToWidth(doc, em.iva || "-", Math.max(20, splitX - condicionIvaValueX - leftHeaderRightPadding)),
+    condicionIvaValueX,
+    ly + 58
+  );
 
   const rx = splitX + 1;
   set(doc, "helvetica", "bold", 14);
@@ -685,9 +722,9 @@ function drawHeader(doc, data, logoDataUrl) {
   text(doc, clampToWidth(doc, cl.cuit || "-", 165), recLx + 58, recY + 18);
   text(doc, clampToWidth(doc, cl.condVenta || FIX.condicion_venta_default, 190), recLx + 96, recY + 46);
   text(doc, "Interno", recLx + 58, bottomRowY);
-  const razonLines = wrapByWidth(doc, clienteNombre, innerW - (recRx - B) - 12);
-  text(doc, razonLines[0] || "", recRx + 30, recY + 18);
-  if (razonLines[1]) text(doc, razonLines[1], recRx + 185, recY + 30);
+  const clienteRazonValueX = recRx + 30;
+  const clienteRazonValueMaxW = Math.max(90, B + innerW - 10 - clienteRazonValueX);
+  drawWrappedClampedText(doc, clienteNombre, clienteRazonValueX, recY + 18, clienteRazonValueMaxW, 2, 11);
   domicilioLines.forEach((lineTxt, lineIdx) => {
     text(doc, lineTxt, domValueX, recY + 46 + lineIdx * domLineH);
   });

@@ -193,6 +193,20 @@ function wrapByWidth(doc, str, maxW) {
   return lines;
 }
 
+function drawWrappedClampedText(doc, value, x, y, maxW, maxLines = 2, lineH = 9) {
+  const lines = wrapByWidth(doc, value, maxW);
+  if (!lines.length) return;
+
+  const visible = lines.slice(0, maxLines);
+  if (lines.length > maxLines) {
+    visible[maxLines - 1] = lines.slice(maxLines - 1).join(" ");
+  }
+
+  visible.forEach((lineText, index) => {
+    text(doc, clampToWidth(doc, lineText, maxW), x, y + index * lineH);
+  });
+}
+
 function normalizeList(value) {
   if (!Array.isArray(value)) return [];
   return value
@@ -806,19 +820,32 @@ async function drawPage(doc, pageName, ctx) {
 
   drawLogoOrFallback(doc, logoDataUrl, em, leftX, headerY, splitX);
 
+  const razonValueX = leftX + 78;
+  const domicilioValueX = leftX + 100;
+  const condicionIvaValueX = leftX + 130;
+  const leftHeaderRightPadding = 10;
+
   set(doc, "helvetica", "bold", 9);
   text(doc, "Razón Social:", leftX, ly + 18);
   set(doc, "helvetica", "normal", 9);
-  text(doc, clampToWidth(doc, em.razon, splitX - leftX - 12), leftX + 78, ly + 18);
+  text(
+    doc,
+    clampToWidth(doc, em.razon, Math.max(20, splitX - razonValueX - leftHeaderRightPadding)),
+    razonValueX,
+    ly + 18
+  );
 
   set(doc, "helvetica", "bold", 9);
   text(doc, "Domicilio Comercial:", leftX, ly + 38);
   set(doc, "helvetica", "normal", 9);
-  text(
+  drawWrappedClampedText(
     doc,
-    clampToWidth(doc, em.domComercial, splitX - leftX - 12),
-    leftX + 100,
-    ly + 38
+    em.domComercial,
+    domicilioValueX,
+    ly + 38,
+    Math.max(20, splitX - domicilioValueX - leftHeaderRightPadding),
+    2,
+    9
   );
 
   set(doc, "helvetica", "bold", 9);
@@ -826,8 +853,8 @@ async function drawPage(doc, pageName, ctx) {
   set(doc, "helvetica", "normal", 9);
   text(
     doc,
-    clampToWidth(doc, em.condIva, splitX - leftX - 12),
-    leftX + 130,
+    clampToWidth(doc, em.condIva, Math.max(20, splitX - condicionIvaValueX - leftHeaderRightPadding)),
+    condicionIvaValueX,
     ly + 58
   );
 
@@ -907,9 +934,9 @@ async function drawPage(doc, pageName, ctx) {
   text(doc, "Apellido y Nombre / Razón Social:", 150, recY + 18);
 
   set(doc, "helvetica", "normal", 9);
-  const razonLines = wrapByWidth(doc, rc.razon, innerW - (recRx - B) - 12);
-  text(doc, razonLines[0] || "", recRx + 30, recY + 18);
-  if (razonLines[1]) text(doc, razonLines[1], recRx + 185, recY + 30);
+  const clienteRazonValueX = recRx + 30;
+  const clienteRazonValueMaxW = Math.max(90, B + innerW - 10 - clienteRazonValueX);
+  drawWrappedClampedText(doc, rc.razon, clienteRazonValueX, recY + 18, clienteRazonValueMaxW, 2, 11);
 
   set(doc, "helvetica", "bold", 9);
   text(doc, "Domicilio:", recRx + 0, recY + 46);

@@ -42,3 +42,9 @@ html[data-theme="oscuro"] .extraContent-ventas--success {
   border-color: rgba(74, 222, 128, .28);
   color: #86efac;
 }
+
+
+/* Detalle de ventas: la fila completa del servicio abre/cierra sus componentes. */
+.mdm-modal .mdm-table__row--service {
+  cursor: pointer;
+}

@@ -342,6 +342,29 @@ export default function Ventas() {
   const liveTokenRef = useRef(null);
   const liveToastCooldownRef = useRef(0);
   useEffect(() => () => { if (searchTimerRef.current) clearTimeout(searchTimerRef.current); if (liveTimerRef.current) clearTimeout(liveTimerRef.current); comprobanteRequestRef.current += 1; }, []);
+
+  // En el detalle de ventas, toda la fila de un servicio funciona como disparador
+  // del acordeón de insumos/productos. El botón de la flecha conserva su comportamiento.
+  useEffect(() => {
+    if (!openDetalleMovimiento) return undefined;
+
+    const handleServiceRowClick = (event) => {
+      const target = event.target instanceof Element ? event.target : null;
+      if (!target) return;
+
+      const serviceRow = target.closest(".mdm-table__row--service");
+      if (!serviceRow || !serviceRow.closest(".mdm-modal")) return;
+
+      // Si el usuario tocó directamente la flecha, el propio botón ya hace el toggle.
+      if (target.closest(".mdm-service-toggle")) return;
+
+      const toggle = serviceRow.querySelector(".mdm-service-toggle");
+      if (toggle && !toggle.disabled) toggle.click();
+    };
+
+    document.addEventListener("click", handleServiceRowClick);
+    return () => document.removeEventListener("click", handleServiceRowClick);
+  }, [openDetalleMovimiento]);
   useEffect(() => {
     ["ventas:listar:cc-medios-v2", "ventas:listar:cc-medios-v3", "ventas:listar:cc-medios-r2-v4", "ventas:listar:cc-medios-r2-v5", "ventas:listar:cc-medios-r2-v6", "ventas:listar:cc-medios-r2-v7", "ventas:listar:cc-medios-r2-v8-tn"].forEach((key) => clearMovPerfCache(key));
   }, []);

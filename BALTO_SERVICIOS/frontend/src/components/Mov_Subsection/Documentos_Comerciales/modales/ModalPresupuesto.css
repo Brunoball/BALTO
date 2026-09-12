@@ -175,19 +175,65 @@ html[data-theme="oscuro"] .dc-total-line--total {
 .presupuesto-terms {
   display: flex;
   flex-direction: column;
-  gap: 10px;
   margin-top: 12px;
-  padding: 12px;
   border: 1px solid var(--mp-border);
   border-radius: 16px;
   background: var(--mp-surface-2);
+  overflow: hidden;
 }
 
-.presupuesto-terms__title {
+.presupuesto-terms__toggle {
+  width: 100%;
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 0;
+  background: var(--mp-surface);
   color: var(--mp-text);
-  font-size: .86rem;
-  font-weight: 800;
-  letter-spacing: -.01em;
+  padding: 9px 12px;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.presupuesto-terms__toggle > span {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.presupuesto-terms__toggle > small {
+  flex: 0 0 auto;
+  color: var(--mp-muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.presupuesto-terms__toggle:hover:not(:disabled) {
+  background: var(--mp-action-soft);
+}
+
+.presupuesto-terms__toggle:focus-visible {
+  outline: 2px solid var(--mp-action);
+  outline-offset: -2px;
+}
+
+.presupuesto-terms__toggle:disabled {
+  opacity: .6;
+  cursor: not-allowed;
+}
+
+.presupuesto-terms__body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 34vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 14px 12px 12px;
+  border-top: 1px solid var(--mp-border-md);
+  background: var(--mp-bg);
 }
 
 .presupuesto-terms__row {
@@ -243,67 +289,106 @@ html[data-theme="oscuro"] .dc-total-line--total {
 
 .presupuesto-terms__row--split .presupuesto-terms__block { min-width: 0; }
 
-.presupuesto-modal__content .gm-table {
+.presupuesto-modal__content .dc-presupuesto-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
   min-height: 0;
+  overflow: hidden;
 }
 
-.presupuesto-modal__content .gm-table-body {
-  flex: 1 1 260px;
-  min-height: 180px;
+/* La tabla, Condiciones comerciales y el pie quedan en contenedores hermanos.
+   Al abrir Condiciones, la tabla se achica y el botón Agregar fila + chips siguen visibles. */
+.presupuesto-modal__content .dc-presupuesto-main > .dc-presupuesto-table {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.presupuesto-modal__content .dc-presupuesto-table .gm-table-body {
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
 }
 
-.presupuesto-modal__content .gm-table > .presupuesto-terms {
-  flex: 0 1 auto;
+/* Cuando Condiciones comerciales está abierto, Materiales / insumos ya está cerrado
+   por el acordeón compartido. En ese estado la tabla debe tomar la altura real de
+   sus filas: no reservamos un viewport interno ni mostramos un scrollbar pequeño. */
+.presupuesto-modal__content .dc-presupuesto-main--terms-open > .dc-presupuesto-table {
+  flex: 0 0 auto;
+  height: auto !important;
+  min-height: 0;
+  max-height: none !important;
+  overflow: visible;
+}
+
+.presupuesto-modal__content .dc-presupuesto-main--terms-open > .dc-presupuesto-table .gm-table-body {
+  flex: 0 0 auto;
+  height: auto !important;
+  min-height: 0;
+  max-height: none !important;
+  overflow-y: visible;
+  overflow-x: hidden;
+}
+
+.presupuesto-modal__content .dc-presupuesto-main > .presupuesto-terms {
+  position: relative;
+  z-index: 1;
+  flex: 0 0 auto;
   width: 100%;
   max-width: 100%;
-  max-height: clamp(240px, 34vh, 360px);
   box-sizing: border-box;
-  margin: 0;
+  margin: 8px 0 0;
   border-left: 0;
   border-right: 0;
   border-bottom: 0;
   border-radius: 0;
   border-top: 1px solid var(--mp-border-md);
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding: 14px 12px 12px;
+  background: var(--mp-bg);
+}
+
+.presupuesto-modal__content .dc-presupuesto-main > .dc-presupuesto-foot {
+  position: relative !important;
+  inset: auto !important;
+  z-index: 2;
+  flex: 0 0 auto;
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 12px;
   background: var(--mp-bg);
 }
 
-.presupuesto-modal__content .gm-table > .presupuesto-terms *,
-.presupuesto-modal__content .gm-table > .presupuesto-terms *::before,
-.presupuesto-modal__content .gm-table > .presupuesto-terms *::after {
+.presupuesto-modal__content .dc-presupuesto-foot .gm-summary-chips {
+  margin-left: auto;
+}
+
+.presupuesto-modal__content .dc-presupuesto-main > .presupuesto-terms *,
+.presupuesto-modal__content .dc-presupuesto-main > .presupuesto-terms *::before,
+.presupuesto-modal__content .dc-presupuesto-main > .presupuesto-terms *::after {
   box-sizing: border-box;
 }
 
-.presupuesto-modal__content .gm-table > .presupuesto-terms .presupuesto-terms__row,
-.presupuesto-modal__content .gm-table > .presupuesto-terms .presupuesto-terms__row--split {
+.presupuesto-modal__content .dc-presupuesto-main > .presupuesto-terms .presupuesto-terms__row,
+.presupuesto-modal__content .dc-presupuesto-main > .presupuesto-terms .presupuesto-terms__row--split {
   min-width: 0;
 }
 
-.presupuesto-modal__content .gm-table > .presupuesto-terms .presupuesto-terms__textarea,
-.presupuesto-modal__content .gm-table > .presupuesto-terms .gm-input {
+.presupuesto-modal__content .dc-presupuesto-main > .presupuesto-terms .presupuesto-terms__textarea,
+.presupuesto-modal__content .dc-presupuesto-main > .presupuesto-terms .gm-input {
   max-width: 100%;
 }
 
-.presupuesto-modal__content .gm-table > .presupuesto-terms .presupuesto-terms__title {
-  padding: 0 2px;
-  color: var(--mp-text);
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: .07em;
-}
-
-.presupuesto-modal__content .gm-table > .presupuesto-terms .presupuesto-terms__field {
+.presupuesto-modal__content .dc-presupuesto-main > .presupuesto-terms .presupuesto-terms__field {
   position: relative;
   min-width: 0;
 }
 
-.presupuesto-modal__content .gm-table > .presupuesto-terms .presupuesto-terms__textarea {
+.presupuesto-modal__content .dc-presupuesto-main > .presupuesto-terms .presupuesto-terms__textarea {
   width: 100%;
   min-height: 62px;
   height: auto;
@@ -312,24 +397,24 @@ html[data-theme="oscuro"] .dc-total-line--total {
   line-height: 1.35;
 }
 
-.presupuesto-modal__content .gm-table > .presupuesto-terms .presupuesto-terms__field--small .gm-input {
+.presupuesto-modal__content .dc-presupuesto-main > .presupuesto-terms .presupuesto-terms__field--small .gm-input {
   height: 42px;
   padding-top: 10px;
 }
 
-.presupuesto-modal__content .gm-table > .presupuesto-terms textarea.gm-input + .gm-label {
+.presupuesto-modal__content .dc-presupuesto-main > .presupuesto-terms textarea.gm-input + .gm-label {
   top: 21px;
 }
 
-.presupuesto-modal__content .gm-table > .presupuesto-terms textarea.gm-input:focus + .gm-label,
-.presupuesto-modal__content .gm-table > .presupuesto-terms textarea.gm-input:not(:placeholder-shown) + .gm-label {
+.presupuesto-modal__content .dc-presupuesto-main > .presupuesto-terms textarea.gm-input:focus + .gm-label,
+.presupuesto-modal__content .dc-presupuesto-main > .presupuesto-terms textarea.gm-input:not(:placeholder-shown) + .gm-label {
   top: -5px;
   transform: translateY(0) scale(.82);
   color: var(--mp-action);
   background: var(--mp-bg);
 }
 
-.presupuesto-modal__content .gm-table > .presupuesto-terms .presupuesto-terms__hint {
+.presupuesto-modal__content .dc-presupuesto-main > .presupuesto-terms .presupuesto-terms__hint {
   min-height: 42px;
   border-radius: 12px;
   border: 1px solid var(--mp-border-md);
@@ -338,8 +423,19 @@ html[data-theme="oscuro"] .dc-total-line--total {
 
 html[data-theme="oscuro"] .presupuesto-terms,
 body.dark .presupuesto-terms {
-  background: rgba(15, 23, 42, .42);
+  background: var(--mp-bg);
   border-color: rgba(148, 163, 184, .18);
+}
+
+html[data-theme="oscuro"] .presupuesto-terms__toggle,
+body.dark .presupuesto-terms__toggle {
+  background: var(--mp-surface);
+  color: var(--mp-text);
+}
+
+html[data-theme="oscuro"] .presupuesto-terms__toggle:hover:not(:disabled),
+body.dark .presupuesto-terms__toggle:hover:not(:disabled) {
+  background: var(--mp-action-soft);
 }
 
 html[data-theme="oscuro"] .presupuesto-terms__hint,
@@ -349,16 +445,22 @@ body.dark .presupuesto-terms__hint {
   color: rgba(255, 255, 255, .92);
 }
 
-html[data-theme="oscuro"] .presupuesto-modal__content .gm-table > .presupuesto-terms,
-body.dark .presupuesto-modal__content .gm-table > .presupuesto-terms {
+html[data-theme="oscuro"] .presupuesto-modal__content .dc-presupuesto-main > .presupuesto-terms,
+body.dark .presupuesto-modal__content .dc-presupuesto-main > .presupuesto-terms {
   background: var(--mp-bg);
   border-top-color: rgba(255, 255, 255, .10);
 }
 
-html[data-theme="oscuro"] .presupuesto-modal__content .gm-table > .presupuesto-terms textarea.gm-input:focus + .gm-label,
-html[data-theme="oscuro"] .presupuesto-modal__content .gm-table > .presupuesto-terms textarea.gm-input:not(:placeholder-shown) + .gm-label,
-body.dark .presupuesto-modal__content .gm-table > .presupuesto-terms textarea.gm-input:focus + .gm-label,
-body.dark .presupuesto-modal__content .gm-table > .presupuesto-terms textarea.gm-input:not(:placeholder-shown) + .gm-label {
+html[data-theme="oscuro"] .presupuesto-modal__content .dc-presupuesto-main > .presupuesto-terms .presupuesto-terms__body,
+body.dark .presupuesto-modal__content .dc-presupuesto-main > .presupuesto-terms .presupuesto-terms__body {
+  background: var(--mp-bg);
+  border-top-color: rgba(255, 255, 255, .10);
+}
+
+html[data-theme="oscuro"] .presupuesto-modal__content .dc-presupuesto-main > .presupuesto-terms textarea.gm-input:focus + .gm-label,
+html[data-theme="oscuro"] .presupuesto-modal__content .dc-presupuesto-main > .presupuesto-terms textarea.gm-input:not(:placeholder-shown) + .gm-label,
+body.dark .presupuesto-modal__content .dc-presupuesto-main > .presupuesto-terms textarea.gm-input:focus + .gm-label,
+body.dark .presupuesto-modal__content .dc-presupuesto-main > .presupuesto-terms textarea.gm-input:not(:placeholder-shown) + .gm-label {
   color: rgba(140, 190, 255, .92);
   background: var(--mp-bg);
 }
