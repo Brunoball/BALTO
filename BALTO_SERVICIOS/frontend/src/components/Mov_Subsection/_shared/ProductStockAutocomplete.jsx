@@ -85,7 +85,7 @@ function controlsStock(x) {
   return Number(x?.mueve_stock ?? 1) === 1;
 }
 
-function filterAvailableProduct(product, allowOutOfStock = false) {
+function filterAvailableProduct(product, allowOutOfStock = false, allowUntrackedStock = false) {
   if (!product) return null;
   const kind = getItemKind(product);
 
@@ -93,14 +93,22 @@ function filterAvailableProduct(product, allowOutOfStock = false) {
   // valida sobre sus materiales/insumos visibles en la composición del movimiento.
   if (kind === "service") return { ...product, variantes: [], tiene_variantes: 0 };
 
-  // El selector "Stock" representa exclusivamente inventario real. Un Material/Insumo
-  // con controla_stock=0 puede seguir usándose dentro de la composición de Servicios,
-  // pero no debe ofrecerse como artículo directo de Stock en Movimientos.
-  if (!controlsStock(product)) return null;
-
   const activeVariants = Array.isArray(product?.variantes)
     ? product.variantes.filter((v) => Number(v?.activo ?? 1) !== 0)
     : [];
+
+  // Por defecto el selector de Stock conserva su comportamiento histórico: sólo
+  // inventario real. Presupuestos y Compras pueden habilitar explícitamente el
+  // catálogo completo para usar materiales/insumos que no controlan existencia.
+  if (!controlsStock(product)) {
+    if (!allowUntrackedStock) return null;
+    return {
+      ...product,
+      variantes: activeVariants,
+      tiene_variantes: activeVariants.length > 0 ? 1 : 0,
+    };
+  }
+
   const variants = allowOutOfStock
     ? activeVariants
     : activeVariants.filter((v) => hasPositiveStock(v));
@@ -176,6 +184,7 @@ export default function ProductStockAutocomplete({
   inputClassName = "",
   emptyMessage = "Sin resultados",
   allowOutOfStock = false,
+  allowUntrackedStock = false,
   catalogKind = "all", // all | service | stock
   defaultKind = "service",
   showKindToggle = true,
@@ -212,9 +221,9 @@ export default function ProductStockAutocomplete({
     const arr = Array.isArray(options) ? options : [];
     return arr
       .filter((p) => effectiveKind === "all" || getItemKind(p) === effectiveKind)
-      .map((p) => filterAvailableProduct(p, allowOutOfStock))
+      .map((p) => filterAvailableProduct(p, allowOutOfStock, allowUntrackedStock))
       .filter(Boolean);
-  }, [options, allowOutOfStock, effectiveKind]);
+  }, [options, allowOutOfStock, allowUntrackedStock, effectiveKind]);
 
   const canToggleKind = catalogKind === "all" && showKindToggle && optionKinds.service && optionKinds.stock;
 
@@ -324,7 +333,7 @@ export default function ProductStockAutocomplete({
 
   const selectProduct = useCallback((product) => {
     const variants = getItemKind(product) === "stock" && Array.isArray(product?.variantes)
-      ? product.variantes.filter((v) => Number(v?.activo ?? 1) !== 0 && (allowOutOfStock || hasPositiveStock(v)))
+      ? product.variantes.filter((v) => Number(v?.activo ?? 1) !== 0 && (allowOutOfStock || allowUntrackedStock || hasPositiveStock(v)))
       : [];
     if (variants.length > 0) {
       toggleProduct(product);
@@ -332,7 +341,7 @@ export default function ProductStockAutocomplete({
     }
     onSelect?.(product);
     closeList();
-  }, [allowOutOfStock, closeList, onSelect, toggleProduct]);
+  }, [allowOutOfStock, allowUntrackedStock, closeList, onSelect, toggleProduct]);
 
   const selectVariant = useCallback((product, variant) => {
     onSelect?.(buildVariantSelection(product, variant));
@@ -411,7 +420,7 @@ export default function ProductStockAutocomplete({
       {filteredProducts.length > 0 ? filteredProducts.map((product) => {
         const pKey = getCatalogKey(product);
         const variants = Array.isArray(product?.variantes)
-          ? product.variantes.filter((v) => Number(v?.activo ?? 1) !== 0 && (allowOutOfStock || hasPositiveStock(v)))
+          ? product.variantes.filter((v) => Number(v?.activo ?? 1) !== 0 && (allowOutOfStock || allowUntrackedStock || hasPositiveStock(v)))
           : [];
         const variantsMatch = q ? variants.filter((v) => normalizeText([getVariantName(v), v?.sku, getProductName(product)].filter(Boolean).join(" ")).includes(q)) : variants;
         const productMatches = !q || normalizeText([getProductName(product), product?.sku].filter(Boolean).join(" ")).includes(q);
@@ -434,7 +443,9 @@ export default function ProductStockAutocomplete({
                 <span className="psa-meta">
                   {getItemKind(product) === "service"
                     ? `Servicio${Number(product?.cantidad_componentes || 0) > 0 ? ` · ${Number(product.cantidad_componentes)} insumo(s)` : ""}`
-                    : `Stock${getStock(product) !== null ? `: ${getStock(product)}` : ""}`}
+                    : controlsStock(product)
+                      ? `Stock${getStock(product) !== null ? `: ${getStock(product)}` : ""}`
+                      : "Material / insumo · sin control de stock"}
                 </span>
               </span>
               {variants.length ? <span className="psa-arrow">{isExpanded ? "▾" : "▸"}</span> : null}

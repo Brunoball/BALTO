@@ -91,7 +91,7 @@ function getPrecio(d) {
 function emptyRow() {
   return {
     localId: uid(),
-    tipo_item: "MANUAL",
+    tipo_item: "SERVICIO",
     id_servicio: null,
     id_articulo: null,
     id_detalle: null,
@@ -106,13 +106,15 @@ function emptyRow() {
 }
 
 function rowFromItem(item) {
+  const idServicio = Number(item?.id_servicio || 0) || null;
+  const idArticulo = Number(item?.id_articulo || item?.id_stock_producto || 0) || null;
   return {
     localId: uid(),
-    tipo_item: String(item?.tipo_item || item?.tipo_item_db || "MANUAL").toUpperCase(),
-    id_servicio: Number(item?.id_servicio || 0) || null,
-    id_articulo: Number(item?.id_articulo || item?.id_stock_producto || 0) || null,
-    id_detalle: Number(item?.id_detalle || 0) || null,
-    id_stock_producto: Number(item?.id_articulo || item?.id_stock_producto || 0) || null,
+    tipo_item: idServicio ? "SERVICIO" : (idArticulo ? "ARTICULO" : "MANUAL"),
+    id_servicio: idServicio,
+    id_articulo: idArticulo,
+    id_detalle: null,
+    id_stock_producto: idArticulo,
     id_stock_variante: null,
     descripcion: upperStr(item?.descripcion || item?.detalle || item?.nombre),
     codigo: upperStr(item?.codigo || item?.sku),
@@ -127,7 +129,11 @@ function normalizeLists(lists) {
   const data = src.listas && typeof src.listas === "object" ? src.listas : src;
   const pick = (k) => (Array.isArray(data?.[k]) ? data[k] : []);
   const servicios = pick("servicios_movimiento").length ? pick("servicios_movimiento") : pick("serviciosMovimiento");
-  const articulos = pick("articulos_stock_todos").length ? pick("articulos_stock_todos") : (pick("articulos_stock").length ? pick("articulos_stock") : pick("stock_productos"));
+  const articulos = pick("articulos_catalogo_todos").length
+    ? pick("articulos_catalogo_todos")
+    : (pick("articulosCatalogoTodos").length
+      ? pick("articulosCatalogoTodos")
+      : (pick("articulos_stock_todos").length ? pick("articulos_stock_todos") : (pick("articulos_stock").length ? pick("articulos_stock") : pick("stock_productos"))));
   const catalogoCompleto = [...servicios, ...articulos];
   return catalogoCompleto.length ? catalogoCompleto : (Array.isArray(data.detalles) ? data.detalles : Array.isArray(data.productos) ? data.productos : []);
 }
@@ -262,6 +268,24 @@ export default function ModalModelosPresupuesto({ open, lists, onClose, onToast,
     }));
   }, []);
 
+  const changeRowType = useCallback((localId, tipoRaw) => {
+    const tipo = ["SERVICIO", "ARTICULO", "MANUAL"].includes(String(tipoRaw).toUpperCase())
+      ? String(tipoRaw).toUpperCase()
+      : "SERVICIO";
+    updateRow(localId, {
+      tipo_item: tipo,
+      id_servicio: null,
+      id_articulo: null,
+      id_detalle: null,
+      id_stock_producto: null,
+      id_stock_variante: null,
+      descripcion: "",
+      codigo: "",
+      cantidad: 1,
+      precio: 0,
+    });
+  }, [updateRow]);
+
   const selectStock = useCallback((localId, option) => {
     const idServicio = getServicioId(option);
     const idArticulo = getStockProductoId(option);
@@ -289,11 +313,11 @@ export default function ModalModelosPresupuesto({ open, lists, onClose, onToast,
         const subtotal = cantidad * precio;
         const ivaMonto = subtotal * ivaPct / 100;
         return {
-          tipo_item: r.id_servicio ? "SERVICIO" : (r.id_articulo || r.id_stock_producto ? "ARTICULO" : (r.id_detalle ? "DETALLE" : "MANUAL")),
-          id_servicio: r.id_servicio || null,
-          id_articulo: r.id_articulo || r.id_stock_producto || null,
-          id_detalle: r.id_detalle || null,
-          id_stock_producto: r.id_articulo || r.id_stock_producto || null,
+          tipo_item: r.tipo_item === "SERVICIO" ? "SERVICIO" : (r.tipo_item === "ARTICULO" ? "ARTICULO" : "MANUAL"),
+          id_servicio: r.tipo_item === "SERVICIO" ? (r.id_servicio || null) : null,
+          id_articulo: r.tipo_item === "ARTICULO" ? (r.id_articulo || r.id_stock_producto || null) : null,
+          id_detalle: null,
+          id_stock_producto: r.tipo_item === "ARTICULO" ? (r.id_articulo || r.id_stock_producto || null) : null,
           id_stock_variante: null,
           descripcion: upperStr(r.descripcion),
           detalle: upperStr(r.descripcion),
@@ -320,13 +344,27 @@ export default function ModalModelosPresupuesto({ open, lists, onClose, onToast,
       onToast?.("error", "Agregá al menos un elemento al modelo.", 3500);
       return;
     }
+    const filaCatalogoInvalida = form.rows.findIndex((row) => {
+      if (!safeStr(row.descripcion)) return false;
+      if (row.tipo_item === "SERVICIO") return !(Number(row.id_servicio || 0) > 0);
+      if (row.tipo_item === "ARTICULO") return !(Number(row.id_articulo || row.id_stock_producto || 0) > 0);
+      return false;
+    });
+    if (filaCatalogoInvalida >= 0) {
+      onToast?.(
+        "error",
+        `Fila ${filaCatalogoInvalida + 1}: seleccioná un ${form.rows[filaCatalogoInvalida].tipo_item === "SERVICIO" ? "servicio" : "material, insumo o producto"} del catálogo.`,
+        4200
+      );
+      return;
+    }
     setSaving(true);
     try {
       const payload = {
         id_modelo: form.id_modelo,
         nombre: upperStr(form.nombre),
         descripcion: upperStr(form.descripcion),
-        es_personalizado: form.es_personalizado ? 1 : 0,
+        es_personalizado: (form.es_personalizado || itemsPayload.some((it) => it.tipo_item === "MANUAL")) ? 1 : 0,
         validez_dias: safeNumber(form.validez_dias) > 0 ? Math.floor(safeNumber(form.validez_dias)) : null,
         plazo_entrega: upperStr(form.plazo_entrega),
         forma_pago: upperStr(form.forma_pago),
@@ -498,7 +536,7 @@ export default function ModalModelosPresupuesto({ open, lists, onClose, onToast,
                             </svg>
                           </span>
                           <span className="presupuesto-modelo-card__badge">
-                            {Number(modelo.es_personalizado ?? 1) === 1 ? "PERSONALIZADO" : "CON STOCK"}
+                            FLEXIBLE
                           </span>
                         </div>
                         <div className="presupuesto-modelo-card__actions" aria-label="Acciones del modelo">
@@ -582,26 +620,50 @@ export default function ModalModelosPresupuesto({ open, lists, onClose, onToast,
                     return (
                       <div className="gm-table-row" key={row.localId}>
                         <div className="gm-table-cell gm-table-cell--detail">
-                          <ProductStockAutocomplete
-                            value={row.descripcion}
-                            onChange={(value) => updateRow(row.localId, { descripcion: upperInput(value), tipo_item: "MANUAL", id_servicio: null, id_articulo: null, id_detalle: null, id_stock_producto: null, id_stock_variante: null, codigo: "" })}
-                            onSelect={(option) => selectStock(row.localId, option)}
-                            options={stockOptions}
-                            defaultKind={row.id_articulo || row.id_stock_producto ? "stock" : "service"}
-                            allowOutOfStock={true}
-                            showAllOnFocus={true}
-                            placeholder="Buscar servicio/stock o escribir manualmente…"
-                            emptyMessage="Sin coincidencias. Podés dejar el texto escrito."
+                          <select
+                            className="gm-cell-input gm-cell-input--select"
+                            value={row.tipo_item}
+                            onChange={(e) => changeRowType(row.localId, e.target.value)}
                             disabled={saving}
-                            inputClassName="gm-cell-input"
-                          />
+                            aria-label={`Tipo de ítem modelo ${row.localId}`}
+                            style={{ marginBottom: 6 }}
+                          >
+                            <option value="SERVICIO">Servicio</option>
+                            <option value="ARTICULO">Material / insumo / producto</option>
+                            <option value="MANUAL">Detalle manual</option>
+                          </select>
+                          {row.tipo_item === "MANUAL" ? (
+                            <input
+                              className="gm-cell-input"
+                              value={row.descripcion}
+                              onChange={(e) => updateRow(row.localId, { descripcion: upperInput(e.target.value), id_servicio: null, id_articulo: null, id_detalle: null, id_stock_producto: null, id_stock_variante: null, codigo: "" })}
+                              placeholder="Escribí el detalle…"
+                              disabled={saving}
+                            />
+                          ) : (
+                            <ProductStockAutocomplete
+                              value={row.descripcion}
+                              onChange={(value) => updateRow(row.localId, { descripcion: upperInput(value), id_servicio: null, id_articulo: null, id_detalle: null, id_stock_producto: null, id_stock_variante: null, codigo: "" })}
+                              onSelect={(option) => selectStock(row.localId, option)}
+                              options={stockOptions}
+                              catalogKind={row.tipo_item === "ARTICULO" ? "stock" : "service"}
+                              showKindToggle={false}
+                              allowOutOfStock
+                              allowUntrackedStock={row.tipo_item === "ARTICULO"}
+                              showAllOnFocus={true}
+                              placeholder={row.tipo_item === "ARTICULO" ? "Buscar material, insumo o producto…" : "Buscar servicio…"}
+                              emptyMessage="Sin coincidencias en el catálogo."
+                              disabled={saving}
+                              inputClassName="gm-cell-input"
+                            />
+                          )}
                         </div>
                         <div className="gm-table-cell gm-table-cell--center">
                           <input
                             className="gm-cell-input gm-cell-input--center"
                             type="number"
-                            min="0.01"
-                            step="0.000001"
+                            min={row.tipo_item === "SERVICIO" ? "1" : "0.01"}
+                            step={row.tipo_item === "SERVICIO" ? "1" : "0.000001"}
                             value={row.cantidad}
                             onChange={(e) => updateRow(row.localId, { cantidad: e.target.value })}
                             disabled={saving}
@@ -751,19 +813,9 @@ export default function ModalModelosPresupuesto({ open, lists, onClose, onToast,
                         />
                         <label className="gm-label">Descripción</label>
                       </div>
-                      <label className={`gm-inline-check presupuesto-check-card presupuesto-modelos-check ${form.es_personalizado ? "is-active" : ""}`}>
-                        <input
-                          type="checkbox"
-                          checked={form.es_personalizado}
-                          onChange={(e) => setForm((p) => ({ ...p, es_personalizado: e.target.checked }))}
-                          disabled={saving}
-                        />
-                        <span className="gm-inline-check__box" aria-hidden="true" />
-                        <span className="presupuesto-check-card__copy">
-                          <b>Trabajo personalizado</b>
-                          <small>Permite materiales escritos a mano y productos sin stock disponible.</small>
-                        </span>
-                      </label>
+                      <div className="gm-info-box presupuesto-modelos-info">
+                        Cada fila puede ser un Servicio, un Material / insumo / producto o un Detalle manual. Los artículos sin control de stock también se pueden presupuestar.
+                      </div>
                       <div className="gm-info-box presupuesto-modelos-info">
                         El modelo quedará disponible para reutilizar su estructura en nuevos presupuestos.
                       </div>

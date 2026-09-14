@@ -24,7 +24,6 @@ import {
   requireMutations,
   selectFirstAutocomplete,
   selectFirstNonEmpty,
-  selectService,
   selectServicePriceInMovementRow,
   waitDialog,
   waitForBusyToFinish,
@@ -55,7 +54,7 @@ async function closeDialogByX(dialog) {
 }
 
 test.describe('BALTO Servicios - regresión de los últimos cambios en Movimientos', () => {
-  test('@critical catálogo + Ventas + Presupuestos + Otros ingresos respetan servicio sin stock, receta completa, cantidad entera y precios venta/costo', async ({ page }) => {
+  test('@critical catálogo + Ventas + Presupuestos respetan servicios y Otros ingresos queda sólo como detalle financiero', async ({ page }) => {
     test.setTimeout(5 * 60_000);
     await requireMutations(test, page);
 
@@ -179,33 +178,17 @@ test.describe('BALTO Servicios - regresión de los últimos cambios en Movimient
       await closeDialogByX(budgetDialog);
 
       // -------- Otros ingresos --------
+      // Es un movimiento financiero independiente: no debe permitir asociar
+      // Servicios/Stock ni mostrar composición de inventario.
       await page.goto('/panel/Otrosingresos');
       await waitForBusyToFinish(page);
       await page.getByTitle('Crear nuevo ingreso').click();
       const incomeDialog = await waitDialog(page, 'Nuevo Ingreso');
-      const incomeRow = incomeDialog.locator('.gm-table-body .gm-table-row').first();
-      await incomeDialog.getByLabel('Tipo de ítem fila 1').selectOption('servicio');
-      await selectService(incomeRow, serviceName);
-
-      const incomeQty = incomeRow.locator('input[type="number"]').first();
-      await expect(incomeQty).toHaveAttribute('step', '1');
-      const incomePrice = incomeDialog.getByLabel('Precio del servicio fila 1');
-      await expect(incomePrice).toBeVisible();
-      const optionTexts = await incomePrice.locator('option').allTextContents();
-      expect(optionTexts.join(' ')).toMatch(/PRECIO DE VENTA/i);
-      expect(optionTexts.join(' ')).toMatch(/PRECIO DE COSTO/i);
-      await expect(incomePrice.locator('option:checked')).toContainText(/PRECIO DE VENTA/i);
-      const costOption = incomePrice.locator('option').filter({ hasText: /PRECIO DE COSTO/i }).first();
-      const costValue = await costOption.getAttribute('value');
-      await incomePrice.selectOption(String(costValue));
-      await expect(incomePrice.locator('option:checked')).toContainText(/PRECIO DE COSTO/i);
-
-      const incomeToggle = incomeDialog.getByRole('button', { name: /Materiales\s*\/\s*insumos\s*\(2\)/i }).first();
+      await expect(incomeDialog.getByLabel('Tipo de ítem fila 1')).toHaveCount(0);
+      await expect(incomeDialog.locator('input.psa-input')).toHaveCount(0);
+      await expect(incomeDialog.getByLabel('Precio del servicio fila 1')).toHaveCount(0);
       await expect(incomeDialog.locator('.ssc__body')).toHaveCount(0);
-      await incomeToggle.click();
-      await expect(incomeDialog.locator('.ssc__body')).toContainText(materialName);
-      await expect(incomeDialog.locator('.ssc__body')).toContainText(inputName);
-      await expect(incomeDialog.locator('.ssc__body')).toContainText(/Sin control de stock/i);
+      await expect(incomeDialog).toContainText(/Detalle/i);
       await closeDialogByX(incomeDialog);
     } finally {
       if (serviceId) await deleteServiceFixture(page, serviceId).catch(() => null);

@@ -20,6 +20,7 @@ import {
   faBasketShopping,
 } from "@fortawesome/free-solid-svg-icons";
 import ModalVerComprobante from "../../../Global/Ver_Comprobantes/ModalVerComprobante.jsx";
+import ProductStockAutocomplete from "../../_shared/ProductStockAutocomplete.jsx";
 
 const NULL_OPTION = "";
 const ADD_OPTION = "__ADD__";
@@ -2495,29 +2496,36 @@ export default function ModalEditarCompra({
 
                   {extraItems.map((item, index) => {
                     const totals = calcItemTotals(item.cantidad, item.precio, item.iva_pct);
-                    const selectedArticulo = Number(item.id_articulo || 0);
                     return (
                       <div className="gm-table-row" key={item.client_id}>
                         <div className="gm-table-cell gm-table-cell--detail">
-                          <select
-                            className="gm-cell-input gm-cell-input--select"
-                            value={selectedArticulo > 0 ? String(selectedArticulo) : ""}
-                            onChange={(e) => selectExtraArticulo(item.client_id, e.target.value)}
-                            disabled={saving || addUI.open || openVerComp}
-                            title={item.descripcion || "Artículo"}
-                            style={{ width: "100%" }}
-                          >
-                            <option value="">Seleccioná un artículo…</option>
-                            {(Array.isArray(safeLists.detalles) ? safeLists.detalles : []).map((detalle) => {
-                              const did = Number(getStockProductoIdFromSelection(detalle) || getGenericId(detalle) || 0);
-                              if (!(did > 0)) return null;
-                              return (
-                                <option key={did} value={did}>
-                                  {String(detalle?.nombre ?? detalle?.label ?? `Artículo ${did}`)}
-                                </option>
+                          <ProductStockAutocomplete
+                            value={item.descripcion || ""}
+                            onChange={(value) => {
+                              updateExtraItem(item.client_id, {
+                                descripcion: value,
+                                id_articulo: NULL_OPTION,
+                                id_detalle: NULL_OPTION,
+                              });
+                            }}
+                            onSelect={(detalle) => {
+                              const did = Number(
+                                getStockProductoIdFromSelection(detalle) || getGenericId(detalle) || 0
                               );
-                            })}
-                          </select>
+                              if (did > 0) selectExtraArticulo(item.client_id, did);
+                            }}
+                            options={Array.isArray(safeLists.detalles) ? safeLists.detalles : []}
+                            placeholder="Buscá un material o insumo…"
+                            disabled={saving || addUI.open || openVerComp}
+                            showAllOnFocus={false}
+                            maxItems={18}
+                            allowOutOfStock
+                            allowUntrackedStock
+                            catalogKind="stock"
+                            showKindToggle={false}
+                            emptyMessage="Sin artículos activos"
+                            inputClassName="gm-cell-input"
+                          />
                         </div>
 
                         <div className="gm-table-cell gm-table-cell--center stock_cant">

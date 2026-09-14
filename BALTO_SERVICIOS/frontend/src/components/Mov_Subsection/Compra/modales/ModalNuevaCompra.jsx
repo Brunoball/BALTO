@@ -1907,6 +1907,7 @@ export default function ModalNuevaCompra({ open, lists, onClose, onToast, onSave
                             showAllOnFocus={false}
                             maxItems={18}
                             allowOutOfStock
+                            allowUntrackedStock
                             catalogKind="stock"
                             showKindToggle={false}
                             emptyMessage="Sin artículos activos"

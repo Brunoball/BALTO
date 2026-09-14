@@ -68,6 +68,7 @@ const emptyLists = {
   servicios_movimiento: [],
   articulos_stock: [],
   articulos_stock_todos: [],
+  articulos_catalogo_todos: [],
   stock_productos: [],
   productos_stock: [],
   medios_pago: [],
@@ -96,8 +97,17 @@ function normalizeLists(raw) {
 
   const serviciosMovimiento = firstArray("servicios_movimiento", "serviciosMovimiento");
   const articulosStock = firstArray("articulos_stock", "articulosStock", "stock_productos", "productos_stock");
-  const articulosStockTodos = firstArray("articulos_stock_todos", "articulosStockTodos", "detalles_compras", "detallesCompras", "detalles_todos", "detallesTodos");
-  const detallesCompras = firstArray("detalles_compras", "detallesCompras", "detalles_todos", "detallesTodos", "articulos_stock_todos", "articulosStockTodos");
+  const articulosStockTodos = firstArray("articulos_stock_todos", "articulosStockTodos");
+  const articulosCatalogoTodos = firstArray(
+    "articulos_catalogo_todos", "articulosCatalogoTodos",
+    "detalles_compras", "detallesCompras", "detalles_todos", "detallesTodos",
+    "articulos_stock_todos", "articulosStockTodos"
+  );
+  const detallesCompras = firstArray(
+    "detalles_compras", "detallesCompras", "detalles_todos", "detallesTodos",
+    "articulos_catalogo_todos", "articulosCatalogoTodos",
+    "articulos_stock_todos", "articulosStockTodos"
+  );
 
   return {
     periodos: periodosUI,
@@ -111,6 +121,7 @@ function normalizeLists(raw) {
     servicios_movimiento: serviciosMovimiento,
     articulos_stock: articulosStock,
     articulos_stock_todos: articulosStockTodos,
+    articulos_catalogo_todos: articulosCatalogoTodos,
     stock_productos: articulosStock,
     productos_stock: articulosStock,
     medios_pago: getArr("medios_pago"),

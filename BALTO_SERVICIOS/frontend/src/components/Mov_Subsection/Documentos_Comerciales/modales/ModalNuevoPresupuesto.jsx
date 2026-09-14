@@ -717,7 +717,7 @@ function PrecioDropdown({ precios, value, onChange, disabled }) {
 function buildEmptyRow() {
   return {
     id: uid(),
-    tipo_item: "MANUAL",
+    tipo_item: "SERVICIO",
     id_servicio: NULL_OPTION,
     id_articulo: NULL_OPTION,
     id_detalle: NULL_OPTION,
@@ -734,6 +734,7 @@ function buildEmptyRow() {
     precios_disponibles: [],
     ivaPct: 0,
     stock_disponible: null,
+    controla_stock: null,
     sinStock: false,
     consumos_snapshot: [],
   };
@@ -741,7 +742,6 @@ function buildEmptyRow() {
 
 function buildRowFromModelItem(item, catalogo = []) {
   const raw = item && typeof item === "object" ? item : {};
-  const idDetalle = Number(raw.id_detalle || 0);
   const idServicio = Number(raw.id_servicio || 0);
   const idStockProducto = Number(raw.id_articulo || raw.id_stock_producto || 0);
   const idStockVariante = 0;
@@ -759,10 +759,10 @@ function buildRowFromModelItem(item, catalogo = []) {
 
   return {
     ...buildEmptyRow(),
-    tipo_item: idServicio > 0 ? "SERVICIO" : (idStockProducto > 0 ? "ARTICULO" : (idDetalle > 0 ? "DETALLE" : "MANUAL")),
+    tipo_item: idServicio > 0 ? "SERVICIO" : (idStockProducto > 0 ? "ARTICULO" : "MANUAL"),
     id_servicio: idServicio > 0 ? idServicio : NULL_OPTION,
     id_articulo: idStockProducto > 0 ? idStockProducto : NULL_OPTION,
-    id_detalle: idDetalle > 0 ? idDetalle : NULL_OPTION,
+    id_detalle: NULL_OPTION,
     id_stock_producto: idStockProducto > 0 ? idStockProducto : NULL_OPTION,
     id_stock_variante: idStockVariante > 0 ? idStockVariante : NULL_OPTION,
     detalleText: upperStr(raw.descripcion || raw.detalle || raw.nombre || raw.detalle_nombre),
@@ -771,6 +771,7 @@ function buildRowFromModelItem(item, catalogo = []) {
     precio: precio >= 0 ? precio : 0,
     ivaPct: ivaPct >= 0 ? ivaPct : 0,
     stock_disponible: null,
+    controla_stock: null,
     sinStock: false,
     consumos_snapshot: consumosServicio,
     precios_disponibles: [],
@@ -806,7 +807,11 @@ function normalizeLists(lists) {
   const l = src.listas && typeof src.listas === "object" ? src.listas : src;
   const pick = (k) => (Array.isArray(l?.[k]) ? l[k] : []);
   const servicios = pick("servicios_movimiento").length ? pick("servicios_movimiento") : pick("serviciosMovimiento");
-  const articulos = pick("articulos_stock_todos").length ? pick("articulos_stock_todos") : (pick("articulos_stock").length ? pick("articulos_stock") : pick("stock_productos"));
+  const articulos = pick("articulos_catalogo_todos").length
+    ? pick("articulos_catalogo_todos")
+    : (pick("articulosCatalogoTodos").length
+      ? pick("articulosCatalogoTodos")
+      : (pick("articulos_stock_todos").length ? pick("articulos_stock_todos") : (pick("articulos_stock").length ? pick("articulos_stock") : pick("stock_productos"))));
   const catalogoCompleto = [...servicios, ...articulos];
   return {
     clientes: pick("clientes"),
@@ -989,6 +994,33 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
     setRows((prev) => prev.map((r) => (r.id === rowId ? { ...r, ...patch } : r)));
   }, []);
 
+  const handleTipoItemChange = useCallback((rowId, tipoRaw) => {
+    const tipo = ["SERVICIO", "ARTICULO", "MANUAL"].includes(String(tipoRaw).toUpperCase())
+      ? String(tipoRaw).toUpperCase()
+      : "SERVICIO";
+    updateRow(rowId, {
+      tipo_item: tipo,
+      id_servicio: NULL_OPTION,
+      id_articulo: NULL_OPTION,
+      id_detalle: NULL_OPTION,
+      id_stock_producto: NULL_OPTION,
+      id_stock_variante: NULL_OPTION,
+      detalleText: "",
+      codigo: "",
+      cantidad: 1,
+      precio: 0,
+      precioDraft: "",
+      precioFocused: false,
+      id_tipo_precio_stock: NULL_OPTION,
+      precio_tipo_label: "",
+      precios_disponibles: [],
+      stock_disponible: null,
+      controla_stock: null,
+      sinStock: false,
+      consumos_snapshot: [],
+    });
+  }, [updateRow]);
+
   const removeRow = useCallback((rowId) => {
     setRows((prev) => (prev.length <= 1 ? prev : prev.filter((r) => r.id !== rowId)));
   }, []);
@@ -1000,25 +1032,6 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
   const updateCondicion = useCallback((key, value) => {
     const nextValue = key === "validezDias" ? value : upperInput(value);
     setCondiciones((prev) => ({ ...prev, [key]: nextValue }));
-  }, []);
-
-  const handlePresupuestoPersonalizadoChange = useCallback((enabled) => {
-    const next = Boolean(enabled);
-    setPresupuestoPersonalizado(next);
-    if (next) {
-      setRows((prev) => prev.map((row) => ({
-        ...row,
-        precios_disponibles: [],
-        id_tipo_precio_stock: NULL_OPTION,
-        precio_tipo_label: "",
-      })));
-    } else {
-      setRows((prev) => prev.map((row) => (
-        row.sinStock || isSinStock(row.stock_disponible)
-          ? { ...row, cantidad: "" }
-          : row
-      )));
-    }
   }, []);
 
   const resetAddUIState = useCallback(() => {
@@ -1194,24 +1207,20 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
       precio: inicial ? safeNumber(inicial.monto) : 0,
       precioDraft: "",
       precioFocused: false,
-      id_tipo_precio_stock: presupuestoPersonalizado ? NULL_OPTION : (inicial?.value || NULL_OPTION),
-      precio_tipo_label: presupuestoPersonalizado ? "" : (inicial?.tipo_precio || ""),
-      precios_disponibles: presupuestoPersonalizado ? [] : precios,
+      id_tipo_precio_stock: inicial?.value || NULL_OPTION,
+      precio_tipo_label: inicial?.tipo_precio || "",
+      precios_disponibles: precios,
       stock_disponible: stockDisponible,
+      controla_stock: esServicio ? null : (Number(detalle?.controla_stock ?? detalle?.mueve_stock ?? 1) === 1 ? 1 : 0),
       sinStock,
       consumos_snapshot: esServicio ? normalizeServiceStockComponents(detalle) : [],
     });
-
-    if (sinStock) {
-      onToast?.("advertencia", `"${nombreDetalle}" no tiene stock suficiente hoy. El presupuesto se puede guardar; el stock se validará al convertirlo en venta.`, 3200);
-    }
-  }, [onToast, presupuestoPersonalizado, updateRow]);
+  }, [updateRow]);
 
 
   const handleDetalleInputChange = useCallback((rowId, value) => {
     updateRow(rowId, {
       detalleText: upperInput(value),
-      tipo_item: "MANUAL",
       id_servicio: NULL_OPTION,
       id_articulo: NULL_OPTION,
       id_detalle: NULL_OPTION,
@@ -1223,6 +1232,7 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
       precioDraft: "",
       precioFocused: false,
       stock_disponible: null,
+      controla_stock: null,
       sinStock: false,
       consumos_snapshot: [],
     });
@@ -1232,30 +1242,17 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
     const row = rows.find((r) => r.id === rowId);
     if (!row) return;
 
-
-    const esServicio = Number(row.id_servicio || 0) > 0;
+    const esServicio = String(row.tipo_item || "").toUpperCase() === "SERVICIO";
     let cantidadFinal = newCantidad === "" ? "" : Number(newCantidad);
     if (typeof cantidadFinal === "number" && cantidadFinal < 0) cantidadFinal = 0;
     if (esServicio && typeof cantidadFinal === "number" && Number.isFinite(cantidadFinal)) {
       cantidadFinal = Math.trunc(cantidadFinal);
     }
 
-    if (
-      !presupuestoPersonalizado &&
-      !esServicio &&
-      row.stock_disponible !== null &&
-      row.stock_disponible !== undefined &&
-      row.stock_disponible !== "" &&
-      typeof cantidadFinal === "number" &&
-      Number.isFinite(cantidadFinal) &&
-      cantidadFinal > Number(row.stock_disponible)
-    ) {
-      cantidadFinal = Number(row.stock_disponible);
-      onToast?.("advertencia", `Stock máximo disponible: ${row.stock_disponible}`, 2000);
-    }
-
+    // Presupuestar no reserva ni descuenta stock: nunca limitamos la cantidad
+    // por la existencia actual del artículo.
     updateRow(rowId, { cantidad: cantidadFinal });
-  }, [onToast, presupuestoPersonalizado, rows, updateRow]);
+  }, [rows, updateRow]);
 
   const handlePrecioTipoChange = useCallback((rowId, value) => {
     const row = rows.find((r) => r.id === rowId);
@@ -1395,6 +1392,8 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
       const touched = safeStr(r.detalleText) || r.cantidad > 0 || r.precio > 0;
       if (!touched) return;
       if (!safeStr(r.detalleText)) problems.push(`Fila ${idx + 1}: falta el detalle.`);
+      if (r.tipo_item === "SERVICIO" && !(Number(r.id_servicio || 0) > 0)) problems.push(`Fila ${idx + 1}: seleccioná un servicio del catálogo.`);
+      if (r.tipo_item === "ARTICULO" && !(Number(r.id_articulo || r.id_stock_producto || 0) > 0)) problems.push(`Fila ${idx + 1}: seleccioná un material, insumo o producto del catálogo.`);
       if (!(r.cantidad > 0)) problems.push(`Fila ${idx + 1}: la cantidad debe ser mayor a 0.`);
       if (!(r.precio > 0)) problems.push(`Fila ${idx + 1}: el precio debe ser mayor a 0.`);
     });
@@ -1405,11 +1404,11 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
     return computedRows
       .filter((r) => safeStr(r.detalleText) && r.cantidad > 0 && r.precio > 0)
       .map((r) => ({
-        tipo_item: r.id_servicio ? "SERVICIO" : (r.id_articulo || r.id_stock_producto ? "ARTICULO" : "MANUAL"),
-        id_servicio: r.id_servicio || null,
-        id_articulo: r.id_articulo || r.id_stock_producto || null,
+        tipo_item: r.tipo_item === "SERVICIO" ? "SERVICIO" : (r.tipo_item === "ARTICULO" ? "ARTICULO" : "MANUAL"),
+        id_servicio: r.tipo_item === "SERVICIO" ? (r.id_servicio || null) : null,
+        id_articulo: r.tipo_item === "ARTICULO" ? (r.id_articulo || r.id_stock_producto || null) : null,
         id_detalle: null,
-        id_stock_producto: r.id_articulo || r.id_stock_producto || null,
+        id_stock_producto: r.tipo_item === "ARTICULO" ? (r.id_articulo || r.id_stock_producto || null) : null,
         id_stock_variante: null,
         codigo: r.codigo || "",
         descripcion: upperStr(r.detalleText),
@@ -1423,7 +1422,7 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
         total: r.total,
         id_tipo_precio_stock: r.id_tipo_precio_stock || null,
         tipo_precio: r.precio_tipo_label || "",
-        consumos_snapshot: Number(r.id_servicio || 0) > 0
+        consumos_snapshot: r.tipo_item === "SERVICIO" && Number(r.id_servicio || 0) > 0
           ? serializeServiceStockComponents(r.consumos_snapshot)
           : undefined,
       }));
@@ -1438,11 +1437,11 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
       .map((r) => {
         const descripcionPdf = upperStr(buildServiceDocumentDescription(r));
         return {
-          tipo_item: r.id_servicio ? "SERVICIO" : (r.id_articulo || r.id_stock_producto ? "ARTICULO" : "MANUAL"),
-          id_servicio: r.id_servicio || null,
-          id_articulo: r.id_articulo || r.id_stock_producto || null,
+          tipo_item: r.tipo_item === "SERVICIO" ? "SERVICIO" : (r.tipo_item === "ARTICULO" ? "ARTICULO" : "MANUAL"),
+          id_servicio: r.tipo_item === "SERVICIO" ? (r.id_servicio || null) : null,
+          id_articulo: r.tipo_item === "ARTICULO" ? (r.id_articulo || r.id_stock_producto || null) : null,
           id_detalle: null,
-          id_stock_producto: r.id_articulo || r.id_stock_producto || null,
+          id_stock_producto: r.tipo_item === "ARTICULO" ? (r.id_articulo || r.id_stock_producto || null) : null,
           id_stock_variante: null,
           codigo: r.codigo || "",
           descripcion: descripcionPdf,
@@ -1586,8 +1585,8 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
       lugar_entrega: condicionesPayload.lugar_entrega,
       moneda: condicionesPayload.moneda,
       condiciones_presupuesto: condicionesPayload,
-      es_personalizado: presupuestoPersonalizado ? 1 : 0,
-      presupuesto_personalizado: presupuestoPersonalizado ? 1 : 0,
+      es_personalizado: (presupuestoPersonalizado || items.some((it) => it.tipo_item === "MANUAL")) ? 1 : 0,
+      presupuesto_personalizado: (presupuestoPersonalizado || items.some((it) => it.tipo_item === "MANUAL")) ? 1 : 0,
       id_modelo_origen: Number(modeloOrigen?.id_modelo || 0) || null,
       nombre_modelo_origen: upperStr(modeloOrigen?.nombre),
       guardar_como_modelo: guardarComoModelo ? 1 : 0,
@@ -1654,22 +1653,11 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
         </div>
 
         <form className="gm-modal-content presupuesto-modal__content" onSubmit={handleSubmit}>
-          <div className={`presupuesto-mode-panel ${presupuestoPersonalizado ? "is-active" : ""}`}>
-            <label className="gm-inline-check presupuesto-check-card presupuesto-mode-toggle">
-              <input
-                type="checkbox"
-                checked={presupuestoPersonalizado}
-                onChange={(e) => handlePresupuestoPersonalizadoChange(e.target.checked)}
-                disabled={saving}
-              />
-              <span className="gm-inline-check__box" aria-hidden="true" />
-              <span className="presupuesto-check-card__copy">
-                <b>Presupuesto personalizado / servicio</b>
-                <small>
-                  Permite escribir materiales o tareas a mano, usar cantidades decimales (metros, m², etc.) y tomar referencias del stock aunque no tengan existencia.
-                </small>
-              </span>
-            </label>
+          <div className="presupuesto-mode-panel is-active">
+            <div className="presupuesto-check-card__copy">
+              <b>Presupuesto flexible</b>
+              <small>En cada fila elegí Servicio, Material / insumo / producto o Detalle manual. El presupuesto no reserva stock.</small>
+            </div>
             <div className="presupuesto-mode-actions">
               {modeloOrigen?.nombre ? (
                 <span className="presupuesto-model-loaded" title={safeStr(modeloOrigen.descripcion)}>
@@ -1698,7 +1686,7 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
               <section className="gm-table gm-table--movement dc-presupuesto-table">
               <div className="gm-table-head">
                 <div className="gm-table-th" style={{ paddingLeft: 10 }}>Detalle</div>
-                <div className="gm-table-th">{presupuestoPersonalizado ? "Cant./medida" : "Cant."}</div>
+                <div className="gm-table-th">Cant./medida</div>
                 <div className="gm-table-th right">Precio</div>
                 <div className="gm-table-th">IVA %</div>
                 <div className="gm-table-th right">IVA $</div>
@@ -1708,37 +1696,57 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
 
               <div className="gm-table-body">
                 {computedRows.map((r) => {
-                  const stockNum =
-                    r.stock_disponible !== null && r.stock_disponible !== undefined
-                      ? Number(r.stock_disponible)
-                      : null;
                   const rowSinStock = false; // presupuestar no reserva ni descuenta stock
 
                   return (
                     <div key={r.id} className={`gm-table-row ${rowSinStock ? "gm-table-row--sin-stock" : ""}`}>
                       <div className="gm-table-cell gm-table-cell--detail">
-                        <ProductStockAutocomplete
-                          value={r.detalleText}
-                          onChange={(val) => handleDetalleInputChange(r.id, val)}
-                          onSelect={(d) => handleSelectDetalle(r.id, d)}
-                          options={detallesList}
-                          defaultKind={r.id_articulo || r.id_stock_producto ? "stock" : "service"}
-                          placeholder={presupuestoPersonalizado ? "Escribí libremente o buscá servicio/stock…" : "Buscá un servicio o stock…"}
-                          emptyMessage={presupuestoPersonalizado ? "No está en catálogo: podés dejar el texto manual" : "Sin resultados en el catálogo"}
-                          allowOutOfStock={true}
+                        <select
+                          className="gm-cell-input gm-cell-input--select"
+                          aria-label={`Tipo de ítem fila ${r.id}`}
+                          value={r.tipo_item}
+                          onChange={(e) => handleTipoItemChange(r.id, e.target.value)}
                           disabled={saving}
-                          showAllOnFocus={false}
-                          maxItems={18}
-                          inputClassName="gm-cell-input"
-                        />
+                          style={{ marginBottom: 6 }}
+                        >
+                          <option value="SERVICIO">Servicio</option>
+                          <option value="ARTICULO">Material / insumo / producto</option>
+                          <option value="MANUAL">Detalle manual</option>
+                        </select>
+                        {r.tipo_item === "MANUAL" ? (
+                          <input
+                            className="gm-cell-input"
+                            value={r.detalleText}
+                            onChange={(e) => handleDetalleInputChange(r.id, e.target.value)}
+                            placeholder="Escribí el detalle…"
+                            disabled={saving}
+                          />
+                        ) : (
+                          <ProductStockAutocomplete
+                            value={r.detalleText}
+                            onChange={(val) => handleDetalleInputChange(r.id, val)}
+                            onSelect={(d) => handleSelectDetalle(r.id, d)}
+                            options={detallesList}
+                            catalogKind={r.tipo_item === "ARTICULO" ? "stock" : "service"}
+                            showKindToggle={false}
+                            placeholder={r.tipo_item === "ARTICULO" ? "Buscá material, insumo o producto…" : "Buscá un servicio…"}
+                            emptyMessage="Sin resultados en el catálogo"
+                            allowOutOfStock
+                            allowUntrackedStock={r.tipo_item === "ARTICULO"}
+                            disabled={saving}
+                            showAllOnFocus={false}
+                            maxItems={18}
+                            inputClassName="gm-cell-input"
+                          />
+                        )}
                       </div>
 
                       <div className="gm-table-cell gm-table-cell--center stock_cant">
                         <input
                           className="gm-cell-input gm-cell-input--center"
                           type="number"
-                          min={rowSinStock ? undefined : (Number(r.id_servicio || 0) > 0 ? "1" : (presupuestoPersonalizado ? "0.01" : "1"))}
-                          step={Number(r.id_servicio || 0) > 0 ? "1" : (presupuestoPersonalizado ? "0.01" : "1")}
+                          min={r.tipo_item === "SERVICIO" ? "1" : "0.01"}
+                          step={r.tipo_item === "SERVICIO" ? "1" : "0.000001"}
                           value={rowSinStock ? "" : r.cantidad}
                           onChange={(e) =>
                             handleCantidadChange(r.id, e.target.value === "" ? "" : Number(e.target.value))
@@ -1755,7 +1763,7 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
                             opacity: rowSinStock ? 0.9 : 1,
                           }}
                         />
-                        {!(Number(r.id_servicio || 0) > 0) && r.stock_disponible !== null && r.stock_disponible !== undefined && (
+                        {r.tipo_item === "ARTICULO" && r.controla_stock !== 0 && r.stock_disponible !== null && r.stock_disponible !== undefined && (
                           <div
                             style={{
                               fontSize: "10px",

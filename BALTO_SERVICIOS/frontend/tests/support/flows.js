@@ -18,7 +18,6 @@ import {
   selectFirstNonEmpty,
   selectSafePaymentMethod,
   selectMovementMode,
-  selectProduct,
   waitDialog,
   waitForBusyToFinish,
 } from './ui.js';
@@ -566,7 +565,8 @@ export async function prepareBudget(page, data) {
     servicePriceKind: data.servicePriceKind,
   });
 
-  const ivaSelect = itemRow.locator('select.gm-cell-input--select').first();
+  // Presupuestos tiene ahora un selector de tipo de ítem antes del IVA.
+  const ivaSelect = itemRow.locator('select.gm-cell-input--select').last();
   await expect(ivaSelect).toBeVisible();
   await ivaSelect.selectOption(String(data.ivaPct ?? 0));
 
@@ -616,9 +616,8 @@ export async function createCatalogDescription(dialog, description) {
   let row;
   let input;
 
-  // Otros Ingresos ahora tiene tres tipos de fila. La descripción global sólo
-  // existe en "Detalle manual"; Servicio/Stock usan ProductStockAutocomplete.
-  // Otros Egresos conserva directamente el GlobalAutocomplete de descripción.
+  // Otros Ingresos y Otros Egresos trabajan con descripciones financieras
+  // independientes del catálogo de Servicios/Stock.
   const prepareDescriptionInput = async () => {
     row = activeDialog.locator('.gm-table-body .gm-table-row').first();
     await expect(row).toBeVisible({ timeout: 15_000 });
@@ -953,30 +952,6 @@ export async function deleteFiscalOtherIncomeThroughTotalCreditNote(page, query)
   await search.press('Enter');
   await waitForBusyToFinish(page);
   await expect(page.locator('.mov-gridTable--row:visible:not(.mov-row--skeleton)').filter({ hasText: query })).toHaveCount(0);
-}
-
-export async function createOtherIncomeWithProduct(page, data) {
-  await page.goto('/panel/Otrosingresos');
-  await waitForBusyToFinish(page);
-  await page.getByTitle('Crear nuevo ingreso').click();
-  const dialog = await waitDialog(page, 'Nuevo Ingreso');
-  const requestedClient = String(data.clientName || data.clientSearch || '').trim();
-  data.clientName = await selectFirstAutocomplete(dialog, 'Cliente', requestedClient);
-
-  const row = dialog.locator('.gm-table-body .gm-table-row').first();
-  await dialog.getByLabel('Tipo de ítem fila 1').selectOption('producto');
-  await selectProduct(row, data.productName);
-  await row.locator('input[type="number"]').first().fill(String(data.quantity ?? 1));
-
-  if (data.price !== undefined) {
-    const price = row.locator('input[inputmode="decimal"]').first();
-    await price.fill(String(data.price));
-    await price.blur();
-  }
-
-  await fillPayment(dialog);
-  await clickSaveAndWait(dialog, /Guardar ingreso/i, { timeout: 60_000 });
-  return searchRow(page, data.productName, /Buscar por descripción/i);
 }
 
 export async function openOtherIncomeCreditNote(page, query) {

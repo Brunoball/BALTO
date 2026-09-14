@@ -407,9 +407,9 @@ test.describe('BALTO Servicios <-> Movimientos', () => {
       expect(Number(article.controla_stock)).toBe(0);
 
       // Un recurso que no controla existencias puede participar de una receta,
-      // pero NO pertenece al catálogo "Stock" de Movimientos. Esto debe cumplirse
-      // tanto en la lista vendible (Ventas/Presupuestos) como en la lista completa
-      // usada por Compras, aunque Compras permita artículos con existencia 0.
+      // pero NO pertenece al catálogo de Stock vendible de Movimientos. Compras y
+      // Presupuestos sí consumen el catálogo comercial completo, que incluye estos
+      // recursos aunque no impacten existencias.
       const movementLists = expectApiSuccess(
         await authenticatedApi(page, 'global_obtener_listas', { query: { _: Date.now() } }),
         'No se pudieron consultar las listas de Movimientos',
@@ -428,7 +428,8 @@ test.describe('BALTO Servicios <-> Movimientos', () => {
       expect(containsArticle(movementCatalog?.articulos_stock)).toBe(false);
       expect(containsArticle(movementCatalog?.detalles_stock)).toBe(false);
       expect(containsArticle(purchaseCatalog?.articulos_stock_todos)).toBe(false);
-      expect(containsArticle(purchaseCatalog?.detalles_compras)).toBe(false);
+      expect(containsArticle(purchaseCatalog?.articulos_catalogo_todos)).toBe(true);
+      expect(containsArticle(purchaseCatalog?.detalles_compras)).toBe(true);
 
       // Cobertura UI adicional: incluso si una respuesta legacy/cacheada llegara a
       // contener el recurso, el autocomplete de Stock debe descartarlo.

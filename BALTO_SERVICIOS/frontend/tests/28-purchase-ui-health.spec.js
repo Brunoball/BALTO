@@ -1,10 +1,11 @@
 import { test, expect } from './support/test.js';
 import { uniqueName } from './support/data.js';
+import { deletePurchase } from './support/flows.js';
 import {
-  createStockProduct,
-  deletePurchase,
-  deleteUnusedStockProduct,
-} from './support/flows.js';
+  createServiceArticleFixture,
+  deleteServiceArticleFixture,
+  getTypedServiceArticleByName,
+} from './support/services.js';
 import {
   fillMovementRow,
   requireMutations,
@@ -14,16 +15,18 @@ import {
   waitForBusyToFinish,
 } from './support/ui.js';
 
-test('@crud @critical Nueva Compra acepta un material/insumo de BALTO Servicios', async ({ page }) => {
+test('@crud @critical Nueva Compra acepta material sin control de stock y no altera existencia', async ({ page }) => {
   test.setTimeout(2 * 60_000);
   await requireMutations(test, page);
 
   const productName = uniqueName('COMPRA-UI-HEALTH', 120);
   let purchaseCreated = false;
 
-  await createStockProduct(page, {
+  await createServiceArticleFixture(page, {
+    type: 'MATERIAL',
     name: productName,
-    stock: 4,
+    controlStock: false,
+    stock: 0,
     cost: 50,
     price: 100,
     ivaPct: 21,
@@ -83,11 +86,15 @@ test('@crud @critical Nueva Compra acepta un material/insumo de BALTO Servicios'
     expect(body?.exito !== false && body?.success !== false, body?.mensaje || body?.message).toBeTruthy();
     purchaseCreated = true;
     await expect(dialog).toBeHidden({ timeout: 30_000 });
+
+    const afterPurchase = await getTypedServiceArticleByName(page, productName, 'MATERIAL', { activo: 'todos' });
+    expect(Number(afterPurchase?.controla_stock ?? 0)).toBe(0);
+    expect(Number(afterPurchase?.stock_actual ?? afterPurchase?.stock ?? 0)).toBe(0);
   } finally {
     if (purchaseCreated) {
       await page.goto('/panel/compras');
       await deletePurchase(page, productName).catch(() => null);
     }
-    await deleteUnusedStockProduct(page, productName).catch(() => null);
+    await deleteServiceArticleFixture(page, productName, { tolerateHistoricalUse: true }).catch(() => null);
   }
 });

@@ -3,16 +3,13 @@ import { uniqueName, uniqueSku } from './support/data.js';
 import { installDiagnostics, assertNoCriticalErrors } from './support/diagnostics.js';
 import { requireMutations, searchRow, waitDialog } from './support/ui.js';
 import {
-  applyOtherIncomeCreditNote,
   createOtherIncome,
-  createOtherIncomeWithProduct,
   createOtherExpense,
   createStockProduct,
   deleteUnusedStockProduct,
   detectOtherIncomeInvoiceStep,
   editOtherMovement,
   deleteOtherMovement,
-  expectOtherIncomeCreditTrace,
   expectOtherIncomeInvoiceSummary,
 } from './support/flows.js';
 import { expectServiceStock } from './support/services.js';
@@ -170,75 +167,41 @@ test('@crud otros ingresos: cliente sin ficha fiscal abre el modal global de CUI
   await assertNoCriticalErrors(diagnostics, testInfo, { allowConsole: [/comprobante/i] });
 });
 
-test('@crud @critical otros ingresos: producto impacta stock y NC revierte exactamente', async ({ page }, testInfo) => {
-  test.setTimeout(4 * 60_000);
+test('@crud @critical otros ingresos: sólo detalle manual y nunca mueve stock', async ({ page }, testInfo) => {
+  test.setTimeout(3 * 60_000);
   await requireMutations(test, page);
   const diagnostics = installDiagnostics(page);
-  const productName = uniqueName('INGRESO-STOCK');
+  const productName = uniqueName('INGRESO-INDEPENDIENTE');
+  const description = uniqueName('INGRESO-MANUAL');
 
   await createStockProduct(page, {
     name: productName,
-    sku: uniqueSku('INGSTK'),
+    sku: uniqueSku('INGMAN'),
     stock: 10,
     cost: 100,
     price: 250,
   });
 
-  let incomeRow;
   try {
-    incomeRow = await createOtherIncomeWithProduct(page, {
-      productName,
-      quantity: 2,
-      price: 250,
-    });
-  } catch (error) {
-    const knownCatalogBug = /Debe aparecer el stock/i.test(String(error?.message || ''))
-      && await page.getByText(/No hay artículos con stock/i).isVisible().catch(() => false);
-    if (!knownCatalogBug) throw error;
+    await page.goto('/panel/Otrosingresos');
+    await page.getByTitle('Crear nuevo ingreso').click();
+    const probeDialog = await waitDialog(page, 'Nuevo Ingreso');
+    await expect(probeDialog.locator('select[aria-label^="Tipo de ítem fila"]')).toHaveCount(0);
+    await expect(probeDialog).not.toContainText(/Stock \/ material \/ insumo|Servicio del catálogo/i);
+    await probeDialog.getByRole('button', { name: /Cerrar/i }).last().click();
+    await expect(probeDialog).toBeHidden();
 
-    // El backend sí entrega el material con stock positivo (lo verifica el fixture),
-    // pero ModalNuevoIngreso + ProductStockAutocomplete hoy lo filtra. Se mantiene
-    // ejecutado como expected failure hasta que el frontend lo acepte nuevamente.
+    await createOtherIncome(page, { description, amount: 300, freeText: true });
     await expectServiceStock(page, productName, 10);
-    const openDialog = page.getByRole('dialog').filter({ has: page.getByText('Nuevo Ingreso') }).last();
-    const close = openDialog.getByRole('button', { name: /Cerrar/i }).last();
-    if (await close.isVisible().catch(() => false)) await close.click();
+
+    await editOtherMovement(page, 'income', description, 350);
+    await expectServiceStock(page, productName, 10);
+
+    await deleteOtherMovement(page, 'income', description);
+    await expectServiceStock(page, productName, 10);
+  } finally {
     await deleteUnusedStockProduct(page, productName).catch(() => null);
-
-    test.fail(true, 'BUG FRONTEND CONOCIDO: Otros Ingresos no muestra artículos de Servicios con stock positivo.');
-    expect(
-      true,
-      'BUG FRONTEND CONOCIDO: el catálogo de stock de Otros Ingresos queda vacío aunque el backend devuelve el artículo con stock.',
-    ).toBe(false);
-    return;
   }
-  await expect(incomeRow.locator('[role="cell"]').nth(2)).toContainText('500');
-
-  const editableIncomeRow = await searchRow(page, productName, /Buscar por descripción/i);
-  await editableIncomeRow.getByTitle('Editar').click();
-  const editDialog = await waitDialog(page, 'Editar ingreso');
-  await expect(editDialog.getByLabel('Tipo de ítem fila 1')).toHaveValue('producto');
-  await editDialog.getByRole('button', { name: /Cancelar/i }).click();
-  await expect(editDialog).toBeHidden();
-
-  await expectServiceStock(page, productName, 8);
-
-  await page.goto('/panel/Otrosingresos');
-  await applyOtherIncomeCreditNote(page, productName, { quantity: 1 });
-
-  const creditedIncomeRow = await searchRow(page, productName, /Buscar por descripción/i);
-  await expect(creditedIncomeRow.locator('[role="cell"]').nth(2)).toContainText('250');
-  await expect(creditedIncomeRow.getByTitle('Editar')).toHaveCount(0);
-  await expect(creditedIncomeRow.getByTitle(/Facturar ingreso/i)).toHaveCount(0);
-  await expectOtherIncomeCreditTrace(page, productName, { item: productName });
-
-  await expectServiceStock(page, productName, 9);
-
-  await page.goto('/panel/Otrosingresos');
-  await deleteOtherMovement(page, 'income', productName);
-
-  await expectServiceStock(page, productName, 10);
-  await deleteUnusedStockProduct(page, productName);
 
   await assertNoCriticalErrors(diagnostics, testInfo, {
     allowConsole: [/comprobante/i, /PDF/i],

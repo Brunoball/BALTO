@@ -18,7 +18,11 @@ import {
   deleteSale,
   deleteUnusedStockProduct,
 } from './support/flows.js';
-import { expectServiceStock } from './support/services.js';
+import {
+  createServiceArticleFixture,
+  deleteServiceArticleFixture,
+  expectServiceStock,
+} from './support/services.js';
 
 const IVA_VALUES = ['0', '10.5', '21', '27'];
 
@@ -325,3 +329,47 @@ test('@crud @critical presupuesto: selector IVA, recálculo backend y rechazo de
     ],
   });
 });
+
+test('@crud presupuesto permite material sin control de stock', async ({ page }, testInfo) => {
+  test.setTimeout(2 * 60_000);
+  await requireMutations(test, page);
+  const diagnostics = installDiagnostics(page);
+  const materialName = uniqueName('PRESU-SIN-STOCK');
+
+  await createServiceArticleFixture(page, {
+    type: 'MATERIAL',
+    name: materialName,
+    controlStock: false,
+    stock: 0,
+    cost: 80,
+    price: 150,
+    ivaPct: 21,
+  });
+
+  try {
+    const row = await createBudget(page, {
+      productName: materialName,
+      quantity: 2.5,
+      price: 150,
+      ivaPct: 21,
+    });
+
+    // La grilla de Presupuestos resume el renglón como "1 PRODUCTO". Validamos
+    // el dato real guardado desde el modal de detalle, no desde ese resumen.
+    await row.getByTitle(/Ver información completa del presupuesto/i).click();
+    const detailDialog = page.getByRole('dialog').last();
+    await expect(detailDialog).toBeVisible();
+    await expect(detailDialog).toContainText(materialName);
+    const closeDetail = detailDialog.getByRole('button', { name: /Cerrar|✕/i }).last();
+    await expect(closeDetail).toBeVisible();
+    await closeDetail.click();
+    await expect(detailDialog).toBeHidden();
+
+    await deleteBudget(page, materialName);
+  } finally {
+    await deleteServiceArticleFixture(page, materialName, { tolerateHistoricalUse: true }).catch(() => null);
+  }
+
+  await assertNoCriticalErrors(diagnostics, testInfo);
+});
+
