@@ -105,6 +105,14 @@ function normalizeSearchText(v) {
     .trim();
 }
 
+function isDarkEnabled(darkProp) {
+  if (darkProp === true) return true;
+  if (typeof document === "undefined") return false;
+  const byAttr = document.documentElement.getAttribute("data-theme") === "oscuro";
+  const byBody = document.body?.classList?.contains("dark");
+  return Boolean(byAttr || byBody);
+}
+
 
 function getAuthInfo() {
   const sessionKey =
@@ -313,8 +321,10 @@ export default function ModalEditarOrdenPago({
   onClose,
   onSave,
   onToast,
+  dark,
 }) {
   const API_LISTS = `${BASE_URL}/api.php?action=global_obtener_listas`;
+  const darkOn = isDarkEnabled(dark);
   const showToast = useCallback((tipo, mensaje) => onToast?.(tipo, mensaje), [onToast]);
 
   const [saving, setSaving] = useState(false);
@@ -721,9 +731,9 @@ export default function ModalEditarOrdenPago({
 
   return createPortal(
     <>
-      <div className="gm-modal-overlay">
+      <div className={`gm-modal-overlay ${darkOn ? "gm-modal-overlay--dark" : ""}`}>
         <div
-          className="gm-modal-container gm-modal-container--movement gm-modal-v2 gm-order-edit-modal"
+          className={`gm-modal-container gm-modal-v2 order-edit-modal ${darkOn ? "gm-modal-container--dark" : ""}`}
           id="mov--modaleditarordenpago"
           role="dialog"
           aria-modal="true"
@@ -751,13 +761,13 @@ export default function ModalEditarOrdenPago({
           </div>
 
           <div className="gm-modal-content">
-            <div className="gm-movement-layout mi-er-layout">
-              <section className="gm-movement-main mi-er-main">
-                <form onSubmit={submit} className="mi-er-form">
+            <div className="gm-movement-layout order-edit-layout">
+              <section className="gm-movement-main order-edit-main">
+                <form onSubmit={submit} className="order-edit-form">
                   <div className="gm-section">
                     <div className="gm-section-head"><div className="gm-section-dot" /><span>Producto</span></div>
                     <div className="gm-section-body">
-                      <div className="mi-er-rel">
+                      <div className="order-edit-rel">
                         <div className="gm-field">
                           <input
                             className="gm-input"
@@ -773,7 +783,7 @@ export default function ModalEditarOrdenPago({
                         </div>
 
                         {!!filteredProductos.length && (
-                          <div className="mi-er-autocomplete">
+                          <div className="order-edit-autocomplete">
                             {filteredProductos.map((prod) => {
                               const id = getProductoId(prod);
                               const nombre = getProductoNombre(prod);
@@ -781,7 +791,7 @@ export default function ModalEditarOrdenPago({
                                 <button
                                   key={`prod-${id}-${nombre}`}
                                   type="button"
-                                  className="mi-er-autocomplete__item"
+                                  className="order-edit-autocomplete__item"
                                   onMouseDown={(e) => e.preventDefault()}
                                   onClick={() => handleSelectProducto(prod)}
                                 >
@@ -798,7 +808,7 @@ export default function ModalEditarOrdenPago({
                   <div className="gm-section">
                     <div className="gm-section-head"><div className="gm-section-dot" /><span>Cantidad y precio</span></div>
                     <div className="gm-section-body">
-                      <div className="mi-er-grid-3">
+                      <div className="order-edit-grid-3">
                         <div className="gm-field">
                           <input
                             className="gm-input"
@@ -853,7 +863,7 @@ export default function ModalEditarOrdenPago({
                   <div className="gm-section">
                     <div className="gm-section-head"><div className="gm-section-dot" /><span>Proveedor</span></div>
                     <div className="gm-section-body">
-                      <div className="mi-er-rel">
+                      <div className="order-edit-rel">
                         <div className="gm-field">
                           <input
                             className="gm-input"
@@ -869,7 +879,7 @@ export default function ModalEditarOrdenPago({
                         </div>
 
                         {!!filteredProveedores.length && (
-                          <div className="mi-er-autocomplete">
+                          <div className="order-edit-autocomplete">
                             {filteredProveedores.map((prov) => {
                               const id = getProveedorId(prov);
                               const nombre = getProveedorNombre(prov);
@@ -877,7 +887,7 @@ export default function ModalEditarOrdenPago({
                                 <button
                                   key={`prov-${id}-${nombre}`}
                                   type="button"
-                                  className="mi-er-autocomplete__item"
+                                  className="order-edit-autocomplete__item"
                                   onMouseDown={(e) => e.preventDefault()}
                                   onClick={() => handleSelectProveedor(prov)}
                                 >
@@ -893,7 +903,7 @@ export default function ModalEditarOrdenPago({
                 </form>
               </section>
 
-              <aside className="gm-aside">
+              <aside className="gm-movement-side gm-aside">
                 <div className="gm-section">
                   <div className="gm-section-head"><div className="gm-section-dot" /><span>Fecha</span></div>
                   <div className="gm-section-body">
@@ -923,11 +933,11 @@ export default function ModalEditarOrdenPago({
                   <div className="gm-section-head"><div className="gm-section-dot" /><span>Resumen de la orden</span></div>
                   <div className="gm-section-body">
                     <div className="gm-info-box">
-                      <div className="mi-er-summary-row"><FontAwesomeIcon icon={faCalendarDays} /><span><b>Fecha:</b> {form.fecha || "--"}</span></div>
-                      <div className="mi-er-summary-row"><FontAwesomeIcon icon={faTruck} /><span><b>Proveedor:</b> {resumen.proveedor}</span></div>
-                      <div className="mi-er-summary-row"><FontAwesomeIcon icon={faBoxOpen} /><span><b>Producto:</b> {resumen.producto}</span></div>
-                      <div className="mi-er-summary-row"><FontAwesomeIcon icon={faFileInvoiceDollar} /><span><b>Cantidad:</b> {resumen.cantidad || "--"}</span></div>
-                      <div className="mi-er-summary-row"><FontAwesomeIcon icon={faDollarSign} /><span><b>Total:</b> {moneyARS(resumen.total)}</span></div>
+                      <div className="order-edit-summary-row"><FontAwesomeIcon icon={faCalendarDays} /><span><b>Fecha:</b> {form.fecha || "--"}</span></div>
+                      <div className="order-edit-summary-row"><FontAwesomeIcon icon={faTruck} /><span><b>Proveedor:</b> {resumen.proveedor}</span></div>
+                      <div className="order-edit-summary-row"><FontAwesomeIcon icon={faBoxOpen} /><span><b>Producto:</b> {resumen.producto}</span></div>
+                      <div className="order-edit-summary-row"><FontAwesomeIcon icon={faFileInvoiceDollar} /><span><b>Cantidad:</b> {resumen.cantidad || "--"}</span></div>
+                      <div className="order-edit-summary-row"><FontAwesomeIcon icon={faDollarSign} /><span><b>Total:</b> {moneyARS(resumen.total)}</span></div>
                     </div>
                   </div>
                 </div>
@@ -935,7 +945,7 @@ export default function ModalEditarOrdenPago({
                 <div className="gm-actions">
                   <button
                     type="button"
-                    className="gm-action-btn gm-action-btn--save mi-er-action"
+                    className="gm-action-btn gm-action-btn--save order-edit-action"
                     onClick={submit}
                     disabled={saving}
                   >
@@ -944,7 +954,7 @@ export default function ModalEditarOrdenPago({
 
                   <button
                     type="button"
-                    className="gm-action-btn gm-action-btn--cancel mi-er-action"
+                    className="gm-action-btn gm-action-btn--cancel order-edit-action"
                     onClick={() => !saving && onClose?.()}
                     disabled={saving}
                   >

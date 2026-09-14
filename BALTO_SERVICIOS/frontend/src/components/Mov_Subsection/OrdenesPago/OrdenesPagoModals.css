@@ -227,87 +227,109 @@ html[data-theme="oscuro"] .gm-order-row.is-checked { background: rgba(0, 85, 187
 /* =========================================================
    Órdenes de Pago - editar orden
    ---------------------------------------------------------
-   Estilos propios del modal de edición: distribución interna,
-   autocomplete y resumen. No son patrones globales.
+   Mismo patrón visual que Editar recibo. Se mantienen clases
+   locales para no acoplar ambas secciones, pero comparten
+   medidas, layout, variables gm-*, responsive y modo oscuro.
 ========================================================= */
 
-.gm-order-edit-modal .mi-er-layout{
-  flex:1;
-  min-height:0;
-  display:grid;
-  grid-template-columns:minmax(0,1fr) 430px;
-  gap:18px;
-  overflow:hidden;
+.order-edit-modal {
+  width: min(980px, 96vw);
+  min-height: 60vh;
+  max-height: 90vh;
 }
 
-.gm-order-edit-modal .mi-er-main{
-  min-width:0;
-  min-height:0;
-  border:1px solid var(--nv-border-md);
-  border-radius:14px;
-  background:var(--nv-bg);
-  box-shadow:var(--nv-shadow-sm);
-  overflow:auto;
-  padding:16px;
+.order-edit-layout {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
 }
 
-.gm-order-edit-modal .mi-er-form{
-  display:flex;
-  flex-direction:column;
-  gap:14px;
+.order-edit-main {
+  min-width: 0;
+  min-height: 0;
+  border: 1px solid var(--gm-border);
+  border-radius: 14px;
+  background: var(--gm-bg);
+  box-shadow: var(--mi-shadow-sm, 0 12px 28px rgba(15, 23, 42, .08));
+  overflow: auto;
+  padding: 16px;
 }
 
-.gm-order-edit-modal .mi-er-rel{ position:relative; }
-
-.gm-order-edit-modal .mi-er-autocomplete{
-  position:absolute;
-  top:calc(100% + 6px);
-  left:0;
-  right:0;
-  z-index:50;
-  background:var(--nv-bg);
-  border:1px solid var(--nv-border-md);
-  border-radius:12px;
-  box-shadow:var(--nv-shadow-md);
-  overflow:hidden;
-  max-height:240px;
-  overflow-y:auto;
+.order-edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
-.gm-order-edit-modal .mi-er-autocomplete__item{
-  width:100%;
-  border:none;
-  background:transparent;
-  text-align:left;
-  padding:10px 12px;
-  font-size:13px;
-  color:var(--nv-text);
-  cursor:pointer;
-  transition:background .12s ease;
-  font-family:inherit;
+.order-edit-rel { position: relative; }
+
+.order-edit-autocomplete {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 50;
+  background: var(--gm-bg);
+  border: 1px solid var(--gm-border);
+  border-radius: 12px;
+  box-shadow: var(--mi-shadow, 0 18px 40px rgba(15, 23, 42, .16));
+  overflow: hidden;
+  max-height: 240px;
+  overflow-y: auto;
 }
 
-.gm-order-edit-modal .mi-er-autocomplete__item:hover{ background:var(--nv-row-hover); }
-
-.gm-order-edit-modal .mi-er-grid-3{
-  display:grid;
-  grid-template-columns:1fr 1fr 1fr;
-  gap:12px;
+.order-edit-autocomplete__item {
+  width: 100%;
+  border: none;
+  background: transparent;
+  text-align: left;
+  padding: 10px 12px;
+  font-size: 13px;
+  color: var(--gm-text);
+  cursor: pointer;
+  transition: background .12s ease;
+  font-family: inherit;
 }
 
-.gm-order-edit-modal .mi-er-summary-row{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  margin-bottom:12px;
+.order-edit-autocomplete__item:hover {
+  background: var(--color-primary-soft, var(--gm-accent-soft));
 }
 
-.gm-order-edit-modal .mi-er-summary-row:last-child{ margin-bottom:0; }
-.gm-order-edit-modal .mi-er-action{ flex:1; }
+.order-edit-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
 
-@media (max-width: 1100px){
-  .gm-order-edit-modal .mi-er-layout{ grid-template-columns:1fr; }
-  .gm-order-edit-modal .mi-er-grid-3{ grid-template-columns:1fr; }
+.order-edit-summary-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.order-edit-summary-row:last-child { margin-bottom: 0; }
+.order-edit-action { flex: 1; }
+
+html[data-theme="oscuro"] .order-edit-main,
+html[data-theme="oscuro"] .order-edit-autocomplete {
+  background: var(--gm-bg);
+  border-color: rgba(255, 255, 255, .10);
+}
+
+html[data-theme="oscuro"] .order-edit-autocomplete__item:hover {
+  background: rgba(0, 85, 187, .22);
+}
+
+@media (max-width: 1100px) {
+  .order-edit-modal {
+    width: min(980px, 96vw);
+    min-height: 60vh;
+    max-height: 90vh;
+  }
+
+  .order-edit-layout { grid-template-columns: 1fr; }
+  .order-edit-grid-3 { grid-template-columns: 1fr; }
 }
 
 /* =========================================================

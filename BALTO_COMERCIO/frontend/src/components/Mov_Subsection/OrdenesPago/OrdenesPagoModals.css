@@ -227,87 +227,108 @@ html[data-theme="oscuro"] .gm-order-row.is-checked { background: rgba(0, 85, 187
 /* =========================================================
    Órdenes de Pago - editar orden
    ---------------------------------------------------------
-   Estilos propios del modal de edición: distribución interna,
-   autocomplete y resumen. No son patrones globales.
+   Misma estructura visual que Editar recibo: layout,
+   autocomplete, resumen, acciones, dark mode y responsive.
 ========================================================= */
 
-.gm-order-edit-modal .mi-er-layout{
-  flex:1;
-  min-height:0;
-  display:grid;
-  grid-template-columns:minmax(0,1fr) 430px;
-  gap:18px;
-  overflow:hidden;
+.op-edit-modal {
+  width: min(980px, 96vw);
+  min-height: 60vh;
+  max-height: 90vh;
 }
 
-.gm-order-edit-modal .mi-er-main{
-  min-width:0;
-  min-height:0;
-  border:1px solid var(--nv-border-md);
-  border-radius:14px;
-  background:var(--nv-bg);
-  box-shadow:var(--nv-shadow-sm);
-  overflow:auto;
-  padding:16px;
+.op-edit-layout {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
 }
 
-.gm-order-edit-modal .mi-er-form{
-  display:flex;
-  flex-direction:column;
-  gap:14px;
+.op-edit-main {
+  min-width: 0;
+  min-height: 0;
+  border: 1px solid var(--gm-border);
+  border-radius: 14px;
+  background: var(--gm-bg);
+  box-shadow: var(--mi-shadow-sm, 0 12px 28px rgba(15, 23, 42, .08));
+  overflow: auto;
+  padding: 16px;
 }
 
-.gm-order-edit-modal .mi-er-rel{ position:relative; }
-
-.gm-order-edit-modal .mi-er-autocomplete{
-  position:absolute;
-  top:calc(100% + 6px);
-  left:0;
-  right:0;
-  z-index:50;
-  background:var(--nv-bg);
-  border:1px solid var(--nv-border-md);
-  border-radius:12px;
-  box-shadow:var(--nv-shadow-md);
-  overflow:hidden;
-  max-height:240px;
-  overflow-y:auto;
+.op-edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
-.gm-order-edit-modal .mi-er-autocomplete__item{
-  width:100%;
-  border:none;
-  background:transparent;
-  text-align:left;
-  padding:10px 12px;
-  font-size:13px;
-  color:var(--nv-text);
-  cursor:pointer;
-  transition:background .12s ease;
-  font-family:inherit;
+.op-edit-rel { position: relative; }
+
+.op-edit-autocomplete {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 50;
+  background: var(--gm-bg);
+  border: 1px solid var(--gm-border);
+  border-radius: 12px;
+  box-shadow: var(--mi-shadow, 0 18px 40px rgba(15, 23, 42, .16));
+  overflow: hidden;
+  max-height: 240px;
+  overflow-y: auto;
 }
 
-.gm-order-edit-modal .mi-er-autocomplete__item:hover{ background:var(--nv-row-hover); }
-
-.gm-order-edit-modal .mi-er-grid-3{
-  display:grid;
-  grid-template-columns:1fr 1fr 1fr;
-  gap:12px;
+.op-edit-autocomplete__item {
+  width: 100%;
+  border: none;
+  background: transparent;
+  text-align: left;
+  padding: 10px 12px;
+  font-size: 13px;
+  color: var(--gm-text);
+  cursor: pointer;
+  transition: background .12s ease;
+  font-family: inherit;
 }
 
-.gm-order-edit-modal .mi-er-summary-row{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  margin-bottom:12px;
+.op-edit-autocomplete__item:hover {
+  background: var(--color-primary-soft, var(--gm-accent-soft));
 }
 
-.gm-order-edit-modal .mi-er-summary-row:last-child{ margin-bottom:0; }
-.gm-order-edit-modal .mi-er-action{ flex:1; }
+.op-edit-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
 
-@media (max-width: 1100px){
-  .gm-order-edit-modal .mi-er-layout{ grid-template-columns:1fr; }
-  .gm-order-edit-modal .mi-er-grid-3{ grid-template-columns:1fr; }
+.op-edit-summary-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.op-edit-summary-row:last-child { margin-bottom: 0; }
+.op-edit-action { flex: 1; }
+
+html[data-theme="oscuro"] .op-edit-main,
+html[data-theme="oscuro"] .op-edit-autocomplete {
+  background: var(--gm-bg);
+  border-color: rgba(255, 255, 255, .10);
+}
+
+html[data-theme="oscuro"] .op-edit-autocomplete__item:hover {
+  background: rgba(0, 85, 187, .22);
+}
+
+@media (max-width: 1100px) {
+  .op-edit-modal {
+    width: min(980px, 96vw);
+    min-height: 60vh;
+    max-height: 90vh;
+  }
+
+  .op-edit-layout { grid-template-columns: 1fr; }
+  .op-edit-grid-3 { grid-template-columns: 1fr; }
 }
 
 /* =========================================================
