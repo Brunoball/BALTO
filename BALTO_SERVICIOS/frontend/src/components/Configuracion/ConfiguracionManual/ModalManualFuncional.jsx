@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowUpRightFromSquare,
@@ -124,9 +125,9 @@ export default function ModalManualFuncional({ open, onClose }) {
 
   const viewerUrl = `${pdfUrl}#page=${page}&zoom=page-width`;
 
-  return (
+  const modalContent = (
     <div
-      className="manual-modalOverlay"
+      className={`manual-modalOverlay ${fullscreen ? "is-fullscreen" : ""}`}
       role="dialog"
       aria-modal="true"
       aria-label="Manual funcional de BALTO Servicios"
@@ -292,4 +293,10 @@ export default function ModalManualFuncional({ open, onClose }) {
       </div>
     </div>
   );
+
+  // Renderizar el visor fuera del árbol de Configuración evita que los
+  // stacking contexts del layout (por ejemplo .pp-content) intercepten
+  // clicks cuando el manual está en pantalla completa.
+  if (typeof document === "undefined") return modalContent;
+  return createPortal(modalContent, document.body);
 }

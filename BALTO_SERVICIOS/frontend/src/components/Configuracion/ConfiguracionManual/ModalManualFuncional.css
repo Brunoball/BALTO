@@ -1,4 +1,5 @@
 .manual-modalOverlay {
+  box-sizing: border-box;
   position: fixed;
   inset: 0;
   z-index: 10050;
@@ -10,7 +11,13 @@
   backdrop-filter: blur(4px);
 }
 
+.manual-modalOverlay.is-fullscreen {
+  padding: 0;
+}
+
 .manual-modal {
+  position: relative;
+  isolation: isolate;
   width: min(1500px, 95vw);
   height: min(920px, 92vh);
   min-height: 620px;
@@ -34,6 +41,9 @@
 }
 
 .manual-modalHeader {
+  position: relative;
+  z-index: 6;
+  flex: 0 0 auto;
   min-height: 72px;
   display: flex;
   align-items: center;
@@ -324,6 +334,8 @@
 }
 
 .manual-viewerWrap {
+  position: relative;
+  z-index: 1;
   flex: 1;
   min-height: 0;
   padding: 10px;
@@ -340,6 +352,9 @@
 }
 
 .manual-modalFooter {
+  position: relative;
+  z-index: 2;
+  flex: 0 0 auto;
   min-height: 36px;
   display: flex;
   align-items: center;

@@ -67,3 +67,17 @@ LIMPIEZA AUTOMÁTICA
 
 Si una corrida se corta por Ctrl+C, cierre de terminal/PC o un crash, podés limpiar manualmente con:
 node tests/cleanup-now.mjs
+
+COBERTURA MANUAL FUNCIONAL
+--------------------------
+El testing también valida la tarjeta Manual funcional de Configuración:
+- La tarjeta aparece y abre el modal del manual.
+- El visor PDF apunta al manual integrado y comienza en la página 1.
+- El botón Descargar Word referencia el .docx correcto.
+- El buscador encuentra módulos y salta a la página esperada.
+- Se validan página anterior/siguiente, límites 1/86, pantalla completa y cierre.
+- El smoke interno visita /panel/configuracion y confirma que la tarjeta está disponible.
+
+Para correr sólo esta cobertura:
+npx playwright test tests/34-manual-functional.spec.js --project=chromium --workers=1 --reporter=list
+

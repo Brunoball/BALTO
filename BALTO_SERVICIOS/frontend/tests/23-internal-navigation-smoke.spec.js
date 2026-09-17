@@ -25,6 +25,7 @@ const routes = [
   ['/panel/cheques/echeqs-cartera', /Echeqs(?: ·| en) Cartera/i],
   ['/panel/cheques/flujo-echeqs', /Flujo de E-?Cheqs/i],
   ['/panel/analisis-financiero', /Análisis Financiero/i],
+  ['/panel/configuracion', /Manual funcional/i],
   ['/panel/configuracion/calendario', /Calendario global/i],
   ['/panel/configuracion/usuarios', /Usuarios del sistema/i],
   ['/panel/configuracion/listas-categorias', /Listas y categorías/i],
