@@ -7,6 +7,7 @@ import "../Global/Global_css/Global_oscuro.css";
 import Toast from "../Global/Toast";
 import { apiFetch, safeJsonParse } from "./api/configuracionApi";
 import useConfiguracionToast from "./hooks/useConfiguracionToast";
+import ModalManualFuncional from "./ConfiguracionManual/ModalManualFuncional";
 import { useDateRange } from "../../context/DateRangeContext";
 import {
   DEMO_BLOCK_MESSAGE,
@@ -22,6 +23,7 @@ import {
   faFileInvoiceDollar,
   faWallet,
   faListCheck,
+  faBookOpen,
 } from "@fortawesome/free-solid-svg-icons";
 
 const DEMO_ADVANCED_MESSAGE = DEMO_BLOCK_MESSAGE;
@@ -58,6 +60,8 @@ export default function Configuracion() {
   const { toast, setToast, mostrarToast } = useConfiguracionToast({
     defaultDuration: 3800,
   });
+
+  const [manualOpen, setManualOpen] = useState(false);
 
   const [datosLegales, setDatosLegales] = useState({
     razon_social: "",
@@ -179,6 +183,21 @@ export default function Configuracion() {
         metaBottom: modoLabel,
         icon: <CalendarioIcon />,
       },
+      {
+        id: "manual-funcional",
+        title: "Manual funcional",
+        description:
+          "Consultá el manual completo de BALTO Servicios, buscá módulos y descargá la versión en Word.",
+        action: "open-manual",
+        status: { text: "Disponible", type: "success" },
+        metaTop: "Versión 2026",
+        metaBottom: "86 páginas · Consulta · Descarga",
+        icon: (
+          <div className="cfg-cardLogo cfg-cardLogo--icon">
+            <FontAwesomeIcon icon={faBookOpen} />
+          </div>
+        ),
+      },
     ];
   }, [datosLegales, calendarConfig, configLoaded, esPlanDemo]);
 
@@ -214,7 +233,11 @@ export default function Configuracion() {
                   );
                   return;
                 }
-                navigate(card.route);
+                if (card.action === "open-manual") {
+                  setManualOpen(true);
+                  return;
+                }
+                if (card.route) navigate(card.route);
               }}
             >
               <div className="cfg-cardMain">
@@ -254,6 +277,11 @@ export default function Configuracion() {
         </div>
       </div>
       </section>
+
+      <ModalManualFuncional
+        open={manualOpen}
+        onClose={() => setManualOpen(false)}
+      />
     </>
   );
 }

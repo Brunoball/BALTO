@@ -5,6 +5,7 @@ import {
   requireMutations,
   waitDialog,
   waitForBusyToFinish,
+  selectProduct,
 } from './support/ui.js';
 import {
   createPurchaseFixtureViaApi,
@@ -268,10 +269,13 @@ test.describe('Blindajes finales BALTO Servicios', () => {
       await dialog.getByTitle('Agregar otro artículo a la compra').click();
       await expect(rows).toHaveCount(3);
       const newRow = rows.nth(2);
-      await newRow.locator('select').first().selectOption(String(articleC.id_articulo));
+      // La UI actual usa el autocompletado de Stock para elegir el artículo.
+      // El único <select> de la fila es IVA, así que seleccionar por id_articulo
+      // sobre un select termina esperando una opción que nunca puede existir.
+      await selectProduct(newRow, productC);
       await newRow.locator('input[type="number"]').nth(0).fill('2');
       await newRow.locator('input[type="number"]').nth(1).fill('70');
-      await newRow.locator('select').nth(1).selectOption('21');
+      await newRow.locator('select').first().selectOption('21');
 
       await dialog.getByRole('button', { name: /Eliminar fila 2/i }).click();
       await expect(rows).toHaveCount(2);
