@@ -15,6 +15,7 @@ import {
 
 import manualPdfUrl from "../../../utils/manuales/Manual_Funcional_BALTO_Servicios_FINAL.pdf";
 import manualDocxUrl from "../../../utils/manuales/Manual_Funcional_BALTO_Servicios_FINAL.docx";
+import "../../Global/Global_css/GlobalsModalsV2.css";
 import "./ModalManualFuncional.css";
 
 const TOTAL_PAGES = 86;
@@ -127,29 +128,25 @@ export default function ModalManualFuncional({ open, onClose }) {
 
   const modalContent = (
     <div
-      className={`manual-modalOverlay ${fullscreen ? "is-fullscreen" : ""}`}
+      className={`gm-modal-overlay manual-modalOverlay ${fullscreen ? "is-fullscreen" : ""}`}
       role="dialog"
       aria-modal="true"
       aria-label="Manual funcional de BALTO Servicios"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose?.();
-      }}
     >
-      <div className={`manual-modal ${fullscreen ? "is-fullscreen" : ""}`}>
-        <header className="manual-modalHeader">
-          <div className="manual-modalTitleWrap">
-            <div className="manual-modalIcon" aria-hidden="true">
-              <FontAwesomeIcon icon={faBookOpen} />
-            </div>
-            <div>
-              <h2>Manual funcional</h2>
-              <p>BALTO Servicios · Versión 2026 · {TOTAL_PAGES} páginas</p>
-            </div>
+      <div className={`gm-modal-container gm-modal-v2 manual-modal ${fullscreen ? "is-fullscreen" : ""}`}>
+        <header className="gm-modal-header manual-modalHeader">
+          <div className="gm-modal-head-icon" aria-hidden="true">
+            <FontAwesomeIcon icon={faBookOpen} />
+          </div>
+
+          <div className="gm-modal-head-left">
+            <h2 className="gm-modal-title">Manual funcional</h2>
+            <p className="gm-modal-subtitle">BALTO Servicios · Versión 2026 · {TOTAL_PAGES} páginas</p>
           </div>
 
           <div className="manual-modalHeaderActions">
             <a
-              className="manual-btn manual-btn--primary"
+              className="manual-headerBtn manual-headerBtn--primary"
               href={docxUrl}
               download="Manual_Funcional_BALTO_Servicios_FINAL.docx"
               title="Descargar manual en Word"
@@ -160,7 +157,7 @@ export default function ModalManualFuncional({ open, onClose }) {
 
             <button
               type="button"
-              className="manual-iconBtn"
+              className="manual-headerIconBtn"
               onClick={() => window.open(pdfUrl, "_blank", "noopener,noreferrer")}
               title="Abrir el manual en una pestaña nueva"
               aria-label="Abrir en una pestaña nueva"
@@ -170,7 +167,7 @@ export default function ModalManualFuncional({ open, onClose }) {
 
             <button
               type="button"
-              className="manual-iconBtn"
+              className="manual-headerIconBtn"
               onClick={() => setFullscreen((value) => !value)}
               title={fullscreen ? "Salir de pantalla completa" : "Expandir manual"}
               aria-label={fullscreen ? "Salir de pantalla completa" : "Expandir manual"}
@@ -180,7 +177,7 @@ export default function ModalManualFuncional({ open, onClose }) {
 
             <button
               type="button"
-              className="manual-iconBtn manual-iconBtn--close"
+              className="gm-modal-close"
               onClick={onClose}
               title="Cerrar manual"
               aria-label="Cerrar manual"
@@ -190,7 +187,8 @@ export default function ModalManualFuncional({ open, onClose }) {
           </div>
         </header>
 
-        <div className="manual-toolbar">
+        <div className="gm-modal-content manual-modalContent">
+          <div className="manual-toolbar">
           <div className="manual-searchWrap">
             <FontAwesomeIcon icon={faMagnifyingGlass} className="manual-searchIcon" />
             <input
@@ -277,16 +275,17 @@ export default function ModalManualFuncional({ open, onClose }) {
           </div>
         </div>
 
-        <div className="manual-viewerWrap">
-          <iframe
-            key={viewerUrl}
-            className="manual-viewer"
-            src={viewerUrl}
-            title="Manual funcional BALTO Servicios"
-          />
+          <div className="manual-viewerWrap">
+            <iframe
+              key={viewerUrl}
+              className="manual-viewer"
+              src={viewerUrl}
+              title="Manual funcional BALTO Servicios"
+            />
+          </div>
         </div>
 
-        <footer className="manual-modalFooter">
+        <footer className="gm-modal-footer manual-modalFooter">
           <span>Podés buscar módulos desde el campo superior o usar la búsqueda propia del visor PDF.</span>
           <span className="manual-footerHint">Atajo: Ctrl + K enfoca el buscador.</span>
         </footer>
