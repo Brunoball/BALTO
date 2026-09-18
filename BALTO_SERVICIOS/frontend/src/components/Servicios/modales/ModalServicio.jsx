@@ -50,10 +50,64 @@ function SelectorMultipleRecursos({
   onAdd,
 }) {
   const rootRef = React.useRef(null);
+  const triggerRef = React.useRef(null);
+  const menuRef = React.useRef(null);
   const searchRef = React.useRef(null);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [selectedIds, setSelectedIds] = useState([]);
+  const [menuPosition, setMenuPosition] = useState(null);
+
+  const updateMenuPosition = React.useCallback(() => {
+    if (!open || !triggerRef.current || typeof window === "undefined") return;
+
+    const rect = triggerRef.current.getBoundingClientRect();
+    const margin = 12;
+    const gap = 6;
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const maxWidth = Math.max(0, viewportWidth - (margin * 2));
+    const width = Math.min(Math.max(rect.width, 460), maxWidth);
+    const triggerStyles = window.getComputedStyle(triggerRef.current);
+    const modalRoot = triggerRef.current.closest(".gm-modal-container, .gm-modal-v2");
+    const modalStyles = modalRoot ? window.getComputedStyle(modalRoot) : triggerStyles;
+    const readCssVar = (name, fallback) =>
+      triggerStyles.getPropertyValue(name).trim() ||
+      modalStyles.getPropertyValue(name).trim() ||
+      fallback;
+
+    const accent = readCssVar("--servicios-component-accent", "#0055bb");
+    const gmBg = readCssVar("--gm-bg", modalStyles.backgroundColor || "#ffffff");
+    const gmBgSoft = readCssVar("--gm-bg-soft", "#f8fafc");
+    const gmBorder = readCssVar("--gm-border", "rgba(15, 23, 42, .12)");
+    const gmText = readCssVar("--gm-text", modalStyles.color || "#0f172a");
+    const gmMuted = readCssVar("--gm-muted", "#64748b");
+
+    let left = rect.left;
+    if (left + width > viewportWidth - margin) left = viewportWidth - margin - width;
+    left = Math.max(margin, left);
+
+    const spaceBelow = Math.max(0, viewportHeight - rect.bottom - gap - margin);
+    const spaceAbove = Math.max(0, rect.top - gap - margin);
+    const placeAbove = spaceBelow < 280 && spaceAbove > spaceBelow;
+    const availableHeight = placeAbove ? spaceAbove : spaceBelow;
+    const maxHeight = Math.max(150, Math.min(340, availableHeight));
+
+    setMenuPosition({
+      left,
+      width,
+      maxHeight,
+      top: placeAbove ? null : rect.bottom + gap,
+      bottom: placeAbove ? viewportHeight - rect.top + gap : null,
+      placement: placeAbove ? "above" : "below",
+      accent,
+      gmBg,
+      gmBgSoft,
+      gmBorder,
+      gmText,
+      gmMuted,
+    });
+  }, [open]);
 
   const filtered = useMemo(() => {
     const q = normalizeSearch(query).trim();
@@ -65,7 +119,9 @@ function SelectorMultipleRecursos({
     if (!open) return undefined;
 
     const handlePointerDown = (event) => {
-      if (!rootRef.current?.contains(event.target)) {
+      const clickedRoot = rootRef.current?.contains(event.target);
+      const clickedMenu = menuRef.current?.contains(event.target);
+      if (!clickedRoot && !clickedMenu) {
         setOpen(false);
         setQuery("");
       }
@@ -87,7 +143,27 @@ function SelectorMultipleRecursos({
   }, [open]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      setMenuPosition(null);
+      return undefined;
+    }
+
+    updateMenuPosition();
+    const frame = window.requestAnimationFrame(updateMenuPosition);
+    const handleViewportChange = () => updateMenuPosition();
+
+    window.addEventListener("resize", handleViewportChange);
+    document.addEventListener("scroll", handleViewportChange, true);
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener("resize", handleViewportChange);
+      document.removeEventListener("scroll", handleViewportChange, true);
+    };
+  }, [open, updateMenuPosition]);
+
+  useEffect(() => {
+    if (!open) return undefined;
     const timer = window.setTimeout(() => searchRef.current?.focus(), 0);
     return () => window.clearTimeout(timer);
   }, [open]);
@@ -127,6 +203,7 @@ function SelectorMultipleRecursos({
     <div className={`servicios-multi-select ${open ? "is-open" : ""}`} ref={rootRef}>
       <div className="gm-field servicios-multi-select__field">
         <button
+          ref={triggerRef}
           type="button"
           className="servicios-multi-select__trigger"
           onClick={() => setOpen((prev) => !prev)}
@@ -141,8 +218,26 @@ function SelectorMultipleRecursos({
         </button>
         <span className="gm-label gm-label--up">{label}</span>
 
-        {open && (
-          <div className="servicios-multi-select__menu" role="dialog" aria-label={label}>
+        {open && typeof document !== "undefined" && createPortal(
+          <div
+            ref={menuRef}
+            className={`servicios-multi-select__menu servicios-multi-select__menu--portal ${menuPosition?.placement === "above" ? "is-above" : "is-below"}`}
+            role="dialog"
+            aria-label={label}
+            style={menuPosition ? {
+              left: `${menuPosition.left}px`,
+              width: `${menuPosition.width}px`,
+              maxHeight: `${menuPosition.maxHeight}px`,
+              top: menuPosition.top == null ? "auto" : `${menuPosition.top}px`,
+              bottom: menuPosition.bottom == null ? "auto" : `${menuPosition.bottom}px`,
+              "--servicios-component-accent": menuPosition.accent || "#0055bb",
+              "--gm-bg": menuPosition.gmBg || "#ffffff",
+              "--gm-bg-soft": menuPosition.gmBgSoft || "#f8fafc",
+              "--gm-border": menuPosition.gmBorder || "rgba(15, 23, 42, .12)",
+              "--gm-text": menuPosition.gmText || "#0f172a",
+              "--gm-muted": menuPosition.gmMuted || "#64748b",
+            } : { visibility: "hidden" }}
+          >
             <div className="servicios-multi-select__search">
               <label className="gm-field">
                 <input
@@ -185,7 +280,8 @@ function SelectorMultipleRecursos({
                 );
               })}
             </div>
-          </div>
+          </div>,
+          document.body
         )}
       </div>
 

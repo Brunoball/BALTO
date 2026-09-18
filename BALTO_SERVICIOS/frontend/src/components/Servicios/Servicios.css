@@ -3540,3 +3540,41 @@ body.dark .servicios-multi-select__menu {
     min-width: 100%;
   }
 }
+
+/* =========================================================
+   MODAL SERVICIO · DROPDOWNS FLOTANTES
+   El selector se porta a <body> para escapar del overflow del modal.
+   Así puede desplegarse por encima del footer/contenido sin obligar
+   a desplazar el modal completo para ver sus opciones.
+========================================================= */
+.servicios-multi-select__menu--portal {
+  position: fixed;
+  right: auto;
+  z-index: 10000000020;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  transform-origin: top center;
+  background: var(--gm-bg, #ffffff);
+  color: var(--gm-text, #0f172a);
+  isolation: isolate;
+  opacity: 1;
+}
+
+.servicios-multi-select__menu--portal.is-above {
+  transform-origin: bottom center;
+}
+
+.servicios-multi-select__menu--portal .servicios-multi-select__search,
+.servicios-multi-select__menu--portal .servicios-multi-select__toolbar {
+  flex: 0 0 auto;
+  background: var(--gm-bg, #ffffff);
+}
+
+.servicios-multi-select__menu--portal .servicios-multi-select__options {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
+  overscroll-behavior: contain;
+  background: var(--gm-bg, #ffffff);
+}
