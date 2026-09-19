@@ -16,7 +16,6 @@
   isolation: isolate;
   width: min(1500px, 95vw);
   height: min(920px, 92vh);
-  min-height: 620px;
   max-height: 92vh;
 }
 
