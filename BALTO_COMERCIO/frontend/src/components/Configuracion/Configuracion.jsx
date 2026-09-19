@@ -9,6 +9,7 @@ import Toast from "../Global/Toast";
 import { apiFetch, safeJsonParse } from "./api/configuracionApi";
 import useConfiguracionToast from "./hooks/useConfiguracionToast";
 import ConfiguracionListasCategorias from "./ConfiguracionListasCategorias/ConfiguracionListasCategorias";
+import ModalManualFuncional from "./ConfiguracionManual/ModalManualFuncional";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -18,6 +19,7 @@ import {
   faFileInvoiceDollar,
   faWallet,
   faListCheck,
+  faBookOpen,
 } from "@fortawesome/free-solid-svg-icons";
 
 import { useDateRange } from "../../context/DateRangeContext";
@@ -70,6 +72,7 @@ function ConfiguracionInicio() {
   const { toast, setToast, mostrarToast } = useConfiguracionToast({
     defaultDuration: 3800,
   });
+  const [manualOpen, setManualOpen] = useState(false);
 
   // ── estado Tienda Nube ─────────────────────────────────────────────────
   const [tiendanube, setTiendanube] = useState({
@@ -251,6 +254,21 @@ function ConfiguracionInicio() {
         metaBottom: modoLabel,
         icon: <CalendarioIcon />,
       },
+      {
+        id: "manual-funcional",
+        title: "Manual funcional",
+        description:
+          "Consultá el manual completo de BALTO Comercio, buscá módulos y descargá la versión en Word.",
+        action: "open-manual",
+        status: { text: "Disponible", type: "success" },
+        metaTop: "Versión 2026",
+        metaBottom: "85 páginas · Consulta · Descarga",
+        icon: (
+          <div className="cfg-cardLogo cfg-cardLogo--icon">
+            <FontAwesomeIcon icon={faBookOpen} />
+          </div>
+        ),
+      },
     ];
   }, [tiendanube, datosLegales, calendarConfig, configLoaded, esPlanDemo, permiteTiendaNube]);
 
@@ -286,7 +304,13 @@ function ConfiguracionInicio() {
                   );
                   return;
                 }
-                navigate(card.route);
+
+                if (card.action === "open-manual") {
+                  setManualOpen(true);
+                  return;
+                }
+
+                if (card.route) navigate(card.route);
               }}
             >
               <div className="cfg-cardMain">
@@ -326,6 +350,11 @@ function ConfiguracionInicio() {
         </div>
       </div>
       </section>
+
+      <ModalManualFuncional
+        open={manualOpen}
+        onClose={() => setManualOpen(false)}
+      />
     </>
   );
 }

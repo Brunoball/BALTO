@@ -1,0 +1,419 @@
+/* =========================================================
+   MANUAL FUNCIONAL
+   ---------------------------------------------------------
+   La estructura base del modal proviene de GlobalsModalsV2:
+   gm-modal-overlay / container / header / content / footer.
+   Este archivo conserva únicamente reglas particulares del
+   visor del manual.
+========================================================= */
+
+.manual-modalOverlay.is-fullscreen {
+  padding: 0;
+}
+
+.manual-modal {
+  position: relative;
+  isolation: isolate;
+  width: min(1500px, 95vw);
+  height: min(920px, 92vh);
+  min-height: 620px;
+  max-height: 92vh;
+}
+
+.manual-modal.is-fullscreen {
+  width: 100vw;
+  height: 100vh;
+  max-width: none;
+  max-height: none;
+  min-height: 0;
+  border: 0;
+  border-radius: 0;
+}
+
+.manual-modalHeader {
+  position: relative;
+  z-index: 6;
+}
+
+.manual-modalHeaderActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.manual-headerBtn,
+.manual-headerIconBtn {
+  appearance: none;
+  border: 1px solid rgba(255, 255, 255, .16);
+  background: rgba(255, 255, 255, .08);
+  color: #fff;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background .15s ease, border-color .15s ease, transform .15s ease;
+}
+
+.manual-headerBtn:hover,
+.manual-headerIconBtn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, .14);
+  border-color: rgba(255, 255, 255, .26);
+}
+
+.manual-headerBtn {
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 12px;
+  border-radius: 9px;
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.manual-headerBtn--primary {
+  background: var(--gm-accent, #0055bb);
+  border-color: var(--gm-accent, #0055bb);
+}
+
+.manual-headerBtn--primary:hover {
+  background: var(--gm-accent-dark, #003f99);
+  border-color: var(--gm-accent-dark, #003f99);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.manual-headerIconBtn {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 9px;
+  font-size: 13px;
+}
+
+.manual-headerIconBtn:disabled {
+  cursor: not-allowed;
+  opacity: .4;
+}
+
+.manual-modalContent {
+  padding: 0;
+  overflow: hidden;
+}
+
+.manual-toolbar {
+  position: relative;
+  z-index: 4;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--gm-border);
+  background: var(--gm-bg-soft);
+}
+
+.manual-searchWrap {
+  position: relative;
+  width: min(520px, 60vw);
+  min-width: 250px;
+}
+
+.manual-searchIcon {
+  position: absolute;
+  z-index: 2;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--gm-muted);
+  font-size: 12px;
+  pointer-events: none;
+}
+
+.manual-searchWrap input[type="search"] {
+  width: 100%;
+  height: 38px;
+  padding: 0 38px 0 34px;
+  border: 1px solid var(--gm-border);
+  border-radius: 10px;
+  outline: none;
+  background: var(--gm-bg);
+  color: var(--gm-text);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
+}
+
+.manual-searchWrap input[type="search"]::placeholder {
+  color: var(--gm-muted);
+}
+
+.manual-searchWrap input[type="search"]:focus {
+  border-color: var(--gm-accent);
+  box-shadow: 0 0 0 3px var(--gm-accent-soft);
+}
+
+.manual-searchWrap input[type="search"]::-webkit-search-cancel-button {
+  display: none;
+}
+
+.manual-searchClear {
+  position: absolute;
+  z-index: 3;
+  right: 7px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--gm-muted);
+  cursor: pointer;
+}
+
+.manual-searchClear:hover {
+  background: var(--gm-accent-soft);
+  color: var(--gm-accent);
+}
+
+.manual-searchResults {
+  display: none;
+}
+
+.manual-searchResults.is-visible {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  max-height: 340px;
+  overflow: auto;
+  padding: 6px;
+  border: 1px solid var(--gm-border);
+  border-radius: 12px;
+  background: var(--gm-bg);
+  box-shadow: 0 16px 36px rgba(6, 31, 52, .16);
+}
+
+.manual-searchResult {
+  width: 100%;
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--gm-text);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.manual-searchResult:hover {
+  background: var(--gm-accent-soft);
+}
+
+.manual-searchResult span {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.manual-searchResult small {
+  color: var(--gm-muted);
+  font-size: 10.5px;
+  white-space: nowrap;
+}
+
+.manual-searchEmpty {
+  padding: 12px 10px;
+  color: var(--gm-muted);
+  font-size: 11.5px;
+  text-align: center;
+}
+
+.manual-pageControls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 7px;
+}
+
+.manual-iconBtn--toolbar {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid var(--gm-border);
+  border-radius: 9px;
+  background: var(--gm-bg);
+  color: var(--gm-text);
+  cursor: pointer;
+  transition: background .15s ease, border-color .15s ease, color .15s ease;
+}
+
+.manual-iconBtn--toolbar:hover:not(:disabled) {
+  border-color: var(--gm-accent-border);
+  background: var(--gm-accent-soft);
+  color: var(--gm-accent);
+}
+
+.manual-iconBtn--toolbar:disabled {
+  cursor: not-allowed;
+  opacity: .4;
+}
+
+.manual-pageField {
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 9px;
+  border: 1px solid var(--gm-border);
+  border-radius: 9px;
+  background: var(--gm-bg);
+  color: var(--gm-muted);
+  font-size: 10.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.manual-pageField input {
+  width: 50px;
+  height: 24px;
+  padding: 0 4px;
+  border: 1px solid var(--gm-border);
+  border-radius: 6px;
+  outline: none;
+  background: var(--gm-bg);
+  color: var(--gm-text);
+  text-align: center;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.manual-pageField input:focus {
+  border-color: var(--gm-accent);
+  box-shadow: 0 0 0 2px var(--gm-accent-soft);
+}
+
+.manual-viewerWrap {
+  position: relative;
+  z-index: 1;
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 10px;
+  background: color-mix(in srgb, var(--gm-bg-soft) 84%, #64748b 16%);
+}
+
+.manual-viewer {
+  width: 100%;
+  height: 100%;
+  display: block;
+  border: 1px solid var(--gm-border);
+  border-radius: 10px;
+  background: var(--gm-bg);
+}
+
+.manual-modalFooter {
+  min-height: 36px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 7px 14px;
+  color: var(--gm-muted);
+  font-size: 10.5px;
+  font-weight: 500;
+}
+
+.manual-footerHint {
+  white-space: nowrap;
+}
+
+html[data-theme="oscuro"] .manual-searchResults.is-visible {
+  box-shadow: 0 18px 42px rgba(0, 0, 0, .34);
+}
+
+html[data-theme="oscuro"] .manual-viewerWrap {
+  background: #091a2b;
+}
+
+@media (max-width: 900px) {
+  .manual-modalOverlay {
+    padding: 0;
+  }
+
+  .manual-modal {
+    width: 100vw;
+    height: 100vh;
+    max-height: none;
+    min-height: 0;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .manual-modalHeader {
+    gap: 9px;
+    padding: 10px;
+  }
+
+  .manual-modalHeaderActions {
+    gap: 5px;
+  }
+
+  .manual-headerBtn {
+    width: 36px;
+    padding: 0;
+  }
+
+  .manual-headerBtn span {
+    display: none;
+  }
+
+  .manual-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .manual-searchWrap {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .manual-pageControls {
+    justify-content: center;
+  }
+
+  .manual-modalFooter {
+    display: none;
+  }
+
+  .manual-viewerWrap {
+    padding: 5px;
+  }
+}
+
+@media (max-width: 560px) {
+  .manual-modalHeader .gm-modal-subtitle {
+    display: none;
+  }
+
+  .manual-modalHeader .gm-modal-head-icon {
+    display: none;
+  }
+}
