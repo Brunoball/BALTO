@@ -9,7 +9,7 @@ const readOnlyPages = [
   ['/panel/contabilidad/iva-ventas', /IVA Ventas/i],
   ['/panel/contabilidad/iva-compras', /IVA Compras/i],
   ['/panel/analisis-financiero', /Análisis Financiero/i],
-  ['/panel/configuracion', /Tienda Nube|Usuarios del sistema|Datos legales/i],
+  ['/panel/configuracion', /Manual funcional/i],
   ['/panel/configuracion/tiendanube', /Configuración de Tienda Nube/i],
   ['/panel/configuracion/calendario', /Calendario global/i],
   ['/panel/configuracion/usuarios', /Usuarios del sistema/i],

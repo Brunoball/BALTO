@@ -28,7 +28,7 @@ const routes = [
   { route: '/panel/cheques/echeqs-cartera', text: /Echeqs(?: ·| en) Cartera/i },
   { route: '/panel/cheques/flujo-echeqs', text: /Flujo de E-?Cheqs/i },
   { route: '/panel/analisis-financiero', text: /Análisis Financiero/i },
-  { route: '/panel/configuracion', text: /Tienda Nube|Usuarios del sistema|Datos legales/i },
+  { route: '/panel/configuracion', text: /Manual funcional/i },
   { route: '/panel/configuracion/tiendanube', text: /Configuración de Tienda Nube/i },
   { route: '/panel/configuracion/calendario', text: /Calendario global/i },
   { route: '/panel/configuracion/usuarios', text: /Usuarios del sistema/i },
