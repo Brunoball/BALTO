@@ -1,5 +1,4 @@
 import BASE_URL from "../../../config/config";
-import { getAuthInfo } from "../api/cuentasCorrientesApi";
 
 export function moneyARS(v) {
   const n = Number(v || 0);
@@ -69,26 +68,12 @@ export function resolveFileUrl(rawUrl) {
 }
 
 export function withSessionKey(url) {
+  // Se conserva el helper por compatibilidad, pero nunca agrega credenciales a la URL.
+  // ModalVerComprobante autentica los recursos privados same-origin con X-Session.
   const base = safeText(url);
   if (!base) return "";
-
   try {
-    const { sessionKey } = getAuthInfo();
-    const u = new URL(base, window.location.origin);
-
-    const isSignedObjectUrl =
-      u.searchParams.has("X-Amz-Signature") ||
-      u.searchParams.has("x-amz-signature") ||
-      /r2\.cloudflarestorage\.com$/i.test(u.hostname);
-
-    if (isSignedObjectUrl) return u.toString();
-
-    if (sessionKey && !u.searchParams.has("session_key")) {
-      u.searchParams.set("session_key", sessionKey);
-    }
-
-
-    return u.toString();
+    return new URL(base, window.location.origin).toString();
   } catch {
     return base;
   }
@@ -120,6 +105,11 @@ function ensureResourceHint(url, rel = "prefetch", as = "") {
 export function prewarmComprobanteUrl(url, mime = "") {
   const finalUrl = withSessionKey(url);
   if (!finalUrl) return;
+
+  // Los resource hints del navegador no pueden adjuntar X-Session.
+  try {
+    if (new URL(finalUrl, window.location.origin).origin === window.location.origin) return;
+  } catch {}
 
   const mm = safeText(mime).toLowerCase();
   const ll = finalUrl.toLowerCase();

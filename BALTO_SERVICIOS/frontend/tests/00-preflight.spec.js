@@ -13,10 +13,21 @@ test('@smoke preflight: entorno, sesión y seguridad', async ({ page }) => {
   const auth = await page.evaluate(() => ({
     sessionKey: localStorage.getItem('session_key'),
     usuario: JSON.parse(localStorage.getItem('usuario') || 'null'),
+    legacy: {
+      token: localStorage.getItem('token'),
+      authToken: localStorage.getItem('auth_token'),
+      sessionKeyAlias: localStorage.getItem('sessionKey'),
+      xSessionAlias: localStorage.getItem('X-Session'),
+      xSessionLegacy: localStorage.getItem('x_session'),
+    },
   }));
 
   expect(auth.sessionKey, 'Debe existir una sesión autenticada').toBeTruthy();
   expect(auth.usuario, 'Debe existir el usuario autenticado').toBeTruthy();
+  expect(
+    Object.values(auth.legacy).filter(Boolean),
+    'La sesión operativa debe quedar únicamente en localStorage.session_key; los aliases/tokens legacy deben limpiarse.',
+  ).toEqual([]);
   expect(String(auth.usuario?.usuario || auth.usuario?.username || auth.usuario?.nombre || '')).not.toBe('');
 
   await assertExpectedTenant(page);

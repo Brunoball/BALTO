@@ -104,21 +104,13 @@ export function construirUrlComprobante(action, idCheque) {
   const search = new URLSearchParams();
   search.set("action", action);
   search.set("id_cheque", String(idCheque));
+  return `${API_URL}?${search.toString()}`;
+}
 
-  const base = `${API_URL}?${search.toString()}`;
-
-  try {
-    const { sessionKey } = getAuthInfo();
-    const url = new URL(base, window.location.origin);
-
-    if (sessionKey && !url.searchParams.has("session_key")) {
-      url.searchParams.set("session_key", sessionKey);
-    }
-
-    return url.toString();
-  } catch {
-    return base;
-  }
+export async function obtenerUrlComprobante(action, idCheque) {
+  const data = await get(action, { id_cheque: idCheque, modo: "url" });
+  const url = String(data?.url || data?.archivo_url || data?.download_url || "").trim();
+  return url || construirUrlComprobante(action, idCheque);
 }
 
 export function listarChequesCartera({ limit = 100, offset = 0, q = "" } = {}) {

@@ -35,7 +35,8 @@ function buildHeaders(options = {}) {
   const sessionKey = getConfiguracionSessionKey();
 
   if (sessionKey) headers.set("X-Session", sessionKey);
-  if (options.body && !headers.has("Content-Type")) {
+  const isFormData = typeof FormData !== "undefined" && options.body instanceof FormData;
+  if (options.body && !isFormData && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
 
@@ -149,3 +150,29 @@ export const reactivarCategoriaServiciosConfiguracion = (grupo, id) =>
   configuracionPost("config_listas_categorias_categoria_reactivar", { grupo, id_categoria: id });
 export const eliminarCategoriaServiciosConfiguracion = (grupo, id) =>
   configuracionPost("config_listas_categorias_categoria_eliminar", { grupo, id_categoria: id });
+
+// Medios de pago administrables desde Configuración.
+export const listarMediosPagoConfiguracion = (params = {}) =>
+  configuracionGet("config_listas_categorias_medios_pago_listar", params);
+export const crearMedioPagoConfiguracion = (body) =>
+  configuracionPost("config_listas_categorias_medio_pago_crear", body);
+export const actualizarMedioPagoConfiguracion = (body) =>
+  configuracionPost("config_listas_categorias_medio_pago_actualizar", body);
+export const darBajaMedioPagoConfiguracion = (id) =>
+  configuracionPost("config_listas_categorias_medio_pago_dar_baja", { id_medio_pago: id });
+export const reactivarMedioPagoConfiguracion = (id) =>
+  configuracionPost("config_listas_categorias_medio_pago_reactivar", { id_medio_pago: id });
+export const eliminarMedioPagoConfiguracion = (id) =>
+  configuracionPost("config_listas_categorias_medio_pago_eliminar", { id_medio_pago: id });
+
+export async function subirArchivoChequeConfiguracion(idCheque, tipoCheque, archivo) {
+  const fd = new FormData();
+  fd.append("id_cheque", String(idCheque));
+  fd.append("tipo", String(tipoCheque || "CHEQUE").toUpperCase() === "ECHEQ" ? "ECHEQ_IMAGEN" : "CHEQUE_IMAGEN");
+  fd.append("archivo", archivo, archivo?.name || "cheque_adjunto");
+  return apiFetchActionJson("mov_global_cheques_actualizar", { method: "POST", body: fd });
+}
+
+export const obtenerArchivoConfiguracion = (idArchivo) =>
+  configuracionGet("mov_global_comprobantes_descargar", { id_archivo: idArchivo });
+

@@ -534,10 +534,13 @@ export default function ModalVerComprobante({
         }
 
         const inferredKind = guessKindFromUrlOrMime(activeUrl, activeMime);
+        const privateSameOrigin = shouldSendAuthHeaders(activeUrl);
 
-        if (inferredKind === "pdf" || inferredKind === "img") {
+        // Los recursos externos firmados (R2) se pueden mostrar directamente.
+        // Los recursos privados same-origin SIEMPRE se solicitan con X-Session y
+        // se convierten a blob:, para no exponer la sesión en query strings.
+        if (!privateSameOrigin && (inferredKind === "pdf" || inferredKind === "img")) {
           if (cancelled) return;
-
           setResolvedMime(safeText(activeMime));
           setResolvedFileName("");
           setBlobUrl("");
@@ -548,7 +551,7 @@ export default function ModalVerComprobante({
           method: "GET",
         };
 
-        if (shouldSendAuthHeaders(activeUrl)) {
+        if (privateSameOrigin) {
           fetchOptions.headers = buildHeadersGET();
         }
 
@@ -592,7 +595,14 @@ export default function ModalVerComprobante({
         }
 
         if (finalKind === "pdf" || finalKind === "img") {
-          if (cancelled) return;
+          const blob = await res.blob();
+          const localBlobUrl = URL.createObjectURL(blob);
+          if (cancelled) {
+            URL.revokeObjectURL(localBlobUrl);
+            return;
+          }
+          internalBlobRef.current = localBlobUrl;
+          setBlobUrl(localBlobUrl);
           return;
         }
 

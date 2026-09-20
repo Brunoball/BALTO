@@ -21,22 +21,23 @@ function exact(rows, name) {
 }
 
 test.describe('Configuración - Listas y categorías de BALTO Servicios', () => {
-  test('@smoke @config muestra las seis listas actuales y su resumen', async ({ page }) => {
+  test('@smoke @config muestra las siete listas actuales y su resumen', async ({ page }) => {
     await page.goto('/panel/configuracion/listas-categorias');
     await waitForBusyToFinish(page);
 
     const resumen = await cfgGet(page, 'config_listas_categorias_resumen_listar', { activo: 'todos' });
-    for (const key of ['detalles', 'unidades', 'categorias_servicios', 'categorias_materiales', 'categorias_insumos', 'categorias_productos']) {
+    for (const key of ['detalles', 'medios_pago', 'unidades', 'categorias_servicios', 'categorias_materiales', 'categorias_insumos', 'categorias_productos']) {
       expect(Array.isArray(resumen[key]), `${key} debe formar parte del resumen actual`).toBe(true);
     }
 
     const tabs = page.getByRole('tablist');
-    for (const label of ['Detalles', 'Unidades', 'Cat. servicios', 'Cat. materiales', 'Cat. insumos', 'Cat. productos']) {
+    for (const label of ['Detalles', 'Medios de pago', 'Unidades', 'Cat. servicios', 'Cat. materiales', 'Cat. insumos', 'Cat. productos']) {
       await expect(tabs.getByRole('button', { name: label, exact: true })).toBeVisible();
     }
 
     for (const [label, addButton] of [
       ['Detalles', 'Agregar detalle'],
+      ['Medios de pago', 'Agregar medio'],
       ['Unidades', 'Agregar unidad'],
       ['Cat. servicios', 'Agregar categoría'],
       ['Cat. materiales', 'Agregar categoría'],
@@ -45,6 +46,74 @@ test.describe('Configuración - Listas y categorías de BALTO Servicios', () => 
     ]) {
       await tabs.getByRole('button', { name: label, exact: true }).click();
       await expect(page.getByRole('button', { name: addButton, exact: true }).first()).toBeVisible();
+    }
+  });
+
+
+  test('@crud @critical medios de pago: alta, edición, baja, reactivación, protección de cheque y borrado', async ({ page }) => {
+    await page.goto('/panel/configuracion/listas-categorias');
+    await waitForBusyToFinish(page);
+    await requireMutations(test, page);
+
+    const name = uniqueName('MEDIO-PAGO', 120);
+    const edited = `${name}-EDIT`.slice(0, 120);
+    let id = 0;
+
+    try {
+      const created = await cfgPost(page, 'config_listas_categorias_medio_pago_crear', { nombre: name });
+      id = Number(created.id_medio_pago || created.medio_pago?.id_medio_pago || 0);
+      expect(id).toBeGreaterThan(0);
+
+      let rows = (await cfgGet(page, 'config_listas_categorias_medios_pago_listar', { activo: 'todos' })).medios_pago;
+      let current = exact(rows, name);
+      expect(current).toBeTruthy();
+      expect(Number(current?.activo)).toBe(1);
+      expect(Number(current?.protegido_sistema || 0)).toBe(0);
+
+      await cfgPost(page, 'config_listas_categorias_medio_pago_actualizar', {
+        id_medio_pago: id,
+        nombre: edited,
+      });
+      rows = (await cfgGet(page, 'config_listas_categorias_medios_pago_listar', { activo: 'todos' })).medios_pago;
+      expect(exact(rows, edited)).toBeTruthy();
+
+      await cfgPost(page, 'config_listas_categorias_medio_pago_dar_baja', { id_medio_pago: id });
+      rows = (await cfgGet(page, 'config_listas_categorias_medios_pago_listar', { activo: 0 })).medios_pago;
+      expect(exact(rows, edited)).toBeTruthy();
+      let globalLists = await cfgGet(page, 'global_obtener_listas');
+      expect(exact(globalLists?.listas?.medios_pago, edited)).toBeFalsy();
+
+      await cfgPost(page, 'config_listas_categorias_medio_pago_reactivar', { id_medio_pago: id });
+      rows = (await cfgGet(page, 'config_listas_categorias_medios_pago_listar', { activo: 'todos' })).medios_pago;
+      current = exact(rows, edited);
+      expect(Number(current?.activo)).toBe(1);
+      globalLists = await cfgGet(page, 'global_obtener_listas');
+      expect(exact(globalLists?.listas?.medios_pago, edited), 'El medio activo debe llegar a los selectores globales de Movimientos').toBeTruthy();
+
+      const reserved = rows.find((row) => Number(row?.protegido_sistema || 0) === 1 && /CHEQUE/i.test(String(row?.nombre || '')));
+      expect(reserved, 'CHEQUE/eCheq debe continuar protegido como medio interno del sistema').toBeTruthy();
+
+      const blockedDisable = await authenticatedApi(page, 'config_listas_categorias_medio_pago_dar_baja', {
+        method: 'POST',
+        body: { id_medio_pago: Number(reserved.id_medio_pago) },
+      });
+      expect(blockedDisable.status).toBe(409);
+      expect(String(blockedDisable.body?.mensaje || '')).toMatch(/reservad|permanecer activo/i);
+
+      const blockedDelete = await authenticatedApi(page, 'config_listas_categorias_medio_pago_eliminar', {
+        method: 'POST',
+        body: { id_medio_pago: Number(reserved.id_medio_pago) },
+      });
+      expect(blockedDelete.status).toBe(409);
+      expect(String(blockedDelete.body?.mensaje || '')).toMatch(/reservad|no se pueden eliminar/i);
+
+      await page.reload();
+      await waitForBusyToFinish(page);
+      await page.getByRole('tablist').getByRole('button', { name: 'Medios de pago', exact: true }).click();
+      await expect(page.getByRole('button', { name: 'Agregar medio', exact: true }).first()).toBeVisible();
+      await expect(page.locator('.cfg-listas-gridRow').filter({ hasText: edited }).first()).toBeVisible({ timeout: 15_000 });
+    } finally {
+      if (id) await bestEffort(page, 'config_listas_categorias_medio_pago_eliminar', { id_medio_pago: id });
     }
   });
 

@@ -29,9 +29,7 @@ function storageAuth(state) {
 
   for (const origin of origins) {
     const values = new Map((origin.localStorage || []).map((item) => [item.name, item.value]));
-    const sessionKey = String(
-      values.get('session_key') || values.get('sessionKey') || values.get('X-Session') || '',
-    ).trim();
+    const sessionKey = String(values.get('session_key') || '').trim();
 
     if (!sessionKey) continue;
 
@@ -149,7 +147,7 @@ async function installSession(page, auth, { persist = false } = {}) {
     ({ key, usuario }) => {
       localStorage.setItem('session_key', key);
       localStorage.setItem('usuario', usuario);
-      localStorage.removeItem('token');
+      ['token', 'auth_token', 'sessionKey', 'x_session', 'X-Session', 'x-session'].forEach((name) => localStorage.removeItem(name));
     },
     { key: auth.sessionKey, usuario: userJson },
   );
@@ -159,7 +157,7 @@ async function installSession(page, auth, { persist = false } = {}) {
     ({ key, usuario }) => {
       localStorage.setItem('session_key', key);
       localStorage.setItem('usuario', usuario);
-      localStorage.removeItem('token');
+      ['token', 'auth_token', 'sessionKey', 'x_session', 'X-Session', 'x-session'].forEach((name) => localStorage.removeItem(name));
     },
     { key: auth.sessionKey, usuario: userJson },
   );
@@ -221,10 +219,14 @@ export async function createEmployeeTestUser(page, username, password) {
 
   const list = await authenticatedApi(page, 'configuracion_usuarios_listar');
   const body = expectApiSuccess(list, 'No se pudieron listar roles para crear el empleado E2E');
-  const employeeRole = (Array.isArray(body?.roles) ? body.roles : []).find(
-    (role) => String(role?.tipo_rol || '').toLowerCase() === 'empleado_basico',
-  );
-  const roleId = Number(employeeRole?.id_rol || 0);
+  const employeeRole = (Array.isArray(body?.roles) ? body.roles : []).find((role) => {
+    const code = String(role?.codigo || role?.tipo_rol || role?.rol || role?.nombre || '')
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, '_');
+    return code === 'empleado_basico' || code === 'empleado';
+  });
+  const roleId = Number(employeeRole?.idRolMaster || employeeRole?.id_rol || employeeRole?.id || 0);
   expect(roleId, 'Debe existir el rol empleado_basico').toBeGreaterThan(0);
 
   const create = await authenticatedApi(page, 'configuracion_usuarios_guardar', {

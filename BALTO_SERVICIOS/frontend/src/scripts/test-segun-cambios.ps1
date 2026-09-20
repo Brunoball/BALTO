@@ -34,7 +34,8 @@ foreach ($rawPath in $Archivos) {
     continue
   }
 
-  if ($path -match 'login|require_session|sesion|auth') { [void]$selected.Add('auth') }
+  if ($path -match 'migrations/|modules/\.htaccess|action_policy|error_response|hardening') { [void]$selected.Add('hardening') }
+  if ($path -match 'login|require_session|sesion|auth') { [void]$selected.Add('auth'); [void]$selected.Add('hardening') }
 
   if ($path -match 'components/servicios|modules/servicios|servicio_articulos|servicio_servicios|servicio_trabajadores') {
     [void]$selected.Add('servicios')
@@ -87,7 +88,7 @@ if ($runAll) {
 } else {
   if ($selected.Count -eq 0) { [void]$selected.Add('smoke') }
   $preferredOrder = @(
-    'smoke', 'auth', 'servicios', 'stock', 'movimientos',
+    'smoke', 'auth', 'hardening', 'servicios', 'stock', 'movimientos',
     'cuentas-corrientes', 'cheques', 'configuracion',
     'documentos', 'exportaciones', 'navegacion'
   )

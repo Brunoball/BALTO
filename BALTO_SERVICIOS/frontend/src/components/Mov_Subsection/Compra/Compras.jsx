@@ -426,30 +426,12 @@ function downloadBlob(content, fileName, mimeType) {
 }
 
 function withSessionKey(url) {
+  // Compatibilidad de nombre: las credenciales ya no se agregan a la URL.
+  // Los recursos same-origin privados se cargan con X-Session desde ModalVerComprobante.
   const base = String(url ?? "").trim();
   if (!base) return "";
-
   try {
-    const { sessionKey } = getAuthInfo();
-    const u = new URL(base, window.location.origin);
-
-    const isSameOrigin = u.origin === window.location.origin;
-
-    const hasAwsSignature =
-      u.searchParams.has("X-Amz-Signature") ||
-      u.searchParams.has("X-Amz-Algorithm") ||
-      u.searchParams.has("X-Amz-Credential");
-
-    if (!isSameOrigin || hasAwsSignature) {
-      return u.toString();
-    }
-
-    if (sessionKey && !u.searchParams.has("session_key")) {
-      u.searchParams.set("session_key", sessionKey);
-    }
-
-
-    return u.toString();
+    return new URL(base, window.location.origin).toString();
   } catch {
     return base;
   }
@@ -476,6 +458,12 @@ function ensureResourceHint(url, rel = "prefetch", as = "document") {
 function prewarmComprobanteUrl(url, mime = "") {
   const finalUrl = withSessionKey(url);
   if (!finalUrl) return;
+
+  // Un <link rel=prefetch> no puede enviar X-Session. No precargar recursos
+  // privados same-origin para evitar 401 y, sobre todo, no volver a usar tokens en URL.
+  try {
+    if (new URL(finalUrl, window.location.origin).origin === window.location.origin) return;
+  } catch {}
 
   const mm = String(mime ?? "").toLowerCase();
   const ll = finalUrl.toLowerCase();

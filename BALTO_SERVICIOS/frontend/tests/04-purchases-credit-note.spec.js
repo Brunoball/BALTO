@@ -233,6 +233,12 @@ test('@crud @critical NC compra: adjunta archivo y lo abre desde el ojo de la co
   );
   await eyeWithCreditNote.click();
   const downloadResponse = await downloadResponsePromise;
+  const downloadRequest = downloadResponse.request();
+  const downloadUrl = new URL(downloadRequest.url());
+  const downloadHeaders = await downloadRequest.allHeaders();
+  expect(downloadUrl.searchParams.has('session_key'), 'La sesión no debe viajar en la URL del comprobante').toBe(false);
+  expect(String(downloadHeaders['x-session'] || ''), 'La descarga privada debe autenticarse mediante X-Session').not.toBe('');
+
   const downloadBody = await downloadResponse.json().catch(() => ({}));
   expect(downloadResponse.status(), JSON.stringify(downloadBody)).toBeLessThan(400);
   expect(downloadBody?.exito, downloadBody?.mensaje || 'El backend debe entregar la URL del archivo').toBe(true);

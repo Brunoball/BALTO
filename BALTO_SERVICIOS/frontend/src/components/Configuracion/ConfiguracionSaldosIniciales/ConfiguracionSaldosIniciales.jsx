@@ -8,6 +8,9 @@ import {
   faCircleInfo,
   faFloppyDisk,
   faMoneyCheckDollar,
+  faPaperclip,
+  faEye,
+  faXmark,
   faPlus,
   faTrash,
   faUsers,
@@ -16,7 +19,7 @@ import {
 
 import Toast from "../../Global/Toast";
 import ModalEliminar from "../../Global/Modales/ModalEliminar";
-import { apiFetchActionJson as apiFetch } from "../api/configuracionApi";
+import { apiFetchActionJson as apiFetch, subirArchivoChequeConfiguracion, obtenerArchivoConfiguracion } from "../api/configuracionApi";
 import { todayISO } from "../utils/configuracionUtils";
 import "../../Global/Global_css/GlobalsModalsV2.css";
 import "./ConfiguracionSaldosIniciales.css";
@@ -88,6 +91,14 @@ function normalizeText(value) {
   return String(value || "").replace(/\s+/g, " ").trim();
 }
 
+function isAllowedChequeFile(file) {
+  if (!(file instanceof File)) return false;
+  const mime = String(file.type || "").toLowerCase();
+  const name = String(file.name || "").toLowerCase();
+  const validType = mime === "application/pdf" || mime.startsWith("image/") || /\.(pdf|jpg|jpeg|png|webp|gif|heic|heif)$/i.test(name);
+  return validType && Number(file.size || 0) > 0 && Number(file.size || 0) <= 15 * 1024 * 1024;
+}
+
 function fmtDate(value) {
   const [y, m, d] = String(value || "").split("-");
   return y && m && d ? `${d}/${m}/${y}` : "—";
@@ -139,6 +150,8 @@ export default function ConfiguracionSaldosIniciales() {
     numero_cheque: "",
     importe: "",
     observaciones: "",
+    archivo: null,
+    archivo_nombre: "",
   });
 
   const notify = useCallback((tipo, mensaje, duracion = 3300) => {
@@ -303,6 +316,34 @@ export default function ConfiguracionSaldosIniciales() {
     }
   }, [ccAEliminar, hydrate]);
 
+  const handleChequeFileSelected = useCallback((event) => {
+    const file = event.target.files?.[0] || null;
+    if (!file) {
+      setChequeForm((prev) => ({ ...prev, archivo: null, archivo_nombre: "" }));
+      return;
+    }
+    if (!isAllowedChequeFile(file)) {
+      event.target.value = "";
+      notify("advertencia", "Subí una imagen o PDF válido de hasta 15 MB.", 4200);
+      setChequeForm((prev) => ({ ...prev, archivo: null, archivo_nombre: "" }));
+      return;
+    }
+    setChequeForm((prev) => ({ ...prev, archivo: file, archivo_nombre: file.name || "adjunto" }));
+  }, [notify]);
+
+  const openChequeAttachment = useCallback(async (row) => {
+    const idArchivo = Number(row?.id_archivo || 0);
+    if (!(idArchivo > 0)) return;
+    try {
+      const info = await obtenerArchivoConfiguracion(idArchivo);
+      const url = String(info?.url || info?.download_url || info?.archivo_url || "").trim();
+      if (!url) throw new Error("No se recibió la URL del archivo.");
+      window.open(url, "_blank", "noopener,noreferrer");
+    } catch (error) {
+      notify("error", error?.message || "No se pudo abrir el archivo del cheque.", 4500);
+    }
+  }, [notify]);
+
   const saveCheque = useCallback(async () => {
     if (!normalizeText(chequeForm.emisor)) return notify("advertencia", "Ingresá el emisor del cheque/eCheq.");
     if (!normalizeText(chequeForm.numero_cheque)) return notify("advertencia", "Ingresá el número del cheque/eCheq.");
@@ -317,17 +358,34 @@ export default function ConfiguracionSaldosIniciales() {
     }
     setSaving(true);
     try {
+      const { archivo, archivo_nombre: _archivoNombre, ...chequePayload } = chequeForm;
       const payload = await apiFetch("config_saldos_iniciales_cheque_crear", {
         method: "POST",
         body: JSON.stringify({
-          ...chequeForm,
+          ...chequePayload,
           importe: Math.abs(parsedImporte),
           emisor: normalizeText(chequeForm.emisor),
           numero_cheque: normalizeText(chequeForm.numero_cheque),
           observaciones: normalizeText(chequeForm.observaciones),
         }),
       });
-      hydrate(payload);
+
+      let archivoWarning = "";
+      if (archivo instanceof File) {
+        const idChequeCreado = Number(payload?.id_cheque_creado || (payload?.cheques || []).find((row) => String(row?.numero_cheque || "") === normalizeText(chequeForm.numero_cheque))?.id_cheque || 0);
+        if (idChequeCreado > 0) {
+          try {
+            await subirArchivoChequeConfiguracion(idChequeCreado, chequeForm.tipo, archivo);
+          } catch (error) {
+            archivoWarning = error?.message || "No se pudo adjuntar la imagen/PDF del cheque.";
+          }
+        } else {
+          archivoWarning = "El cheque se cargó, pero no se pudo identificar para vincular el archivo.";
+        }
+      }
+
+      const refreshed = await apiFetch("config_saldos_iniciales_get");
+      hydrate(refreshed);
       setChequeForm({
         tipo: chequeForm.tipo,
         fecha_saldo: chequeForm.fecha_saldo || todayISO(),
@@ -337,8 +395,14 @@ export default function ConfiguracionSaldosIniciales() {
         numero_cheque: "",
         importe: "",
         observaciones: "",
+        archivo: null,
+        archivo_nombre: "",
       });
-      notify("exito", payload.mensaje || "Cheque/eCheq inicial cargado.");
+      if (archivoWarning) {
+        notify("advertencia", `Cheque/eCheq cargado, pero el archivo no quedó vinculado: ${archivoWarning}`, 6000);
+      } else {
+        notify("exito", payload.mensaje || "Cheque/eCheq inicial cargado.");
+      }
     } catch (e) {
       notify("error", e?.message || "No se pudo cargar el cheque/eCheq.", 4500);
     } finally {
@@ -457,14 +521,27 @@ export default function ConfiguracionSaldosIniciales() {
                 <FloatingField label="Observación" value={chequeForm.observaciones} className="cfg-si-span2">
                   <input className="cfg-si-control" type="text" maxLength={500} placeholder=" " value={chequeForm.observaciones} onChange={(e) => setChequeForm((p) => ({ ...p, observaciones: e.target.value }))} />
                 </FloatingField>
+                <div className="cfg-si-chequeFile cfg-si-span2">
+                  <div className="cfg-si-chequeFile__meta">
+                    <FontAwesomeIcon icon={faPaperclip} />
+                    <div><strong>Imagen / PDF del cheque</strong><span>{chequeForm.archivo_nombre || "Opcional · imagen o PDF de hasta 15 MB"}</span></div>
+                  </div>
+                  <div className="cfg-si-chequeFile__actions">
+                    <label className="cfg-si-fileBtn">
+                      {chequeForm.archivo ? "Reemplazar" : "Seleccionar archivo"}
+                      <input aria-label="Archivo del cheque/eCheq" type="file" accept="image/*,application/pdf,.heic,.heif" onChange={handleChequeFileSelected} disabled={saving} />
+                    </label>
+                    {chequeForm.archivo && <button type="button" className="cfg-si-fileRemove" title="Quitar archivo" onClick={() => setChequeForm((p) => ({ ...p, archivo: null, archivo_nombre: "" }))} disabled={saving}><FontAwesomeIcon icon={faXmark} /></button>}
+                  </div>
+                </div>
                 <div className="cfg-si-chequeAction"><button className="cfg-si-primaryBtn" type="button" onClick={saveCheque} disabled={saving}><FontAwesomeIcon icon={faPlus} /> Cargar en cartera</button></div>
               </div>
 
               <div className="cfg-si-tableWrap">
-                <table className="cfg-si-table"><thead><tr><th className="is-center">Tipo</th><th className="is-center">Número</th><th>Emisor</th><th>Apertura</th><th className="is-center">Vencimiento</th><th className="is-right">Importe</th><th className="is-center">Estado</th><th className="is-center">Acciones</th></tr></thead>
+                <table className="cfg-si-table"><thead><tr><th className="is-center">Tipo</th><th className="is-center">Número</th><th>Emisor</th><th>Apertura</th><th className="is-center">Vencimiento</th><th className="is-right">Importe</th><th className="is-center">Estado</th><th className="is-center">Archivo</th><th className="is-center">Acciones</th></tr></thead>
                   <tbody>{data.cheques.length ? data.cheques.map((r) => (
-                    <tr key={r.id_cheque}><td className="is-center">{r.tipo}</td><td className="is-center">{r.numero_cheque}</td><td>{r.emisor}</td><td>{fmtDate(r.fecha_saldo)}</td><td className="is-center">{fmtDate(r.fecha_pago)}</td><td className="is-right is-strong">{moneyARS(r.importe)}</td><td className="is-center"><span className={`cfg-si-state ${r.estado === "EN_CARTERA" ? "is-ok" : ""}`}>{String(r.estado || "").replaceAll("_", " ")}</span></td><td className="is-center"><button type="button" className="cfg-si-dangerIcon" title="Eliminar carga inicial" onClick={() => setChequeAEliminar(r)} disabled={saving}><FontAwesomeIcon icon={faTrash} /></button></td></tr>
-                  )) : <tr><td colSpan="8" className="cfg-si-tableEmpty">No hay cheques iniciales cargados.</td></tr>}</tbody></table>
+                    <tr key={r.id_cheque}><td className="is-center">{r.tipo}</td><td className="is-center">{r.numero_cheque}</td><td>{r.emisor}</td><td>{fmtDate(r.fecha_saldo)}</td><td className="is-center">{fmtDate(r.fecha_pago)}</td><td className="is-right is-strong">{moneyARS(r.importe)}</td><td className="is-center"><span className={`cfg-si-state ${r.estado === "EN_CARTERA" ? "is-ok" : ""}`}>{String(r.estado || "").replaceAll("_", " ")}</span></td><td className="is-center">{Number(r.tiene_archivo || 0) === 1 ? <button type="button" className="cfg-si-fileView" title="Ver archivo del cheque" onClick={() => openChequeAttachment(r)}><FontAwesomeIcon icon={faEye} /></button> : <span className="cfg-si-noFile">—</span>}</td><td className="is-center"><button type="button" className="cfg-si-dangerIcon" title="Eliminar carga inicial" onClick={() => setChequeAEliminar(r)} disabled={saving}><FontAwesomeIcon icon={faTrash} /></button></td></tr>
+                  )) : <tr><td colSpan="9" className="cfg-si-tableEmpty">No hay cheques iniciales cargados.</td></tr>}</tbody></table>
               </div>
             </div>
           ) : (

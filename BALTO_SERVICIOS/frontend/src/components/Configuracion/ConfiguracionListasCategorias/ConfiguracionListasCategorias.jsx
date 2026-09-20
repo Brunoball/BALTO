@@ -24,9 +24,11 @@ import ModalUnidad from "../../Servicios/modales/ModalUnidad";
 import ModalAgregarCategoria from "../../Servicios/modales/ModalAgregarCategoria";
 import * as configuracionApi from "../api/configuracionApi";
 import ModalDetalleLista from "./ModalDetalleLista";
+import ModalMedioPago from "./ModalMedioPago";
 
 const TABS = [
   { value: "detalles", label: "Detalles" },
+  { value: "medios_pago", label: "Medios de pago" },
   { value: "unidades", label: "Unidades" },
   { value: "categorias_servicios", label: "Cat. servicios", grupo: "SERVICIO", singular: "categoría de servicio" },
   { value: "categorias_materiales", label: "Cat. materiales", grupo: "MATERIAL", singular: "categoría de material" },
@@ -44,6 +46,7 @@ const tabMeta = (value) => TABS.find((item) => item.value === value) || TABS[0];
 
 function rowId(tab, row) {
   if (tab === "detalles") return row.id_detalle;
+  if (tab === "medios_pago") return row.id_medio_pago;
   if (tab === "unidades") return row.id_unidad;
   return row.id_categoria;
 }
@@ -61,6 +64,7 @@ export default function ConfiguracionListasCategorias() {
   const [buscar, setBuscar] = useState("");
   const [data, setData] = useState({
     detalles: [],
+    medios_pago: [],
     unidades: [],
     categorias_servicios: [],
     categorias_materiales: [],
@@ -87,6 +91,7 @@ export default function ConfiguracionListasCategorias() {
 
       setData({
         detalles: resumen?.detalles || [],
+        medios_pago: resumen?.medios_pago || [],
         unidades: resumen?.unidades || [],
         categorias_servicios: resumen?.categorias_servicios || [],
         categorias_materiales: resumen?.categorias_materiales || [],
@@ -184,6 +189,25 @@ export default function ConfiguracionListasCategorias() {
     } catch {}
   };
 
+  const guardarMedioPago = async (payload) => {
+    const editing = Boolean(modal.item?.id_medio_pago);
+    try {
+      await ejecutar(
+        () => editing
+          ? configuracionApi.actualizarMedioPagoConfiguracion(payload)
+          : configuracionApi.crearMedioPagoConfiguracion(payload),
+        editing ? "Medio de pago actualizado correctamente." : "Medio de pago creado correctamente.",
+        (result) => guardarFilaLocal("medios_pago", {
+          ...(result?.medio_pago || {}),
+          cantidad_movimientos: editing ? (modal.item?.cantidad_movimientos || 0) : 0,
+          cantidad_saldos_iniciales: editing ? (modal.item?.cantidad_saldos_iniciales || 0) : 0,
+          cantidad_usos: editing ? (modal.item?.cantidad_usos || 0) : 0,
+        })
+      );
+      setModal({ kind: null, item: null });
+    } catch {}
+  };
+
   const guardarUnidad = async (payload) => {
     const editing = Boolean(modal.item?.id_unidad);
     try {
@@ -241,10 +265,12 @@ export default function ConfiguracionListasCategorias() {
         () => actualizarFilaLocal(kind, item.id_categoria, (row) => ({ ...row, activo: active ? 0 : 1 }))
       );
     } else {
-      const id = kind === "detalles" ? item.id_detalle : item.id_unidad;
+      const id = kind === "detalles" ? item.id_detalle : kind === "medios_pago" ? item.id_medio_pago : item.id_unidad;
       const operation = kind === "detalles"
         ? (active ? configuracionApi.darBajaDetalleConfiguracion : configuracionApi.reactivarDetalleConfiguracion)
-        : (active ? configuracionApi.darBajaUnidadConfiguracion : configuracionApi.reactivarUnidadConfiguracion);
+        : kind === "medios_pago"
+          ? (active ? configuracionApi.darBajaMedioPagoConfiguracion : configuracionApi.reactivarMedioPagoConfiguracion)
+          : (active ? configuracionApi.darBajaUnidadConfiguracion : configuracionApi.reactivarUnidadConfiguracion);
       await ejecutar(
         () => operation(id),
         null,
@@ -272,8 +298,10 @@ export default function ConfiguracionListasCategorias() {
 
     const operation = kind === "detalles"
       ? configuracionApi.eliminarDetalleConfiguracion
-      : configuracionApi.eliminarUnidadConfiguracion;
-    const id = kind === "detalles" ? item.id_detalle : item.id_unidad;
+      : kind === "medios_pago"
+        ? configuracionApi.eliminarMedioPagoConfiguracion
+        : configuracionApi.eliminarUnidadConfiguracion;
+    const id = kind === "detalles" ? item.id_detalle : kind === "medios_pago" ? item.id_medio_pago : item.id_unidad;
     await ejecutar(
       () => operation(id),
       "Registro eliminado correctamente.",
@@ -286,14 +314,18 @@ export default function ConfiguracionListasCategorias() {
   const categoriaActual = isCategoriaTab(tab);
   const addLabel = tab === "detalles"
     ? "Agregar detalle"
-    : tab === "unidades"
-      ? "Agregar unidad"
-      : "Agregar categoría";
+    : tab === "medios_pago"
+      ? "Agregar medio"
+      : tab === "unidades"
+        ? "Agregar unidad"
+        : "Agregar categoría";
   const searchPlaceholder = tab === "detalles"
     ? "Buscar detalle..."
-    : tab === "unidades"
-      ? "Buscar unidad..."
-      : "Buscar categoría...";
+    : tab === "medios_pago"
+      ? "Buscar medio de pago..."
+      : tab === "unidades"
+        ? "Buscar unidad..."
+        : "Buscar categoría...";
 
   const deleteMeta = tabMeta(deleteModal.kind);
   const deleteEsCategoria = isCategoriaTab(deleteModal.kind);
@@ -302,7 +334,11 @@ export default function ConfiguracionListasCategorias() {
     ? deleteUsos > 0
       ? `Esta categoría tiene ${deleteUsos.toLocaleString("es-AR")} registro${deleteUsos === 1 ? "" : "s"} asociado${deleteUsos === 1 ? "" : "s"}. Al eliminarla, esos registros quedarán sin categoría.`
       : "La categoría se eliminará definitivamente."
-    : "Si el registro ya fue utilizado, el sistema bloqueará el borrado y deberás darlo de baja.";
+    : deleteModal.kind === "medios_pago"
+      ? Number(deleteModal.item?.protegido_sistema || 0) === 1
+        ? "CHEQUE y ECHEQ son medios reservados del sistema y no se pueden eliminar."
+        : "Si el medio ya fue utilizado en movimientos o saldos iniciales, el sistema bloqueará el borrado y deberás darlo de baja."
+      : "Si el registro ya fue utilizado, el sistema bloqueará el borrado y deberás darlo de baja.";
 
   const statusIsActive = Number(statusModal.item?.activo) === 1;
   const statusEsCategoria = isCategoriaTab(statusModal.kind);
@@ -311,7 +347,9 @@ export default function ConfiguracionListasCategorias() {
     ? statusMeta.singular
     : statusModal.kind === "detalles"
       ? "detalle"
-      : "unidad";
+      : statusModal.kind === "medios_pago"
+        ? "medio de pago"
+        : "unidad";
   const statusActionLabel = statusIsActive ? "Dar de baja" : "Reactivar";
 
   return (
@@ -390,7 +428,7 @@ export default function ConfiguracionListasCategorias() {
               <div className="cfg-listas-gridRow" role="row">
                 <div className="cfg-listas-gridCell cfg-listas-gridCell--head" role="columnheader">Nombre</div>
                 {tab === "unidades" && <div className="cfg-listas-gridCell cfg-listas-gridCell--head is-center" role="columnheader">Símbolo</div>}
-                {tab === "detalles" && <div className="cfg-listas-gridCell cfg-listas-gridCell--head is-center" role="columnheader">Usos históricos</div>}
+                {(tab === "detalles" || tab === "medios_pago") && <div className="cfg-listas-gridCell cfg-listas-gridCell--head is-center" role="columnheader">Usos históricos</div>}
                 {categoriaActual && <div className="cfg-listas-gridCell cfg-listas-gridCell--head" role="columnheader">Descripción</div>}
                 {categoriaActual && <div className="cfg-listas-gridCell cfg-listas-gridCell--head is-center" role="columnheader">Registros</div>}
                 <div className="cfg-listas-gridCell cfg-listas-gridCell--head is-center" role="columnheader">Estado</div>
@@ -409,10 +447,11 @@ export default function ConfiguracionListasCategorias() {
                     <div className="cfg-listas-gridCell cfg-listas-gridCell--name" role="cell">
                       <strong>{row.nombre}</strong>
                       {tab === "detalles" && <small>Detalle de ingresos / egresos</small>}
+                      {tab === "medios_pago" && <small>{Number(row.protegido_sistema || 0) === 1 ? "Medio reservado del sistema" : "Disponible para cobros y pagos"}</small>}
                       {categoriaActual && <small>{currentMeta.singular}</small>}
                     </div>
                     {tab === "unidades" && <div className="cfg-listas-gridCell is-center" role="cell">{row.simbolo}</div>}
-                    {tab === "detalles" && <div className="cfg-listas-gridCell is-center" role="cell">{Number(row.cantidad_usos || 0).toLocaleString("es-AR")}</div>}
+                    {(tab === "detalles" || tab === "medios_pago") && <div className="cfg-listas-gridCell is-center" role="cell">{Number(row.cantidad_usos || 0).toLocaleString("es-AR")}</div>}
                     {categoriaActual && <div className="cfg-listas-gridCell cfg-listas-gridCell--description" role="cell">{row.descripcion || "—"}</div>}
                     {categoriaActual && <div className="cfg-listas-gridCell is-center" role="cell">{cantidadUsosCategoria(tab, row).toLocaleString("es-AR")}</div>}
                     <div className="cfg-listas-gridCell is-center" role="cell">
@@ -427,16 +466,18 @@ export default function ConfiguracionListasCategorias() {
                         </button>
                         <button
                           type="button"
-                          title={Number(row.activo) === 1 ? "Dar de baja" : "Reactivar"}
+                          title={tab === "medios_pago" && Number(row.protegido_sistema || 0) === 1 ? "Medio reservado: debe permanecer activo" : (Number(row.activo) === 1 ? "Dar de baja" : "Reactivar")}
                           onClick={() => alternarEstado(row)}
+                          disabled={tab === "medios_pago" && Number(row.protegido_sistema || 0) === 1}
                         >
                           <FontAwesomeIcon icon={Number(row.activo) === 1 ? faBan : faRotateLeft} />
                         </button>
                         <button
                           type="button"
                           className="is-danger"
-                          title="Eliminar"
+                          title={tab === "medios_pago" && Number(row.protegido_sistema || 0) === 1 ? "Medio reservado: no se puede eliminar" : "Eliminar"}
                           onClick={() => setDeleteModal({ kind: tab, item: row })}
+                          disabled={tab === "medios_pago" && Number(row.protegido_sistema || 0) === 1}
                         >
                           <FontAwesomeIcon icon={faTrashCan} />
                         </button>
@@ -463,6 +504,15 @@ export default function ConfiguracionListasCategorias() {
         saving={saving}
         onClose={() => setModal({ kind: null, item: null })}
         onSave={guardarDetalle}
+        onToast={notify}
+      />
+
+      <ModalMedioPago
+        open={modal.kind === "medios_pago"}
+        item={modal.item}
+        saving={saving}
+        onClose={() => setModal({ kind: null, item: null })}
+        onSave={guardarMedioPago}
         onToast={notify}
       />
 

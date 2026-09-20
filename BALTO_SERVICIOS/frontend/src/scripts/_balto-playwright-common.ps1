@@ -31,12 +31,14 @@ function Get-BaltoTestBatches {
       'tests/00-preflight.spec.js',
       'tests/01-auth.spec.js',
       'tests/11-global-guards.spec.js',
-      'tests/18-auth-actions.spec.js'
+      'tests/18-auth-actions.spec.js',
+      'tests/35-backend-hardening-regression.spec.js'
     )
     'auth' = @(
       'tests/00-preflight.spec.js',
       'tests/01-auth.spec.js',
-      'tests/18-auth-actions.spec.js'
+      'tests/18-auth-actions.spec.js',
+      'tests/35-backend-hardening-regression.spec.js'
     )
     'navegacion' = @(
       'tests/02-navigation-smoke.spec.js',
@@ -90,7 +92,14 @@ function Get-BaltoTestBatches {
       'tests/10-config-accounting.spec.js',
       'tests/21-configuration-actions.spec.js',
       'tests/22-configuration-lists-categories.spec.js',
-      'tests/24-initial-balances.spec.js'
+      'tests/24-initial-balances.spec.js',
+      'tests/35-backend-hardening-regression.spec.js'
+    )
+    'hardening' = @(
+      'tests/00-preflight.spec.js',
+      'tests/18-auth-actions.spec.js',
+      'tests/24-initial-balances.spec.js',
+      'tests/35-backend-hardening-regression.spec.js'
     )
     'documentos' = @(
       'tests/06-budgets.spec.js',

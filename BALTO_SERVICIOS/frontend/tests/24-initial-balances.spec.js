@@ -263,6 +263,7 @@ async function fillInitialChequeForm(page, {
   number,
   amount,
   observation = '',
+  attachment = null,
 }) {
   await page.getByLabel('Tipo').selectOption(type);
   await page.getByLabel('Fecha de apertura').fill(openingDate);
@@ -272,9 +273,18 @@ async function fillInitialChequeForm(page, {
   await page.getByLabel('Número').fill(number);
   await page.getByLabel('Importe').fill(String(amount).replace('.', ','));
   if (observation) await page.getByLabel('Observación').fill(observation);
+  if (attachment) await page.getByLabel('Archivo del cheque/eCheq').setInputFiles(attachment);
 }
 
-async function createInitialCheque(page, values) {
+async function createInitialCheque(page, values, options = {}) {
+  const uploadPromise = options.expectAttachment
+    ? page.waitForResponse(
+        (response) =>
+          response.request().method() === 'POST' &&
+          new URL(response.url()).searchParams.get('action') === 'mov_global_cheques_actualizar',
+        { timeout: 90_000 },
+      )
+    : null;
   const responsePromise = page.waitForResponse(
     (response) =>
       response.request().method() === 'POST' &&
@@ -286,6 +296,16 @@ async function createInitialCheque(page, values) {
   const body = await response.json().catch(() => ({}));
   expect(response.status(), JSON.stringify(body)).toBeLessThan(400);
   expect(body?.exito, body?.mensaje || 'El cheque inicial debe crearse').toBe(true);
+
+  if (uploadPromise) {
+    const uploadResponse = await uploadPromise;
+    const uploadBody = await uploadResponse.json().catch(() => ({}));
+    expect(uploadResponse.status(), JSON.stringify(uploadBody)).toBeLessThan(400);
+    expect(
+      uploadBody?.exito !== false && uploadBody?.success !== false,
+      uploadBody?.mensaje || uploadBody?.message || 'El archivo del cheque inicial debe vincularse',
+    ).toBe(true);
+  }
 
   const cheque = (Array.isArray(body?.cheques) ? body.cheques : []).find(
     (row) => String(row?.numero_cheque || '') === String(values.number),
@@ -731,6 +751,15 @@ for (const type of ['CHEQUE', 'ECHEQ']) {
     const today = todayISO();
     const yesterday = addDaysISO(today, -1);
     const dueDate = addDaysISO(today, 30);
+    const attachment = {
+      name: `${type.toLowerCase()}-${number}.png`,
+      mimeType: 'image/png',
+      // PNG 1x1 válido: suficiente para verificar multipart + R2 + relación CHEQUE.
+      buffer: Buffer.from(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9Z0p8AAAAASUVORK5CYII=',
+        'base64',
+      ),
+    };
     let created = false;
 
     try {
@@ -777,8 +806,9 @@ for (const type of ['CHEQUE', 'ECHEQ']) {
         number,
         amount,
         observation: uniqueName(`APERTURA-${type}`, 65),
+        attachment,
       });
-      const cheque = await createInitialCheque(page, { number });
+      const cheque = await createInitialCheque(page, { number }, { expectAttachment: true });
       created = true;
       expect(cheque?.tipo).toBe(type);
       closeTo(cheque?.importe, amount);
@@ -787,6 +817,15 @@ for (const type of ['CHEQUE', 'ECHEQ']) {
       await expect(configRow).toBeVisible({ timeout: 30_000 });
       await expect(configRow).toContainText(issuer);
       await expect(configRow).toContainText(/EN CARTERA/i);
+      await expect(configRow.getByTitle('Ver archivo del cheque')).toBeVisible();
+
+      const configAfterCreate = await getInitialBalances(page);
+      const persistedCheque = (Array.isArray(configAfterCreate?.cheques) ? configAfterCreate.cheques : []).find(
+        (row) => String(row?.numero_cheque || '') === number,
+      );
+      expect(Number(persistedCheque?.tiene_archivo || 0)).toBe(1);
+      expect(Number(persistedCheque?.id_archivo || 0)).toBeGreaterThan(0);
+      const attachedFileId = Number(persistedCheque.id_archivo);
 
       // Debe ser un documento real reutilizado por el módulo normal de cartera.
       const carteraRoute = type === 'ECHEQ'
@@ -849,6 +888,11 @@ for (const type of ['CHEQUE', 'ECHEQ']) {
         config.cheques.some((row) => String(row?.numero_cheque || '') === number),
         'El cheque inicial eliminado no debe quedar en Configuración',
       ).toBe(false);
+
+      const deletedAttachment = await authenticatedApi(page, 'mov_global_comprobantes_descargar', {
+        query: { id_archivo: attachedFileId },
+      });
+      expect(deletedAttachment.status).toBe(404);
     } finally {
       if (created) {
         try {

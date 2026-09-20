@@ -15,7 +15,7 @@ import {
   faRotateLeft,
 } from "@fortawesome/free-solid-svg-icons";
 import {
-  construirUrlComprobante,
+  obtenerUrlComprobante,
   listarFlujoCheques,
   revertirDepositoCheque,
 } from "../api/chequesApi";
@@ -105,7 +105,7 @@ const Flujo_Cheques = () => {
   }, []);
 
   const openModalComprobante = useCallback(
-    (row) => {
+    async (row) => {
       const flujo = normalizeFlujo(row);
       const idCheque = Number(flujo?.id_cheque || 0);
 
@@ -121,21 +121,25 @@ const Flujo_Cheques = () => {
           ? "echeq_cartera_comprobante_ver"
           : "cheques_cartera_comprobante_ver";
 
-      const finalUrl = construirUrlComprobante(action, idCheque);
+      try {
+        const finalUrl = await obtenerUrlComprobante(action, idCheque);
 
-      const archivoRef = getArchivoRef(row);
+        const archivoRef = getArchivoRef(row);
 
-      const mimeFinal =
-        inferMime(archivoRef) ||
-        String(row?.archivo_mime || row?.mime || flujo?.archivo_mime || "").trim() ||
-        "application/pdf";
+        const mimeFinal =
+          inferMime(archivoRef) ||
+          String(row?.archivo_mime || row?.mime || flujo?.archivo_mime || "").trim() ||
+          "application/pdf";
 
-      setModalComprobanteUrl(finalUrl);
-      setModalComprobanteMime(mimeFinal);
-      setModalComprobanteTitle(
-        tipo === "echeq" ? "Comprobante de E-Cheq" : "Comprobante de Cheque"
-      );
-      setModalComprobanteOpen(true);
+        setModalComprobanteUrl(finalUrl);
+        setModalComprobanteMime(mimeFinal);
+        setModalComprobanteTitle(
+          tipo === "echeq" ? "Comprobante de E-Cheq" : "Comprobante de Cheque"
+        );
+        setModalComprobanteOpen(true);
+      } catch (e) {
+        showToast("error", e?.message || "No se pudo abrir el comprobante.");
+      }
     },
     [showToast]
   );

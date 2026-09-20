@@ -13,7 +13,7 @@ import {
   faBuildingColumns,
 } from "@fortawesome/free-solid-svg-icons";
 import {
-  construirUrlComprobante,
+  obtenerUrlComprobante,
   depositarEcheqCartera,
   listarEcheqsCartera,
 } from "../api/chequesApi";
@@ -138,7 +138,7 @@ const Echeqs_Cartera = () => {
   }, []);
 
   const openModalComprobante = useCallback(
-    (row) => {
+    async (row) => {
       const echeq = normalizeEcheq(row);
       const idCheque = Number(echeq?.id_cheque || 0);
 
@@ -147,16 +147,20 @@ const Echeqs_Cartera = () => {
         return;
       }
 
-      const finalUrl = construirUrlComprobante(
-        "echeq_cartera_comprobante_ver",
-        idCheque
-      );
-      setModalComprobanteUrl(finalUrl);
-      setModalComprobanteMime(
-        String(echeq?.archivo_mime || "").trim() || "application/pdf"
-      );
-      setModalComprobanteTitle("Comprobante de Echeq");
-      setModalComprobanteOpen(true);
+      try {
+        const finalUrl = await obtenerUrlComprobante(
+          "echeq_cartera_comprobante_ver",
+          idCheque
+        );
+        setModalComprobanteUrl(finalUrl);
+        setModalComprobanteMime(
+          String(echeq?.archivo_mime || "").trim() || "application/pdf"
+        );
+        setModalComprobanteTitle("Comprobante de Echeq");
+        setModalComprobanteOpen(true);
+      } catch (e) {
+        showToast("error", e?.message || "No se pudo abrir el comprobante.");
+      }
     },
     [showToast]
   );

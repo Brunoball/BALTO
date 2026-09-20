@@ -39,27 +39,20 @@ function authFromStorageState(state) {
   });
 
   let sessionKey = '';
-  let token = '';
   for (const origin of origins) {
     const map = new Map((origin.localStorage || []).map((entry) => [entry.name, entry.value]));
-    sessionKey =
-      map.get('session_key') ||
-      map.get('sessionKey') ||
-      map.get('X-Session') ||
-      map.get('x_session') ||
-      '';
-    token = map.get('token') || map.get('auth_token') || '';
-    if (sessionKey || token) break;
+    sessionKey = String(map.get('session_key') || '').trim();
+    if (sessionKey) break;
   }
 
-  if (!sessionKey && !token) {
+  if (!sessionKey) {
     throw new Error(
-      '[Playwright cleanup] No se encontró session_key/token en el storageState. ' +
-      'No se ejecuta una limpieza mutante sin autenticación explícita.',
+      '[Playwright cleanup] No se encontró la session_key canónica en el storageState. ' +
+      'BALTO_SERVICIOS autentica el testing exclusivamente mediante X-Session.',
     );
   }
 
-  return { sessionKey, token };
+  return { sessionKey };
 }
 
 function authFromStorageFile() {
@@ -124,10 +117,8 @@ async function nodeApi(action, { method = 'GET', body = null, query = {}, auth =
     }
   }
 
-  const { sessionKey, token } = auth || authFromStorageFile();
-  const headers = { Accept: 'application/json' };
-  if (sessionKey) headers['X-Session'] = sessionKey;
-  if (token) headers.Authorization = `Bearer ${token}`;
+  const { sessionKey } = auth || authFromStorageFile();
+  const headers = { Accept: 'application/json', 'X-Session': sessionKey };
 
   const payload = body === null ? null : JSON.stringify(body);
   if (payload !== null) headers['Content-Type'] = 'application/json';
@@ -149,6 +140,13 @@ async function nodeApi(action, { method = 'GET', body = null, query = {}, auth =
 
 function assertCleanupResult(result, phase) {
   if (!result.ok || result.body?.exito === false) {
+    if (result.status === 404 && /acción no disponible|accion no disponible/i.test(String(result.body?.mensaje || result.text || ''))) {
+      throw new Error(
+        `[Playwright cleanup] ${phase}: las herramientas E2E del backend están deshabilitadas. ` +
+        'En el .env PRIVADO del backend de PRUEBA/STAGING configurá BALTO_E2E_TOOLS_ENABLED=1. ' +
+        'En producción debe permanecer en 0. No se ejecutan mutaciones sin cleanup seguro.',
+      );
+    }
     throw new Error(
       `[Playwright cleanup] ${phase}: HTTP ${result.status}. ` +
       `${result.body?.mensaje || result.text || 'Falló la limpieza E2E.'}`,
@@ -238,6 +236,12 @@ export async function e2eCleanupStatusFromStorage(
   });
 
   if (!result.ok || result.body?.exito === false) {
+    if (result.status === 404 && /acción no disponible|accion no disponible/i.test(String(result.body?.mensaje || result.text || ''))) {
+      throw new Error(
+        'Las herramientas E2E están deshabilitadas. Para testing mutable configurá ' +
+        'BALTO_E2E_TOOLS_ENABLED=1 únicamente en el backend de prueba/staging.',
+      );
+    }
     throw new Error(
       `No se pudo consultar el estado de limpieza E2E: HTTP ${result.status}. ` +
       `${result.body?.mensaje || result.text || ''}`,

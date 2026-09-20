@@ -62,7 +62,12 @@ test.describe('BALTO Servicios - contrato de acciones genéricas de artículos',
         id_unidad: Number(unit.id_unidad),
         nombre: articleName,
         descripcion: 'ARTICULO GENERICO E2E',
-        stock_actual: 4,
+        // Este spec prueba aliases CRUD, no trazabilidad de stock. Si nace con
+        // existencia controlada el backend final genera historial y, correctamente,
+        // bloquea el hard-delete con 409. Lo creamos sin stock para poder seguir
+        // verificando el alias servicios_articulo_eliminar.
+        controla_stock: 0,
+        stock_actual: 0,
         costo_unitario: 80,
         precio_venta: 130,
         iva_pct: 21,

@@ -15,7 +15,7 @@ import {
   faRotateLeft,
 } from "@fortawesome/free-solid-svg-icons";
 import {
-  construirUrlComprobante,
+  obtenerUrlComprobante,
   listarFlujoEcheqs,
   revertirDepositoEcheq,
 } from "../api/chequesApi";
@@ -102,7 +102,7 @@ const Flujo_Echeqs = () => {
   }, []);
 
   const openModalComprobante = useCallback(
-    (row) => {
+    async (row) => {
       const flujo = normalizeFlujoEcheq(row);
       const idCheque = Number(flujo?.id_cheque || 0);
 
@@ -111,29 +111,33 @@ const Flujo_Echeqs = () => {
         return;
       }
 
-      const finalUrl = construirUrlComprobante(
-        "echeq_cartera_comprobante_ver",
-        idCheque
-      );
+      try {
+        const finalUrl = await obtenerUrlComprobante(
+          "echeq_cartera_comprobante_ver",
+          idCheque
+        );
 
-      const archivoRef =
-        row?.archivo_path ||
-        row?.archivoPath ||
-        row?.archivo_url ||
-        row?.archivoUrl ||
-        flujo?.archivo_path ||
-        flujo?.archivo_url ||
-        "";
+        const archivoRef =
+          row?.archivo_path ||
+          row?.archivoPath ||
+          row?.archivo_url ||
+          row?.archivoUrl ||
+          flujo?.archivo_path ||
+          flujo?.archivo_url ||
+          "";
 
-      const mimeFinal =
-        inferMime(archivoRef) ||
-        String(row?.archivo_mime || row?.mime || flujo?.archivo_mime || "").trim() ||
-        "application/pdf";
+        const mimeFinal =
+          inferMime(archivoRef) ||
+          String(row?.archivo_mime || row?.mime || flujo?.archivo_mime || "").trim() ||
+          "application/pdf";
 
-      setModalComprobanteUrl(finalUrl);
-      setModalComprobanteMime(mimeFinal);
-      setModalComprobanteTitle("Comprobante de E-Cheq");
-      setModalComprobanteOpen(true);
+        setModalComprobanteUrl(finalUrl);
+        setModalComprobanteMime(mimeFinal);
+        setModalComprobanteTitle("Comprobante de E-Cheq");
+        setModalComprobanteOpen(true);
+      } catch (e) {
+        showToast("error", e?.message || "No se pudo abrir el comprobante.");
+      }
     },
     [showToast]
   );

@@ -17,22 +17,27 @@ function apiUrl(action, query = {}) {
 export async function authenticatedApi(page, action, options = {}) {
   const method = String(options.method || (options.body ? 'POST' : 'GET')).toUpperCase();
   const query = { ...(options.query || {}) };
+  for (const forbidden of ['session_key', 'sessionKey', 'x_session', 'X-Session']) {
+    if (Object.prototype.hasOwnProperty.call(query, forbidden)) {
+      throw new Error(`El testing no permite credenciales de sesión en query string (${forbidden}). Usá X-Session.`);
+    }
+  }
+  if (options.body && typeof options.body === 'object') {
+    for (const forbidden of ['session_key', 'sessionKey', 'x_session', 'X-Session']) {
+      if (Object.prototype.hasOwnProperty.call(options.body, forbidden)) {
+        throw new Error(`El testing no permite credenciales de sesión en el body (${forbidden}). Usá X-Session.`);
+      }
+    }
+  }
   if (ENV.allowMutations && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
     query.e2e_run = RUN_PREFIX;
   }
   const url = apiUrl(action, query);
 
   return page.evaluate(async ({ requestUrl, requestMethod, requestBody }) => {
-    const sessionKey =
-      localStorage.getItem('session_key') ||
-      localStorage.getItem('sessionKey') ||
-      localStorage.getItem('X-Session') ||
-      localStorage.getItem('x_session') ||
-      '';
-    const token = localStorage.getItem('token') || localStorage.getItem('auth_token') || '';
+    const sessionKey = String(localStorage.getItem('session_key') || '').trim();
     const headers = { Accept: 'application/json' };
     if (sessionKey) headers['X-Session'] = sessionKey;
-    if (token) headers.Authorization = `Bearer ${token}`;
     if (requestBody !== null) headers['Content-Type'] = 'application/json';
 
     const response = await fetch(requestUrl, {

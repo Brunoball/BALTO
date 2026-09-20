@@ -10,6 +10,7 @@ import useTableScrollGutter from "../../Global/useTableScrollGutter.jsx";
 import { readMovPerfCache, writeMovPerfCache, MOV_CACHE_LONG_TTL_MS } from "../_shared/performanceCache.js";
 import { buildDocumentosUrl, documentosRequest } from "./api/documentosComercialesApi.js";
 import { formatFecha, isDocumentosNetworkError, moneyARS, normalizeText, safeText } from "./utils/documentosComercialesUtils.js";
+import { openAuthenticatedResourceInNewTab } from "../../../utils/authenticatedResource.js";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faBoxesStacked,
@@ -493,7 +494,7 @@ function DocumentosClientePanel({
         if (url) signedUrlCacheRef.current.set(String(id), url);
       }
       if (!url) throw new Error("No se pudo obtener el enlace del PDF.");
-      window.open(url, "_blank", "noopener,noreferrer");
+      await openAuthenticatedResourceInNewTab(url);
     } catch (err) {
       setError(err?.message || "No se pudo abrir el PDF en una nueva pestaña.");
     }

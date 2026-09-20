@@ -29,15 +29,9 @@ const IVA_VALUES = ['0', '10.5', '21', '27'];
 async function authenticatedApiGet(page, actionAndQuery) {
   const apiBase = ENV.apiURL.replace(/\/$/, '');
   return page.evaluate(async ({ url }) => {
-    const sessionKey =
-      localStorage.getItem('session_key') ||
-      localStorage.getItem('sessionKey') ||
-      localStorage.getItem('X-Session') ||
-      '';
-    const token = localStorage.getItem('token') || '';
+    const sessionKey = String(localStorage.getItem('session_key') || '').trim();
     const headers = {};
     if (sessionKey) headers['X-Session'] = sessionKey;
-    if (token) headers.Authorization = `Bearer ${token}`;
 
     const response = await fetch(url, { headers });
     const body = await response.json().catch(() => ({}));

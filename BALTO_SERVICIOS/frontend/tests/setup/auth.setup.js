@@ -82,7 +82,6 @@ async function validateAppSessionWithRetry(request, sessionKey) {
       const response = await request.get(appSessionEndpoint(), {
         headers: {
           'X-Session': sessionKey,
-          Authorization: `Bearer ${sessionKey}`,
           Accept: 'application/json',
           // Hostinger/proxy a veces resetea conexiones keep-alive largas.
           // Forzamos cierre porque esta validación se hace una sola vez en setup.
@@ -165,6 +164,7 @@ setup('autenticar administrador de Balto', async ({ page, request }) => {
     ({ key, userJson }) => {
       localStorage.setItem('session_key', key);
       localStorage.setItem('usuario', userJson);
+      ['token', 'auth_token', 'sessionKey', 'x_session', 'X-Session', 'x-session'].forEach((name) => localStorage.removeItem(name));
     },
     {
       key: sessionKey,

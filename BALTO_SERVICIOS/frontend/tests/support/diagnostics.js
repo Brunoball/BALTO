@@ -8,6 +8,11 @@ const IGNORED_CONSOLE_PATTERNS = [
   /net::ERR_ABORTED/i,
   /Failed to load resource: net::ERR_CONNECTION_CLOSED/i,
   /Failed to load resource: net::ERR_FILE_NOT_FOUND/i,
+  // Un 409 es una respuesta de negocio válida en varios blindajes (p. ej.
+  // hard-delete bloqueado por historial). Los tests que esperan ese conflicto
+  // validan el status/body explícitamente; no debe contarse además como un
+  // console.error crítico genérico del navegador.
+  /Failed to load resource: the server responded with a status of 409/i,
 ];
 
 function ignoredConsoleMessage(text) {
@@ -20,6 +25,7 @@ export function installDiagnostics(page) {
     consoleErrors: [],
     serverErrors: [],
     failedRequests: [],
+    pendingResponses: [],
   };
 
   page.on('pageerror', (error) => {
@@ -37,7 +43,17 @@ export function installDiagnostics(page) {
     if (status < 500) return;
     const url = response.url();
     if (/\.(png|jpe?g|gif|webp|svg|ico)(\?|$)/i.test(url)) return;
-    state.serverErrors.push(`${status} ${url}`);
+
+    // Desde el hardening de producción los 500 ya no exponen SQL/stack y
+    // devuelven request_id. Capturamos también el body para que el reporte de
+    // Playwright permita ubicar el error real en error_log sin volver a correr.
+    const pending = response.text()
+      .catch(() => '')
+      .then((body) => {
+        const compact = String(body || '').replace(/\s+/g, ' ').trim().slice(0, 1200);
+        state.serverErrors.push(`${status} ${url}${compact ? `\n  ${compact}` : ''}`);
+      });
+    state.pendingResponses.push(pending);
   });
 
   page.on('requestfailed', (request) => {
@@ -53,6 +69,10 @@ export function installDiagnostics(page) {
 }
 
 export async function assertNoCriticalErrors(state, testInfo, options = {}) {
+  if (Array.isArray(state.pendingResponses) && state.pendingResponses.length) {
+    await Promise.allSettled(state.pendingResponses);
+  }
+
   const allowConsole = options.allowConsole || [];
   const consoleErrors = state.consoleErrors.filter(
     (message) => !allowConsole.some((pattern) => pattern.test(message))

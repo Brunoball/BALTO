@@ -11,6 +11,20 @@ PW_API_URL=https://app.balto.com.ar/BALTO_SERVICIOS/api/routes
 
 No cambies usuario ni contraseña: el testing los elige automáticamente.
 
+
+REQUISITO DEL BACKEND PARA SUITE MUTABLE
+----------------------------------------
+El hardening final deja las herramientas E2E APAGADAS por defecto.
+En el .env PRIVADO del backend de PRUEBA/STAGING debe existir:
+BALTO_E2E_TOOLS_ENABLED=1
+
+En PRODUCCIÓN debe quedar:
+BALTO_E2E_TOOLS_ENABLED=0
+
+Si PW_ALLOW_MUTATIONS=1 y el flag E2E del backend está apagado, la suite falla
+antes de mutar datos con un mensaje explícito. Esto es intencional: no se corre
+una suite mutable sin cleanup seguro.
+
 SUITE COMPLETA
 --------------
 npx playwright test --project=chromium --workers=1 --reporter=list
@@ -81,3 +95,18 @@ El testing también valida la tarjeta Manual funcional de Configuración:
 Para correr sólo esta cobertura:
 npx playwright test tests/34-manual-functional.spec.js --project=chromium --workers=1 --reporter=list
 
+
+HARDENING BACKEND FINAL
+-----------------------
+La suite ahora también valida:
+- session_key por URL/body NO autentica; la credencial operativa es X-Session.
+- No quedan aliases/token legacy en localStorage del frontend de prueba.
+- /api/modules/*.php no puede ejecutarse directamente saltando routes/api.php.
+- EMPLEADO conserva Dashboard/Ventas/Recibos/Flujo y dependencias de Venta.
+- EMPLEADO recibe 403 server-side en Configuración, CC, Cheques, Servicios y Contabilidad.
+- Un usuario con login_auditoria no puede hard-deletearse y exige baja lógica.
+- Descargas privadas de comprobantes usan X-Session y no session_key en URL.
+- Si ../api está disponible localmente: action_policy, migraciones, error_response y ausencia de DDL runtime.
+
+Sólo hardening:
+npx playwright test tests/35-backend-hardening-regression.spec.js --project=chromium --workers=1 --reporter=list

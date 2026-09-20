@@ -149,7 +149,7 @@ async function assertEnabledDelete(row) {
   await expect(button.locator('xpath=..')).toHaveAttribute('title', 'Eliminar');
 }
 
-async function addFilteredMultiSelection(dialog, cardSelector, searchText, expectedNames) {
+async function addFilteredMultiSelection(page, dialog, cardSelector, searchText, expectedNames) {
   const card = dialog.locator(cardSelector);
   const trigger = card.locator('.servicios-multi-select__trigger');
   const addButton = card.locator('.servicios-multi-select__add');
@@ -157,7 +157,7 @@ async function addFilteredMultiSelection(dialog, cardSelector, searchText, expec
   await expect(addButton).toBeDisabled();
   await trigger.click();
 
-  const picker = pageDialogWithinCard(card);
+  const picker = await pageDialogWithinCard(page, card);
   const search = picker.locator('input[type="search"]');
   await expect(search).toBeVisible();
   await search.fill(searchText);
@@ -173,8 +173,15 @@ async function addFilteredMultiSelection(dialog, cardSelector, searchText, expec
   await expect(picker).toBeHidden();
 }
 
-function pageDialogWithinCard(card) {
-  return card.locator('.servicios-multi-select__menu[role="dialog"]');
+async function pageDialogWithinCard(page, card) {
+  // ModalServicio renderiza el selector con createPortal(document.body), por lo
+  // que ya no es descendiente del card en el DOM. Usamos el aria-label del
+  // trigger/card y, como fallback, el único menú portal visible.
+  const label = card.locator('.gm-label--up').first();
+  const name = String((await label.textContent().catch(() => '')) || '').trim();
+  return name
+    ? page.getByRole('dialog', { name, exact: true }).last()
+    : page.locator('.servicios-multi-select__menu[role="dialog"]:visible').last();
 }
 
 async function deleteBudgetModel(page, idModel) {
@@ -280,6 +287,7 @@ test.describe('BALTO Servicios - UX nueva, rentabilidad y blindaje de borrado', 
       await expect(compositionTab).toHaveAttribute('aria-selected', 'true');
 
       await addFilteredMultiSelection(
+        page,
         dialog,
         '.servicios-component-card--materials',
         resourceTag,
@@ -295,7 +303,7 @@ test.describe('BALTO Servicios - UX nueva, rentabilidad y blindaje de borrado', 
       // Los ya agregados desaparecen del selector: no pueden duplicarse.
       const materialCard = dialog.locator('.servicios-component-card--materials');
       await materialCard.locator('.servicios-multi-select__trigger').click();
-      const materialPicker = pageDialogWithinCard(materialCard);
+      const materialPicker = await pageDialogWithinCard(page, materialCard);
       await materialPicker.locator('input[type="search"]').fill(resourceTag);
       await expect(materialPicker.locator('.servicios-multi-select__options button')).toHaveCount(0);
       await expect(materialPicker).toContainText('NO HAY RECURSOS DISPONIBLES');
@@ -305,6 +313,7 @@ test.describe('BALTO Servicios - UX nueva, rentabilidad y blindaje de borrado', 
       await expect(materialPicker).toBeHidden();
 
       await addFilteredMultiSelection(
+        page,
         dialog,
         '.servicios-component-card--labor',
         workerTag,

@@ -313,3 +313,5 @@ html[data-theme="oscuro"] .cfg-listas-gridCell--skeleton span {
 @media (min-width: 641px) {
   .cfg-listas-page { overflow: hidden; }
 }
+
+.cfg-listas-actions button:disabled{opacity:.42;cursor:not-allowed}.cfg-listas-actions button:disabled:hover{background:inherit;border-color:#dce4ec;color:#52657b}

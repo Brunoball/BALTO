@@ -184,6 +184,23 @@ test('@configuracion @crud usuarios: alta, edición, baja, activación y elimina
     await createInputs.nth(1).fill(email);
     await createInputs.nth(2).fill('Pw!123456');
 
+    // El backend final exige rol explícito. La pantalla lo completa al cargar los
+    // roles, pero en E2E puede abrirse el modal unas décimas antes. Esperamos el
+    // catálogo y elegimos un rol válido para eliminar esa carrera sin ocultar un
+    // eventual 500 de configuracion_usuarios_listar.
+    const roleSelect = dialog.locator('select.mu-select').first();
+    await expect(roleSelect).toBeEnabled({ timeout: 30_000 });
+    const roleOptions = roleSelect.locator('option');
+    await expect(roleOptions).not.toHaveCount(0);
+    if (!(await roleSelect.inputValue())) {
+      const roleValues = await roleOptions.evaluateAll((options) =>
+        options.map((option) => String(option.value || '').trim()).filter(Boolean)
+      );
+      expect(roleValues.length, 'Debe existir al menos un rol válido para crear usuarios').toBeGreaterThan(0);
+      await roleSelect.selectOption(roleValues[0]);
+    }
+    await expect(dialog.getByRole('button', { name: /Crear usuario/i })).toBeEnabled({ timeout: 30_000 });
+
     let responsePromise = page.waitForResponse(
       (response) =>
         response.request().method() === 'POST' &&
