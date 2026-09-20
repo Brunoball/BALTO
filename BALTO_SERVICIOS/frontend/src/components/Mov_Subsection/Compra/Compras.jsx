@@ -1043,7 +1043,7 @@ export default function Compras() {
         key: "proveedor",
         label: "PROVEEDOR",
         fr: 1.8,
-        align: "left",
+        align: "center",
         render: (r) =>
           safeText(pick(r, ["proveedor", "nombre_proveedor", "razon_social_proveedor"], "")),
       },

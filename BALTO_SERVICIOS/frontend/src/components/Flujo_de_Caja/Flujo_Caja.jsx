@@ -10,6 +10,7 @@ import {
   faFileExcel,
   faChevronDown,
   faChevronRight,
+  faChevronLeft,
   faArrowRightLong,
   faWallet,
 } from "@fortawesome/free-solid-svg-icons";
@@ -53,7 +54,9 @@ export default function Flujo_Caja() {
   const closeToast = useCallback(() => setToast(null), []);
 
   const paymentCardsRef = useRef(null);
-  const [activePaymentCardIndex, setActivePaymentCardIndex] = useState(0);
+  const [paymentNavigation, setPaymentNavigation] = useState({
+    overflow: false, canPrevious: false, canNext: false,
+  });
 
   const { data, error, loading, showSkeleton } = useFlujoCajaResumen(
     dateRange,
@@ -95,34 +98,47 @@ export default function Flujo_Caja() {
   const showing = rows.length;
 
   useEffect(() => {
-    setActivePaymentCardIndex((current) => {
-      if (!selectedPaymentCards.length) return 0;
-      return Math.min(current, selectedPaymentCards.length - 1);
+    const scroller = paymentCardsRef.current;
+    if (!scroller) {
+      setPaymentNavigation({ overflow: false, canPrevious: false, canNext: false });
+      return undefined;
+    }
+
+    const updateNavigation = () => {
+      const maxScroll = Math.max(0, scroller.scrollWidth - scroller.clientWidth);
+      const next = {
+        overflow: maxScroll > 2,
+        canPrevious: scroller.scrollLeft > 2,
+        canNext: scroller.scrollLeft < maxScroll - 2,
+      };
+      setPaymentNavigation((current) => Object.keys(next).every((key) => next[key] === current[key]) ? current : next);
+    };
+
+    scroller.scrollTo({ left: 0, behavior: "instant" });
+    updateNavigation();
+    scroller.addEventListener("scroll", updateNavigation, { passive: true });
+    window.addEventListener("resize", updateNavigation);
+    const observer = typeof ResizeObserver !== "undefined" ? new ResizeObserver(updateNavigation) : null;
+    observer?.observe(scroller);
+    Array.from(scroller.children).forEach((card) => observer?.observe(card));
+    return () => {
+      scroller.removeEventListener("scroll", updateNavigation);
+      window.removeEventListener("resize", updateNavigation);
+      observer?.disconnect();
+    };
+  }, [selectedRow?.fecha, selectedPaymentCards.length]);
+
+  const movePaymentCards = useCallback((direction) => {
+    const scroller = paymentCardsRef.current;
+    const card = scroller?.firstElementChild;
+    if (!scroller || !card) return;
+    const gap = parseFloat(window.getComputedStyle(scroller).columnGap) || 0;
+    const step = card.getBoundingClientRect().width + gap;
+    scroller.scrollBy({
+      left: direction * step,
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth",
     });
-  }, [selectedPaymentCards.length]);
-
-  const goToNextPaymentCard = useCallback(() => {
-    const total = selectedPaymentCards.length;
-    if (total <= 1) return;
-
-    setActivePaymentCardIndex((current) => {
-      const next = (current + 1) % total;
-
-      window.requestAnimationFrame(() => {
-        const scroller = paymentCardsRef.current;
-        const nextCard = scroller?.children?.[next];
-        if (nextCard?.scrollIntoView) {
-          nextCard.scrollIntoView({
-            behavior: "smooth",
-            inline: "start",
-            block: "nearest",
-          });
-        }
-      });
-
-      return next;
-    });
-  }, [selectedPaymentCards.length]);
+  }, []);
 
   /* =========================
      Label calendario
@@ -365,27 +381,19 @@ export default function Flujo_Caja() {
         {/* ===== TARJETAS DINÁMICAS POR MEDIO DE PAGO ===== */}
         <div className="fc-paymentSummary">
 
-          {selectedPaymentCards.length > 1 && (
-            <div className="fc-cardPager" aria-label="Navegación de tarjetas de medios de pago">
-              <span className="fc-cardPager__counter">
-                Tarjeta {Math.min(activePaymentCardIndex + 1, selectedPaymentCards.length)}/{selectedPaymentCards.length}
-              </span>
-
-              <button
-                type="button"
-                className="fc-cardPager__btn"
-                onClick={goToNextPaymentCard}
-                title="Ver siguiente tarjeta"
-                aria-label="Ver siguiente tarjeta"
-              >
-                Siguiente
-                <FontAwesomeIcon icon={faChevronRight} />
-              </button>
-            </div>
-          )}
-
           {selectedPaymentCards.length ? (
-            <div ref={paymentCardsRef} className="fc-paymentCards" aria-label="Detalle de medios de pago del día seleccionado">
+            <div className={`fc-paymentSlider${selectedPaymentCards.length > 1 ? " fc-paymentSlider--multiple" : ""}`}>
+              {paymentNavigation.overflow && (
+                <>
+                  <button type="button" className="fc-sliderArrow fc-sliderArrow--previous" onClick={() => movePaymentCards(-1)} disabled={!paymentNavigation.canPrevious} title="Ver tarjeta anterior" aria-label="Ver tarjeta anterior" aria-controls="fc-paymentCards">
+                    <FontAwesomeIcon icon={faChevronLeft} />
+                  </button>
+                  <button type="button" className="fc-sliderArrow fc-sliderArrow--next" onClick={() => movePaymentCards(1)} disabled={!paymentNavigation.canNext} title="Ver siguiente tarjeta" aria-label="Ver siguiente tarjeta" aria-controls="fc-paymentCards">
+                    <FontAwesomeIcon icon={faChevronRight} />
+                  </button>
+                </>
+              )}
+            <div id="fc-paymentCards" ref={paymentCardsRef} className="fc-paymentCards" tabIndex={0} onKeyDown={(event) => { if (event.key === "ArrowLeft" || event.key === "ArrowRight") { event.preventDefault(); movePaymentCards(event.key === "ArrowLeft" ? -1 : 1); } }} aria-label="Detalle de medios de pago del día seleccionado">
               {selectedPaymentCards.map((card, index) => {
                 const saldoNeg = Number(card.saldo) < 0;
                 const tones = ["green", "blue", "pink", "yellow"];
@@ -419,6 +427,7 @@ export default function Flujo_Caja() {
                   </div>
                 );
               })}
+            </div>
             </div>
           ) : (
             <div className="fc-paymentEmpty">

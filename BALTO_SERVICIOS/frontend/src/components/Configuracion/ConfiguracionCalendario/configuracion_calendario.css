@@ -327,7 +327,6 @@
   background: #f7f9fc;
   color: var(--balto-ink, #0a2540);
   transition: border-color 0.15s;
-  -moz-appearance: textfield;
   outline: none;
 }
 

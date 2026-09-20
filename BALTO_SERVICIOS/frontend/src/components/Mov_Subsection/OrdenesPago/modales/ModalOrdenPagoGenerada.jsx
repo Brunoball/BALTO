@@ -654,12 +654,8 @@ export default function ModalOrdenPagoGenerada({
         onMouseDown={(e) => e.stopPropagation()}
       >
         <div className="gm-modal-header gm-view-header">
-          <div className="gm-view-head-left">
+          <div className="gm-modal-head-left gm-view-head-left">
             <h2 className="gm-modal-title gm-view-title">{title}</h2>
-            <p className="gm-modal-subtitle gm-view-subtitle">
-              Vista previa · X / ESC / Finalizar guardan y cierran todo igual
-              {autoSaving ? " · guardando en segundo plano…" : ""}
-            </p>
           </div>
 
           <button

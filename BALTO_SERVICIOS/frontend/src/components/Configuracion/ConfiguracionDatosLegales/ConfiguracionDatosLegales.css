@@ -1116,7 +1116,7 @@ body.dark .cfg-legal-tab__badge {
    El header con Volver queda fijo; solo scrollea el contenido.
 ========================================================= */
 .cfg-legal-page {
-  height: calc(100vh - 90px);
+  height: calc(100vh - 110px);
   min-height: 0;
   overflow: hidden;
 }

@@ -281,6 +281,7 @@ function resolveFixedModalTitle(title = "") {
   if (t.includes("compra")) return plural ? "Comprobantes de Compra" : "Comprobante de Compra";
   if (t.includes("cobro")) return plural ? "Comprobantes de Cobro" : "Comprobante de Cobro";
   if (t.includes("pago")) return plural ? "Comprobantes de Pago" : "Comprobante de Pago";
+  if (t.includes("cheque") || t.includes("echeq")) return "Archivo de cheque / eCheq";
 
   return "Comprobante";
 }

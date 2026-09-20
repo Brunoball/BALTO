@@ -73,6 +73,9 @@ function moneyARS(v) {
 function safeStr(v) {
   return String(v ?? "").trim();
 }
+function upperInput(v) {
+  return String(v ?? "").toLocaleUpperCase("es-AR");
+}
 function normalizeText(v) {
   return String(v ?? "")
     .toLowerCase()
@@ -2012,7 +2015,7 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
         id_detalle: NULL_OPTION,
         id_stock_producto: idStockProducto ? String(idStockProducto) : NULL_OPTION,
         id_stock_variante: idStockVariante ? String(idStockVariante) : NULL_OPTION,
-        detalleText: nombreDetalle,
+        detalleText: upperInput(nombreDetalle),
         precio,
         id_tipo_precio_stock: String(precioInicial?.value ?? NULL_OPTION),
         precio_tipo_label: String(precioInicial?.tipo_precio ?? ""),
@@ -2030,6 +2033,27 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
     [updateRow, showToast]
   );
 
+
+  const handleDetalleInputChange = useCallback(
+    (rowId, value) => {
+      updateRow(rowId, {
+        detalleText: upperInput(value),
+        id_servicio: NULL_OPTION,
+        id_articulo: NULL_OPTION,
+        id_detalle: NULL_OPTION,
+        id_stock_producto: NULL_OPTION,
+        id_stock_variante: NULL_OPTION,
+        precio: 0,
+        id_tipo_precio_stock: NULL_OPTION,
+        precio_tipo_label: "",
+        precios_disponibles: [],
+        stock_disponible: null,
+        sinStock: false,
+        consumos_snapshot: [],
+      });
+    },
+    [updateRow]
+  );
 
   const handleTipoItemChange = useCallback(
     (rowId, nextType) => {
@@ -3716,11 +3740,12 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
                       <div key={r.id} className={`gm-table-row ${rowSinStock ? "nv-row--sin-stock" : ""}`}>
                         <div className="gm-table-cell gm-table-cell--detail">
                           <select
-                            className="nv-item-kind"
+                            className="gm-cell-input gm-cell-input--select"
                             value={tipoSeleccionado}
                             onChange={(e) => handleTipoItemChange(r.id, e.target.value)}
                             disabled={saving || addUI.open}
                             aria-label={`Tipo de ítem fila ${rowIndex + 1}`}
+                            style={{ marginBottom: 6 }}
                           >
                             <option value="SERVICIO">Servicio del catálogo</option>
                             <option value="ARTICULO">Stock / material / insumo</option>
@@ -3730,23 +3755,7 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
                           {tipoSeleccionado === "SERVICIO" ? (
                             <ProductStockAutocomplete
                               value={r.detalleText}
-                              onChange={(val) =>
-                                updateRow(r.id, {
-                                  detalleText: val,
-                                  id_servicio: NULL_OPTION,
-                                  id_articulo: NULL_OPTION,
-                                  id_detalle: NULL_OPTION,
-                                  id_stock_producto: NULL_OPTION,
-                                  id_stock_variante: NULL_OPTION,
-                                  precio: 0,
-                                  id_tipo_precio_stock: NULL_OPTION,
-                                  precio_tipo_label: "",
-                                  precios_disponibles: [],
-                                  stock_disponible: null,
-                                  sinStock: false,
-                                  consumos_snapshot: [],
-                                })
-                              }
+                              onChange={(val) => handleDetalleInputChange(r.id, val)}
                               onSelect={(d) => handleSelectDetalle(d, r.id)}
                               options={detallesList}
                               catalogKind="service"
@@ -3761,23 +3770,7 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
                           ) : tipoSeleccionado === "ARTICULO" ? (
                             <ProductStockAutocomplete
                               value={r.detalleText}
-                              onChange={(val) =>
-                                updateRow(r.id, {
-                                  detalleText: val,
-                                  id_servicio: NULL_OPTION,
-                                  id_articulo: NULL_OPTION,
-                                  id_detalle: NULL_OPTION,
-                                  id_stock_producto: NULL_OPTION,
-                                  id_stock_variante: NULL_OPTION,
-                                  precio: 0,
-                                  id_tipo_precio_stock: NULL_OPTION,
-                                  precio_tipo_label: "",
-                                  precios_disponibles: [],
-                                  stock_disponible: null,
-                                  sinStock: false,
-                                  consumos_snapshot: [],
-                                })
-                              }
+                              onChange={(val) => handleDetalleInputChange(r.id, val)}
                               onSelect={(d) => handleSelectDetalle(d, r.id)}
                               options={detallesList}
                               catalogKind="stock"
@@ -3794,23 +3787,10 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
                               className="gm-cell-input"
                               type="text"
                               value={r.detalleText}
-                              onChange={(e) =>
-                                updateRow(r.id, {
-                                  tipo_item: "DETALLE",
-                                  detalleText: e.target.value,
-                                  id_servicio: NULL_OPTION,
-                                  id_articulo: NULL_OPTION,
-                                  id_detalle: NULL_OPTION,
-                                  id_stock_producto: NULL_OPTION,
-                                  id_stock_variante: NULL_OPTION,
-                                  id_tipo_precio_stock: NULL_OPTION,
-                                  precio_tipo_label: "",
-                                  precios_disponibles: [],
-                                  stock_disponible: null,
-                                  sinStock: false,
-                                  consumos_snapshot: [],
-                                })
-                              }
+                              onChange={(e) => {
+                                handleDetalleInputChange(r.id, e.target.value);
+                                updateRow(r.id, { tipo_item: "DETALLE" });
+                              }}
                               placeholder="Escribí un detalle manual…"
                               disabled={saving || addUI.open}
                             />

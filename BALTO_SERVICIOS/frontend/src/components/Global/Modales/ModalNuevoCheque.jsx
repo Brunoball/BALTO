@@ -189,18 +189,20 @@ export default function ModalNuevoCheque({
   onClose,
   onSave,
   initialData,
-  tipoCheque = "cheque",
+  tipoCheque: tipoChequeProp = "cheque",
+  saldoInicial = false,
   dark = false,
   saving = false,
   onToast,
   showToast,
   verificarNumeroCheque = null,
 }) {
-  const isEcheq = String(tipoCheque || "").toLowerCase() === "echeq";
-  const titulo = isEcheq ? "Cargar eCheq" : "Cargar Cheque";
 
   const emptyForm = useCallback(
     () => ({
+      tipo: "cheque",
+      fecha_saldo: todayISO(),
+      observaciones: "",
       fecha_emision: todayISO(),
       emisor: "",
       numero_cheque: "",
@@ -213,6 +215,9 @@ export default function ModalNuevoCheque({
   );
 
   const [form, setForm] = useState(emptyForm);
+  const tipoCheque = saldoInicial ? form.tipo : tipoChequeProp;
+  const isEcheq = String(tipoCheque || "").toLowerCase() === "echeq";
+  const titulo = isEcheq ? "Cargar eCheq" : "Cargar Cheque";
   const [archivo, setArchivo] = useState(null);
   const [archivoNombre, setArchivoNombre] = useState("");
   const [checkingNumero, setCheckingNumero] = useState(false);
@@ -353,13 +358,16 @@ export default function ModalNuevoCheque({
 
     if (initialData) {
       setForm({
+        tipo: String(initialData.tipo || tipoChequeProp).toLowerCase(),
+        fecha_saldo: initialData.fecha_saldo || todayISO(),
+        observaciones: initialData.observaciones || "",
         fecha_emision: clampDateToToday(initialData.fecha_emision || todayISO()),
         emisor: sanitizeEmitter(initialData.emisor || ""),
         numero_cheque: onlyDigits(initialData.numero_cheque || ""),
         importe: safeNumber(initialData.importe),
         importeDraft: "",
         importeFocused: false,
-        fecha_pago: clampDateToToday(initialData.fecha_pago || todayISO()),
+        fecha_pago: saldoInicial ? initialData.fecha_pago || todayISO() : clampDateToToday(initialData.fecha_pago || todayISO()),
       });
 
       if (initialData.archivo instanceof File) {
@@ -395,7 +403,7 @@ export default function ModalNuevoCheque({
     if (fileInputRef.current) fileInputRef.current.value = "";
 
     setTimeout(() => closeBtnRef.current?.focus(), 0);
-  }, [open, initialData, emptyForm, compUrl]);
+  }, [open, initialData, emptyForm, compUrl, saldoInicial, tipoChequeProp]);
 
   useEffect(() => {
     if (!open) return;
@@ -559,7 +567,7 @@ export default function ModalNuevoCheque({
       return;
     }
 
-    if (isFutureDateISO(form.fecha_pago)) {
+    if (!saldoInicial && isFutureDateISO(form.fecha_pago)) {
       notify("advertencia", "La fecha de pago no puede ser posterior al día actual.", 3600);
       setField("fecha_pago", todayISO());
       fechaPagoRef.current?.focus();
@@ -573,6 +581,21 @@ export default function ModalNuevoCheque({
         4200
       );
       return;
+    }
+
+    if (saldoInicial) {
+      if (!form.fecha_saldo || isFutureDateISO(form.fecha_saldo)) {
+        notify("advertencia", "Ingresá una fecha de apertura válida, no posterior a hoy.");
+        return;
+      }
+      if (form.fecha_emision > form.fecha_saldo || form.fecha_pago < form.fecha_emision) {
+        notify("advertencia", "La emisión debe ser anterior o igual a la apertura y al vencimiento.");
+        return;
+      }
+      if (archivo && (!(archivo.size > 0) || archivo.size > 15 * 1024 * 1024)) {
+        notify("advertencia", "Subí una imagen o PDF válido de hasta 15 MB.");
+        return;
+      }
     }
 
     const disponible = await runNumeroCheck();
@@ -591,6 +614,7 @@ export default function ModalNuevoCheque({
   }, [
     saving,
     checkingNumero,
+    saldoInicial,
     form,
     tipoCheque,
     archivo,
@@ -712,7 +736,7 @@ export default function ModalNuevoCheque({
         onMouseDown={(e) => {
           e.stopPropagation();
 
-          if (e.target === e.currentTarget && !saving && !checkingNumero) {
+          if (!saldoInicial && e.target === e.currentTarget && !saving && !checkingNumero) {
             onClose?.();
           }
         }}
@@ -776,6 +800,16 @@ export default function ModalNuevoCheque({
                   </div>
 
                   <div className="nc-section-body">
+                    {saldoInicial && (
+                      <>
+                        <div className="nc-field">
+                          <select id="mnc-tipo-inicial" className="nc-input" value={form.tipo} onChange={(e) => setField("tipo", e.target.value)} disabled={saving || checkingNumero}>
+                            <option value="cheque">Cheque</option><option value="echeq">eCheq</option>
+                          </select>
+                          <label htmlFor="mnc-tipo-inicial" className="nc-label">Tipo</label>
+                        </div>
+                      </>
+                    )}
                     <div className="nc-field">
                       <input
                         className="nc-input"
@@ -904,10 +938,10 @@ export default function ModalNuevoCheque({
                           type="date"
                           placeholder=" "
                           value={form.fecha_pago}
-                          max={todayISO()}
+                          max={saldoInicial ? undefined : todayISO()}
                           onClick={() => abrirCalendario(fechaPagoRef)}
                           onFocus={() => abrirCalendario(fechaPagoRef)}
-                          onChange={(e) => setField("fecha_pago", clampDateToToday(e.target.value))}
+                          onChange={(e) => setField("fecha_pago", saldoInicial ? e.target.value : clampDateToToday(e.target.value))}
                           disabled={saving || checkingNumero}
                         />
                         <label
@@ -918,6 +952,12 @@ export default function ModalNuevoCheque({
                         </label>
                       </div>
                     </div>
+                    {saldoInicial && (
+                        <div className="nc-field">
+                          <input id="mnc-observaciones" className="nc-input" type="text" placeholder=" " maxLength={500} value={form.observaciones} onChange={(e) => setField("observaciones", e.target.value)} disabled={saving || checkingNumero} />
+                          <label htmlFor="mnc-observaciones" className="nc-label">Observación</label>
+                        </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1037,6 +1077,17 @@ export default function ModalNuevoCheque({
                     </div>
                   </div>
                 </div>
+
+                {saldoInicial && (
+                  <div className="nc-section">
+                    <div className="nc-section-body">
+                        <div className="nc-field">
+                          <input id="mnc-apertura" className="nc-input" type="date" value={form.fecha_saldo} max={todayISO()} onClick={(e) => { try { e.currentTarget.showPicker?.(); } catch {} }} onChange={(e) => setField("fecha_saldo", e.target.value)} disabled={saving || checkingNumero} />
+                          <label htmlFor="mnc-apertura" className="nc-label">Fecha de apertura *</label>
+                        </div>
+                    </div>
+                  </div>
+                )}
 
                 <div className="nc-actions" style={{ padding: 0 }}>
                   <button

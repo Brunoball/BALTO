@@ -976,14 +976,9 @@ export default function ModalReciboGenerado({
         onMouseDown={(e) => e.stopPropagation()}
       >
         <div className="gm-modal-header gm-view-header">
-          <div className="gm-view-head-left">
-            <div className="gm-view-title">
+          <div className="gm-modal-head-left gm-view-head-left">
+            <div className="gm-modal-title gm-view-title">
               <span>{title}</span>
-            </div>
-
-            <div className="gm-view-subtitle">
-              Vista previa · X / ESC / Finalizar guardan y cierran todo igual
-              {autoSaving ? " · guardando en segundo plano…" : ""}
             </div>
           </div>
 

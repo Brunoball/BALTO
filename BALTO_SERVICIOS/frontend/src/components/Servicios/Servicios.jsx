@@ -350,13 +350,13 @@ export default function Servicios() {
       { k: "nombre", l: "Servicio" }, { k: "categoria", l: "Categoría", center: true }, { k: "unidad", l: "Unidad", center: true }, { k: "composicion", l: "Composición" }, { k: "costo", l: "Costo", right: true }, { k: "precio", l: "Precio", right: true }, { k: "acciones", l: "Acciones", center: true },
     ];
     if (tab === "trabajadores") return [
-      { k: "nombre", l: "Trabajador" }, { k: "rol", l: "Rol", center: true }, { k: "modalidad", l: "Modalidad", center: true }, { k: "tarifa", l: "Tarifa" }, { k: "hora", l: "Costo/h", right: true }, { k: "servicios", l: "Servicios", center: true }, { k: "acciones", l: "Acciones", center: true },
+      { k: "nombre", l: "Trabajador" }, { k: "rol", l: "Rol", center: true }, { k: "modalidad", l: "Modalidad", center: true }, { k: "tarifa", l: "Tarifa", center: true }, { k: "hora", l: "Costo/h", right: true }, { k: "servicios", l: "Servicios", center: true }, { k: "acciones", l: "Acciones", center: true },
     ];
     if (tab === "stock") return [
-      { k: "nombre", l: "Artículo" }, { k: "tipo", l: "Tipo", center: true }, { k: "categoria", l: "Categoría", center: true }, { k: "unidad", l: "Unidad", center: true }, { k: "stock", l: "Stock", right: true }, { k: "costo", l: "Costo", right: true }, { k: "acciones", l: "Acciones", center: true },
+      { k: "nombre", l: "Artículo" }, { k: "tipo", l: "Tipo", center: true }, { k: "categoria", l: "Categoría", center: true }, { k: "unidad", l: "Unidad", center: true }, { k: "stock", l: "Stock", center: true }, { k: "costo", l: "Costo", right: true }, { k: "acciones", l: "Acciones", center: true },
     ];
     return [
-      { k: "nombre", l: tab === "materiales" ? "Material" : "Insumo" }, { k: "categoria", l: "Categoría", center: true }, { k: "unidad", l: "Unidad", center: true }, { k: "stock", l: "Stock", right: true }, { k: "costo", l: "Costo", right: true }, { k: "precio", l: "Precio", right: true }, { k: "acciones", l: "Acciones", center: true },
+      { k: "nombre", l: tab === "materiales" ? "Material" : "Insumo" }, { k: "categoria", l: "Categoría", center: true }, { k: "unidad", l: "Unidad", center: true }, { k: "stock", l: "Stock", center: true }, { k: "costo", l: "Costo", right: true }, { k: "precio", l: "Precio", right: true }, { k: "acciones", l: "Acciones", center: true },
     ];
   }, [tab]);
 
@@ -364,6 +364,12 @@ export default function Servicios() {
     if (index === 0) return "minmax(190px,1.35fr)";
     if (column.k === "acciones") return "150px";
     if (column.k === "unidad") return "82px";
+    if (tab === "trabajadores") {
+      if (column.k === "rol") return "minmax(110px,.95fr)";
+      if (column.k === "servicios") return "minmax(80px,.35fr)";
+      if (column.k === "modalidad") return "minmax(90px,.45fr)";
+      if (column.k === "tarifa") return "minmax(120px,1.45fr)";
+    }
     return "minmax(100px,.8fr)";
   }).join(" ");
   const values = (row) => ({
