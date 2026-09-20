@@ -14,7 +14,24 @@ function apiUrl(action, query = {}) {
   return url.toString();
 }
 
+async function ensureAppOrigin(page) {
+  let currentOrigin = '';
+  let expectedOrigin = '';
+
+  try { currentOrigin = new URL(String(page.url() || '')).origin; } catch {}
+  try { expectedOrigin = new URL(ENV.baseURL).origin; } catch {}
+
+  if (currentOrigin && expectedOrigin && currentOrigin === expectedOrigin) return;
+
+  // Un Page recién creado puede seguir en about:blank aunque el storageState ya
+  // contenga la sesión. Chromium bloquea localStorage en ese documento opaco.
+  // Entramos al origin local de BALTO antes de leer session_key.
+  await page.goto('/panel/dashboard', { waitUntil: 'domcontentloaded' });
+}
+
 export async function authenticatedApi(page, action, options = {}) {
+  await ensureAppOrigin(page);
+
   const method = String(options.method || (options.body ? 'POST' : 'GET')).toUpperCase();
   const query = { ...(options.query || {}) };
   for (const forbidden of ['session_key', 'sessionKey', 'x_session', 'X-Session']) {

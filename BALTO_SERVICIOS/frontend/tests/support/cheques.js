@@ -460,9 +460,12 @@ export async function deleteCurrentAccountPaymentViaUi(page, options) {
   }
 
   await candidates.first().locator(deleteSelector).click();
-  const dialog = await waitDialog(page, 'Eliminar registro de cobro');
+  const dialog = await waitDialog(page, isProvider ? /Eliminar orden de pago/i : /Eliminar recibo/i);
   const responsePromise = responseForAction(page, 'cc_eliminar_cobro');
-  await dialog.getByRole('button', { name: /Eliminar cobro/i }).last().click();
+  await dialog
+    .getByRole('button', { name: isProvider ? /Eliminar orden/i : /Eliminar recibo/i })
+    .last()
+    .click();
   const response = await responsePromise;
   const body = await responseBody(response, 'La eliminación del pago debe finalizar correctamente');
   expect(Number(body?.id_cobro || body?.id_movimiento_medio_pago || 0)).toBe(expectedId);

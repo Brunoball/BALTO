@@ -79,7 +79,7 @@ async function mockSelectedClientFiscalState(page, state) {
   });
 }
 
-test('@crud otros ingresos: cliente + resumen fiscal global sin guardar antes de emitir', async ({ page }, testInfo) => {
+test('@crud otros ingresos: cliente sólo fiscal + resumen global sin asociarlo al movimiento', async ({ page }, testInfo) => {
   await requireMutations(test, page);
   await mockSelectedClientFiscalState(page, 'existing');
   const diagnostics = installDiagnostics(page);
@@ -98,6 +98,7 @@ test('@crud otros ingresos: cliente + resumen fiscal global sin guardar antes de
     description,
     amount: 350,
     freeText: true,
+    selectClient: true,
     finalAction: 'facturar',
   });
   const invoiceStep = await detectOtherIncomeInvoiceStep(page);
@@ -115,6 +116,11 @@ test('@crud otros ingresos: cliente + resumen fiscal global sin guardar antes de
   await expect(incomeDialog).toBeVisible();
   await incomeDialog.getByRole('button', { name: /^Guardar ingreso$/i }).click();
   await expect(incomeDialog).toBeHidden({ timeout: 60_000 });
+
+  expect(createRequests, 'Guardar debe crear exactamente un Otro Ingreso.').toHaveLength(1);
+  const savedPayload = createRequests[0].postDataJSON();
+  expect(savedPayload, 'El payload debe declarar explícitamente id_cliente = null.').toHaveProperty('id_cliente', null);
+  expect(savedPayload, 'El payload tampoco debe persistir cliente_nombre.').toHaveProperty('cliente_nombre', null);
 
   const incomeRow = await searchRow(page, description, /Buscar por descripción/i);
   await expect(incomeRow.getByTitle('Facturar ingreso')).toHaveCount(0);
@@ -145,6 +151,7 @@ test('@crud otros ingresos: cliente sin ficha fiscal abre el modal global de CUI
     description,
     amount: 100,
     freeText: true,
+    selectClient: true,
     finalAction: 'facturar',
   });
   const invoiceStep = await detectOtherIncomeInvoiceStep(page);
@@ -163,6 +170,57 @@ test('@crud otros ingresos: cliente sin ficha fiscal abre el modal global de CUI
   await expect(
     page.locator('.mov-gridTable--row:visible:not(.mov-row--skeleton)').filter({ hasText: description }),
   ).toHaveCount(0);
+
+  await assertNoCriticalErrors(diagnostics, testInfo, { allowConsole: [/comprobante/i] });
+});
+
+test('@crud @critical otros ingresos: guardar es libre y Facturar exige cliente', async ({ page }, testInfo) => {
+  await requireMutations(test, page);
+  const diagnostics = installDiagnostics(page);
+  const description = uniqueName('INGRESO-SIN-CLIENTE');
+  const createRequests = [];
+  page.on('request', (request) => {
+    if (
+      request.method() === 'POST' &&
+      new URL(request.url()).searchParams.get('action') === 'otros_ingresos_crear'
+    ) {
+      createRequests.push(request);
+    }
+  });
+
+  const { incomeDialog } = await createOtherIncome(page, {
+    description,
+    amount: 175,
+    freeText: true,
+    finalAction: 'none',
+  });
+
+  await expect(incomeDialog).toContainText(/Cliente para facturar \(opcional\)/i);
+  const clientInput = incomeDialog.locator('.oi-cliente-wrap input').first();
+  await expect(clientInput).toBeVisible();
+  await expect(clientInput).toHaveValue('');
+
+  // Facturar sí necesita receptor fiscal, pero no debe crear ni persistir nada
+  // mientras el cliente siga vacío.
+  await incomeDialog.getByRole('button', { name: /^Facturar$/i }).click();
+  await expect(
+    page.locator('.toast-message').filter({ hasText: /Seleccioná un cliente antes de facturar/i }).last(),
+  ).toBeVisible({ timeout: 10_000 });
+  await expect(incomeDialog).toBeVisible();
+  expect(createRequests, 'Intentar facturar sin cliente no debe crear el ingreso.').toHaveLength(0);
+  await expect(page.getByRole('dialog').filter({ hasText: /Datos fiscales para facturar|Resumen antes de emitir/i })).toHaveCount(0);
+
+  // Guardar, en cambio, debe funcionar sin cliente y persistir explícitamente NULL.
+  await incomeDialog.getByRole('button', { name: /^Guardar ingreso$/i }).click();
+  await expect(incomeDialog).toBeHidden({ timeout: 60_000 });
+  expect(createRequests, 'Guardar sin cliente debe crear exactamente un ingreso.').toHaveLength(1);
+  const payload = createRequests[0].postDataJSON();
+  expect(payload).toHaveProperty('id_cliente', null);
+  expect(payload).toHaveProperty('cliente_nombre', null);
+
+  const row = await searchRow(page, description, /Buscar por descripción/i);
+  await expect(row).toBeVisible();
+  await deleteOtherMovement(page, 'income', description);
 
   await assertNoCriticalErrors(diagnostics, testInfo, { allowConsole: [/comprobante/i] });
 });

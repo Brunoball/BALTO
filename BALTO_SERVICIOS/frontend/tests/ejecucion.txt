@@ -25,11 +25,26 @@ Si PW_ALLOW_MUTATIONS=1 y el flag E2E del backend está apagado, la suite falla
 antes de mutar datos con un mensaje explícito. Esto es intencional: no se corre
 una suite mutable sin cleanup seguro.
 
-SUITE COMPLETA
---------------
+SUITE PRINCIPAL / FUNCIONAL
+--------------------------
+La suite interna nueva vive en tests/internal y todos sus títulos llevan @internal.
+Para correr SOLAMENTE el testing principal de siempre:
+
+npx playwright test --project=chromium --workers=1 --reporter=list --grep-invert @internal
+
+SUITE SECUNDARIA / INTERNA
+--------------------------
+Suite ampliada (22 tests internos): contabilidad de clientes/proveedores, redondeos,
+rollback, límites y concurrencia de stock, cheque/eCheq, reversión, multiítem,
+secuencias largas, seguridad y auditoría SQL read-only:
+
+npx playwright test tests/internal --project=chromium --workers=1 --reporter=list
+
+Para correr ambas suites juntas (principal + interna):
+
 npx playwright test --project=chromium --workers=1 --reporter=list
 
-También podés usar:
+También podés usar para la suite principal:
 powershell -ExecutionPolicy Bypass -File src/scripts/test-lote.ps1 todo
 powershell -ExecutionPolicy Bypass -File src/scripts/test-lotes-todos.ps1
 
@@ -72,6 +87,21 @@ COBERTURA NUEVA DE SERVICIOS / MOVIMIENTOS
 - Contrato de PDFs/remitos: nombre del servicio + "Incluye" sin precios internos,
   y nombre del servicio incorporado al nombre del archivo.
 
+TESTING INTERNO - BACKEND
+-------------------------
+La suite secundaria agrega una única acción READ-ONLY dentro del módulo de testing:
+config_testing_e2e_integrity.
+
+Está protegida exactamente igual que el cleanup existente:
+- requiere sesión ADMIN;
+- sólo existe si BALTO_E2E_TOOLS_ENABLED=1;
+- en producción debe permanecer apagada;
+- no acepta SQL arbitrario ni modifica datos.
+
+Valida stock_actual vs historial, continuidad y aritmética del historial de stock,
+stock negativo, matemática subtotal/IVA/total, pagos no positivos, estados y usos
+de cheques, y relaciones huérfanas.
+
 LIMPIEZA AUTOMÁTICA
 -------------------
 - Al iniciar la suite se eliminan residuos PW-* de corridas anteriores.
@@ -110,3 +140,33 @@ La suite ahora también valida:
 
 Sólo hardening:
 npx playwright test tests/35-backend-hardening-regression.spec.js --project=chromium --workers=1 --reporter=list
+
+REGRESIÓN RECIBOS / ÓRDENES DE PAGO AGRUPADOS
+----------------------------------------------
+Valida el fix de cuenta corriente cuando una misma operación se paga con más de un medio:
+- Recibo con CHEQUE + otro medio aparece como una sola fila por el total.
+- Orden de pago con CHEQUE + otro medio aparece como una sola fila por el total.
+- La fila agrupada conserva un único comprobante y expone sus dos aplicaciones internas.
+- Al eliminar Recibo/Orden se eliminan juntas todas las aplicaciones y el comprobante.
+- No queda un pago parcial fantasma ni una fila sobreviviente sin PDF.
+- En Orden de pago, el cheque utilizado vuelve a EN_CARTERA al revertir la operación completa.
+- En Recibo, el cheque recibido permanece correctamente en cartera.
+
+Sólo esta regresión:
+npx playwright test tests/36-grouped-payment-current-account-regression.spec.js --project=chromium --workers=1 --reporter=list
+
+REGRESIÓN OTROS INGRESOS LIBRE / CLIENTE FISCAL OPCIONAL
+--------------------------------------------------------
+Valida el ajuste final de Otros Ingresos:
+- Guardar un Otro Ingreso NO selecciona cliente automáticamente.
+- El movimiento se crea con id_cliente = NULL y cliente_nombre = NULL.
+- Incluso si se seleccionó un cliente para el circuito fiscal, al guardar sin facturar
+  ese cliente no queda asociado comercialmente al movimiento.
+- Facturar sin cliente se bloquea antes de crear el ingreso y muestra la advertencia
+  "Seleccioná un cliente antes de facturar".
+- Al seleccionar cliente explícitamente, el flujo fiscal existente (ficha fiscal o CUIT)
+  sigue funcionando sin alterar la naturaleza libre del movimiento.
+- Otros Ingresos continúa sin mover stock.
+
+Sólo esta cobertura:
+npx playwright test tests/07-other-movements.spec.js tests/17-other-income-fiscal.spec.js --project=chromium --workers=1 --reporter=list

@@ -686,7 +686,15 @@ export async function createOtherIncome(page, data) {
   await expect(dialog.getByRole('button', { name: /^Guardar ingreso$/i })).toBeVisible();
   await expect(dialog.getByRole('button', { name: /^Facturar$/i })).toBeVisible();
   const requestedClient = String(data.clientName || data.clientSearch || '').trim();
-  data.clientName = await selectFirstAutocomplete(dialog, 'Cliente', requestedClient);
+  const shouldSelectClient = Boolean(requestedClient) || data.selectClient === true;
+  if (shouldSelectClient) {
+    data.clientName = await selectFirstAutocomplete(dialog, 'Cliente', requestedClient);
+  } else {
+    // Otros Ingresos es libre: guardar NO debe seleccionar un cliente por defecto.
+    // El cliente sólo se elige explícitamente cuando el escenario quiere probar
+    // el circuito fiscal de "Facturar".
+    data.clientName = '';
+  }
 
   let row;
   if (data.freeText) {
@@ -718,6 +726,11 @@ export async function createOtherIncome(page, data) {
     await expect(invoiceDialog).toContainText(/Resumen antes de emitir|Datos fiscales para facturar/i);
     return { invoiceDialog, incomeDialog: dialog };
   }
+
+  // Permite que una prueba deje el modal listo, sin guardar, para validar
+  // diferencias entre "Guardar ingreso" (cliente opcional) y "Facturar"
+  // (cliente obligatorio).
+  if (data.finalAction === 'none') return { incomeDialog: dialog };
 
   await clickSaveAndWait(dialog, /Guardar ingreso/i, { timeout: 60_000 });
   return searchRow(page, data.description, /Buscar por descripción/i);

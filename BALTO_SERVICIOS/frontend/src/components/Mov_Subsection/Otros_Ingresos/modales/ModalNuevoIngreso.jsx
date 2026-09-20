@@ -1536,10 +1536,11 @@ export default function ModalNuevoIngreso({
   // ─── Validación ──────────────────────────────────────────────────────────────
   const validate = useCallback(() => {
     if (!safeStr(fecha)) return { ok: false, msg: "Falta la fecha." };
-    if (!(Number(selectedClienteId) > 0)) {
-      return { ok: false, msg: "Falta seleccionar un Cliente (obligatorio)." };
-    }
-    
+
+    // El cliente NO pertenece al movimiento de Otros Ingresos.
+    // Sólo se usa como receptor fiscal cuando el usuario elige "Facturar".
+    // Por eso guardar un ingreso común nunca debe exigir un cliente.
+
     // ⭐ VALIDACIÓN DE FECHA FUTURA ⭐
     if (fecha > todayISO()) {
       return { ok: false, msg: "La fecha no puede ser posterior al día actual." };
@@ -1625,7 +1626,7 @@ export default function ModalNuevoIngreso({
       };
     }
     return { ok: true, usable };
-  }, [fecha, selectedClienteId, mediosFilas, mediosPagoList, sumaMediosPago, resumen.total, rowsCalc]);
+  }, [fecha, mediosFilas, mediosPagoList, sumaMediosPago, resumen.total, rowsCalc]);
 
   // ─── Build payload ────────────────────────────────────────────────────────────
   const buildPayload = useCallback(() => {
@@ -1671,8 +1672,11 @@ export default function ModalNuevoIngreso({
       });
     return {
       fecha: safeStr(fecha).slice(0, 10),
-      id_cliente: Number(selectedClienteId) || null,
-      cliente_nombre: selectedClienteNombre || null,
+      // Otros Ingresos es un movimiento libre: no genera relación comercial
+      // con Clientes. El cliente seleccionado queda reservado exclusivamente
+      // para el circuito fiscal de Facturar (ver buildIngresoFacturaDraft).
+      id_cliente: null,
+      cliente_nombre: null,
       id_medio_pago: mediosPayload[0]?.id_medio_pago || null,
       medio_pago_nombre: optionLabel(
         mediosPagoList.find(
@@ -1712,7 +1716,7 @@ export default function ModalNuevoIngreso({
         consumos_snapshot: undefined,
       })),
     };
-  }, [rowsCalc, fecha, selectedClienteId, selectedClienteNombre, mediosFilas, mediosPagoList]);
+  }, [rowsCalc, fecha, mediosFilas, mediosPagoList]);
 
   const abrirResumenFactura = useCallback(async (clienteFiscalSource, clienteSource = null) => {
     const fiscal = normalizeClienteFiscalDb(clienteFiscalSource || {});
@@ -2448,7 +2452,7 @@ export default function ModalNuevoIngreso({
                               ? "__add_cliente__"
                               : String(getClienteId(cliente) || cliente?.nombre || "")
                           }
-                          label="Cliente *"
+                          label="Cliente para facturar (opcional)"
                           placeholder=" "
                           disabled={saving || addClienteOpen || fiscalPanelOpen}
                           showAllOnFocus={true}
