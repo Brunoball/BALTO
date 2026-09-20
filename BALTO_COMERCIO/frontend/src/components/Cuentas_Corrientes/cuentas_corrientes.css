@@ -85,6 +85,24 @@
   min-height: 0;
 }
 
+
+/* =========================
+   Contenedor global de la sección
+   Replica el mismo doble borde visual de Ventas / Compras:
+   el layout exterior + .mov-card global alrededor del contenido.
+========================= */
+.cc-accountCard{
+  height: 100%;
+  min-height: 0;
+}
+
+/* La tabla ocupa el espacio interno del card sin crear otra tarjeta local. */
+.cc-accountCard > .cc-cliente-table{
+  flex: 1 1 auto;
+  height: auto;
+  min-height: 0;
+}
+
 /* =========================
    Subhead
 ========================= */
@@ -316,23 +334,26 @@
 }
 
 /* =========================
-   Tabla clientes
+   Tabla clientes / proveedores
+   La estructura visual base (head, filas, celdas, hover y separadores)
+   la aporta Global_Section.css mediante las clases .mov-*.
+   Aca solo conservamos layout y comportamiento propios de CC.
 ========================= */
 .cc-cliente-table{
-  background: var(--b-white);
-  border: 1px solid rgba(10, 37, 64, 0.10);
-  border-radius: 16px;
-  box-shadow: 0 14px 34px -22px rgba(10, 37, 64, 0.28);
-  overflow: hidden;
   display: flex;
   flex-direction: column;
   min-height: 0;
   height: calc(100vh - 200px);
+  overflow: hidden;
+
+  /* Sin una segunda tarjeta local: se integra con el patron global. */
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
 }
 
 .cc-cliente-table__desktopHead{
-  background: var(--b-midnight);
-  border-bottom: 1px solid rgba(255,255,255,.10);
   flex: 0 0 auto;
 }
 
@@ -340,7 +361,7 @@
   flex: 1 1 auto;
   overflow-y: auto;
   overflow-x: hidden;
-  background: #fff;
+  background: var(--color-surface, #fff);
   min-height: 0;
 }
 
@@ -475,19 +496,18 @@ button.cc-cliente-table__row:focus-visible{
 
 /* fila movimientos dentro del detalle */
 .cc-cliente-table__movRow{
+  /* button conserva solo el reset necesario; el aspecto viene de .mov-gridTable--row */
+  appearance: none;
   border: 0;
-  border-bottom: 1px solid color-mix(in srgb, var(--mov-border) 60%, #fff);
-  background: #fff;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 60%, #fff);
   cursor: pointer;
   width: 100%;
+  font: inherit;
+  color: inherit;
 }
 
 .mov-ellipsialingf{
   text-align: left;
-}
-
-.cc-cliente-table__movRow:hover{
-  background: rgba(0, 85, 187, 0.05);
 }
 
 /* =========================

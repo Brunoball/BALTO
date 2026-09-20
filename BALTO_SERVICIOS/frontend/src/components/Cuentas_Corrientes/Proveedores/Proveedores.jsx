@@ -791,6 +791,7 @@ export default function ProveedoresCC() {
         onToast={showToast}
       />
 
+      <section className="mov-card mov-card--table cc-accountCard">
       <div className={`mov-card__head cc-accountHeader ${isDetailMode ? "is-detail" : ""}`}>
         <div className="mov-card__headLeft">
           <div className="title-mov">
@@ -1132,6 +1133,7 @@ export default function ProveedoresCC() {
       )}
 
       {isDetailMode && renderDetailTabs("cc-detailTabs--bottom")}
+      </section>
     </div>
   );
 }

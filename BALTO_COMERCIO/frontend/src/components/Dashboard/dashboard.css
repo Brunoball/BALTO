@@ -1091,3 +1091,43 @@ html[data-theme="oscuro"] .db-skeleton::after {
     animation: none;
   }
 }
+
+/* =========================================================
+   GRÁFICO — ocupar el alto disponible del panel
+   Evita que el gráfico quede "flotando" arriba con un bloque
+   grande de espacio vacío debajo en escritorio.
+========================================================= */
+@media (min-width: 769px) {
+  .db-panel--chart {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .db-panel--chart > .db-panel__head {
+    flex: 0 0 auto;
+  }
+
+  .db-panel--chart > .db-chart {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    align-items: stretch;
+  }
+
+  .db-panel--chart .db-chart__plot {
+    flex: 1 0 100%;
+    min-height: 162px;
+    height: 100%;
+  }
+
+  .db-panel--chart .db-chart__item {
+    height: 100%;
+    min-height: 148px;
+  }
+
+  .db-panel--chart > .db-chart-skeleton {
+    flex: 1 1 auto;
+    min-height: 162px;
+  }
+}

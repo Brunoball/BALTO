@@ -1,12 +1,15 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowLeft,
   faBuildingColumns,
+  faCircleInfo,
   faFloppyDisk,
   faMoneyCheckDollar,
+  faEye,
+  faXmark,
   faPlus,
   faTrash,
   faUsers,
@@ -14,11 +17,20 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 
 import Toast from "../../Global/Toast";
-import { apiFetchActionJson as apiFetch } from "../api/configuracionApi";
-import { todayISO } from "../utils/configuracionUtils";
+import ModalNuevoCheque from "../../Global/Modales/ModalNuevoCheque";
 import ModalEliminar from "../../Global/Modales/ModalEliminar";
+import ModalVerComprobante from "../../Global/Ver_Comprobantes/ModalVerComprobante";
+import {
+  apiFetchActionJson as apiFetch,
+  buildConfiguracionApiUrl,
+  getConfiguracionSessionKey,
+  subirArchivoChequeConfiguracion,
+  obtenerArchivoConfiguracion,
+} from "../api/configuracionApi";
+import { todayISO } from "../utils/configuracionUtils";
 import "../../Global/Global_css/GlobalsModalsV2.css";
 import "./ConfiguracionSaldosIniciales.css";
+import "./ConfiguracionSaldosInicialesVolver.css";
 
 
 function parseMoney(value) {
@@ -86,6 +98,14 @@ function normalizeText(value) {
   return String(value || "").replace(/\s+/g, " ").trim();
 }
 
+function isAllowedChequeFile(file) {
+  if (!(file instanceof File)) return false;
+  const mime = String(file.type || "").toLowerCase();
+  const name = String(file.name || "").toLowerCase();
+  const validType = mime === "application/pdf" || mime.startsWith("image/") || /\.(pdf|jpg|jpeg|png|webp|gif|heic|heif)$/i.test(name);
+  return validType && Number(file.size || 0) > 0 && Number(file.size || 0) <= 15 * 1024 * 1024;
+}
+
 function fmtDate(value) {
   const [y, m, d] = String(value || "").split("-");
   return y && m && d ? `${d}/${m}/${y}` : "—";
@@ -126,17 +146,21 @@ export default function ConfiguracionSaldosIniciales() {
   const [ccTipo, setCcTipo] = useState("CLIENTE");
   const [ccSearch, setCcSearch] = useState("");
   const [ccEditor, setCcEditor] = useState(null);
+  const [ccAEliminar, setCcAEliminar] = useState(null);
   const [chequeAEliminar, setChequeAEliminar] = useState(null);
-  const [chequeForm, setChequeForm] = useState({
-    tipo: "CHEQUE",
-    fecha_saldo: todayISO(),
-    fecha_emision: todayISO(),
-    fecha_pago: todayISO(),
-    emisor: "",
-    numero_cheque: "",
-    importe: "",
-    observaciones: "",
+  const [nuevoChequeOpen, setNuevoChequeOpen] = useState(false);
+  const [chequePreview, setChequePreview] = useState({
+    open: false,
+    url: "",
+    mime: "",
+    fileName: "",
+    loading: false,
+    error: "",
   });
+  // Los adjuntos de cheques se precargan al entrar a Saldos iniciales.
+  // Así el botón del ojo sólo abre un recurso que ya está resuelto/cargado.
+  const chequeAttachmentCacheRef = useRef(new Map());
+  const chequeAttachmentLoadsRef = useRef(new Map());
 
   const notify = useCallback((tipo, mensaje, duracion = 3300) => {
     setToast({ tipo, mensaje, duracion, key: Date.now() });
@@ -179,8 +203,147 @@ export default function ConfiguracionSaldosIniciales() {
 
   useEffect(() => { load(); }, [load]);
 
+  const preloadChequeAttachment = useCallback((row) => {
+    const idArchivo = Number(row?.id_archivo || 0);
+    if (!(idArchivo > 0)) return Promise.resolve(null);
+
+    const cached = chequeAttachmentCacheRef.current.get(idArchivo);
+    if (cached) return Promise.resolve(cached);
+
+    const inFlight = chequeAttachmentLoadsRef.current.get(idArchivo);
+    if (inFlight) return inFlight;
+
+    const fallbackName = normalizeText(row?.numero_cheque)
+      ? `Cheque ${normalizeText(row.numero_cheque)}`
+      : "Cheque / eCheq";
+
+    const request = (async () => {
+      const info = await obtenerArchivoConfiguracion(idArchivo);
+      const sourceUrl = String(info?.url || info?.download_url || info?.archivo_url || "").trim();
+      if (!sourceUrl) throw new Error("No se recibió la URL del archivo.");
+
+      let mime = String(info?.mime || info?.mime_type || info?.tipo_mime || info?.content_type || "").trim();
+      const fileName = String(
+        info?.nombre_archivo ||
+        info?.nombre_original ||
+        info?.file_name ||
+        info?.filename ||
+        fallbackName
+      ).trim();
+
+      let previewUrl = sourceUrl;
+      let objectUrl = false;
+
+      // Además de resolver la URL antes del clic, intentamos descargar el archivo
+      // ahora para dejarlo en memoria como blob:. Si el origen externo no permite
+      // fetch por CORS, las imágenes se precargan igualmente con Image().
+      try {
+        const absoluteUrl = new URL(sourceUrl, window.location.href);
+        const backendOrigin = new URL(buildConfiguracionApiUrl()).origin;
+        const pageOrigin = window.location.origin;
+        const headers = new Headers();
+
+        if (absoluteUrl.origin === backendOrigin || absoluteUrl.origin === pageOrigin) {
+          const sessionKey = getConfiguracionSessionKey();
+          if (sessionKey) headers.set("X-Session", sessionKey);
+        }
+
+        const response = await fetch(absoluteUrl.toString(), {
+          method: "GET",
+          headers,
+        });
+
+        if (response.ok) {
+          const blob = await response.blob();
+          if (blob.size > 0) {
+            if (!mime) mime = String(blob.type || "").trim();
+            previewUrl = URL.createObjectURL(blob);
+            objectUrl = true;
+          }
+        }
+      } catch {
+        const isImage = String(mime || "").toLowerCase().startsWith("image/") ||
+          /\.(jpg|jpeg|png|webp|gif|bmp|svg|heic|heif)(?:$|[?#])/i.test(sourceUrl);
+
+        if (isImage) {
+          await new Promise((resolve) => {
+            const image = new Image();
+            image.onload = resolve;
+            image.onerror = resolve;
+            image.src = sourceUrl;
+          });
+        }
+      }
+
+      const entry = {
+        idArchivo,
+        url: previewUrl,
+        sourceUrl,
+        mime,
+        fileName,
+        objectUrl,
+      };
+
+      chequeAttachmentCacheRef.current.set(idArchivo, entry);
+      return entry;
+    })().finally(() => {
+      chequeAttachmentLoadsRef.current.delete(idArchivo);
+    });
+
+    chequeAttachmentLoadsRef.current.set(idArchivo, request);
+    return request;
+  }, []);
+
   useEffect(() => {
-    if (!ccEditor) return undefined;
+    const rows = (data.cheques || []).filter(
+      (row) => Number(row?.tiene_archivo || 0) === 1 && Number(row?.id_archivo || 0) > 0
+    );
+    const validIds = new Set(rows.map((row) => Number(row.id_archivo)));
+
+    // Liberar blobs de archivos que ya no forman parte de la lista.
+    chequeAttachmentCacheRef.current.forEach((entry, idArchivo) => {
+      if (validIds.has(Number(idArchivo))) return;
+      if (entry?.objectUrl && String(entry?.url || "").startsWith("blob:")) {
+        URL.revokeObjectURL(entry.url);
+      }
+      chequeAttachmentCacheRef.current.delete(idArchivo);
+    });
+
+    let cancelled = false;
+    const queue = rows.filter((row) => !chequeAttachmentCacheRef.current.has(Number(row.id_archivo)));
+
+    // Dos descargas en paralelo evitan saturar la carga inicial de la pantalla.
+    const worker = async () => {
+      while (!cancelled && queue.length) {
+        const row = queue.shift();
+        try {
+          await preloadChequeAttachment(row);
+        } catch {
+          // La precarga es silenciosa: si falla, el clic del ojo volverá a intentarlo.
+        }
+      }
+    };
+
+    worker();
+    worker();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [data.cheques, preloadChequeAttachment]);
+
+  useEffect(() => () => {
+    chequeAttachmentCacheRef.current.forEach((entry) => {
+      if (entry?.objectUrl && String(entry?.url || "").startsWith("blob:")) {
+        URL.revokeObjectURL(entry.url);
+      }
+    });
+    chequeAttachmentCacheRef.current.clear();
+    chequeAttachmentLoadsRef.current.clear();
+  }, []);
+
+  useEffect(() => {
+    if (!ccEditor || ccAEliminar) return undefined;
     const onKeyDown = (event) => {
       if (event.key === "Escape" && !saving) {
         event.preventDefault();
@@ -189,7 +352,7 @@ export default function ConfiguracionSaldosIniciales() {
     };
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [ccEditor, saving]);
+  }, [ccEditor, ccAEliminar, saving]);
 
   const saveTreasury = useCallback(async () => {
     const rowsToSave = tesoreriaRows.filter(
@@ -283,28 +446,84 @@ export default function ConfiguracionSaldosIniciales() {
   }, [ccEditor, hydrate, notify]);
 
   const deleteCc = useCallback(async () => {
-    if (!ccEditor?.exists) return;
+    if (!ccAEliminar?.exists) return;
     setSaving(true);
     try {
       const payload = await apiFetch("config_saldos_iniciales_cc_eliminar", {
         method: "POST",
-        body: JSON.stringify({ tipo_entidad: ccEditor.tipo_entidad, id_entidad: ccEditor.id_entidad }),
+        body: JSON.stringify({ tipo_entidad: ccAEliminar.tipo_entidad, id_entidad: ccAEliminar.id_entidad }),
       });
       hydrate(payload);
+      setCcAEliminar(null);
       setCcEditor(null);
-      notify("exito", payload.mensaje || "Saldo inicial eliminado.");
     } catch (e) {
-      notify("error", e?.message || "No se pudo eliminar el saldo inicial.", 4500);
+      throw e;
     } finally {
       setSaving(false);
     }
-  }, [ccEditor, hydrate, notify]);
+  }, [ccAEliminar, hydrate]);
 
-  const saveCheque = useCallback(async () => {
+  const openChequeAttachment = useCallback(async (row) => {
+    const idArchivo = Number(row?.id_archivo || 0);
+    if (!(idArchivo > 0)) return;
+
+    const fallbackName = normalizeText(row?.numero_cheque)
+      ? `Cheque ${normalizeText(row.numero_cheque)}`
+      : "Cheque / eCheq";
+
+    const cached = chequeAttachmentCacheRef.current.get(idArchivo);
+    if (cached) {
+      setChequePreview({
+        open: true,
+        url: cached.url,
+        mime: cached.mime,
+        fileName: cached.fileName || fallbackName,
+        loading: false,
+        error: "",
+      });
+      return;
+    }
+
+    // Si la precarga todavía está terminando, reutilizamos la misma promesa
+    // en lugar de iniciar una segunda descarga.
+    setChequePreview({
+      open: true,
+      url: "",
+      mime: "",
+      fileName: fallbackName,
+      loading: true,
+      error: "",
+    });
+
+    try {
+      const attachment = await preloadChequeAttachment(row);
+      if (!attachment) throw new Error("No se pudo preparar el archivo del cheque.");
+
+      setChequePreview({
+        open: true,
+        url: attachment.url,
+        mime: attachment.mime,
+        fileName: attachment.fileName || fallbackName,
+        loading: false,
+        error: "",
+      });
+    } catch (error) {
+      setChequePreview((prev) => ({
+        ...prev,
+        loading: false,
+        error: error?.message || "No se pudo cargar el archivo del cheque.",
+      }));
+    }
+  }, [preloadChequeAttachment]);
+
+  const saveCheque = useCallback(async (form) => {
+    if (saving) return;
+    const chequeForm = { ...form, tipo: String(form.tipo).toUpperCase() };
+    if (form.archivo && !isAllowedChequeFile(form.archivo)) return notify("advertencia", "Subí una imagen o PDF válido de hasta 15 MB.", 4200);
     if (!normalizeText(chequeForm.emisor)) return notify("advertencia", "Ingresá el emisor del cheque/eCheq.");
     if (!normalizeText(chequeForm.numero_cheque)) return notify("advertencia", "Ingresá el número del cheque/eCheq.");
-    const parsedImporte = parseMoney(chequeForm.importe);
-    if (parsedImporte === null) return notify("advertencia", "Ingresá un importe válido.");
+    const parsedImporte = Number(chequeForm.importe);
+    if (!Number.isFinite(parsedImporte)) return notify("advertencia", "Ingresá un importe válido.");
     if (!(Math.abs(parsedImporte) > 0)) return notify("advertencia", "Ingresá un importe mayor a cero.");
     if (chequeForm.fecha_emision && chequeForm.fecha_saldo && chequeForm.fecha_emision > chequeForm.fecha_saldo) {
       return notify("advertencia", "La fecha de emisión no puede ser posterior a la fecha de apertura.");
@@ -314,34 +533,54 @@ export default function ConfiguracionSaldosIniciales() {
     }
     setSaving(true);
     try {
+      const { archivo } = chequeForm;
       const payload = await apiFetch("config_saldos_iniciales_cheque_crear", {
         method: "POST",
         body: JSON.stringify({
-          ...chequeForm,
+          tipo: chequeForm.tipo,
+          fecha_saldo: chequeForm.fecha_saldo,
+          fecha_emision: chequeForm.fecha_emision,
+          fecha_pago: chequeForm.fecha_pago,
           importe: Math.abs(parsedImporte),
           emisor: normalizeText(chequeForm.emisor),
           numero_cheque: normalizeText(chequeForm.numero_cheque),
           observaciones: normalizeText(chequeForm.observaciones),
         }),
       });
+
+      let archivoWarning = "";
+      if (archivo instanceof File) {
+        const idChequeCreado = Number(payload?.id_cheque_creado || (payload?.cheques || []).find((row) => String(row?.numero_cheque || "") === normalizeText(chequeForm.numero_cheque))?.id_cheque || 0);
+        if (idChequeCreado > 0) {
+          try {
+            await subirArchivoChequeConfiguracion(idChequeCreado, chequeForm.tipo, archivo);
+          } catch (error) {
+            archivoWarning = error?.message || "No se pudo adjuntar la imagen/PDF del cheque.";
+          }
+        } else {
+          archivoWarning = "El cheque se cargó, pero no se pudo identificar para vincular el archivo.";
+        }
+      }
+
       hydrate(payload);
-      setChequeForm({
-        tipo: chequeForm.tipo,
-        fecha_saldo: chequeForm.fecha_saldo || todayISO(),
-        fecha_emision: todayISO(),
-        fecha_pago: todayISO(),
-        emisor: "",
-        numero_cheque: "",
-        importe: "",
-        observaciones: "",
-      });
-      notify("exito", payload.mensaje || "Cheque/eCheq inicial cargado.");
+      setNuevoChequeOpen(false);
+      try {
+        hydrate(await apiFetch("config_saldos_iniciales_get"));
+      } catch {
+        notify("advertencia", "El cheque se guardó. No se pudo actualizar la lista; volvé a ingresar a la sección.", 6000);
+        return;
+      }
+      if (archivoWarning) {
+        notify("advertencia", `Cheque/eCheq cargado, pero el archivo no quedó vinculado: ${archivoWarning}`, 6000);
+      } else {
+        notify("exito", payload.mensaje || "Cheque/eCheq inicial cargado.");
+      }
     } catch (e) {
       notify("error", e?.message || "No se pudo cargar el cheque/eCheq.", 4500);
     } finally {
       setSaving(false);
     }
-  }, [chequeForm, hydrate, notify]);
+  }, [saving, hydrate, notify]);
 
   const deleteCheque = useCallback(async () => {
     if (!chequeAEliminar?.id_cheque) return;
@@ -353,6 +592,8 @@ export default function ConfiguracionSaldosIniciales() {
       });
       hydrate(payload);
       setChequeAEliminar(null);
+    } catch (e) {
+      throw e;
     } finally {
       setSaving(false);
     }
@@ -381,16 +622,16 @@ export default function ConfiguracionSaldosIniciales() {
         </header>
 
         <div className="cfg-si-tabs" role="tablist">
-          <button className={tab === "tesoreria" ? "is-active" : ""} onClick={() => setTab("tesoreria")} type="button">
-            <FontAwesomeIcon icon={faWallet} /> Caja y cuentas <span>{configuredCount.tesoreria}</span>
-          </button>
-          <button className={tab === "cheques" ? "is-active" : ""} onClick={() => setTab("cheques")} type="button">
-            <FontAwesomeIcon icon={faMoneyCheckDollar} /> Cheques <span>{configuredCount.cheques}</span>
-          </button>
-          <button className={tab === "cc" ? "is-active" : ""} onClick={() => setTab("cc")} type="button">
-            <FontAwesomeIcon icon={faUsers} /> Cuentas corrientes <span>{configuredCount.cc}</span>
-          </button>
-        </div>
+            <button className={tab === "tesoreria" ? "is-active" : ""} onClick={() => setTab("tesoreria")} type="button">
+              <FontAwesomeIcon icon={faWallet} /> Caja y cuentas <span>{configuredCount.tesoreria}</span>
+            </button>
+            <button className={tab === "cheques" ? "is-active" : ""} onClick={() => setTab("cheques")} type="button">
+              <FontAwesomeIcon icon={faMoneyCheckDollar} /> Cheques <span>{configuredCount.cheques}</span>
+            </button>
+            <button className={tab === "cc" ? "is-active" : ""} onClick={() => setTab("cc")} type="button">
+              <FontAwesomeIcon icon={faUsers} /> Cuentas corrientes <span>{configuredCount.cc}</span>
+            </button>
+          </div>
 
         <div className="cfg-si-scroll">
           {loading ? (
@@ -426,39 +667,16 @@ export default function ConfiguracionSaldosIniciales() {
             </div>
           ) : tab === "cheques" ? (
             <div className="cfg-si-panel">
-              <div className="cfg-si-panelHead"><div><h2>Cheques y eCheq en cartera</h2><p>Cargá cada documento real que el negocio ya poseía al comenzar a usar Balto.</p></div></div>
-              <div className="cfg-si-chequeForm">
-                <FloatingField label="Tipo" value={chequeForm.tipo}>
-                  <select className="cfg-si-control" value={chequeForm.tipo} onChange={(e) => setChequeForm((p) => ({ ...p, tipo: e.target.value }))}><option value="CHEQUE">Cheque</option><option value="ECHEQ">eCheq</option></select>
-                </FloatingField>
-                <FloatingField label="Fecha de apertura" value={chequeForm.fecha_saldo}>
-                  <input className="cfg-si-control cfg-si-dateControl" type="date" max={todayISO()} value={chequeForm.fecha_saldo} onClick={openNativeDatePicker} onChange={(e) => setChequeForm((p) => ({ ...p, fecha_saldo: e.target.value }))} />
-                </FloatingField>
-                <FloatingField label="Fecha emisión" value={chequeForm.fecha_emision}>
-                  <input className="cfg-si-control cfg-si-dateControl" type="date" max={todayISO()} value={chequeForm.fecha_emision} onClick={openNativeDatePicker} onChange={(e) => setChequeForm((p) => ({ ...p, fecha_emision: e.target.value }))} />
-                </FloatingField>
-                <FloatingField label="Fecha de pago / vencimiento" value={chequeForm.fecha_pago}>
-                  <input className="cfg-si-control cfg-si-dateControl" type="date" value={chequeForm.fecha_pago} onClick={openNativeDatePicker} onChange={(e) => setChequeForm((p) => ({ ...p, fecha_pago: e.target.value }))} />
-                </FloatingField>
-                <FloatingField label="Emisor" value={chequeForm.emisor} className="cfg-si-span2">
-                  <input className="cfg-si-control" type="text" maxLength={150} placeholder=" " value={chequeForm.emisor} onChange={(e) => setChequeForm((p) => ({ ...p, emisor: e.target.value.toLocaleUpperCase("es-AR") }))} />
-                </FloatingField>
-                <FloatingField label="Número" value={chequeForm.numero_cheque}>
-                  <input className="cfg-si-control" type="text" inputMode="numeric" maxLength={80} placeholder=" " value={chequeForm.numero_cheque} onChange={(e) => setChequeForm((p) => ({ ...p, numero_cheque: e.target.value.replace(/[^0-9]/g, "") }))} />
-                </FloatingField>
-                <FloatingField label="Importe" value={chequeForm.importe} className="cfg-si-field--money">
-                  <div className="cfg-si-moneyInput"><span>$</span><input className="cfg-si-control" inputMode="decimal" placeholder=" " value={chequeForm.importe} onChange={(e) => setChequeForm((p) => ({ ...p, importe: e.target.value }))} /></div>
-                </FloatingField>
-                <FloatingField label="Observación" value={chequeForm.observaciones} className="cfg-si-span2">
-                  <input className="cfg-si-control" type="text" maxLength={500} placeholder=" " value={chequeForm.observaciones} onChange={(e) => setChequeForm((p) => ({ ...p, observaciones: e.target.value }))} />
-                </FloatingField>
-                <div className="cfg-si-chequeAction"><button className="cfg-si-primaryBtn" type="button" onClick={saveCheque} disabled={saving}><FontAwesomeIcon icon={faPlus} /> Cargar en cartera</button></div>
+              <div className="cfg-si-panelHead">
+                <div><h2>Cheques y eCheq en cartera</h2><p>Documentos que el negocio ya poseía al comenzar a usar Balto.</p></div>
+                <button type="button" className="cfg-si-primaryBtn" onClick={() => setNuevoChequeOpen(true)} disabled={saving}>
+                  <FontAwesomeIcon icon={faPlus} /> Cargar nuevo cheque
+                </button>
               </div>
-
               <div className="cfg-si-tableWrap">
                 <table className="cfg-si-table"><thead><tr><th className="is-center">Tipo</th><th className="is-center">Número</th><th>Emisor</th><th>Apertura</th><th className="is-center">Vencimiento</th><th className="is-right">Importe</th><th className="is-center">Estado</th><th className="is-center">Acciones</th></tr></thead>
                   <tbody>{data.cheques.length ? data.cheques.map((r) => (
-                    <tr key={r.id_cheque}><td className="is-center">{r.tipo}</td><td className="is-center">{r.numero_cheque}</td><td>{r.emisor}</td><td>{fmtDate(r.fecha_saldo)}</td><td className="is-center">{fmtDate(r.fecha_pago)}</td><td className="is-right is-strong">{moneyARS(r.importe)}</td><td className="is-center"><span className={`cfg-si-state ${r.estado === "EN_CARTERA" ? "is-ok" : ""}`}>{String(r.estado || "").replaceAll("_", " ")}</span></td><td className="is-center"><button type="button" className="cfg-si-dangerIcon" title="Eliminar carga inicial" onClick={() => setChequeAEliminar(r)} disabled={saving}><FontAwesomeIcon icon={faTrash} /></button></td></tr>
+                    <tr key={r.id_cheque}><td className="is-center">{r.tipo}</td><td className="is-center">{r.numero_cheque}</td><td>{r.emisor}</td><td>{fmtDate(r.fecha_saldo)}</td><td className="is-center">{fmtDate(r.fecha_pago)}</td><td className="is-right is-strong">{moneyARS(r.importe)}</td><td className="is-center"><span className={`cfg-si-state ${r.estado === "EN_CARTERA" ? "is-ok" : ""}`}>{String(r.estado || "").replaceAll("_", " ")}</span></td><td className="is-center"><div className="cfg-si-chequeActions"><button type="button" className="cfg-si-fileView" title={Number(r.tiene_archivo || 0) === 1 && Number(r.id_archivo) > 0 ? "Ver archivo del cheque" : "Sin archivo adjunto"} aria-label="Ver archivo del cheque" disabled={Number(r.tiene_archivo || 0) !== 1 || !(Number(r.id_archivo) > 0)} onClick={() => openChequeAttachment(r)}><FontAwesomeIcon icon={faEye} /></button><button type="button" className="cfg-si-dangerIcon" title="Eliminar carga inicial" onClick={() => setChequeAEliminar(r)} disabled={saving}><FontAwesomeIcon icon={faTrash} /></button></div></td></tr>
                   )) : <tr><td colSpan="8" className="cfg-si-tableEmpty">No hay cheques iniciales cargados.</td></tr>}</tbody></table>
               </div>
             </div>
@@ -486,73 +704,140 @@ export default function ConfiguracionSaldosIniciales() {
           )}
         </div>
 
+        <ModalNuevoCheque
+          open={nuevoChequeOpen}
+          onClose={() => { if (!saving) setNuevoChequeOpen(false); }}
+          onSave={saveCheque}
+          saldoInicial
+          saving={saving}
+          onToast={notify}
+          dark={document.body.classList.contains("dark") || ["dark", "oscuro"].includes(document.documentElement.getAttribute("data-theme"))}
+        />
+
+        <ModalVerComprobante
+          open={chequePreview.open}
+          url={chequePreview.url}
+          mime={chequePreview.mime}
+          fileName={chequePreview.fileName}
+          title="Archivo de cheque / eCheq"
+          loading={chequePreview.loading}
+          error={chequePreview.error}
+          onClose={() => setChequePreview((prev) => ({ ...prev, open: false }))}
+        />
+
         {ccEditor && createPortal(
-          <div className="gm-modal-overlay" role="presentation">
-            <div className="gm-modal-container gm-modal-v2 cfg-si-ccModal" role="dialog" aria-modal="true" aria-labelledby="cfg-si-cc-modal-title">
-              <div className="gm-modal-header">
+          <div className="gm-modal-overlay" role="presentation" onMouseDown={(e) => e.stopPropagation()}>
+            <div className="gm-modal-container gm-modal-v2 cfg-si-serviceModal cfg-si-ccModal" role="dialog" aria-modal="true" aria-labelledby="cfg-si-cc-modal-title">
+              <header className="gm-modal-header">
                 <div className="gm-modal-head-icon" aria-hidden="true"><FontAwesomeIcon icon={faUsers} /></div>
                 <div className="gm-modal-head-left">
                   <h2 className="gm-modal-title" id="cfg-si-cc-modal-title">{ccEditor.nombre}</h2>
                   <p className="gm-modal-subtitle">{ccEditor.tipo_entidad === "CLIENTE" ? "Saldo inicial de cliente" : "Saldo inicial de proveedor"}</p>
                 </div>
                 <button type="button" className="gm-modal-close" onClick={() => setCcEditor(null)} disabled={saving} aria-label="Cerrar">✕</button>
+              </header>
+
+              <div className="gm-modal-content cfg-si-serviceModal__content">
+                {ccEditor.exists && (
+                  <div className="gm-info-box cfg-si-serviceModal__notice">
+                    <FontAwesomeIcon icon={faCircleInfo} />
+                    <span>Al modificar este saldo inicial también cambiarán los saldos posteriores de esta cuenta corriente.</span>
+                  </div>
+                )}
+
+                <section className="gm-section cfg-si-serviceModal__panel">
+                  <div className="gm-section-head cfg-si-serviceModal__sectionHead">
+                    <span className="cfg-si-serviceModal__sectionIcon"><FontAwesomeIcon icon={faWallet} /></span>
+                    <span className="cfg-si-serviceModal__sectionCopy">
+                      <strong>Datos del saldo inicial</strong>
+                      <small>Definí la fecha, situación e importe con el que comienza la cuenta.</small>
+                    </span>
+                  </div>
+                  <div className="gm-section-body cfg-si-serviceModal__sectionBody">
+                    <div className="cfg-si-ccModalGrid">
+                      <label className="gm-field">
+                        <input className="gm-input" type="date" max={todayISO()} value={ccEditor.fecha_saldo} placeholder=" " onClick={openNativeDatePicker} onChange={(e) => setCcEditor((p) => ({ ...p, fecha_saldo: e.target.value }))} />
+                        <span className="gm-label gm-label--up">Fecha de apertura</span>
+                      </label>
+
+                      <label className="gm-field">
+                        <select className="gm-input gm-select" value={ccEditor.sentido} onChange={(e) => setCcEditor((p) => ({ ...p, sentido: e.target.value }))}>
+                          {ccEditor.tipo_entidad === "CLIENTE" ? <><option value="DEUDA">El cliente nos debe</option><option value="FAVOR">El cliente tiene saldo a favor</option></> : <><option value="DEUDA">Le debemos al proveedor</option><option value="FAVOR">Tenemos saldo a favor</option></>}
+                        </select>
+                        <span className="gm-label gm-label--up">Situación</span>
+                      </label>
+
+                      <label className="gm-field cfg-si-ccModalMoneyField cfg-si-ccModalWide">
+                        <input className="gm-input cfg-si-ccModalMoneyInput" autoFocus inputMode="decimal" placeholder=" " value={ccEditor.importe} onChange={(e) => setCcEditor((p) => ({ ...p, importe: e.target.value }))} />
+                        <span className="gm-label">Importe</span>
+                      </label>
+                    </div>
+                  </div>
+                </section>
+
+                <section className="gm-section cfg-si-serviceModal__panel cfg-si-serviceModal__panel--notes">
+                  <div className="gm-section-head cfg-si-serviceModal__sectionHead">
+                    <span className="cfg-si-serviceModal__sectionIcon"><FontAwesomeIcon icon={faCircleInfo} /></span>
+                    <span className="cfg-si-serviceModal__sectionCopy">
+                      <strong>Observación</strong>
+                      <small>Agregá una referencia opcional para identificar el origen del saldo.</small>
+                    </span>
+                  </div>
+                  <div className="gm-section-body cfg-si-serviceModal__sectionBody">
+                    <label className="gm-field cfg-si-ccModalObservation">
+                      <textarea className="gm-input cfg-si-ccModalTextarea" rows="3" maxLength={500} placeholder=" " value={ccEditor.observaciones} onChange={(e) => setCcEditor((p) => ({ ...p, observaciones: e.target.value }))} />
+                      <span className={`gm-label ${ccEditor.observaciones !== "" ? "gm-label--up" : ""}`.trim()}>Observación</span>
+                    </label>
+                  </div>
+                </section>
               </div>
 
-              <div className="gm-modal-content cfg-si-ccModalContent">
-                {ccEditor.exists && <div className="gm-info-box cfg-si-ccModalNotice">Al modificar este saldo inicial también cambiarán los saldos posteriores de esta cuenta corriente.</div>}
-
-                <div className="cfg-si-ccModalGrid">
-                  <div className="gm-field">
-                    <input className="gm-input" type="date" max={todayISO()} value={ccEditor.fecha_saldo} placeholder=" " onClick={openNativeDatePicker} onChange={(e) => setCcEditor((p) => ({ ...p, fecha_saldo: e.target.value }))} />
-                    <span className="gm-label gm-label--up">Fecha de apertura</span>
-                  </div>
-
-                  <div className="gm-field">
-                    <select className="gm-input gm-select" value={ccEditor.sentido} onChange={(e) => setCcEditor((p) => ({ ...p, sentido: e.target.value }))}>
-                      {ccEditor.tipo_entidad === "CLIENTE" ? <><option value="DEUDA">El cliente nos debe</option><option value="FAVOR">El cliente tiene saldo a favor</option></> : <><option value="DEUDA">Le debemos al proveedor</option><option value="FAVOR">Tenemos saldo a favor</option></>}
-                    </select>
-                    <span className="gm-label gm-label--up">Situación</span>
-                  </div>
-
-                  <div className="gm-field cfg-si-ccModalMoneyField">
-                    <input className="gm-input cfg-si-ccModalMoneyInput" autoFocus inputMode="decimal" placeholder=" " value={ccEditor.importe} onChange={(e) => setCcEditor((p) => ({ ...p, importe: e.target.value }))} />
-                    <span className="gm-label">Importe</span>
-                  </div>
-
-                  <div className="gm-field cfg-si-ccModalObservation">
-                    <textarea className="gm-input cfg-si-ccModalTextarea" rows="3" maxLength={500} placeholder=" " value={ccEditor.observaciones} onChange={(e) => setCcEditor((p) => ({ ...p, observaciones: e.target.value }))} />
-                    <span className={`gm-label ${ccEditor.observaciones !== "" ? "gm-label--up" : ""}`.trim()}>Observación</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="gm-modal-footer cfg-si-ccModalFooter">
-                {ccEditor.exists && <button className="gm-action-btn gm-action-btn--danger cfg-si-ccModalDelete" type="button" onClick={deleteCc} disabled={saving}><span className="gm-action-btn__icon"><FontAwesomeIcon icon={faTrash} /></span>Eliminar saldo</button>}
+              <footer className="gm-modal-footer gm-view-footer-actions cfg-si-ccModalFooter">
+                {ccEditor.exists && <button className="gm-action-btn gm-action-btn--danger cfg-si-ccModalDelete" type="button" onClick={() => setCcAEliminar({ ...ccEditor })} disabled={saving}><span className="gm-action-btn__icon"><FontAwesomeIcon icon={faTrash} /></span>Eliminar saldo</button>}
                 <div className="cfg-si-ccModalFooterRight">
                   <button className="gm-action-btn gm-action-btn--cancel" type="button" onClick={() => setCcEditor(null)} disabled={saving}>Cancelar</button>
-                  <button className="gm-action-btn gm-action-btn--save" type="button" onClick={saveCc} disabled={saving}><span className="gm-action-btn__icon"><FontAwesomeIcon icon={faFloppyDisk} /></span>Guardar</button>
+                  <button className="gm-action-btn gm-action-btn--save" type="button" onClick={saveCc} disabled={saving}><span className="gm-action-btn__icon"><FontAwesomeIcon icon={faFloppyDisk} /></span>{saving ? "Guardando..." : "Guardar"}</button>
                 </div>
-              </div>
+              </footer>
             </div>
           </div>,
           document.body
         )}
 
         <ModalEliminar
-          open={!!chequeAEliminar}
+          open={Boolean(ccAEliminar)}
+          row={ccAEliminar}
+          loading={saving}
+          onClose={() => setCcAEliminar(null)}
+          onConfirm={deleteCc}
+          onToast={notify}
+          title="Eliminar saldo inicial"
+          message="¿Seguro que querés eliminar este saldo inicial?"
+          warning="Esta acción no se puede deshacer."
+          loadingMessage="Eliminando saldo inicial…"
+          successMessage="Saldo inicial eliminado correctamente."
+          errorMessage="No se pudo eliminar el saldo inicial."
+          details={ccAEliminar ? [
+            { label: ccAEliminar.tipo_entidad === "CLIENTE" ? "Cliente" : "Proveedor", value: ccAEliminar.nombre || "—" },
+            { label: "Fecha de apertura", value: fmtDate(ccAEliminar.fecha_saldo) },
+            { label: "Situación", value: ccAEliminar.sentido === "FAVOR" ? "Saldo a favor" : "Deuda" },
+            { label: "Importe", value: moneyARS(Math.abs(parseMoney(ccAEliminar.importe) || 0)) },
+          ] : []}
+        />
+
+        <ModalEliminar
+          open={Boolean(chequeAEliminar)}
           row={chequeAEliminar}
           loading={saving}
           onClose={() => setChequeAEliminar(null)}
           onConfirm={deleteCheque}
           onToast={notify}
           title="Eliminar cheque/eCheq"
-          message={`¿Seguro que querés eliminar el ${chequeAEliminar?.tipo === "ECHEQ" ? "eCheq" : "cheque"} N.º ${chequeAEliminar?.numero_cheque || ""} de los saldos iniciales?`}
-          warning="Esta acción quitará el documento de la cartera inicial y no se puede deshacer."
+          message="¿Seguro que querés eliminar este documento de los saldos iniciales?"
+          warning="Esta acción no se puede deshacer."
           loadingMessage="Eliminando cheque/eCheq…"
           successMessage="Cheque/eCheq inicial eliminado correctamente."
           errorMessage="No se pudo eliminar el cheque/eCheq inicial."
-          confirmLabel="Eliminar"
-          cancelLabel="Cancelar"
           details={chequeAEliminar ? [
             { label: "Tipo", value: chequeAEliminar.tipo === "ECHEQ" ? "eCheq" : "Cheque" },
             { label: "Número", value: chequeAEliminar.numero_cheque || "—" },

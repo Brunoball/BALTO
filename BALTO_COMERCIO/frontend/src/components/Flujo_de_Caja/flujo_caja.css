@@ -204,7 +204,7 @@
 .fc-payCard__amount {
   display: block;
   color: var(--fc-midnight);
-  font-size: clamp(16px, 1.45vw, 21px);
+  font-size: 21px;
   font-weight: 760;
   line-height: 1.08;
   letter-spacing: -.025em;
@@ -834,5 +834,97 @@ body.dark .fc-saldo--neg { color: #f87171 !important; }
     border-color: rgba(148,163,184,.16) !important;
     color: #8ab4ff !important;
     box-shadow: none !important;
+  }
+}
+
+/* Carrusel de medios de pago en todos los tamaños de pantalla. */
+.mov-page--flujoCaja .fc-paymentSummary { min-width: 0; }
+.mov-page--flujoCaja .fc-paymentCards {
+  display: grid;
+  grid-template-columns: none;
+  grid-template-rows: auto;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(min(320px, 100%), 1fr);
+  gap: 10px;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  padding-bottom: 4px;
+}
+.mov-page--flujoCaja .fc-paymentCards::-webkit-scrollbar { display: none; }
+.mov-page--flujoCaja .fc-payCard { min-width: 0; scroll-snap-align: start; }
+.mov-page--flujoCaja .fc-paymentSlider { position: relative; min-width: 0; }
+.mov-page--flujoCaja .fc-paymentSlider--multiple { padding-inline: 30px; }
+.mov-page--flujoCaja .fc-sliderArrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--fc-muted);
+  font-size: 16px;
+  cursor: pointer;
+  transition: color .15s ease, background-color .15s ease, opacity .15s ease;
+}
+.mov-page--flujoCaja .fc-sliderArrow--previous { left: 0; }
+.mov-page--flujoCaja .fc-sliderArrow--next { right: 0; }
+.mov-page--flujoCaja .fc-sliderArrow:hover:not(:disabled) {
+  color: var(--fc-action);
+  background: rgba(0,85,187,.06);
+}
+.mov-page--flujoCaja .fc-sliderArrow:disabled { opacity: .22; cursor: default; }
+.mov-page--flujoCaja .fc-sliderArrow:focus-visible,
+.mov-page--flujoCaja .fc-paymentCards:focus-visible { outline: 2px solid var(--fc-action); outline-offset: -2px; }
+html[data-theme="oscuro"] .mov-page--flujoCaja .fc-sliderArrow,
+body.dark .mov-page--flujoCaja .fc-sliderArrow { color: #8ab4ff; }
+@media (max-width: 560px) {
+  .mov-page--flujoCaja .fc-paymentCards { grid-auto-columns: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mov-page--flujoCaja .fc-paymentCards { scroll-behavior: auto; }
+}
+
+/* Carrusel: 4 tarjetas visibles en monitor y avance de a una tarjeta.
+   La altura original de las tarjetas se mantiene sin cambios. */
+@media (min-width: 1200px) {
+  .mov-page--flujoCaja .fc-paymentCards {
+    grid-auto-columns: calc((100% - 30px) / 4);
+  }
+}
+
+/* Escalado intermedio para conservar tarjetas legibles. */
+@media (min-width: 901px) and (max-width: 1199px) {
+  .mov-page--flujoCaja .fc-paymentCards {
+    grid-auto-columns: calc((100% - 20px) / 3);
+  }
+}
+
+@media (min-width: 561px) and (max-width: 900px) {
+  .mov-page--flujoCaja .fc-paymentCards {
+    grid-auto-columns: calc((100% - 10px) / 2);
+  }
+}
+
+@media (min-width: 561px) {
+  .mov-page--flujoCaja .fc-payCard {
+    min-width: 0;
+  }
+
+  .mov-page--flujoCaja .fc-payCard__rows {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .mov-page--flujoCaja .fc-payCard__titleWrap {
+    min-width: 0;
   }
 }

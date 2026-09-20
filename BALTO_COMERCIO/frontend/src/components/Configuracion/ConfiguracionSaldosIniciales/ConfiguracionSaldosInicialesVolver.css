@@ -1,0 +1,13 @@
+.cfg-si-hero {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+@media (max-width: 720px) {
+  .cfg-si-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .cfg-si-hero > .mov-btn {
+    width: 100%;
+  }
+}

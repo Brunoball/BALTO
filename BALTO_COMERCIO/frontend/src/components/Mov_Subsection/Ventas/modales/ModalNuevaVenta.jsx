@@ -73,6 +73,9 @@ function moneyARS(v) {
 function safeStr(v) {
   return String(v ?? "").trim();
 }
+function upperInput(v) {
+  return String(v ?? "").toLocaleUpperCase("es-AR");
+}
 function normalizeText(v) {
   return String(v ?? "")
     .toLowerCase()
@@ -1958,7 +1961,7 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
         id_stock_unidad: detalle?.id_stock_unidad ?? detalle?.id_unidad_stock ?? null,
         unidad_abreviatura: detalle?.unidad_abreviatura ?? detalle?.unidad ?? detalle?.unidad_nombre ?? "",
         unidad_permite_decimales: Number(detalle?.unidad_permite_decimales ?? detalle?.permite_decimales ?? 1),
-        detalleText: nombreDetalle,
+        detalleText: upperInput(nombreDetalle),
         precio,
         id_tipo_precio_stock: String(precioInicial?.value ?? NULL_OPTION),
         precio_tipo_label: String(precioInicial?.tipo_precio ?? ""),
@@ -3742,7 +3745,7 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
                             value={r.detalleText}
                             onChange={(val) =>
                               updateRow(r.id, {
-                                detalleText: val,
+                                detalleText: upperInput(val),
                                 id_detalle: NULL_OPTION,
                                 id_stock_producto: NULL_OPTION,
                                 id_stock_variante: NULL_OPTION,

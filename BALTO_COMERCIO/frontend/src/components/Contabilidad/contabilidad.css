@@ -46,34 +46,18 @@
 
 
 /* =========================================================
-   CONTABILIDAD — Tabla IVA compacta
-   - No hereda la altura grande de las tablas de Movimientos.
-   - Deja siempre visible la fila de totales y evita que se corte abajo.
+   CONTABILIDAD — Tabla IVA alineada con el estándar global
+   - Filas y encabezado con la misma altura que el resto de Movimientos.
+   - La tarjeta ocupa el alto disponible y deja siempre visible la fila de totales.
 ========================================================= */
 
 .contabilidad-cardTable {
   min-height: 0;
+  height: calc(100vh - 118px);
   max-height: calc(100vh - 118px);
 }
 
-.contabilidad-cardTable .mov-card__head {
-  padding: 14px 18px 12px;
-}
-
-.contabilidad-cardTable .mov-card__title {
-  font-size: 14px;
-}
-
-.contabilidad-cardTable .mov-card__hint {
-  margin-top: 3px;
-  font-size: 11.5px;
-}
-
-.contabilidad-cardTable .mov-headFilters {
-  gap: 10px;
-}
-
-/* Buscador IVA: evita que se achique dentro del header compacto.
+/* Buscador IVA: evita que se achique dentro del encabezado.
    El ancho base lo toma de .cc-filter--search global, y acá solo se ajusta
    para que conviva bien con el calendario y el botón Exportar, sin pasar de 340px. */
 .contabilidad-cardTable .mov-headFilters {
@@ -104,15 +88,10 @@
   }
 }
 
-.contabilidad-cardTable .cc-floatingField,
-.contabilidad-cardTable .cc-calTrigger,
-.contabilidad-cardTable .cc-input {
-  min-height: 40px;
-}
-
 .contabilidad-tableWrap {
-  min-height: calc(100vh - 260px);
-  max-height: calc(100vh - 360px);
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-gutter: auto;
@@ -134,19 +113,18 @@
 }
 
 .contabilidad-gridHead .mov-gridCell--head,
-.contabilidad-cardTable .mov-gridTable--row .mov-gridCell,
-.contabilidad-totalRow .mov-gridCell {
-  min-height: 38px;
+.contabilidad-cardTable .mov-gridTable--row .mov-gridCell {
+  min-height: 44px;
 }
 
 .contabilidad-gridHead .mov-gridCell--head {
-  padding: 8px 12px;
-  font-size: 10.5px;
+  padding: 11px 12px;
+  font-size: 11px;
 }
 
 .contabilidad-cardTable .mov-gridTable--row .mov-gridCell {
-  padding: 8px 12px;
-  font-size: 12.5px;
+  padding: 10px 12px;
+  font-size: 13px;
 }
 
 .contabilidad-totalRow {
@@ -154,8 +132,9 @@
 }
 
 .contabilidad-totalRow .mov-gridCell {
-  padding: 8px 12px;
-  font-size: 12.5px;
+  min-height: 48px;
+  padding: 10px 12px;
+  font-size: 13px;
 }
 
 .contabilidad-emptyState {
@@ -163,13 +142,12 @@
   padding: 22px 14px;
 }
 
-@media (max-width: 1300px) {
+@media (max-width: 900px) {
   .contabilidad-cardTable {
+    height: auto;
     max-height: none;
   }
-}
 
-@media (max-width: 900px) {
   .contabilidad-cardTable .mov-card__head,
   .contabilidad-cardTable .mov-card__headLeft,
   .contabilidad-cardTable .mov-headFilters {
@@ -256,8 +234,8 @@ html[data-theme="oscuro"] .contabilidad-emptyState .cc-emptyText {
 }
 
 .contabilidad-cardTable .contabilidad-skeletonRow .mov-gridCell {
-  min-height: 38px;
-  padding: 8px 12px;
+  min-height: 44px;
+  padding: 10px 12px;
 }
 
 .contabilidad-cardTable .contabilidad-skeletonRow .mov-skeletonBar {
@@ -288,10 +266,14 @@ html[data-theme="oscuro"] .contabilidad-emptyState .cc-emptyText {
   width: 100%;
 }
 
-.contabilidad-cardTable .contabilidad-skeletonRow .mov-gridCell,
+.contabilidad-cardTable .contabilidad-skeletonRow .mov-gridCell {
+  min-height: 44px;
+  padding: 10px 12px;
+}
+
 .contabilidad-cardTable .contabilidad-totalRow--skeleton .mov-gridCell {
-  min-height: 38px;
-  padding: 8px 12px;
+  min-height: 48px;
+  padding: 10px 12px;
 }
 
 .contabilidad-cardTable .contabilidad-skeletonRow .mov-skeletonBar,

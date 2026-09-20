@@ -35,7 +35,8 @@ function buildHeaders(options = {}) {
   const sessionKey = getConfiguracionSessionKey();
 
   if (sessionKey) headers.set("X-Session", sessionKey);
-  if (options.body && !headers.has("Content-Type")) {
+  const isFormData = typeof FormData !== "undefined" && options.body instanceof FormData;
+  if (options.body && !isFormData && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
 
@@ -155,3 +156,16 @@ export function actualizarUnidadStockConfiguracion(body) { return configuracionP
 export function darBajaUnidadStockConfiguracion(id) { return configuracionPost("config_listas_categorias_stock_unidad_dar_baja", { id_stock_unidad: id }); }
 export function reactivarUnidadStockConfiguracion(id) { return configuracionPost("config_listas_categorias_stock_unidad_reactivar", { id_stock_unidad: id }); }
 export function eliminarUnidadStockConfiguracion(id) { return configuracionPost("config_listas_categorias_stock_unidad_eliminar", { id_stock_unidad: id }); }
+
+// Adjuntos de cheques/eCheq utilizados por Configuración > Saldos iniciales.
+export async function subirArchivoChequeConfiguracion(idCheque, tipoCheque, archivo) {
+  const fd = new FormData();
+  fd.append("id_cheque", String(idCheque));
+  fd.append("tipo", String(tipoCheque || "CHEQUE").toUpperCase() === "ECHEQ" ? "ECHEQ_IMAGEN" : "CHEQUE_IMAGEN");
+  fd.append("archivo", archivo, archivo?.name || "cheque_adjunto");
+  return apiFetchActionJson("mov_global_cheques_actualizar", { method: "POST", body: fd });
+}
+
+export const obtenerArchivoConfiguracion = (idArchivo) =>
+  configuracionGet("mov_global_comprobantes_descargar", { id_archivo: idArchivo });
+

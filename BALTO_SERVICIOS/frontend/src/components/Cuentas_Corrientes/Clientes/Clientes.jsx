@@ -817,6 +817,7 @@ export default function ClientesCC() {
         cancelLabel="Cancelar"
       />
 
+      <section className="mov-card mov-card--table cc-accountCard">
       <div className={`mov-card__head cc-accountHeader ${isDetailMode ? "is-detail" : ""}`}>
         <div className="mov-card__headLeft">
           <div className="title-mov">
@@ -1159,6 +1160,7 @@ export default function ClientesCC() {
       )}
 
       {isDetailMode && renderDetailTabs("cc-detailTabs--bottom")}
+      </section>
     </div>
   );
 }
