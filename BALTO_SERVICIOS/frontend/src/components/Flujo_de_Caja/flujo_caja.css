@@ -894,17 +894,37 @@ body.dark .mov-page--flujoCaja .fc-sliderArrow { color: #8ab4ff; }
   .mov-page--flujoCaja .fc-paymentCards { scroll-behavior: auto; }
 }
 
-/* Tarjetas más largas, conservando la distribución y altura compactas. */
-@media (min-width: 561px) {
+/* Carrusel: 4 tarjetas visibles en monitor y avance de a una tarjeta.
+   La altura original de las tarjetas se mantiene sin cambios. */
+@media (min-width: 1200px) {
   .mov-page--flujoCaja .fc-paymentCards {
-    grid-auto-columns: minmax(max-content, 1fr);
+    grid-auto-columns: calc((100% - 30px) / 4);
   }
-  .mov-page--flujoCaja .fc-payCard { min-width: 360px; }
+}
+
+/* Escalado intermedio para conservar tarjetas legibles. */
+@media (min-width: 901px) and (max-width: 1199px) {
+  .mov-page--flujoCaja .fc-paymentCards {
+    grid-auto-columns: calc((100% - 20px) / 3);
+  }
+}
+
+@media (min-width: 561px) and (max-width: 900px) {
+  .mov-page--flujoCaja .fc-paymentCards {
+    grid-auto-columns: calc((100% - 10px) / 2);
+  }
+}
+
+@media (min-width: 561px) {
+  .mov-page--flujoCaja .fc-payCard {
+    min-width: 0;
+  }
+
   .mov-page--flujoCaja .fc-payCard__rows {
-    grid-template-columns: repeat(2, max-content);
-    justify-content: space-between;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  .mov-page--flujoCaja .fc-payCard__titleWrap { min-width: max-content; }
-  .mov-page--flujoCaja .fc-payCard__row span,
-  .mov-page--flujoCaja .fc-payCard__row b { flex-shrink: 0; }
+
+  .mov-page--flujoCaja .fc-payCard__titleWrap {
+    min-width: 0;
+  }
 }
