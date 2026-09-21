@@ -210,13 +210,9 @@ export async function ensureAdministratorSession(page) {
 }
 
 export async function createEmployeeTestUser(page, username, password) {
-  // authenticatedApi lee la sesión desde localStorage. Un Page recién creado puede
-  // seguir en about:blank, donde Chromium bloquea localStorage con SecurityError.
-  // Entramos primero al origen de Balto para usar la sesión del storageState.
-  if (!/^https?:/i.test(String(page.url() || ''))) {
-    await page.goto('/', { waitUntil: 'domcontentloaded' });
-  }
-
+  // authenticatedApi usa APIRequestContext + la session_key del storageState,
+  // así que crear el usuario no depende de que React esté quieto ni de navegar
+  // previamente la Page al origen local.
   const list = await authenticatedApi(page, 'configuracion_usuarios_listar');
   const body = expectApiSuccess(list, 'No se pudieron listar roles para crear el empleado E2E');
   const employeeRole = (Array.isArray(body?.roles) ? body.roles : []).find((role) => {

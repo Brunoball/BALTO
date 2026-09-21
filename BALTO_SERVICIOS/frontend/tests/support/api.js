@@ -14,24 +14,104 @@ function apiUrl(action, query = {}) {
   return url.toString();
 }
 
-async function ensureAppOrigin(page) {
-  let currentOrigin = '';
-  let expectedOrigin = '';
+function sessionKeyFromStorageState(state) {
+  let preferredOrigin = '';
+  try { preferredOrigin = new URL(ENV.baseURL).origin; } catch {}
 
-  try { currentOrigin = new URL(String(page.url() || '')).origin; } catch {}
-  try { expectedOrigin = new URL(ENV.baseURL).origin; } catch {}
+  const origins = [...(state?.origins || [])].sort((a, b) => {
+    if (a.origin === preferredOrigin) return -1;
+    if (b.origin === preferredOrigin) return 1;
+    return 0;
+  });
 
-  if (currentOrigin && expectedOrigin && currentOrigin === expectedOrigin) return;
+  for (const origin of origins) {
+    const session = (origin.localStorage || []).find((item) => item.name === 'session_key');
+    const key = String(session?.value || '').trim();
+    if (key) return key;
+  }
 
-  // Un Page recién creado puede seguir en about:blank aunque el storageState ya
-  // contenga la sesión. Chromium bloquea localStorage en ese documento opaco.
-  // Entramos al origin local de BALTO antes de leer session_key.
-  await page.goto('/panel/dashboard', { waitUntil: 'domcontentloaded' });
+  return '';
+}
+
+async function authenticatedSessionKey(page) {
+  const state = await page.context().storageState();
+  const sessionKey = sessionKeyFromStorageState(state);
+
+  if (!sessionKey) {
+    throw new Error(
+      'No hay session_key disponible en el storageState del contexto Playwright. ' +
+      'La fixture de autenticación debe instalar la sesión antes de llamar authenticatedApi().',
+    );
+  }
+
+  return sessionKey;
+}
+
+const SAFE_READ_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
+const TRANSIENT_READ_RETRIES = 2;
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isTransientTransportError(error) {
+  const message = String(error?.message || error || '').toLowerCase();
+  return [
+    'socket hang up',
+    'econnreset',
+    'enetreset',
+    'etimedout',
+    'econnaborted',
+    'econnrefused',
+    'epipe',
+    'fetch failed',
+    'network socket disconnected',
+    'client network socket disconnected',
+  ].some((needle) => message.includes(needle));
+}
+
+async function fetchWithSafeReadRetry(request, url, requestOptions, method) {
+  const safeRead = SAFE_READ_METHODS.has(method);
+  const maxAttempts = safeRead ? 1 + TRANSIENT_READ_RETRIES : 1;
+  let lastError = null;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      const headers = { ...(requestOptions.headers || {}) };
+
+      // Si una conexión keep-alive remota quedó inválida durante una suite larga,
+      // el reintento abre una conexión nueva. El primer intento conserva el camino
+      // normal para no penalizar todas las lecturas con un handshake adicional.
+      if (attempt > 1) headers.Connection = 'close';
+
+      return await request.fetch(url, {
+        ...requestOptions,
+        headers,
+      });
+    } catch (error) {
+      lastError = error;
+
+      // Nunca se reintentan mutaciones: un POST/PUT/PATCH/DELETE pudo haber llegado
+      // al servidor aunque el socket se cortara antes de recibir la respuesta.
+      if (!safeRead || !isTransientTransportError(error) || attempt === maxAttempts) {
+        throw error;
+      }
+
+      const actionName = (() => {
+        try { return new URL(url).searchParams.get('action') || url; } catch { return url; }
+      })();
+      console.warn(
+        `[Playwright API retry] ${method} ${actionName}: corte transitorio de red; ` +
+        `reintento ${attempt}/${maxAttempts - 1}. ${String(error?.message || error)}`,
+      );
+      await sleep(350 * attempt);
+    }
+  }
+
+  throw lastError;
 }
 
 export async function authenticatedApi(page, action, options = {}) {
-  await ensureAppOrigin(page);
-
   const method = String(options.method || (options.body ? 'POST' : 'GET')).toUpperCase();
   const query = { ...(options.query || {}) };
   for (const forbidden of ['session_key', 'sessionKey', 'x_session', 'X-Session']) {
@@ -50,31 +130,42 @@ export async function authenticatedApi(page, action, options = {}) {
     query.e2e_run = RUN_PREFIX;
   }
   const url = apiUrl(action, query);
+  const sessionKey = await authenticatedSessionKey(page);
+  const headers = {
+    Accept: 'application/json',
+    'X-Session': sessionKey,
+  };
 
-  return page.evaluate(async ({ requestUrl, requestMethod, requestBody }) => {
-    const sessionKey = String(localStorage.getItem('session_key') || '').trim();
-    const headers = { Accept: 'application/json' };
-    if (sessionKey) headers['X-Session'] = sessionKey;
-    if (requestBody !== null) headers['Content-Type'] = 'application/json';
+  if (options.body !== undefined && options.body !== null) {
+    headers['Content-Type'] = 'application/json';
+  }
 
-    const response = await fetch(requestUrl, {
-      method: requestMethod,
-      headers,
-      body: requestBody === null ? undefined : JSON.stringify(requestBody),
-    });
-    const text = await response.text();
-    let body = {};
-    try {
-      body = text ? JSON.parse(text) : {};
-    } catch {
-      body = { raw: text };
-    }
-    return { status: response.status, ok: response.ok, body, text };
-  }, {
-    requestUrl: url,
-    requestMethod: method,
-    requestBody: options.body ?? null,
-  });
+  // Las llamadas auxiliares de la suite no deben depender del execution context
+  // de React. Si la SPA navega o redirige al login mientras corre una llamada,
+  // page.evaluate()/fetch puede destruirse a mitad de request. APIRequestContext
+  // vive a nivel BrowserContext y conserva la llamada aunque cambie la página.
+  const response = await fetchWithSafeReadRetry(page.context().request, url, {
+    method,
+    headers,
+    data: options.body ?? undefined,
+    failOnStatusCode: false,
+    timeout: ENV.timeoutMs,
+  }, method);
+
+  const text = await response.text();
+  let body = {};
+  try {
+    body = text ? JSON.parse(text) : {};
+  } catch {
+    body = { raw: text };
+  }
+
+  return {
+    status: response.status(),
+    ok: response.ok(),
+    body,
+    text,
+  };
 }
 
 export function expectApiSuccess(result, message = 'La operación del backend debe finalizar correctamente') {

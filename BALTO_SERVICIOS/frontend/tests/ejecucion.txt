@@ -137,6 +137,10 @@ La suite ahora también valida:
 - Un usuario con login_auditoria no puede hard-deletearse y exige baja lógica.
 - Descargas privadas de comprobantes usan X-Session y no session_key en URL.
 - Si ../api está disponible localmente: action_policy, migraciones, error_response y ausencia de DDL runtime.
+- El tenant operativo se deriva sólo de SESSION_MASTER/AUTH_TENANT_ID/TENANT_MASTER_ROW; nunca GET/POST/REQUEST ni X-IdTenant.
+- Configuración y Movimientos/R2 fallan cerrado si dos fuentes autenticadas de tenant discrepan.
+- R2 y el fallback local guardan comprobantes bajo tenants/t_<tenant autenticado>.
+- CORS ya no permite X-IdTenant/X-Id-Tenant y el deploy conserva X-Frame-Options, CSP de framing/base, Permissions-Policy y HSTS.
 
 Sólo hardening:
 npx playwright test tests/35-backend-hardening-regression.spec.js --project=chromium --workers=1 --reporter=list

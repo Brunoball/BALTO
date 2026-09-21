@@ -71,6 +71,7 @@ async function attachGroupedComprobante(page, { action, tipo, movementIds, payme
       method: 'POST',
       headers: { Accept: 'application/json', 'X-Session': sessionKey },
       body: fd,
+      timeoutMs: 70_000,
     });
     const text = await response.text();
     let body = {};

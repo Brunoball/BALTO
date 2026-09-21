@@ -254,6 +254,28 @@ async function assertCurrentAccountBalance(page, kind, id, expectedBalance, expe
   }
 }
 
+async function initialChequeDialog(page, { openIfNeeded = true } = {}) {
+  const dialog = page.getByRole('dialog', { name: /Cargar (?:Cheque|eCheq)/i }).last();
+
+  if (openIfNeeded && !(await dialog.isVisible().catch(() => false))) {
+    await page.getByRole('button', { name: /Cargar nuevo cheque/i }).click();
+  }
+
+  await expect(dialog).toBeVisible({ timeout: 15_000 });
+  return dialog;
+}
+
+function initialChequeField(dialog, label) {
+  return dialog.locator('.nc-field').filter({ hasText: label }).locator('input, select').first();
+}
+function expectedChequeIssuer(value) {
+  return String(value ?? "")
+    .toUpperCase()
+    .replace(/[^\p{L}\p{N}\s]/gu, "")
+    .replace(/\s+/g, " " )
+    .trim();
+}
+
 async function fillInitialChequeForm(page, {
   type,
   openingDate,
@@ -265,15 +287,24 @@ async function fillInitialChequeForm(page, {
   observation = '',
   attachment = null,
 }) {
-  await page.getByLabel('Tipo').selectOption(type);
-  await page.getByLabel('Fecha de apertura').fill(openingDate);
-  await page.getByLabel('Fecha emisión').fill(emissionDate);
-  await page.getByLabel('Fecha de pago / vencimiento').fill(dueDate);
-  await page.getByLabel('Emisor').fill(issuer);
-  await page.getByLabel('Número').fill(number);
-  await page.getByLabel('Importe').fill(String(amount).replace('.', ','));
-  if (observation) await page.getByLabel('Observación').fill(observation);
-  if (attachment) await page.getByLabel('Archivo del cheque/eCheq').setInputFiles(attachment);
+  const dialog = await initialChequeDialog(page);
+
+  await dialog.getByLabel('Tipo').selectOption(String(type || '').toLowerCase());
+  await dialog.locator('#mnc-apertura').fill(openingDate);
+  await initialChequeField(dialog, /Fecha emisión/i).fill(emissionDate);
+  await initialChequeField(dialog, /Fecha de pago/i).fill(dueDate);
+  await initialChequeField(dialog, /Emisor \/ Banco/i).fill(issuer);
+  await initialChequeField(dialog, /N° de (?:eCheq|cheque)/i).fill(number);
+  await initialChequeField(dialog, /Importe/i).fill(String(amount).replace('.', ','));
+  if (observation) await dialog.getByLabel('Observación').fill(observation);
+  if (attachment) await dialog.locator('input[type="file"]').setInputFiles(attachment);
+
+  return dialog;
+}
+
+async function submitInitialChequeForm(page) {
+  const dialog = await initialChequeDialog(page, { openIfNeeded: false });
+  await dialog.getByRole('button', { name: /Confirmar (?:cheque|eCheq)/i }).click();
 }
 
 async function createInitialCheque(page, values, options = {}) {
@@ -291,7 +322,7 @@ async function createInitialCheque(page, values, options = {}) {
       new URL(response.url()).searchParams.get('action') === 'config_saldos_iniciales_cheque_crear',
     { timeout: 90_000 },
   );
-  await page.getByRole('button', { name: /Cargar en cartera/i }).click();
+  await submitInitialChequeForm(page);
   const response = await responsePromise;
   const body = await response.json().catch(() => ({}));
   expect(response.status(), JSON.stringify(body)).toBeLessThan(400);
@@ -785,9 +816,9 @@ for (const type of ['CHEQUE', 'ECHEQ']) {
         ) invalidCreateRequests += 1;
       };
       page.on('request', countInvalidCreate);
-      await page.getByRole('button', { name: /Cargar en cartera/i }).click();
+      await submitInitialChequeForm(page);
       await expect(page.locator('body')).toContainText(
-        /fecha de emisión.*no puede ser posterior.*fecha de apertura/i,
+        /emisión.*anterior o igual.*apertura.*vencimiento/i,
         { timeout: 10_000 },
       );
       await page.waitForTimeout(250);
@@ -815,7 +846,8 @@ for (const type of ['CHEQUE', 'ECHEQ']) {
 
       const configRow = page.locator('.cfg-si-table tbody tr').filter({ hasText: number }).first();
       await expect(configRow).toBeVisible({ timeout: 30_000 });
-      await expect(configRow).toContainText(issuer);
+      const displayedIssuer = expectedChequeIssuer(issuer);
+      await expect(configRow).toContainText(displayedIssuer);
       await expect(configRow).toContainText(/EN CARTERA/i);
       await expect(configRow.getByTitle('Ver archivo del cheque')).toBeVisible();
 
@@ -841,7 +873,7 @@ for (const type of ['CHEQUE', 'ECHEQ']) {
         .filter({ hasText: number })
         .first();
       await expect(carteraRow).toBeVisible({ timeout: 30_000 });
-      await expect(carteraRow).toContainText(issuer);
+      await expect(carteraRow).toContainText(displayedIssuer);
 
       // El alta de un cheque inicial incrementa apertura, no "Ingresos".
       const afterFlow = await flowDay(page, today);
@@ -863,17 +895,23 @@ for (const type of ['CHEQUE', 'ECHEQ']) {
         number,
         amount,
       });
-      let responsePromise = page.waitForResponse(
-        (res) =>
-          res.request().method() === 'POST' &&
-          new URL(res.url()).searchParams.get('action') === 'config_saldos_iniciales_cheque_crear',
-        { timeout: 90_000 },
-      );
-      await page.getByRole('button', { name: /Cargar en cartera/i }).click();
-      let response = await responsePromise;
-      let body = await response.json().catch(() => ({}));
-      expect(response.status()).toBe(400);
-      expect(String(body?.mensaje || '')).toMatch(/Ya existe un cheque\/eCheq con ese número/i);
+      // El modal actual verifica el número antes de llamar al alta. Un duplicado
+      // debe quedar frenado en esa prevalidación y no generar un POST de creación.
+      let duplicateCreateRequests = 0;
+      const countDuplicateCreate = (request) => {
+        if (
+          request.method() === 'POST' &&
+          new URL(request.url()).searchParams.get('action') === 'config_saldos_iniciales_cheque_crear'
+        ) duplicateCreateRequests += 1;
+      };
+      page.on('request', countDuplicateCreate);
+      await submitInitialChequeForm(page);
+      await expect(page.locator('body')).toContainText(/Ya existe un cheque\/eCheq con el número/i, {
+        timeout: 15_000,
+      });
+      await page.waitForTimeout(250);
+      page.off('request', countDuplicateCreate);
+      expect(duplicateCreateRequests, 'Un número duplicado debe frenarse antes del POST de alta').toBe(0);
 
       await deleteInitialCheque(page, number);
       created = false;

@@ -73,6 +73,91 @@ test('@security @critical acceso directo a modules está bloqueado y no saltea r
   ).toContain(response.status());
 });
 
+
+
+test('@security @critical tenant/R2: el navegador no puede elegir tenant y almacenamiento falla cerrado', async () => {
+  const apiRoot = findLocalApiRoot();
+  test.skip(!apiRoot, 'El checkout local no incluye ../api; este contrato se valida cuando frontend y api están juntos.');
+
+  const read = (relative) => fs.readFileSync(path.join(apiRoot, relative), 'utf8');
+  const router = sourceWithoutComments(read('routes/api.php'));
+  const routesHtaccess = sourceWithoutComments(read('routes/.htaccess'));
+  const cfgTenant = sourceWithoutComments(read('modules/configuracion/_shared/tenant.php'));
+  const movHelpers = sourceWithoutComments(read('modules/movimientos/global/helpers.php'));
+  const servicesRequest = sourceWithoutComments(read('modules/servicios/global/helpers/ServiciosRequestHelper.php'));
+
+  const forbiddenBrowserTenantSources = [
+    /\$_GET\s*\[\s*['"](?:idTenant|id_tenant|tenant_id)['"]\s*\]/i,
+    /\$_POST\s*\[\s*['"](?:idTenant|id_tenant|tenant_id)['"]\s*\]/i,
+    /\$_REQUEST\s*\[\s*['"](?:idTenant|id_tenant|tenant_id)['"]\s*\]/i,
+    /HTTP_X_IDTENANT/i,
+    /HTTP_X_ID_TENANT/i,
+  ];
+
+  for (const [label, source] of [
+    ['Configuración tenant resolver', cfgTenant],
+    ['Movimientos/R2 tenant resolver', movHelpers],
+    ['Servicios tenant resolver', servicesRequest],
+  ]) {
+    for (const pattern of forbiddenBrowserTenantSources) {
+      expect(source, `${label} no debe resolver identidad tenant desde browser (${pattern})`).not.toMatch(pattern);
+    }
+  }
+
+  // El router fija el tenant únicamente después de validar la sesión MASTER.
+  expect(router).toMatch(/\$GLOBALS\s*\[\s*['"]SESSION_MASTER['"]\s*\]\s*=\s*\$ses\s*;/);
+  expect(router).toMatch(/\$GLOBALS\s*\[\s*['"]AUTH_TENANT_ID['"]\s*\]\s*=\s*\$idTenantSesion\s*;/);
+  expect(router).toMatch(/\$GLOBALS\s*\[\s*['"]TENANT_MASTER_ROW['"]\s*\]\s*=\s*\$tenantMasterRow\s*;/);
+
+  // Los headers CORS legacy de selección de tenant no vuelven a exponerse.
+  const allowHeadersLine = router.match(/Access-Control-Allow-Headers:[^\r\n]*/i)?.[0] || '';
+  expect(allowHeadersLine).toContain('X-Session');
+  expect(allowHeadersLine).not.toMatch(/X-IdTenant|X-Id-Tenant/i);
+
+  // Configuración y Movimientos fallan cerrado si dos fuentes autenticadas discrepan.
+  expect(cfgTenant).toMatch(/if\s*\(\s*\$idTenant\s*!==\s*\$resolved\s*\)\s*return\s+0\s*;/);
+
+  const movTenantStart = movHelpers.indexOf("if (!function_exists('mov_current_tenant_id'))");
+  const movTenantEnd = movHelpers.indexOf("if (!function_exists('mov_upload_root'))", movTenantStart);
+  expect(movTenantStart).toBeGreaterThanOrEqual(0);
+  expect(movTenantEnd).toBeGreaterThan(movTenantStart);
+  const movTenantResolver = movHelpers.slice(movTenantStart, movTenantEnd);
+  expect(movTenantResolver).toMatch(/if\s*\(\s*\$n\s*!==\s*\$resolved\s*\)\s*return\s+0\s*;/);
+  expect(movTenantResolver).not.toMatch(/BALTO_TENANT_ID|MOV_TENANT_ID|APP_TENANT_ID/i);
+
+  // Tanto R2 como el fallback local deben namespacerse por el tenant autenticado.
+  const r2BuildStart = movHelpers.indexOf("if (!function_exists('mov_r2_build_object_key'))");
+  const r2BuildEnd = movHelpers.indexOf("if (!function_exists('mov_r2_put_file'))", r2BuildStart);
+  expect(r2BuildStart).toBeGreaterThanOrEqual(0);
+  expect(r2BuildEnd).toBeGreaterThan(r2BuildStart);
+  const r2Builder = movHelpers.slice(r2BuildStart, r2BuildEnd);
+  expect(r2Builder).toMatch(/mov_current_tenant_id\s*\(\s*\)/);
+  expect(r2Builder).toMatch(/tenants\/t_/);
+  expect(r2Builder).toMatch(/tenant autenticado/i);
+
+  const uploadStart = movHelpers.indexOf("if (!function_exists('mov_upload_from_files'))");
+  const uploadEnd = movHelpers.indexOf("if (!function_exists('mov_comprobante_stream_url'))", uploadStart);
+  expect(uploadStart).toBeGreaterThanOrEqual(0);
+  expect(uploadEnd).toBeGreaterThan(uploadStart);
+  const uploadBlock = movHelpers.slice(uploadStart, uploadEnd);
+  expect(uploadBlock).toMatch(/mov_current_tenant_id\s*\(\s*\)/);
+  expect(uploadBlock).toMatch(/tenants\/t_/);
+
+  // Servicios tampoco puede volver a confiar en idTenant enviado dentro de $data.
+  const servicesTenantStart = servicesRequest.indexOf('public static function tenantId');
+  expect(servicesTenantStart).toBeGreaterThanOrEqual(0);
+  const servicesTenantBlock = servicesRequest.slice(servicesTenantStart);
+  expect(servicesTenantBlock).toMatch(/SESSION_MASTER/);
+  expect(servicesTenantBlock).toMatch(/AUTH_TENANT_ID/);
+  expect(servicesTenantBlock).not.toMatch(/\$data\s*\[\s*['"](?:idTenant|id_tenant|tenant_id)['"]\s*\]/i);
+
+  // Hardening HTTP mínimo del deploy final.
+  expect(routesHtaccess).toMatch(/X-Frame-Options\s+"DENY"/i);
+  expect(routesHtaccess).toMatch(/Content-Security-Policy\s+"[^"]*frame-ancestors\s+'none'/i);
+  expect(routesHtaccess).toMatch(/Permissions-Policy/i);
+  expect(routesHtaccess).toMatch(/Strict-Transport-Security/i);
+});
+
 test('@security @roles @critical EMPLEADO conserva lo permitido y backend bloquea módulos administrativos', async ({ page, browser }) => {
   test.setTimeout(3 * 60_000);
   await requireMutations(test, page);

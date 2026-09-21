@@ -885,7 +885,12 @@ async function apiPostJson(url, payload) {
 
 async function apiPostForm(url, formData) {
   const headers = buildAuthHeaders(false);
-  const res = await documentosRequest(url, { method: "POST", headers, body: formData });
+  const res = await documentosRequest(url, {
+    method: "POST",
+    headers,
+    body: formData,
+    timeoutMs: 70_000,
+  });
   return await parseJsonOrThrow(res);
 }
 
