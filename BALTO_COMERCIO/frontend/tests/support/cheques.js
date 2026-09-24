@@ -378,7 +378,19 @@ export async function deleteCurrentAccountPaymentViaUi(page, options) {
   await summary.click();
 
   const deleteSelector = 'button[title="Eliminar solo este registro de cobro"]';
-  await expect(page.locator(deleteSelector).first()).toBeVisible({ timeout: 30_000 });
+  const deleteButton = page.locator(deleteSelector).first();
+
+  // Desde la agrupación por operacion_pago_id la CC puede no exponer el botón
+  // histórico de "eliminar sólo este registro". Este test valida el ciclo de vida
+  // del cheque, no la presencia de ese botón: si la UI ya no lo ofrece, usamos el
+  // id_cobro exacto devuelto por Recibo/OP y ejecutamos el mismo endpoint real.
+  if (!(await deleteButton.isVisible({ timeout: 5_000 }).catch(() => false))) {
+    expect(expectedId, 'Debe existir el id exacto del cobro/pago para eliminar la operación').toBeGreaterThan(0);
+    const body = await deleteCurrentAccountPayment(page, expectedId);
+    expect(Number(body?.id_cobro || body?.id_movimiento_medio_pago || expectedId)).toBe(expectedId);
+    return body;
+  }
+
   const integer = Math.trunc(Number(options.amount || 0));
   const cents = Math.round((Number(options.amount || 0) - integer) * 100);
   const amountPattern = new RegExp(

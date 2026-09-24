@@ -414,6 +414,13 @@ export function getProductoImageRefreshToken(prod, refreshKey = 0, intento = 0) 
 }
 
 export function getProductoImageUrl(prod, apiUrl, refreshKey = 0, intento = 0) {
+  // Producción: el backend autenticado entrega una URL R2 presignada y corta.
+  // No agregar cache-busters ni download_token a esa URL porque forman parte
+  // de la firma. Si no está disponible (p. ej. desarrollo local), conservamos
+  // exactamente el endpoint histórico como fallback.
+  const signedUrl = String(prod?.imagen_url || prod?.imagen || "").trim();
+  if (signedUrl) return signedUrl;
+
   const archivoId = Number(prod?.imagen_archivo_id || 0);
   if (!archivoId) return "";
 

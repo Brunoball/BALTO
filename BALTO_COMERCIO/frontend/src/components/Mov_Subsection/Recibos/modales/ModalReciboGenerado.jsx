@@ -109,6 +109,7 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = 60000) {
     return await recibosFetch(url, {
       ...options,
       signal: controller.signal,
+      timeoutMs,
     });
   } finally {
     clearTimeout(id);
@@ -324,7 +325,7 @@ function clearPendingSnapshot(expectedKey) {
 ========================= */
 const PDF_SCALE_SAVE = 1.25;
 const PDF_SCALE_EXPORT = 1.8;
-const PDF_SAVE_TIMEOUT = 60000;
+const PDF_SAVE_TIMEOUT = 70000;
 
 export default function ModalReciboGenerado({
   open,

@@ -23,7 +23,6 @@ export async function barcodeApi(page, op, options = {}) {
   const query = { ...(options.query || {}), op };
   if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
     query.e2e_run = RUN_PREFIX;
-    if (ENV.skipTiendaNube) query.skip_tiendanube_sync = '1';
   }
   const url = barcodeEndpointUrl(query);
 

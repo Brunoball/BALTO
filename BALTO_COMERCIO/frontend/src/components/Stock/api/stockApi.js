@@ -67,11 +67,11 @@ export function withSessionKey(url) {
   if (!base) return "";
 
   try {
-    const sessionKey = (localStorage.getItem("session_key") || "").trim();
+    const downloadToken = (localStorage.getItem("balto_download_token") || "").trim();
     const parsed = new URL(base, window.location.origin);
 
-    if (sessionKey && !parsed.searchParams.has("session_key")) {
-      parsed.searchParams.set("session_key", sessionKey);
+    if (downloadToken && !parsed.searchParams.has("download_token")) {
+      parsed.searchParams.set("download_token", downloadToken);
     }
 
     return parsed.toString();

@@ -679,6 +679,7 @@ export default function ProveedoresCC() {
     try {
       const data = await apiPost(`${API}?action=cc_eliminar_cobro`, {
         id_cobro: idCobro,
+        id_comprobante: Number(row?.id_comprobante || 0) || null,
         idUsuario,
       });
 
@@ -770,7 +771,7 @@ export default function ProveedoresCC() {
         row={{
           ...deleteState.row,
           id_movimiento: deleteState.row?.id_cobro ?? null,
-          tipo_movimiento: "Cobro CC Proveedor",
+          tipo_movimiento: "Orden de pago CC Proveedor",
           detalle: deleteState.row
             ? `Comprobante: ${safeText(deleteState.row.comprobante) || "-"} · Fecha: ${
                 formatDisplayDate(deleteState.row.fecha || deleteState.row.fecha_raw) || "-"
@@ -782,13 +783,13 @@ export default function ProveedoresCC() {
         onClose={closeDeleteModal}
         onConfirm={confirmDeleteCobro}
         onToast={showToast}
-        title="Eliminar registro de cobro"
-        message="¿Seguro que querés eliminar solo este cobro de la cuenta corriente?"
-        warning="No se eliminará la deuda ni el movimiento original. Solo el cobro seleccionado."
-        loadingMessage="Eliminando cobro…"
-        successMessage="Cobro eliminado correctamente."
-        errorMessage="No se pudo eliminar el cobro."
-        confirmLabel="Eliminar cobro"
+        title="Eliminar orden de pago"
+        message="¿Seguro que querés eliminar esta orden de pago completa?"
+        warning="Se eliminarán juntos todos los medios de pago que pertenecen a esta orden y su comprobante. La compra original no se eliminará."
+        loadingMessage="Eliminando orden de pago…"
+        successMessage="Orden de pago eliminada correctamente."
+        errorMessage="No se pudo eliminar la orden de pago."
+        confirmLabel="Eliminar orden"
         cancelLabel="Cancelar"
       />
 

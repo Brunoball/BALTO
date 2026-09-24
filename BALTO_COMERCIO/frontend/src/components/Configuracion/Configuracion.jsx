@@ -230,7 +230,7 @@ function ConfiguracionInicio() {
       {
         id: "listas-categorias",
         title: "Listas y categorías",
-        description: "Administrá detalles de movimientos y categorías de stock desde un solo lugar.",
+        description: "Administrá detalles, medios de pago, categorías y unidades de stock desde un solo lugar.",
         route: "/panel/configuracion?seccion=listas-categorias",
         demoBlocked: esPlanDemo,
         demoMessage: DEMO_ADVANCED_MESSAGE,

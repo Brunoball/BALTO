@@ -1465,8 +1465,9 @@ export function PanelMediosPagoInlineVenta({
 /* ================================================================
    MODAL PRINCIPAL
 ================================================================ */
-export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved }) {
+export default function ModalNuevaVenta({ open, lists, tiendaNubeVenta = null, onClose, onToast, onSaved }) {
   const API_BATCH = `${BASE_URL}/api.php?action=ventas_crear_batch`;
+  const API_TN_COMPLETAR = `${BASE_URL}/api.php?action=ventas_tienda_nube_completar`;
   const API_CATALOGO = `${BASE_URL}/api.php?action=catalogo_crear`;
   const API_GET_CLIENTE_FISCAL = `${BASE_URL}/api.php?action=cliente_fiscal_get`;
   const API_SAVE_CLIENTE_FISCAL = `${BASE_URL}/api.php?action=cliente_fiscal_upsert`;
@@ -1478,6 +1479,9 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
   const API_CHEQUES_ACTUALIZAR = `${BASE_URL}/api.php?action=mov_global_cheques_actualizar`;
 
   const showToast = useCallback((tipo, mensaje, dur = 2800) => onToast?.(tipo, mensaje, dur), [onToast]);
+  const esCompletarTiendaNube = Number(tiendaNubeVenta?.id_movimiento ?? 0) > 0;
+  const tnTieneComprobanteVenta = Number(tiendaNubeVenta?.tn_tiene_comprobante_venta ?? 0) === 1;
+  const tnTieneRemito = Number(tiendaNubeVenta?.tn_tiene_remito ?? 0) === 1;
 
   const [dark, setDark] = useState(isTemaOscuro);
 
@@ -1578,19 +1582,43 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
     if (!open) return;
 
     if (!wasOpen && open) {
-      setFecha(todayISO());
+      const ventaTn = esCompletarTiendaNube ? tiendaNubeVenta : null;
+      const paymentStatusTn = String(ventaTn?.tn_payment_status ?? "").trim().toLowerCase();
+      const tnPagada = ["paid", "pagado", "authorized", "autorizado", "approved", "aprobado", "completed", "complete", "settled"].includes(paymentStatusTn);
+      const tipoBuscado = tnPagada ? "CONTADO" : "CUENTA CORRIENTE";
+      const tipoTn = tiposVentaList.find((item) => normalizeText(item?.nombre || item?.descripcion || "") === normalizeText(tipoBuscado));
+      const tipoTnId = Number(tipoTn?.id ?? tipoTn?.id_tipo_venta ?? 0) || NULL_OPTION;
+      const clienteTnId = Number(ventaTn?.id_cliente ?? 0) || NULL_OPTION;
+      const itemsTn = Array.isArray(ventaTn?.items_detalle) ? ventaTn.items_detalle : [];
+      const rowsTn = itemsTn.map((item) => ({
+        ...buildEmptyRow(),
+        id_detalle: item?.id_detalle ? String(item.id_detalle) : NULL_OPTION,
+        id_stock_producto: item?.id_stock_producto ? String(item.id_stock_producto) : NULL_OPTION,
+        id_stock_variante: item?.id_stock_variante ? String(item.id_stock_variante) : NULL_OPTION,
+        detalleText: upperInput(item?.nombre_completo || item?.producto_variante_nombre || item?.nombre || item?.descripcion || item?.detalle || ""),
+        cantidad: safeNumber(item?.cantidad || 0),
+        precio: safeNumber(item?.precio || 0),
+        precioDraft: "",
+        ivaPct: safeNumber(item?.iva_pct || 0),
+        stock_disponible: null,
+        sinStock: false,
+      }));
+      const medioInicialTn = buildEmptyMedioPagoVenta();
+      medioInicialTn.monto = tnPagada ? safeNumber(ventaTn?.monto_total ?? ventaTn?.total ?? 0) : 0;
+
+      setFecha(ventaTn?.fecha ? String(ventaTn.fecha).slice(0, 10) : todayISO());
       setFilters({
-        id_tipo_venta: NULL_OPTION,
+        id_tipo_venta: ventaTn ? String(tipoTnId || "") : NULL_OPTION,
         id_medio_pago: NULL_OPTION,
-        id_cliente: NULL_OPTION,
+        id_cliente: ventaTn && clienteTnId ? String(clienteTnId) : NULL_OPTION,
         id_cuenta_corriente: NULL_OPTION,
       });
       setAccionContado("guardar");
-      setCliInput("");
-      setRows([buildEmptyRow()]);
+      setCliInput(ventaTn ? safeStr(ventaTn?.cliente || ventaTn?.cliente_nombre || "") : "");
+      setRows(ventaTn && rowsTn.length ? rowsTn : [buildEmptyRow()]);
       setDescuentoTipo("PORCENTAJE");
       setDescuentoValor("");
-      setMediosFilas([buildEmptyMedioPagoVenta()]);
+      setMediosFilas(ventaTn ? [medioInicialTn] : [buildEmptyMedioPagoVenta()]);
       setAddUI({ open: false, kind: null, rowId: null, text: "", cuit: "", fiscalData: null, fiscalError: "", lookupLoading: false, saving: false });
       setSaving(false);
       setFiscalLoading(false);
@@ -1604,7 +1632,7 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
       setOpenResumenFactura(false);
       setResumenFacturaData(null);
       totalVentaAnteriorRef.current = null;
-      setArcaOperationKey(getOrCreateNuevaVentaArcaKey());
+      setArcaOperationKey(ventaTn ? "" : getOrCreateNuevaVentaArcaKey());
       setTimeout(() => closeBtnRef.current?.focus(), 0);
     }
   }, [open]);
@@ -2855,6 +2883,30 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
       const idClienteParaGuardar = Number(clienteFinal?.id_cliente || selectedClienteId || 0) || null;
       const nombreClienteParaGuardar = clienteFinal?.nombre || selectedClienteNombre || safeStr(clienteFiscalResuelto?.razon_social) || null;
 
+      if (esCompletarTiendaNube) {
+        if (esFacturadaFinal) {
+          throw new Error("Primero completá la venta de Tienda Nube. Después podés facturarla desde el flujo habitual.");
+        }
+        const data = await apiPostJson(API_TN_COMPLETAR, {
+          id_movimiento: Number(tiendaNubeVenta?.id_movimiento || 0),
+          id_cliente: idClienteParaGuardar,
+          medios_pago: isContado ? mediosPayload : [],
+        });
+        if (!data?.exito) throw new Error(data?.mensaje || "No se pudo completar la venta de Tienda Nube.");
+        return {
+          ...data,
+          periodoApi,
+          fecha,
+          cliente_fiscal: clienteFiscalResuelto,
+          cliente_id: idClienteParaGuardar,
+          cliente_nombre: nombreClienteParaGuardar,
+          accion_venta: "guardar",
+          es_facturada: false,
+          origen: "TIENDA_NUBE",
+          tn_order_id: tiendaNubeVenta?.tn_order_id ?? data?.tn_order_id ?? null,
+        };
+      }
+
       const payloads = rowsCalc
         .filter((r) => {
           const stockId = Number(r.id_stock_producto || r.id_detalle);
@@ -2940,6 +2992,9 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
     },
     [
       API_BATCH,
+      API_TN_COMPLETAR,
+      esCompletarTiendaNube,
+      tiendaNubeVenta,
       fecha,
       mediosFilas,
       mediosPagoList,
@@ -3545,24 +3600,28 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
       let comprobanteInterno = null;
       let remito = null;
       const pdfWarnings = [];
-      try {
-        comprobanteInterno = await generarYVincularVentaNoFacturadaPdf(info);
-      } catch (pdfError) {
-        pdfWarnings.push(
-          pdfError?.message || "La venta se guardó, pero no se pudo generar el comprobante interno."
-        );
+      if (!esCompletarTiendaNube || !tnTieneComprobanteVenta) {
+        try {
+          comprobanteInterno = await generarYVincularVentaNoFacturadaPdf(info);
+        } catch (pdfError) {
+          pdfWarnings.push(
+            pdfError?.message || "La venta se guardó, pero no se pudo generar el comprobante interno."
+          );
+        }
       }
 
-      try {
-        remito = await generarYVincularRemitoPdf(info);
-      } catch (remitoError) {
-        pdfWarnings.push(remitoError?.message || "La venta se guardó, pero no se pudo generar el remito.");
+      if (!esCompletarTiendaNube || !tnTieneRemito) {
+        try {
+          remito = await generarYVincularRemitoPdf(info);
+        } catch (remitoError) {
+          pdfWarnings.push(remitoError?.message || "La venta se guardó, pero no se pudo generar el remito.");
+        }
       }
 
       const chequeWarnings = await subirArchivosChequesCreados(info);
       const warnings = [...pdfWarnings, ...chequeWarnings];
 
-      showToast("exito", "Venta agregada correctamente.", 3000);
+      showToast("exito", esCompletarTiendaNube ? "Venta de Tienda Nube completada correctamente." : "Venta agregada correctamente.", 3000);
       if (warnings.length) showToast("advertencia", warnings.join(" "), 6200);
       onSaved?.({
         ...info,
@@ -3585,6 +3644,9 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
     generarYVincularRemitoPdf,
     subirArchivosChequesCreados,
     onSaved,
+    esCompletarTiendaNube,
+    tnTieneComprobanteVenta,
+    tnTieneRemito,
   ]);
 
   const consultarArcaPanelFiscal = useCallback(async () => {
@@ -3693,7 +3755,7 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
     <>
       <div className="gm-modal-overlay">
         <div
-          className="gm-modal-container gm-modal-container--movement gm-modal-v2 nv-modal"
+          className={`gm-modal-container gm-modal-container--movement gm-modal-v2 nv-modal ${esCompletarTiendaNube ? "nv-modal--tn-completion" : ""}`}
           role="dialog"
           aria-modal="true"
           onMouseDown={(e) => e.stopPropagation()}
@@ -3703,7 +3765,7 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
               <FontAwesomeIcon icon={faFileInvoiceDollar} />
             </div>
             <div className="gm-modal-head-left">
-              <h2 className="gm-modal-title">Nueva Venta</h2>
+              <h2 className="gm-modal-title">{esCompletarTiendaNube ? `Completar venta Tienda Nube #${tiendaNubeVenta?.tn_order_id || ""}` : "Nueva Venta"}</h2>
             </div>
             <button
               ref={closeBtnRef}
@@ -3718,6 +3780,12 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
           </div>
 
           <div className="gm-modal-content">
+            {esCompletarTiendaNube && (
+              <div className="nv-tn-completion-note">
+                <strong>Venta ya importada desde Tienda Nube.</strong>
+                <span>Los productos y el stock ya fueron registrados. Acá sólo confirmás el cliente/medio de pago y generás los comprobantes faltantes, sin descontar stock otra vez.</span>
+              </div>
+            )}
             <div className="gm-movement-layout">
               <section className="gm-table gm-table--movement gm-movement-main nv-table">
                 <div className={`gm-table-head ${hasScroll ? "gm-table-head--body-scroll" : ""}`}>
@@ -3763,7 +3831,7 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
                             onSelect={(d) => handleSelectDetalle(d, r.id)}
                             options={detallesList}
                             placeholder="Escribí o buscá un producto…"
-                            disabled={saving || addUI.open}
+                            disabled={saving || addUI.open || esCompletarTiendaNube}
                             showAllOnFocus={false}
                             maxItems={18}
                             inputClassName="gm-cell-input"
@@ -3780,7 +3848,7 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
                             onChange={(e) =>
                               handleCantidadChange(r.id, e.target.value === "" ? "" : Number(e.target.value))
                             }
-                            disabled={saving || rowSinStock}
+                            disabled={saving || rowSinStock || esCompletarTiendaNube}
                             placeholder={rowSinStock ? "0" : ""}
                             title={rowSinStock ? "No podés ingresar cantidad porque el stock es 0" : ""}
                             style={{
@@ -3805,7 +3873,7 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
                               precios={r.precios_disponibles}
                               value={String(r.id_tipo_precio_stock || r.precios_disponibles?.[0]?.value || NULL_OPTION)}
                               onChange={(val) => handlePrecioTipoChange(r.id, val)}
-                              disabled={saving || !r.id_detalle}
+                              disabled={saving || !r.id_detalle || esCompletarTiendaNube}
                             />
                           ) : (
                             <input
@@ -3830,7 +3898,7 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
                             className="gm-cell-input gm-cell-input--center gm-cell-input--select"
                             value={String(r.ivaPct)}
                             onChange={(e) => updateRow(r.id, { ivaPct: Number(e.target.value) })}
-                            disabled={saving}
+                            disabled={saving || esCompletarTiendaNube}
                             style={{ width: "100%" }}
                           >
                             {IVA_OPTIONS.map((x) => (
@@ -3852,8 +3920,8 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
                             type="button"
                             className="gm-row-delete"
                             onClick={() => removeRow(r.id)}
-                            disabled={saving}
-                            title="Eliminar fila"
+                            disabled={saving || esCompletarTiendaNube}
+                            title={esCompletarTiendaNube ? "Los productos de una venta Tienda Nube ya importada no se modifican desde este paso." : "Eliminar fila"}
                           >
                             ×
                           </button>
@@ -3865,7 +3933,7 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
 
                 <div className="gm-table-foot">
                   <div className="gm-foot-actions">
-                    <button type="button" className="gm-foot-btn" onClick={addRow} disabled={saving}>
+                    <button type="button" className="gm-foot-btn" onClick={addRow} disabled={saving || esCompletarTiendaNube}>
                       <span className="gm-foot-btn__icon">
                         <svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg">
                           <path d="M5 1.5V8.5M1.5 5H8.5" stroke="white" strokeWidth="1.6" strokeLinecap="round" />
@@ -3938,8 +4006,8 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
                             }
                             setFecha(nuevaFecha);
                           }}
-                          disabled={saving || usuarioBasicoVentas}
-                          title={usuarioBasicoVentas ? "Usuario básico: las ventas se cargan solamente con fecha de hoy." : undefined}
+                          disabled={saving || usuarioBasicoVentas || esCompletarTiendaNube}
+                          title={esCompletarTiendaNube ? "La fecha proviene de la orden de Tienda Nube." : usuarioBasicoVentas ? "Usuario básico: las ventas se cargan solamente con fecha de hoy." : undefined}
                         />
                         <label className="gm-label">Fecha</label>
                       </div>
@@ -3966,7 +4034,7 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
                           className="gm-input gm-select"
                           value={filters.id_tipo_venta}
                           onChange={(e) => updateFilter("id_tipo_venta", e.target.value)}
-                          disabled={saving}
+                          disabled={saving || esCompletarTiendaNube}
                         >
                           <option value="">Seleccionar.</option>
                           {tiposVentaList.map((x) => {
@@ -3983,6 +4051,7 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
                         </label>
                       </div>
 
+                      {!esCompletarTiendaNube && (
                       <div className="nv-discount-box">
                         <div className="nv-discount-box__head">
                           <div>
@@ -4029,6 +4098,7 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
                           )}
                         </div>
                       </div>
+                      )}
 
                       {isContado && (
                         <PanelMediosPagoInlineVenta
@@ -4113,16 +4183,22 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
                     disabled={saving}
                     className="gm-action-btn gm-action-btn--save"
                   >
-                    {saving && accionContado === "guardar" ? "Guardando..." : "Guardar venta"}
+                    {saving && accionContado === "guardar"
+                      ? "Guardando..."
+                      : esCompletarTiendaNube
+                        ? "Completar venta"
+                        : "Guardar venta"}
                   </button>
-                  <button
-                    type="button"
-                    onClick={onClickFacturar}
-                    disabled={saving}
-                    className="gm-action-btn gm-action-btn--invoice"
-                  >
-                    {saving && accionContado === "facturar" ? "Procesando..." : "Facturar"}
-                  </button>
+                  {!esCompletarTiendaNube && (
+                    <button
+                      type="button"
+                      onClick={onClickFacturar}
+                      disabled={saving}
+                      className="gm-action-btn gm-action-btn--invoice"
+                    >
+                      {saving && accionContado === "facturar" ? "Procesando..." : "Facturar"}
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

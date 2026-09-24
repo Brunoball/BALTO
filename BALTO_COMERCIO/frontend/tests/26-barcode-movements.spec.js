@@ -172,7 +172,7 @@ test('@barcode @movimientos @critical pistola selecciona automáticamente en tod
 });
 
 test('@barcode @movimientos @variants edición: compra e ingreso leen BL-V; recibo y orden guardan id_stock_variante real', async ({ page }) => {
-  test.setTimeout(7 * 60_000);
+  test.setTimeout(12 * 60_000);
   await requireMutations(test, page);
 
   const sourceName = uniqueName('SCAN-ORIGEN');

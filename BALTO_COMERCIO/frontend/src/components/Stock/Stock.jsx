@@ -28,6 +28,7 @@ import {
 import "./Stock.css";
 import "../Global/Global_css/Global_Section.css";
 import { canBaltoUseBarcode } from "../../utils/demoMode";
+import { DOWNLOAD_TOKEN_UPDATED_EVENT } from "../../session/sessionClient";
 
 import {
   API_URL,
@@ -155,6 +156,7 @@ const Stock = () => {
   } = useStockToast();
   const [cargaPreciosMasivos, setCargaPreciosMasivos] = useState(null);
   const [versionImagenPorProducto, setVersionImagenPorProducto] = useState({});
+  const [downloadTokenVersion, setDownloadTokenVersion] = useState(0);
   const [erroresImagenes, setErroresImagenes] = useState({});
   const [reintentosImagenes, setReintentosImagenes] = useState({});
   const [imagenesTemporalesPorProducto, setImagenesTemporalesPorProducto] = useState({});
@@ -208,6 +210,21 @@ const Stock = () => {
   useEffect(() => {
     variantesPorProductoRef.current = variantesPorProducto;
   }, [variantesPorProducto]);
+
+  useEffect(() => {
+    const onDownloadTokenUpdated = () => {
+      // Fuerza a reconstruir las URLs de miniaturas con el token recién
+      // renovado. Sin esto, un <img loading="lazy"> puede conservar una URL
+      // creada con el token anterior aunque localStorage ya tenga el nuevo.
+      setDownloadTokenVersion((prev) => prev + 1);
+      setErroresImagenes({});
+      setReintentosImagenes({});
+    };
+
+    window.addEventListener(DOWNLOAD_TOKEN_UPDATED_EVENT, onDownloadTokenUpdated);
+    return () =>
+      window.removeEventListener(DOWNLOAD_TOKEN_UPDATED_EVENT, onDownloadTokenUpdated);
+  }, []);
 
   const obtenerProteccionMutacionVariantes = useCallback((productoId) => {
     const id = Number(productoId || 0);
@@ -2958,13 +2975,16 @@ const Stock = () => {
                         totalVariantesProducto > 0 ||
                         variantesActivasProducto > 0 ||
                         variantesInactivasProducto > 0;
+                      const imageRefreshKey = `${
+                        versionImagenPorProducto[productoId] || 0
+                      }-${downloadTokenVersion}`;
                       const imageUrl =
                         imagenTemporal ||
                         (archivoId > 0
                           ? getProductoImageUrl(
                               prodConImagen,
                               API_URL,
-                              versionImagenPorProducto[productoId] || 0,
+                              imageRefreshKey,
                               intentoImagen
                             )
                           : "");
@@ -2995,7 +3015,7 @@ const Stock = () => {
                               <div className="prod-thumb">
                                 {imageUrl && !imagenRota ? (
                                   <img
-                                    key={`${productoId}-${archivoId}-${versionImagenPorProducto[productoId] || 0}-${intentoImagen}-${mostrarDadosDeBaja ? "baja" : "alta"}`}
+                                    key={`${productoId}-${archivoId}-${versionImagenPorProducto[productoId] || 0}-${downloadTokenVersion}-${intentoImagen}-${mostrarDadosDeBaja ? "baja" : "alta"}`}
                                     src={imageUrl}
                                     alt={prodConImagen.nombre}
                                     className="prod-thumb__img"

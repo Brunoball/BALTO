@@ -71,6 +71,7 @@ export default function ModalManualFuncional({ open, onClose }) {
   const [page, setPage] = useState(1);
   const [fullscreen, setFullscreen] = useState(false);
   const searchRef = useRef(null);
+  const onCloseRef = useRef(onClose);
 
   const pdfUrl = manualPdfUrl;
   const docxUrl = manualDocxUrl;
@@ -86,13 +87,17 @@ export default function ModalManualFuncional({ open, onClose }) {
   }, [query]);
 
   useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
+  useEffect(() => {
     if (!open) return undefined;
 
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
 
     const onKeyDown = (event) => {
-      if (event.key === "Escape") onClose?.();
+      if (event.key === "Escape") onCloseRef.current?.();
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();
         searchRef.current?.focus();
@@ -100,13 +105,14 @@ export default function ModalManualFuncional({ open, onClose }) {
     };
 
     window.addEventListener("keydown", onKeyDown);
-    window.setTimeout(() => searchRef.current?.focus(), 50);
+    const focusTimer = window.setTimeout(() => searchRef.current?.focus(), 50);
 
     return () => {
       document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", onKeyDown);
+      window.clearTimeout(focusTimer);
     };
-  }, [open, onClose]);
+  }, [open]);
 
   useEffect(() => {
     if (!open) {

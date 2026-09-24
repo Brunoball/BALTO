@@ -3,6 +3,9 @@ import { redirectToCentralAccessBridge } from "./localSessionBridge";
 
 const SESSION_KEY = "session_key";
 const USER_KEY = "usuario";
+const DOWNLOAD_TOKEN_KEY = "balto_download_token";
+const DOWNLOAD_TOKEN_EXP_KEY = "balto_download_token_exp";
+export const DOWNLOAD_TOKEN_UPDATED_EVENT = "balto:download-token-updated";
 const FORCE_DASHBOARD_KEY = "balto_force_dashboard_after_login";
 
 export function getSessionKey() {
@@ -11,6 +14,74 @@ export function getSessionKey() {
   } catch {
     return "";
   }
+}
+
+
+export function getDownloadToken() {
+  try {
+    return String(localStorage.getItem(DOWNLOAD_TOKEN_KEY) || "").trim();
+  } catch {
+    return "";
+  }
+}
+
+function decodeBase64UrlJson(value = "") {
+  try {
+    const normalized = String(value || "").replace(/-/g, "+").replace(/_/g, "/");
+    const padding = normalized.length % 4;
+    const padded = padding ? normalized + "=".repeat(4 - padding) : normalized;
+    const json = decodeURIComponent(
+      Array.from(atob(padded))
+        .map((char) => `%${char.charCodeAt(0).toString(16).padStart(2, "0")}`)
+        .join("")
+    );
+    const parsed = JSON.parse(json);
+    return parsed && typeof parsed === "object" ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+export function getDownloadTokenExpiresAt() {
+  try {
+    const stored = Number(localStorage.getItem(DOWNLOAD_TOKEN_EXP_KEY) || 0);
+    if (Number.isFinite(stored) && stored > 0) return stored;
+  } catch {}
+
+  const token = getDownloadToken();
+  const encoded = token.split(".")[0] || "";
+  const payload = decodeBase64UrlJson(encoded);
+  const exp = Number(payload?.exp || 0);
+
+  if (Number.isFinite(exp) && exp > 0) {
+    try {
+      localStorage.setItem(DOWNLOAD_TOKEN_EXP_KEY, String(exp));
+    } catch {}
+    return exp;
+  }
+
+  return 0;
+}
+
+export function isDownloadTokenFresh(minValiditySeconds = 120) {
+  const token = getDownloadToken();
+  if (!token) return false;
+
+  const exp = getDownloadTokenExpiresAt();
+  if (!exp) return false;
+
+  const margin = Math.max(0, Number(minValiditySeconds) || 0);
+  return exp > Math.floor(Date.now() / 1000) + margin;
+}
+
+function notifyDownloadTokenUpdated(expiresAt = 0) {
+  try {
+    window.dispatchEvent(
+      new CustomEvent(DOWNLOAD_TOKEN_UPDATED_EVENT, {
+        detail: { expiresAt: Number(expiresAt || 0) },
+      })
+    );
+  } catch {}
 }
 
 export function hasSession() {
@@ -29,11 +100,31 @@ export function getStoredUser() {
   }
 }
 
-export function storeValidatedUser(usuario) {
+export function storeValidatedUser(usuario, downloadToken = "", downloadTokenExpiresAt = 0) {
   if (!usuario || typeof usuario !== "object") return;
+
+  const previousToken = getDownloadToken();
 
   try {
     localStorage.setItem(USER_KEY, JSON.stringify(usuario));
+    const token = String(downloadToken || "").trim();
+    const exp = Number(downloadTokenExpiresAt || 0);
+
+    if (token) {
+      localStorage.setItem(DOWNLOAD_TOKEN_KEY, token);
+      if (Number.isFinite(exp) && exp > 0) {
+        localStorage.setItem(DOWNLOAD_TOKEN_EXP_KEY, String(exp));
+      } else {
+        localStorage.removeItem(DOWNLOAD_TOKEN_EXP_KEY);
+      }
+    } else {
+      localStorage.removeItem(DOWNLOAD_TOKEN_KEY);
+      localStorage.removeItem(DOWNLOAD_TOKEN_EXP_KEY);
+    }
+
+    if (token && token !== previousToken) {
+      notifyDownloadTokenUpdated(exp);
+    }
   } catch {}
 }
 
@@ -68,6 +159,8 @@ export function clearClientSession() {
   try {
     localStorage.removeItem(SESSION_KEY);
     localStorage.removeItem(USER_KEY);
+    localStorage.removeItem(DOWNLOAD_TOKEN_KEY);
+    localStorage.removeItem(DOWNLOAD_TOKEN_EXP_KEY);
     localStorage.removeItem("balto_sistema");
 
     // Limpieza de claves legacy que Comercio ya no debe utilizar.

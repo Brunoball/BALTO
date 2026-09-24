@@ -1129,11 +1129,14 @@ export default function ModalEditarProducto({
     if (eliminarImagenActual) return "";
     if (nuevaImagenFile) return "";
 
+    const signedUrl = form.imagen_url ? String(form.imagen_url).trim() : "";
+    if (signedUrl) return signedUrl;
+
     if (Number(form.imagen_archivo_id || 0) > 0) {
       return getProductoImageUrlByArchivoId(form.imagen_archivo_id);
     }
 
-    return form.imagen_url ? String(form.imagen_url).trim() : "";
+    return "";
   }, [
     form.imagen_archivo_id,
     form.imagen_url,

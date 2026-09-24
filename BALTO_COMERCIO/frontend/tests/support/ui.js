@@ -566,7 +566,8 @@ export async function requireMutations(test, page) {
 
   // Todas las mutaciones de Playwright llevan e2e_run=PW-... para que la
   // auditoría y el limpiador puedan reconocerlas sin confundirlas con datos
-  // reales. Si PW_SKIP_TIENDA_NUBE=1 también se conserva el bloqueo de sync.
+  // reales. La sincronización externa ya no puede deshabilitarse desde el request:
+  // el backend ignora deliberadamente cualquier skip_tiendanube_sync enviado por el cliente.
   if (page) {
     await page.context().route('**/api.php**', async (route) => {
       const request = route.request();
@@ -576,7 +577,6 @@ export async function requireMutations(test, page) {
       }
 
       const url = new URL(request.url());
-      if (ENV.skipTiendaNube) url.searchParams.set('skip_tiendanube_sync', '1');
       url.searchParams.set('e2e_run', RUN_PREFIX);
       await route.continue({ url: url.toString() });
     });

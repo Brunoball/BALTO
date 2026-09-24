@@ -145,6 +145,12 @@ export function actualizarDetalleConfiguracion(body) { return configuracionPost(
 export function darBajaDetalleConfiguracion(id) { return configuracionPost("config_listas_categorias_detalle_dar_baja", { id_detalle: id }); }
 export function reactivarDetalleConfiguracion(id) { return configuracionPost("config_listas_categorias_detalle_reactivar", { id_detalle: id }); }
 export function eliminarDetalleConfiguracion(id) { return configuracionPost("config_listas_categorias_detalle_eliminar", { id_detalle: id }); }
+export function crearMedioPagoConfiguracion(body) { return configuracionPost("config_listas_categorias_medio_pago_crear", body); }
+export function actualizarMedioPagoConfiguracion(body) { return configuracionPost("config_listas_categorias_medio_pago_actualizar", body); }
+export function darBajaMedioPagoConfiguracion(id) { return configuracionPost("config_listas_categorias_medio_pago_dar_baja", { id_medio_pago: id }); }
+export function reactivarMedioPagoConfiguracion(id) { return configuracionPost("config_listas_categorias_medio_pago_reactivar", { id_medio_pago: id }); }
+export function eliminarMedioPagoConfiguracion(id) { return configuracionPost("config_listas_categorias_medio_pago_eliminar", { id_medio_pago: id }); }
+
 export function crearCategoriaStockConfiguracion(body) { return configuracionPost("config_listas_categorias_stock_categoria_crear", body); }
 export function actualizarCategoriaStockConfiguracion(body) { return configuracionPost("config_listas_categorias_stock_categoria_actualizar", body); }
 export function darBajaCategoriaStockConfiguracion(id) { return configuracionPost("config_listas_categorias_stock_categoria_dar_baja", { id_stock_categoria: id }); }

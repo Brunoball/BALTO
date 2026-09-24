@@ -879,48 +879,18 @@ for (const type of ['CHEQUE', 'ECHEQ']) {
         number,
         amount,
       });
-      // El modal actual confirma con "Confirmar cheque/eCheq". El duplicado puede
-      // frenarse en frontend (sin request) o llegar al backend y volver 400.
-      // La prueba acepta ambas capas de defensa, pero nunca deja de comprobar que
-      // el duplicado no haya generado una segunda fila.
-      const { dialog: duplicateDialog, button: duplicateButton } = await initialChequeSubmitButton(page);
-      const duplicateResponsePromise = page
-        .waitForResponse(
-          (res) =>
-            res.request().method() === 'POST' &&
-            new URL(res.url()).searchParams.get('action') === 'config_saldos_iniciales_cheque_crear',
-          { timeout: 3_000 },
-        )
-        .catch(() => null);
+      let responsePromise = page.waitForResponse(
+        (res) =>
+          res.request().method() === 'POST' &&
+          new URL(res.url()).searchParams.get('action') === 'config_saldos_iniciales_cheque_crear',
+        { timeout: 90_000 },
+      );
+      await (await initialChequeSubmitButton(page)).button.click();
+      let response = await responsePromise;
+      let body = await response.json().catch(() => ({}));
+      expect(response.status()).toBe(400);
+      expect(String(body?.mensaje || '')).toMatch(/Ya existe un cheque\/eCheq con ese número/i);
 
-      const duplicateButtonEnabled = await duplicateButton.isEnabled().catch(() => false);
-      if (duplicateButtonEnabled) {
-        await duplicateButton.click({ timeout: 5_000 });
-      }
-
-      const duplicateResponse = await duplicateResponsePromise;
-      if (duplicateResponse) {
-        const duplicateBody = await duplicateResponse.json().catch(() => ({}));
-        expect(duplicateResponse.status(), JSON.stringify(duplicateBody)).toBe(400);
-        expect(String(duplicateBody?.mensaje || '')).toMatch(/ya existe.*cheque.*n[uú]mero/i);
-      } else {
-        // Si no hubo POST, la validación client-side debe explicar el rechazo y
-        // mantener el modal abierto para que el usuario corrija el número.
-        await expect(page.locator('body')).toContainText(/ya existe.*cheque.*n[uú]mero/i, {
-          timeout: 10_000,
-        });
-        await expect(duplicateDialog).toBeVisible({ timeout: 5_000 });
-      }
-
-      // Cobertura fuerte: independientemente de si el rechazo fue client-side o backend,
-      // jamás puede quedar una segunda carga con el mismo número.
-      const afterDuplicate = await getInitialBalances(page);
-      expect(
-        (Array.isArray(afterDuplicate?.cheques) ? afterDuplicate.cheques : []).filter(
-          (row) => String(row?.numero_cheque || '') === String(number),
-        ),
-        'El intento duplicado no debe crear un segundo cheque/eCheq',
-      ).toHaveLength(1);
       await deleteInitialCheque(page, number);
       created = false;
 

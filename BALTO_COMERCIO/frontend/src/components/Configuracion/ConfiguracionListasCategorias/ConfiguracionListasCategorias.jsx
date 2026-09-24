@@ -23,9 +23,11 @@ import * as configuracionApi from "../api/configuracionApi";
 import ModalDetalleLista from "./ModalDetalleLista";
 import ModalCategoriaStock from "./ModalCategoriaStock";
 import ModalUnidadStock from "./ModalUnidadStock";
+import ModalMedioPago from "./ModalMedioPago";
 
 const TABS = [
   { value: "detalles", label: "Detalles", singular: "detalle" },
+  { value: "medios_pago", label: "Medios de pago", singular: "medio de pago" },
   { value: "categorias_stock", label: "Categorías de stock", singular: "categoría de stock" },
   { value: "unidades_stock", label: "Unidades de stock", singular: "unidad de stock" },
 ];
@@ -37,6 +39,7 @@ const ESTADOS = [
 
 function rowId(tab, row) {
   if (tab === "detalles") return row?.id_detalle;
+  if (tab === "medios_pago") return row?.id_medio_pago;
   if (tab === "unidades_stock") return row?.id_stock_unidad;
   return row?.id_stock_categoria;
 }
@@ -57,7 +60,7 @@ export default function ConfiguracionListasCategorias() {
   const [tab, setTab] = useState("detalles");
   const [estado, setEstado] = useState("1");
   const [buscar, setBuscar] = useState("");
-  const [data, setData] = useState({ detalles: [], categorias_stock: [], unidades_stock: [] });
+  const [data, setData] = useState({ detalles: [], medios_pago: [], categorias_stock: [], unidades_stock: [] });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [modal, setModal] = useState({ kind: null, item: null });
@@ -75,6 +78,7 @@ export default function ConfiguracionListasCategorias() {
       const resumen = await configuracionApi.listarResumenListasCategoriasConfiguracion({ activo: "todos" });
       setData({
         detalles: resumen?.detalles || [],
+        medios_pago: resumen?.medios_pago || [],
         categorias_stock: resumen?.categorias_stock || [],
         unidades_stock: resumen?.unidades_stock || [],
       });
@@ -162,6 +166,19 @@ export default function ConfiguracionListasCategorias() {
     } catch {}
   };
 
+  const guardarMedioPago = async (payload) => {
+    const editing = Boolean(modal.item?.id_medio_pago);
+    try {
+      await ejecutar(
+        () => editing ? configuracionApi.actualizarMedioPagoConfiguracion(payload) : configuracionApi.crearMedioPagoConfiguracion(payload),
+        editing ? "Medio de pago actualizado correctamente." : "Medio de pago creado correctamente.",
+        (result) => guardarFilaLocal("medios_pago", result?.medio_pago)
+      );
+      notifyListsUpdated();
+      setModal({ kind: null, item: null });
+    } catch {}
+  };
+
   const guardarCategoria = async (payload) => {
     const editing = Boolean(modal.item?.id_stock_categoria);
     try {
@@ -195,17 +212,19 @@ export default function ConfiguracionListasCategorias() {
     const id = rowId(kind, item);
     const operation = kind === "detalles"
       ? (active ? configuracionApi.darBajaDetalleConfiguracion : configuracionApi.reactivarDetalleConfiguracion)
-      : kind === "unidades_stock"
-        ? (active ? configuracionApi.darBajaUnidadStockConfiguracion : configuracionApi.reactivarUnidadStockConfiguracion)
-        : (active ? configuracionApi.darBajaCategoriaStockConfiguracion : configuracionApi.reactivarCategoriaStockConfiguracion);
+      : kind === "medios_pago"
+        ? (active ? configuracionApi.darBajaMedioPagoConfiguracion : configuracionApi.reactivarMedioPagoConfiguracion)
+        : kind === "unidades_stock"
+          ? (active ? configuracionApi.darBajaUnidadStockConfiguracion : configuracionApi.reactivarUnidadStockConfiguracion)
+          : (active ? configuracionApi.darBajaCategoriaStockConfiguracion : configuracionApi.reactivarCategoriaStockConfiguracion);
 
     await ejecutar(
       () => operation(id),
       null,
-      (result) => actualizarFilaLocal(kind, id, (row) => ({ ...row, ...(result?.detalle || result?.categoria || result?.unidad || {}), activo: active ? 0 : 1 })),
+      (result) => actualizarFilaLocal(kind, id, (row) => ({ ...row, ...(result?.detalle || result?.medio_pago || result?.categoria || result?.unidad || {}), activo: active ? 0 : 1 })),
       false
     );
-    if (kind === "categorias_stock" || kind === "unidades_stock") notifyListsUpdated();
+    if (["categorias_stock", "unidades_stock", "medios_pago"].includes(kind)) notifyListsUpdated();
     setStatusModal({ kind: null, item: null });
   };
 
@@ -215,9 +234,11 @@ export default function ConfiguracionListasCategorias() {
     const id = rowId(kind, item);
     const operation = kind === "detalles"
       ? configuracionApi.eliminarDetalleConfiguracion
-      : kind === "unidades_stock"
-        ? configuracionApi.eliminarUnidadStockConfiguracion
-        : configuracionApi.eliminarCategoriaStockConfiguracion;
+      : kind === "medios_pago"
+        ? configuracionApi.eliminarMedioPagoConfiguracion
+        : kind === "unidades_stock"
+          ? configuracionApi.eliminarUnidadStockConfiguracion
+          : configuracionApi.eliminarCategoriaStockConfiguracion;
     await ejecutar(
       () => operation(id),
       null,
@@ -239,15 +260,16 @@ export default function ConfiguracionListasCategorias() {
       },
       false
     );
-    if (kind === "categorias_stock" || kind === "unidades_stock") notifyListsUpdated();
+    if (["categorias_stock", "unidades_stock", "medios_pago"].includes(kind)) notifyListsUpdated();
     setDeleteModal({ kind: null, item: null });
   };
 
   const currentMeta = tabMeta(tab);
   const isCategory = tab === "categorias_stock";
   const isUnit = tab === "unidades_stock";
-  const addLabel = isCategory ? "Agregar categoría" : isUnit ? "Agregar unidad" : "Agregar detalle";
-  const searchPlaceholder = isCategory ? "Buscar categoría..." : isUnit ? "Buscar unidad..." : "Buscar detalle...";
+  const isPayment = tab === "medios_pago";
+  const addLabel = isCategory ? "Agregar categoría" : isUnit ? "Agregar unidad" : isPayment ? "Agregar medio" : "Agregar detalle";
+  const searchPlaceholder = isCategory ? "Buscar categoría..." : isUnit ? "Buscar unidad..." : isPayment ? "Buscar medio de pago..." : "Buscar detalle...";
 
   const statusIsActive = Number(statusModal.item?.activo) === 1;
   const statusLabel = tabMeta(statusModal.kind).singular;
@@ -255,6 +277,7 @@ export default function ConfiguracionListasCategorias() {
 
   const deletingCategory = deleteModal.kind === "categorias_stock";
   const deletingUnit = deleteModal.kind === "unidades_stock";
+  const deletingPayment = deleteModal.kind === "medios_pago";
   const productos = Number(deleteModal.item?.cantidad_productos || 0);
   const hijas = Number(deleteModal.item?.cantidad_hijas || 0);
   const syncTn = Number(deleteModal.item?.cantidad_sync_tn || 0);
@@ -271,7 +294,11 @@ export default function ConfiguracionListasCategorias() {
     categoryDeleteImpacts.push("Si estaba vinculada con Tienda Nube, la categoría remota no se borrará y BALTO evitará reimportarla automáticamente.");
   }
 
-  const deleteWarning = deletingUnit
+  const deleteWarning = deletingPayment
+    ? (usosDetalle > 0
+        ? "Este medio de pago ya tiene movimientos o saldos iniciales asociados. No puede eliminarse: dalo de baja para preservar el historial."
+        : "El medio de pago se eliminará definitivamente porque todavía no tiene asociaciones históricas.")
+    : deletingUnit
     ? (Number(deleteModal.item?.cantidad_productos || 0) + Number(deleteModal.item?.cantidad_variantes || 0) > 0
         ? "Esta unidad está en uso y no puede eliminarse para evitar cambiar el significado del stock. Reasigná primero esos productos/variantes o dala de baja."
         : "La unidad se eliminará definitivamente. No se modificará ningún producto ni cantidad de stock.")
@@ -283,7 +310,12 @@ export default function ConfiguracionListasCategorias() {
       ? "Los ingresos, egresos y presupuestos que usen este detalle se conservarán, pero quedarán sin detalle asignado."
       : "El detalle se eliminará definitivamente.";
 
-  const deleteDetails = deletingUnit
+  const deleteDetails = deletingPayment
+    ? [
+        { label: "Nombre", value: deleteModal.item?.nombre || "—" },
+        { label: "Usos históricos", value: usosDetalle.toLocaleString("es-AR") },
+      ]
+    : deletingUnit
     ? [
         { label: "Nombre", value: deleteModal.item?.nombre || "—" },
         { label: "Abreviatura", value: deleteModal.item?.abreviatura || "—" },
@@ -310,7 +342,7 @@ export default function ConfiguracionListasCategorias() {
         <div>
           <span className="cfg-listas-eyebrow">Configuración</span>
           <h1>Listas y categorías</h1>
-          <p>Administrá los detalles de Movimientos, categorías y unidades de medida que utiliza Stock.</p>
+          <p>Administrá detalles de Movimientos, medios de pago, categorías y unidades de medida que utiliza Stock.</p>
         </div>
         <button type="button" className="mov-btn mov-btn--primary" onClick={() => navigate("/panel/configuracion")}>
           <FontAwesomeIcon icon={faArrowLeft} /> Volver
@@ -347,7 +379,7 @@ export default function ConfiguracionListasCategorias() {
           <div
             className={`cfg-listas-grid ${isCategory ? "is-category" : isUnit ? "is-unit" : "is-detail"}`}
             role="table"
-            aria-label={isCategory ? "Categorías de stock" : isUnit ? "Unidades de stock" : "Detalles de movimientos"}
+            aria-label={isCategory ? "Categorías de stock" : isUnit ? "Unidades de stock" : isPayment ? "Medios de pago" : "Detalles de movimientos"}
             aria-busy={loading}
           >
             <div className={`cfg-listas-gridHead ${hasRowsScroll ? "has-y-scroll" : ""}`} role="rowgroup">
@@ -375,7 +407,7 @@ export default function ConfiguracionListasCategorias() {
                   <div key={rowId(tab, row)} className={`cfg-listas-gridRow ${Number(row.activo) === 1 ? "" : "is-inactive"}`} role="row">
                     <div className="cfg-listas-gridCell cfg-listas-gridCell--name" role="cell">
                       <strong>{row.nombre}</strong>
-                      <small>{isCategory ? (row.categoria_padre_nombre ? `Subcategoría de ${row.categoria_padre_nombre}` : "Categoría principal") : isUnit ? (Number(row.es_default || 0) === 1 ? "Unidad predeterminada" : "Unidad de medida") : "Detalle de ingresos / egresos"}</small>
+                      <small>{isCategory ? (row.categoria_padre_nombre ? `Subcategoría de ${row.categoria_padre_nombre}` : "Categoría principal") : isUnit ? (Number(row.es_default || 0) === 1 ? "Unidad predeterminada" : "Unidad de medida") : isPayment ? (Number(row.es_sistema || 0) === 1 ? "Medio integrado del sistema" : "Medio de cobro / pago") : "Detalle de ingresos / egresos"}</small>
                     </div>
                     {isCategory && <div className="cfg-listas-gridCell cfg-listas-gridCell--description" role="cell">{row.descripcion || "—"}</div>}
                     {isCategory && <div className="cfg-listas-gridCell is-center" role="cell">{Number(row.cantidad_productos || 0).toLocaleString("es-AR")}</div>}
@@ -389,9 +421,9 @@ export default function ConfiguracionListasCategorias() {
                     </div>
                     <div className="cfg-listas-gridCell is-center" role="cell">
                       <div className="cfg-listas-actions">
-                        <button type="button" disabled={isUnit && Number(row.es_default || 0) === 1} title={isUnit && Number(row.es_default || 0) === 1 ? "La unidad predeterminada no se puede modificar" : "Editar"} onClick={() => setModal({ kind: tab, item: row })}><FontAwesomeIcon icon={faPenToSquare} /></button>
-                        <button type="button" disabled={isUnit && Number(row.es_default || 0) === 1} title={Number(row.activo) === 1 ? "Dar de baja" : "Reactivar"} onClick={() => setStatusModal({ kind: tab, item: row })}><FontAwesomeIcon icon={Number(row.activo) === 1 ? faBan : faRotateLeft} /></button>
-                        <button type="button" disabled={isUnit && Number(row.es_default || 0) === 1} className="is-danger" title="Eliminar" onClick={() => setDeleteModal({ kind: tab, item: row })}><FontAwesomeIcon icon={faTrashCan} /></button>
+                        <button type="button" disabled={(isUnit && Number(row.es_default || 0) === 1) || (isPayment && Number(row.es_sistema || 0) === 1)} title={isPayment && Number(row.es_sistema || 0) === 1 ? "CHEQUE/ECHEQ son medios integrados y no pueden renombrarse" : isUnit && Number(row.es_default || 0) === 1 ? "La unidad predeterminada no se puede modificar" : "Editar"} onClick={() => setModal({ kind: tab, item: row })}><FontAwesomeIcon icon={faPenToSquare} /></button>
+                        <button type="button" disabled={(isUnit && Number(row.es_default || 0) === 1) || (isPayment && Number(row.es_sistema || 0) === 1)} title={Number(row.activo) === 1 ? "Dar de baja" : "Reactivar"} onClick={() => setStatusModal({ kind: tab, item: row })}><FontAwesomeIcon icon={Number(row.activo) === 1 ? faBan : faRotateLeft} /></button>
+                        <button type="button" disabled={(isUnit && Number(row.es_default || 0) === 1) || (isPayment && (Number(row.es_sistema || 0) === 1 || Number(row.cantidad_usos || 0) > 0))} className="is-danger" title={isPayment && Number(row.cantidad_usos || 0) > 0 ? "En uso: dalo de baja para preservar el historial" : "Eliminar"} onClick={() => setDeleteModal({ kind: tab, item: row })}><FontAwesomeIcon icon={faTrashCan} /></button>
                       </div>
                     </div>
                   </div>
@@ -405,6 +437,7 @@ export default function ConfiguracionListasCategorias() {
       </section>
 
       <ModalDetalleLista open={modal.kind === "detalles"} item={modal.item} saving={saving} onClose={() => setModal({ kind: null, item: null })} onSave={guardarDetalle} onToast={notify} />
+      <ModalMedioPago open={modal.kind === "medios_pago"} item={modal.item} saving={saving} onClose={() => setModal({ kind: null, item: null })} onSave={guardarMedioPago} onToast={notify} />
       <ModalCategoriaStock open={modal.kind === "categorias_stock"} item={modal.item} categorias={data.categorias_stock} saving={saving} onClose={() => setModal({ kind: null, item: null })} onSave={guardarCategoria} onToast={notify} />
       <ModalUnidadStock open={modal.kind === "unidades_stock"} item={modal.item} saving={saving} onClose={() => setModal({ kind: null, item: null })} onSave={guardarUnidad} onToast={notify} />
 
@@ -443,11 +476,13 @@ export default function ConfiguracionListasCategorias() {
         message={`¿Seguro que querés eliminar definitivamente "${deleteModal.item?.nombre || "este registro"}"?`}
         warning={deleteWarning}
         loadingMessage="Eliminando…"
-        successMessage={deletingUnit
-          ? "Unidad eliminada correctamente."
-          : deletingCategory
-            ? "Categoría eliminada. Los productos y su stock se conservaron."
-            : "Detalle eliminado. Los movimientos históricos se conservaron."}
+        successMessage={deletingPayment
+          ? "Medio de pago eliminado correctamente."
+          : deletingUnit
+            ? "Unidad eliminada correctamente."
+            : deletingCategory
+              ? "Categoría eliminada. Los productos y su stock se conservaron."
+              : "Detalle eliminado. Los movimientos históricos se conservaron."}
         errorMessage="No se pudo eliminar."
         confirmLabel="Eliminar definitivamente"
         details={deleteDetails}

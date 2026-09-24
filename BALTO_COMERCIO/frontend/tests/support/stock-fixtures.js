@@ -164,7 +164,6 @@ export async function createStockProductFixture(page, product) {
     tipos_precio: '[]',
     diferir_sync: '1',
     origen_sync: 'playwright_e2e',
-    ...(ENV.skipTiendaNube ? { skip_tiendanube_sync: '1' } : {}),
   };
 
   const response = await page.request.post(endpoint('stock_productos_crear'), {

@@ -5,6 +5,7 @@ import {
   consumeDashboardAfterLogin,
   getSessionKey,
   isDefinitiveSessionFailure,
+  isDownloadTokenFresh,
   redirectToCentralAccess,
   storeValidatedUser,
   validateCommerceSession,
@@ -25,7 +26,9 @@ export default function GlobalSessionGate({ children }) {
   const currentSessionKey = getSessionKey();
   const [state, setState] = useState(() => ({
     status:
-      currentSessionKey && validatedSessionKey === currentSessionKey
+      currentSessionKey &&
+      validatedSessionKey === currentSessionKey &&
+      isDownloadTokenFresh()
         ? "ready"
         : "checking",
     message: "",
@@ -58,7 +61,7 @@ export default function GlobalSessionGate({ children }) {
      * Si esta sesión ya fue validada en este documento, mantenemos el panel
      * visible. Cada módulo conserva su propio estado/skeleton de carga.
      */
-    if (validatedSessionKey === sessionKey) {
+    if (validatedSessionKey === sessionKey && isDownloadTokenFresh()) {
       setState((prev) =>
         prev.status === "ready" ? prev : { status: "ready", message: "" }
       );
@@ -88,7 +91,11 @@ export default function GlobalSessionGate({ children }) {
         return;
       }
 
-      storeValidatedUser(result.data?.usuario);
+      storeValidatedUser(
+        result.data?.usuario,
+        result.data?.download_token,
+        result.data?.download_token_expires_at
+      );
       validatedSessionKey = sessionKey;
 
       const goToDashboard = consumeDashboardAfterLogin();
@@ -109,9 +116,63 @@ export default function GlobalSessionGate({ children }) {
     }
   }, [leaveCommerce]);
 
+  const refreshDownloadTokenSilently = useCallback(async () => {
+    const sessionKey = getSessionKey();
+
+    // Renovamos antes de que venza para que las URLs directas de imágenes y
+    // comprobantes no queden con un download_token expirado mientras la sesión
+    // MASTER continúa siendo válida.
+    if (!sessionKey || validatedSessionKey !== sessionKey || isDownloadTokenFresh(180)) {
+      return;
+    }
+
+    if (verifyingRef.current) return;
+    verifyingRef.current = true;
+
+    try {
+      const result = await validateCommerceSession();
+
+      if (!result.ok) {
+        if (isDefinitiveSessionFailure(result.status, result.data)) {
+          leaveCommerce();
+        }
+        return;
+      }
+
+      storeValidatedUser(
+        result.data?.usuario,
+        result.data?.download_token,
+        result.data?.download_token_expires_at
+      );
+      validatedSessionKey = sessionKey;
+    } catch {
+      // Un corte transitorio no debe sacar al usuario del sistema. El refresh
+      // se vuelve a intentar por intervalo, foco o regreso a la pestaña.
+    } finally {
+      verifyingRef.current = false;
+    }
+  }, [leaveCommerce]);
+
   useEffect(() => {
     verify();
   }, [verify]);
+
+  useEffect(() => {
+    const intervalId = window.setInterval(refreshDownloadTokenSilently, 60 * 1000);
+    const onFocus = () => refreshDownloadTokenSilently();
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") refreshDownloadTokenSilently();
+    };
+
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, [refreshDownloadTokenSilently]);
 
   useEffect(() => {
     const onUnauthorized = (event) => {

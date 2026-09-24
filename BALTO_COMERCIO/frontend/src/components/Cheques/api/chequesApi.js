@@ -108,11 +108,11 @@ export function construirUrlComprobante(action, idCheque) {
   const base = `${API_URL}?${search.toString()}`;
 
   try {
-    const { sessionKey } = getAuthInfo();
+    const downloadToken = (localStorage.getItem("balto_download_token") || "").trim();
     const url = new URL(base, window.location.origin);
 
-    if (sessionKey && !url.searchParams.has("session_key")) {
-      url.searchParams.set("session_key", sessionKey);
+    if (downloadToken && !url.searchParams.has("download_token")) {
+      url.searchParams.set("download_token", downloadToken);
     }
 
     return url.toString();

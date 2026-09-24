@@ -133,7 +133,6 @@ test('@stock @unidades @critical contrato de unidades: UNIDAD sigue entera y las
       precio: 20,
       diferir_sync: 1,
       origen_sync: 'playwright_e2e',
-      skip_tiendanube_sync: 1,
     },
   });
   expect(rejected.status).toBeGreaterThanOrEqual(400);

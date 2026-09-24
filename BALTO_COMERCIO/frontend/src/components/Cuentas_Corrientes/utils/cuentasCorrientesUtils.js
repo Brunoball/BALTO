@@ -73,7 +73,7 @@ export function withSessionKey(url) {
   if (!base) return "";
 
   try {
-    const { sessionKey } = getAuthInfo();
+    const downloadToken = (localStorage.getItem("balto_download_token") || "").trim();
     const u = new URL(base, window.location.origin);
 
     const isSignedObjectUrl =
@@ -83,8 +83,8 @@ export function withSessionKey(url) {
 
     if (isSignedObjectUrl) return u.toString();
 
-    if (sessionKey && !u.searchParams.has("session_key")) {
-      u.searchParams.set("session_key", sessionKey);
+    if (downloadToken && !u.searchParams.has("download_token")) {
+      u.searchParams.set("download_token", downloadToken);
     }
 
 

@@ -114,7 +114,7 @@ function deriveTarget(values) {
 
   return {
     ...values,
-    // El único selector manual es PW_API_URL. Todo lo demás se deriva.
+    // PW_API_URL selecciona el destino. Credenciales y permisos sensibles no se derivan.
     PW_API_URL: rawApiURL,
     PW_TEST_URL: 'http://127.0.0.1:3000',
     PW_BASE_URL: 'http://127.0.0.1:3000',
@@ -123,10 +123,14 @@ function deriveTarget(values) {
     PW_LOGIN_URL: `${remoteOrigin}/`,
     PW_START_FRONTEND: '1',
     PW_SKIP_WEBSERVER: '0',
-    PW_ALLOW_PRODUCTION: isProduction ? '1' : '0',
+    // Apuntar la URL a producción NO autoriza mutaciones por sí solo.
+    // La habilitación debe existir de forma explícita en .env.playwright.
+    PW_ALLOW_PRODUCTION: String(values.PW_ALLOW_PRODUCTION || '0'),
     PW_ENVIRONMENT: isProduction ? 'production' : 'staging',
-    PW_USER: isProduction ? 'admin_balto' : 'admin',
-    PW_PASSWORD: isProduction ? '@Cr3devs2026' : '1234',
+    // Nunca incrustar credenciales productivas en el código del testing.
+    // Staging conserva sus defaults locales; producción exige valores explícitos.
+    PW_USER: String(values.PW_USER || (isProduction ? '' : 'admin')),
+    PW_PASSWORD: String(values.PW_PASSWORD || (isProduction ? '' : '1234')),
   };
 }
 
@@ -190,7 +194,6 @@ export const ENV = Object.freeze({
   startCommand: String(process.env.PW_START_COMMAND || 'npm start').trim(),
 
   cleanup: bool(process.env.PW_CLEANUP, true),
-  skipTiendaNube: bool(process.env.PW_SKIP_TIENDA_NUBE, true),
   timeoutMs: integer(process.env.PW_TIMEOUT_MS, 60_000),
   expectTimeoutMs: integer(process.env.PW_EXPECT_TIMEOUT_MS, 15_000),
   slowMoMs: integer(process.env.PW_SLOW_MO_MS, 0),

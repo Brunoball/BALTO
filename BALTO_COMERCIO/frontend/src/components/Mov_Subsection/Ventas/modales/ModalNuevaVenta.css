@@ -668,3 +668,41 @@ html[data-theme="oscuro"] .nv-discount-box__summary b {
     grid-template-columns: 1fr;
   }
 }
+
+/* Completar venta ya importada desde Tienda Nube: los ítems son de sólo lectura
+   para no generar diferencias entre el pedido remoto, el movimiento y el stock. */
+.nv-tn-completion-note {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(13, 110, 253, .22);
+  border-radius: 12px;
+  background: rgba(13, 110, 253, .06);
+  color: var(--color-text-primary, #17324d);
+  display: grid;
+  gap: 3px;
+  font-size: 12px;
+}
+.nv-tn-completion-note strong {
+  color: #0d6efd;
+  font-size: 13px;
+}
+.nv-modal--tn-completion .gm-movement-main {
+  position: relative;
+}
+.nv-modal--tn-completion .gm-movement-main::after {
+  content: "Productos fijados por la orden de Tienda Nube";
+  position: absolute;
+  right: 10px;
+  top: 8px;
+  z-index: 3;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(13, 110, 253, .10);
+  color: #0d6efd;
+  font-size: 10px;
+  font-weight: 800;
+  pointer-events: none;
+}
+.nv-modal--tn-completion .gm-movement-main .gm-table-body {
+  opacity: .86;
+}

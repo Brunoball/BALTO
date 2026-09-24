@@ -697,6 +697,7 @@ export default function ClientesCC() {
     try {
       const data = await apiPost(`${API}?action=cc_eliminar_cobro`, {
         id_cobro: idCobro,
+        id_comprobante: Number(row?.id_comprobante || 0) || null,
         idUsuario,
       });
 
@@ -795,7 +796,7 @@ export default function ClientesCC() {
         row={{
           ...deleteState.row,
           id_movimiento: deleteState.row?.id_cobro ?? null,
-          tipo_movimiento: "Cobro CC Cliente",
+          tipo_movimiento: "Recibo CC Cliente",
           detalle: deleteState.row
             ? `Comprobante: ${safeText(deleteState.row.comprobante) || "-"} · Fecha: ${
                 formatDisplayDate(deleteState.row.fecha || deleteState.row.fecha_raw) || "-"
@@ -807,13 +808,13 @@ export default function ClientesCC() {
         onClose={closeDeleteModal}
         onConfirm={confirmDeleteCobro}
         onToast={showToast}
-        title="Eliminar registro de cobro"
-        message="¿Seguro que querés eliminar solo este cobro de la cuenta corriente?"
-        warning="No se eliminará la deuda ni el movimiento original. Solo el cobro seleccionado."
-        loadingMessage="Eliminando cobro…"
-        successMessage="Cobro eliminado correctamente."
-        errorMessage="No se pudo eliminar el cobro."
-        confirmLabel="Eliminar cobro"
+        title="Eliminar recibo"
+        message="¿Seguro que querés eliminar este recibo completo?"
+        warning="Se eliminarán juntos todos los medios de pago y aplicaciones que pertenecen a este recibo y su comprobante. La venta original no se eliminará."
+        loadingMessage="Eliminando recibo…"
+        successMessage="Recibo eliminado correctamente."
+        errorMessage="No se pudo eliminar el recibo."
+        confirmLabel="Eliminar recibo"
         cancelLabel="Cancelar"
       />
 

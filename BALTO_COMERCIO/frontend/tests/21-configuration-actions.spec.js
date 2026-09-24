@@ -138,6 +138,16 @@ test('@configuracion @crud usuarios: alta, edición, baja, activación y elimina
   try {
     await page.goto('/panel/configuracion/usuarios');
     await waitForBusyToFinish(page);
+
+    // Si el esquema MASTER/roles quedó desactualizado, el modal no puede cargar roles
+    // y el botón de alta queda disabled. Fallamos acá con el error real del backend
+    // en vez de convertirlo en un timeout ambiguo de UI.
+    const usersPreflight = await authenticatedApi(page, 'configuracion_usuarios_listar');
+    expectApiSuccess(
+      usersPreflight,
+      'Configuración de usuarios no está disponible; revisá la migración Stage 1 del esquema MASTER',
+    );
+
     await page.getByRole('button', { name: /Agregar usuario/i }).click();
 
     let dialog = page.getByRole('dialog', { name: 'Agregar usuario' }).last();
@@ -146,6 +156,28 @@ test('@configuracion @crud usuarios: alta, edición, baja, activación y elimina
     await createInputs.nth(0).fill(username);
     await createInputs.nth(1).fill(email);
     await createInputs.nth(2).fill('Pw!123456');
+
+    // El alta actual exige rol explícito. El test histórico sólo llenaba los tres
+    // inputs, por eso "Crear usuario" quedaba disabled aunque el modal estuviera bien.
+    const selects = dialog.locator('select');
+    for (let index = 0; index < await selects.count(); index += 1) {
+      const select = selects.nth(index);
+      if (!(await select.isVisible().catch(() => false))) continue;
+      const options = await select.locator('option').evaluateAll((nodes) => nodes.map((node) => ({
+        value: String(node.value || ''),
+        text: String(node.textContent || '').trim(),
+        disabled: Boolean(node.disabled),
+      })));
+      const role = options.find((option) =>
+        option.value && !option.disabled && /empleado|administrador|admin|rol/i.test(option.text)
+      ) || options.find((option) => option.value && !option.disabled);
+      if (role) {
+        await select.selectOption(role.value);
+        break;
+      }
+    }
+
+    await expect(dialog.getByRole('button', { name: /Crear usuario/i })).toBeEnabled({ timeout: 15_000 });
 
     let responsePromise = page.waitForResponse(
       (response) =>

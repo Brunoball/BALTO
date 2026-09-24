@@ -1661,9 +1661,6 @@ export default function ModalNuevoIngreso({
   // ─── Validación ──────────────────────────────────────────────────────────────
   const validate = useCallback(() => {
     if (!safeStr(fecha)) return { ok: false, msg: "Falta la fecha." };
-    if (!(Number(selectedClienteId) > 0)) {
-      return { ok: false, msg: "Falta seleccionar un Cliente (obligatorio)." };
-    }
     
     // ⭐ VALIDACIÓN DE FECHA FUTURA ⭐
     if (fecha > todayISO()) {
@@ -1759,7 +1756,7 @@ export default function ModalNuevoIngreso({
       };
     }
     return { ok: true, usable };
-  }, [fecha, selectedClienteId, mediosFilas, mediosPagoList, sumaMediosPago, resumen.total, rowsCalc]);
+  }, [fecha, mediosFilas, mediosPagoList, sumaMediosPago, resumen.total, rowsCalc]);
 
   // ─── Build payload ────────────────────────────────────────────────────────────
   const buildPayload = useCallback(() => {
@@ -1807,7 +1804,7 @@ export default function ModalNuevoIngreso({
     return {
       fecha: safeStr(fecha).slice(0, 10),
       id_cliente: Number(selectedClienteId) || null,
-      cliente_nombre: selectedClienteNombre || null,
+      cliente_nombre: Number(selectedClienteId) > 0 ? (selectedClienteNombre || null) : null,
       id_medio_pago: mediosPayload[0]?.id_medio_pago || null,
       medio_pago_nombre: optionLabel(
         mediosPagoList.find(
@@ -2622,7 +2619,7 @@ export default function ModalNuevoIngreso({
                               ? "__add_cliente__"
                               : String(getClienteId(cliente) || cliente?.nombre || "")
                           }
-                          label="Cliente *"
+                          label="Cliente (opcional)"
                           placeholder=" "
                           disabled={saving || addClienteOpen || fiscalPanelOpen}
                           showAllOnFocus={true}

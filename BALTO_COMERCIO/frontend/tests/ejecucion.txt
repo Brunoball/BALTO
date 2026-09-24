@@ -8,12 +8,16 @@
 # ============================================================
 # PREPARAR ENTORNO
 # Ejecutar estas dos líneas antes de comenzar.
-# Desactiva Tienda Nube y evita acciones reales en ARCA.
+# Evita acciones reales en ARCA. Tienda Nube NO se prueba en esta suite.
+# IMPORTANTE: el backend seguro ya no acepta skip_tiendanube_sync desde el cliente.
+# Si querés cero sincronización externa durante tests mutables, usá un tenant de staging
+# sin Tienda Nube conectada. Los tests no llaman endpoints de conexión/importación de TN.
 # ============================================================
 
-$env:PW_SKIP_TIENDA_NUBE="1"
 Remove-Item Env:PW_ALLOW_ARCA -ErrorAction SilentlyContinue
 # La limpieza E2E queda forzada cuando PW_ALLOW_MUTATIONS=1: limpia PW al inicio y al terminar.
+# Producción queda bloqueada para mutaciones salvo PW_ALLOW_PRODUCTION=1 explícito en .env.playwright.
+# Las credenciales de producción también deben venir explícitamente de .env.playwright.
 
 
 # ============================================================
@@ -38,10 +42,12 @@ npx playwright test tests/08-current-accounts.spec.js tests/19-current-account-e
 # 3. STOCK
 # Productos, edición, eliminación, baja, reactivación, categorías administradas desde Configuración,
 # ciclo completo de variantes y códigos de barra (BL-P/BL-V/códigos físicos/permisos),
-# incluido el lector global de Stock y la búsqueda real mediante ProductoRepository.php.
+# lector global, búsqueda real mediante ProductoRepository.php y regresión backend de Stock:
+# change-feed, lecturas sin efectos secundarios, update parcial, SKU global, impacto de baja,
+# decimales, imágenes, reportes y ajustes/historial de precios. Tienda Nube real queda fuera.
 # ============================================================
 
-npx playwright test tests/03-stock-crud.spec.js tests/20-stock-lifecycle.spec.js tests/22-stock-variants-lifecycle.spec.js tests/25-stock-barcodes.spec.js tests/28-stock-barcode-search.spec.js tests/29-configuration-lists-categories.spec.js tests/31-stock-units-fractional.spec.js tests/32-units-pdf-contract.spec.js --project=chromium --workers=1 --reporter=list
+npx playwright test tests/03-stock-crud.spec.js tests/20-stock-lifecycle.spec.js tests/22-stock-variants-lifecycle.spec.js tests/25-stock-barcodes.spec.js tests/28-stock-barcode-search.spec.js tests/29-configuration-lists-categories.spec.js tests/31-stock-units-fractional.spec.js tests/32-units-pdf-contract.spec.js tests/37-stock-backend-regression.spec.js --project=chromium --workers=1 --reporter=list
 
 
 
@@ -98,6 +104,28 @@ npx playwright test tests/02-navigation-smoke.spec.js tests/11-global-guards.spe
 # porque repetiría prácticamente las mismas pruebas.
 # ============================================================
 
-npx playwright test tests/00-preflight.spec.js tests/01-auth.spec.js tests/02-navigation-smoke.spec.js tests/03-stock-crud.spec.js tests/04-purchases-credit-note.spec.js tests/05-sales-credit-note.spec.js tests/06-budgets.spec.js tests/07-other-movements.spec.js tests/08-current-accounts.spec.js tests/09-cheques-smoke.spec.js tests/10-config-accounting.spec.js tests/11-global-guards.spec.js tests/12-documents-readonly.spec.js tests/13-movement-delete-reversal.spec.js tests/14-details-and-cancel.spec.js tests/15-cheques-lifecycle.spec.js tests/16-movement-details-integrity.spec.js tests/17-other-income-fiscal.spec.js tests/18-auth-actions.spec.js tests/19-current-account-entities.spec.js tests/20-stock-lifecycle.spec.js tests/21-configuration-actions.spec.js tests/22-stock-variants-lifecycle.spec.js tests/23-internal-navigation-smoke.spec.js tests/24-initial-balances.spec.js tests/25-stock-barcodes.spec.js tests/26-barcode-movements.spec.js tests/27-performance-safety.spec.js tests/28-stock-barcode-search.spec.js tests/29-configuration-lists-categories.spec.js tests/31-stock-units-fractional.spec.js tests/32-units-pdf-contract.spec.js tests/34-manual-functional.spec.js tests/example.spec.js --project=chromium --workers=1 --reporter=list
+npx playwright test tests/00-preflight.spec.js tests/01-auth.spec.js tests/02-navigation-smoke.spec.js tests/03-stock-crud.spec.js tests/04-purchases-credit-note.spec.js tests/05-sales-credit-note.spec.js tests/06-budgets.spec.js tests/07-other-movements.spec.js tests/08-current-accounts.spec.js tests/09-cheques-smoke.spec.js tests/10-config-accounting.spec.js tests/11-global-guards.spec.js tests/12-documents-readonly.spec.js tests/13-movement-delete-reversal.spec.js tests/14-details-and-cancel.spec.js tests/15-cheques-lifecycle.spec.js tests/16-movement-details-integrity.spec.js tests/17-other-income-fiscal.spec.js tests/18-auth-actions.spec.js tests/19-current-account-entities.spec.js tests/20-stock-lifecycle.spec.js tests/21-configuration-actions.spec.js tests/22-stock-variants-lifecycle.spec.js tests/23-internal-navigation-smoke.spec.js tests/24-initial-balances.spec.js tests/25-stock-barcodes.spec.js tests/26-barcode-movements.spec.js tests/27-performance-safety.spec.js tests/28-stock-barcode-search.spec.js tests/29-configuration-lists-categories.spec.js tests/30-export-scope-detail.spec.js tests/31-stock-units-fractional.spec.js tests/32-units-pdf-contract.spec.js tests/34-manual-functional.spec.js tests/35-movement-search-health.spec.js tests/36-grouped-payment-current-account-regression.spec.js tests/37-stock-backend-regression.spec.js tests/example.spec.js --project=chromium --workers=1 --reporter=list
 
 npx playwright test --project=chromium --workers=1 --reporter=list
+
+
+# ============================================================
+# 8. ETAPA 4 · SUITE INTERNA ACTIVA + FREEZE
+# Ejecutar SOLO contra staging balto.3devsnet.com.
+# Esta batería provoca carreras reales, rollback, eCheq, reversiones,
+# multiítem/IVA, stress y valida CC con un ledger independiente.
+# ============================================================
+
+# En el .env del BACKEND de staging, temporalmente:
+# BALTO_E2E_TOOLS_ENABLED=1
+#
+# En esta terminal PowerShell:
+$env:PW_ALLOW_MUTATIONS="1"
+Remove-Item Env:PW_ALLOW_ARCA -ErrorAction SilentlyContinue
+
+npx playwright test tests/internal/00-freeze-internal.spec.js --project=chromium --workers=1 --reporter=list
+
+# Al terminar, volver OBLIGATORIAMENTE el backend a:
+# BALTO_E2E_TOOLS_ENABLED=0
+#
+# La suite activa se auto-bloquea fuera de balto.3devsnet.com.

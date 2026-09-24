@@ -13,12 +13,12 @@ import {
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 
-import manualPdfUrl from "../../../utils/manuales/Manual_Funcional_BALTO_Servicios_FINAL.pdf";
-import manualDocxUrl from "../../../utils/manuales/Manual_Funcional_BALTO_Servicios_FINAL.docx";
+import manualPdfUrl from "../../../utils/manuales/Manual_Funcional_BALTO_Servicios.pdf";
+import manualDocxUrl from "../../../utils/manuales/Manual_Funcional_BALTO_Servicios.docx";
 import "../../Global/Global_css/GlobalsModalsV2.css";
 import "./ModalManualFuncional.css";
 
-const TOTAL_PAGES = 86;
+const TOTAL_PAGES = 88;
 
 const MANUAL_SECTIONS = [
   { title: "Ingreso y navegación", page: 3, keywords: "login inicio sesión menu lateral perfil permisos rol plan" },
@@ -28,7 +28,7 @@ const MANUAL_SECTIONS = [
   { title: "Compras", page: 16, keywords: "compra proveedor nota crédito cheque echeq stock cuenta corriente" },
   { title: "Recibos", page: 22, keywords: "recibo cobrar cobro cliente cuenta corriente cheque echeq" },
   { title: "Órdenes de Pago", page: 26, keywords: "orden pago proveedor pagar cuenta corriente cheque echeq" },
-  { title: "Otros Ingresos", page: 29, keywords: "otros ingresos entrada dinero ingreso manual" },
+  { title: "Otros Ingresos", page: 29, keywords: "otros ingresos entrada dinero ingreso manual cliente opcional facturar factura" },
   { title: "Otros Egresos", page: 33, keywords: "otros egresos salida dinero gasto costo fijo variable" },
   { title: "Presupuestos", page: 36, keywords: "presupuesto modelos convertir venta propuesta comercial" },
   { title: "Flujo de Caja", page: 45, keywords: "flujo caja saldo ingresos egresos medios pago" },
@@ -55,8 +55,8 @@ const MANUAL_SECTIONS = [
   { title: "Configuración - Usuarios", page: 80, keywords: "usuarios roles acceso contraseña tema estado" },
   { title: "Configuración - Datos legales", page: 81, keywords: "datos legales fiscal cuit razon social iva punto venta" },
   { title: "Configuración - Saldos iniciales", page: 82, keywords: "saldos iniciales caja banco cheques cuentas corrientes apertura" },
-  { title: "Configuración - Listas y categorías", page: 84, keywords: "listas categorías unidades detalles materiales insumos productos" },
-  { title: "Configuración - Calendario global", page: 85, keywords: "calendario fechas periodo mes dias" },
+  { title: "Configuración - Listas y categorías", page: 85, keywords: "listas categorías unidades detalles medios pago materiales insumos productos" },
+  { title: "Configuración - Calendario global", page: 86, keywords: "calendario fechas periodo mes dias" },
 ];
 
 function normalizeText(value) {
@@ -148,7 +148,7 @@ export default function ModalManualFuncional({ open, onClose }) {
             <a
               className="manual-headerBtn manual-headerBtn--primary"
               href={docxUrl}
-              download="Manual_Funcional_BALTO_Servicios_FINAL.docx"
+              download="Manual_Funcional_BALTO_Servicios.docx"
               title="Descargar manual en Word"
             >
               <FontAwesomeIcon icon={faDownload} />
