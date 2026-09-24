@@ -1,7 +1,6 @@
 import { test, expect } from './support/test.js';
 import { authenticatedApi, expectApiSuccess, expectChequeState } from './support/api.js';
-import { RUN_PREFIX, uniqueChequeNumber, uniqueName, todayISO } from './support/data.js';
-import { ENV } from './support/env.js';
+import { uniqueChequeNumber, uniqueName, todayISO } from './support/data.js';
 import { requireMutations } from './support/ui.js';
 import { createServiceArticleFixture } from './support/services.js';
 import { createPurchaseFixtureViaApi } from './support/flows.js';
@@ -16,89 +15,6 @@ import {
   getLists,
   getProviderCurrentAccount,
 } from './internal/support/internal-api.js';
-
-
-
-async function attachGroupedComprobante(page, { action, tipo, movementIds, paymentIds, title }) {
-  const movements = (Array.isArray(movementIds) ? movementIds : [movementIds])
-    .map(Number)
-    .filter(Boolean);
-  const payments = (Array.isArray(paymentIds) ? paymentIds : [paymentIds])
-    .map(Number)
-    .filter(Boolean);
-
-  expect(movements, `${tipo}: debe haber al menos un movimiento para vincular el comprobante`).not.toHaveLength(0);
-  expect(payments, `${tipo}: el pago con dos medios debe devolver sus dos ids internos`).toHaveLength(2);
-
-  const base = ENV.apiURL.replace(/\/+$/, '');
-  const url = new URL(`${base}/api.php`);
-  url.searchParams.set('action', action);
-  if (ENV.allowMutations) url.searchParams.set('e2e_run', RUN_PREFIX);
-
-  const result = await page.evaluate(async ({ requestUrl, tipoArchivo, idsMovimientos, idsPagos, titulo }) => {
-    const sessionKey = String(localStorage.getItem('session_key') || '').trim();
-    if (!sessionKey) throw new Error('No hay session_key para guardar el comprobante E2E.');
-
-    // PDF mínimo suficiente para atravesar exactamente el endpoint multipart que usa
-    // "Finalizar" en Recibos/Órdenes de Pago. Lo importante de esta regresión no es
-    // maquetar el PDF, sino persistir UNA identidad de comprobante común a ambas patas.
-    const pdf = [
-      '%PDF-1.4',
-      '1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj',
-      '2 0 obj<</Type/Pages/Count 0/Kids[]>>endobj',
-      'trailer<</Root 1 0 R>>',
-      '%%EOF',
-    ].join('\n');
-    const file = new File([new TextEncoder().encode(pdf)], 'balto-e2e-operacion.pdf', {
-      type: 'application/pdf',
-    });
-
-    const fd = new FormData();
-    fd.append('tipo', tipoArchivo);
-    fd.append('titulo', titulo);
-    idsMovimientos.forEach((id) => fd.append('ids_movimiento[]', String(id)));
-    idsPagos.forEach((id) => {
-      fd.append('ids_pago[]', String(id));
-      fd.append('ids_cobro[]', String(id));
-      fd.append('ids_movimiento_medio_pago[]', String(id));
-    });
-    fd.append('id_movimiento', String(idsMovimientos[0]));
-    fd.append('id_pago', String(idsPagos[0]));
-    fd.append('id_cobro', String(idsPagos[0]));
-    fd.append('archivo', file);
-
-    const response = await fetch(requestUrl, {
-      method: 'POST',
-      headers: { Accept: 'application/json', 'X-Session': sessionKey },
-      body: fd,
-      timeoutMs: 70_000,
-    });
-    const text = await response.text();
-    let body = {};
-    try { body = text ? JSON.parse(text) : {}; } catch { body = { raw: text }; }
-    return { status: response.status, ok: response.ok, body, text };
-  }, {
-    requestUrl: url.toString(),
-    tipoArchivo: tipo,
-    idsMovimientos: movements,
-    idsPagos: payments,
-    titulo: title,
-  });
-
-  const body = expectApiSuccess(result, `${tipo}: no se pudo persistir el comprobante agrupado`);
-  const idComprobante = Number(body?.id_comprobante || body?.id_archivo || body?.data?.id_comprobante || 0);
-  expect(idComprobante, `${tipo}: Finalizar debe devolver un id_comprobante común`).toBeGreaterThan(0);
-
-  const linked = (Array.isArray(body?.ids_pago_vinculados) ? body.ids_pago_vinculados : [])
-    .map(Number)
-    .filter(Boolean)
-    .sort((a, b) => a - b);
-  expect(linked, `${tipo}: el comprobante debe quedar vinculado a las dos aplicaciones`).toEqual(
-    [...payments].sort((a, b) => a - b),
-  );
-
-  return idComprobante;
-}
 
 function groupedPaymentRows(account, movementId) {
   return (Array.isArray(account?.rows) ? account.rows : []).filter((row) => {
@@ -117,31 +33,71 @@ function originalMovementRow(account, movementId) {
   );
 }
 
+function assertOperationId(operationId, prefix, label) {
+  const value = String(operationId || '').trim();
+  expect(value, `${label}: el backend debe devolver operacion_pago_id`).not.toBe('');
+  expect(value, `${label}: operacion_pago_id debe usar el prefijo esperado`).toMatch(
+    new RegExp(`^${prefix}-[a-f0-9]{32,}$`, 'i'),
+  );
+  expect(value.length, `${label}: operacion_pago_id debe caber en VARCHAR(64)`).toBeLessThanOrEqual(64);
+  return value;
+}
+
+function assertApplicationsShareOperation(body, operationId, label) {
+  const applications = Array.isArray(body?.aplicaciones) ? body.aplicaciones : [];
+  expect(applications, `${label}: deben persistirse las dos aplicaciones internas`).toHaveLength(2);
+  for (const application of applications) {
+    expect(
+      String(application?.operacion_pago_id || '').trim(),
+      `${label}: todas las aplicaciones deben compartir la identidad financiera`,
+    ).toBe(operationId);
+  }
+}
+
 async function deleteGroupedPayment(page, row) {
   const result = await authenticatedApi(page, 'cc_eliminar_cobro', {
     method: 'POST',
-    body: {
-      id_cobro: Number(row?.id_cobro || 0),
-      id_comprobante: Number(row?.id_comprobante || 0),
-    },
+    // Contrato nuevo: id_cobro alcanza para resolver operacion_pago_id en backend.
+    // No se envía id_comprobante: el PDF ya no define la identidad financiera.
+    body: { id_cobro: Number(row?.id_cobro || 0) },
   });
   return expectApiSuccess(result, 'No se pudo eliminar la operación agrupada de cuenta corriente');
 }
 
-function assertGroupedRow(row, { amount, label }) {
+function assertGroupedRow(row, { amount, label, operationId }) {
   expect(row, `Debe existir una única fila agrupada para ${label}`).toBeTruthy();
   expect(Number(row?.credito || 0), `${label}: el crédito debe sumar todos los medios`).toBeCloseTo(amount, 2);
-  expect(Number(row?.id_comprobante || 0), `${label}: debe conservar el comprobante único`).toBeGreaterThan(0);
+  // La agrupación tiene que existir ANTES de generar cualquier PDF. Si esto vuelve a
+  // ser > 0, el test detecta una dependencia accidental del comprobante.
+  expect(Number(row?.id_comprobante || row?.id_archivo || 0), `${label}: la agrupación no debe depender de un PDF`).toBe(0);
+  expect(String(row?.operacion_pago_id || '').trim(), `${label}: la fila agrupada debe exponer operacion_pago_id`).toBe(operationId);
 
   const ids = Array.isArray(row?.ids_cobro) ? row.ids_cobro.map(Number).filter(Boolean) : [];
   expect(ids, `${label}: deben existir dos aplicaciones internas`).toHaveLength(2);
-  expect(Number(row?.cantidad_aplicaciones || 0), `${label}: cantidad_aplicaciones incorrecta`).toBe(2);
-  expect(Array.isArray(row?.medios_pago_detalle) ? row.medios_pago_detalle : [], `${label}: deben exponerse los dos medios de pago`).toHaveLength(2);
+  expect(Number(row?.cantidad_aplicaciones || ids.length), `${label}: cantidad_aplicaciones incorrecta`).toBe(2);
+  expect(
+    Array.isArray(row?.medios_pago_detalle) ? row.medios_pago_detalle : [],
+    `${label}: deben exponerse los dos medios de pago`,
+  ).toHaveLength(2);
+
+  for (const payment of row?.medios_pago_detalle || []) {
+    expect(String(payment?.operacion_pago_id || '').trim(), `${label}: cada pata debe conservar operacion_pago_id`).toBe(operationId);
+  }
+
   return ids.sort((a, b) => a - b);
 }
 
-test.describe.serial('@crud @critical regresión CC: Recibo/Orden de pago con múltiples medios', () => {
-  test('recibo: dos medios se muestran como una sola operación y al eliminarla no queda pago ni comprobante huérfano', async ({ page }) => {
+function deletedPaymentIds(deletion) {
+  return (Array.isArray(deletion?.ids_pago_eliminados)
+    ? deletion.ids_pago_eliminados
+    : (Array.isArray(deletion?.ids_cobro) ? deletion.ids_cobro : []))
+    .map(Number)
+    .filter(Boolean)
+    .sort((a, b) => a - b);
+}
+
+test.describe.serial('@crud @critical regresión CC: Recibo/Orden de pago multimétodo por operacion_pago_id', () => {
+  test('recibo: agrupa dos medios sin depender del PDF y revierte toda la operación', async ({ page }) => {
     test.setTimeout(4 * 60_000);
     await requireMutations(test, page);
 
@@ -189,40 +145,32 @@ test.describe.serial('@crud @critical regresión CC: Recibo/Orden de pago con m�
       'No se pudo crear el recibo agrupado de prueba',
     );
 
+    const operationId = assertOperationId(receipt?.operacion_pago_id, 'RECIBO', 'Recibo');
+    assertApplicationsShareOperation(receipt, operationId, 'Recibo');
+
     const createdChequeId = Number(receipt?.cheques_creados?.[0]?.id_cheque || 0);
     expect(createdChequeId, 'El recibo debe crear el cheque de $100').toBeGreaterThan(0);
     await expectChequeState(page, chequeNumber, 'EN_CARTERA');
 
-    const receiptPaymentIds = (Array.isArray(receipt?.ids_pago) ? receipt.ids_pago : receipt?.ids_cobro || [])
-      .map(Number)
-      .filter(Boolean);
-    await attachGroupedComprobante(page, {
-      action: 'recibos_comprobantes_subir',
-      tipo: 'RECIBO',
-      movementIds: [sale.id],
-      paymentIds: receiptPaymentIds,
-      title: `${RUN_PREFIX}-RECIBO-GROUP`,
-    });
-
     const account = await getCurrentAccount(page, client.id);
     const paymentRows = groupedPaymentRows(account, sale.id);
-    expect(paymentRows, 'El recibo con dos medios debe renderizar una sola fila de cuenta corriente').toHaveLength(1);
+    expect(paymentRows, 'El recibo con dos medios debe renderizar una sola fila aun sin PDF').toHaveLength(1);
     const row = paymentRows[0];
-    const idsBefore = assertGroupedRow(row, { amount: 180, label: 'Recibo' });
+    const idsBefore = assertGroupedRow(row, {
+      amount: 180,
+      label: 'Recibo',
+      operationId,
+    });
 
     expect(Number(account?.totales?.debito || 0)).toBeCloseTo(180, 2);
     expect(Number(account?.totales?.credito || 0)).toBeCloseTo(180, 2);
     expect(Number(account?.totales?.saldo || 0)).toBeCloseTo(0, 2);
 
     const deletion = await deleteGroupedPayment(page, row);
-    const deletedIds = (Array.isArray(deletion?.ids_cobro) ? deletion.ids_cobro : [])
-      .map(Number)
-      .filter(Boolean)
-      .sort((a, b) => a - b);
-    expect(deletion?.operacion_agrupada).toBe(true);
-    expect(deletion?.comprobante_eliminado).toBe(true);
+    expect(String(deletion?.operacion_pago_id || '').trim()).toBe(operationId);
     expect(Number(deletion?.medios_pago_eliminados || 0)).toBe(2);
-    expect(deletedIds).toEqual(idsBefore);
+    expect(deletion?.comprobante_eliminado, 'Sin PDF no debe inventarse una eliminación de comprobante').toBe(false);
+    expect(deletedPaymentIds(deletion)).toEqual(idsBefore);
 
     const after = await getCurrentAccount(page, client.id);
     expect(groupedPaymentRows(after, sale.id), 'No debe sobrevivir ninguna pata del recibo').toHaveLength(0);
@@ -233,12 +181,12 @@ test.describe.serial('@crud @critical regresión CC: Recibo/Orden de pago con m�
     expect(Number(after?.totales?.credito || 0)).toBeCloseTo(0, 2);
     expect(Number(after?.totales?.saldo || 0)).toBeCloseTo(180, 2);
 
-    // El cheque recibido no debe desaparecer por eliminar el recibo: su alta en cartera
-    // es un hecho independiente y esta conducta ya forma parte del contrato de Balto.
+    // El cheque recibido no desaparece al eliminar el recibo: su alta en cartera es
+    // un hecho independiente del pago aplicado a la cuenta corriente.
     await expectChequeState(page, chequeNumber, 'EN_CARTERA');
   });
 
-  test('orden de pago: cheque + otro medio se agrupan y al eliminar la orden completa el cheque vuelve a cartera', async ({ page }) => {
+  test('orden de pago: cheque + otro medio forman una operación y el cheque vuelve a cartera al revertirla', async ({ page }) => {
     test.setTimeout(5 * 60_000);
     await requireMutations(test, page);
 
@@ -298,38 +246,43 @@ test.describe.serial('@crud @critical regresión CC: Recibo/Orden de pago con m�
       'No se pudo crear la orden de pago agrupada de prueba',
     );
 
+    const operationId = assertOperationId(payment?.operacion_pago_id, 'ORDEN_PAGO', 'Orden de pago');
+    assertApplicationsShareOperation(payment, operationId, 'Orden de pago');
     await expectChequeState(page, chequeNumber, 'EGRESADO_CARTERA');
-
-    const orderPaymentIds = (Array.isArray(payment?.ids_pago) ? payment.ids_pago : payment?.ids_cobro || [])
-      .map(Number)
-      .filter(Boolean);
-    await attachGroupedComprobante(page, {
-      action: 'ordenes_pago_comprobante_subir_y_vincular',
-      tipo: 'ORDEN_PAGO',
-      movementIds: [purchaseId],
-      paymentIds: orderPaymentIds,
-      title: `${RUN_PREFIX}-ORDEN-GROUP`,
-    });
 
     const account = await getProviderCurrentAccount(page, provider.id);
     const paymentRows = groupedPaymentRows(account, purchaseId);
-    expect(paymentRows, 'La orden con dos medios debe renderizar una sola fila de cuenta corriente').toHaveLength(1);
+    expect(paymentRows, 'La orden con dos medios debe renderizar una sola fila aun sin PDF').toHaveLength(1);
     const row = paymentRows[0];
-    const idsBefore = assertGroupedRow(row, { amount: 180, label: 'Orden de pago' });
+    const idsBefore = assertGroupedRow(row, {
+      amount: 180,
+      label: 'Orden de pago',
+      operationId,
+    });
 
     expect(Number(account?.totales?.debito || 0)).toBeCloseTo(180, 2);
     expect(Number(account?.totales?.credito || 0)).toBeCloseTo(180, 2);
     expect(Number(account?.totales?.saldo || 0)).toBeCloseTo(0, 2);
 
-    const deletion = await deleteGroupedPayment(page, row);
-    const deletedIds = (Array.isArray(deletion?.ids_cobro) ? deletion.ids_cobro : [])
-      .map(Number)
-      .filter(Boolean)
-      .sort((a, b) => a - b);
-    expect(deletion?.operacion_agrupada).toBe(true);
-    expect(deletion?.comprobante_eliminado).toBe(true);
-    expect(Number(deletion?.medios_pago_eliminados || 0)).toBe(2);
-    expect(deletedIds).toEqual(idsBefore);
+    // La ruta propia de Órdenes de pago recibe UNA sola pata y debe expandirla
+    // al grupo completo por operacion_pago_id, sin necesitar PDF compartido.
+    const deletion = expectApiSuccess(
+      await authenticatedApi(page, 'ordenes_pago_eliminar_pago', {
+        method: 'POST',
+        body: { id_pago: Number(row?.id_cobro || 0), fecha_evento: date },
+      }),
+      'No se pudo revertir la orden de pago agrupada por operacion_pago_id',
+    );
+    expect(deletedPaymentIds(deletion)).toEqual(idsBefore);
+    expect(Number(deletion?.borrados || 0)).toBe(2);
+    expect(
+      Array.isArray(deletion?.operaciones_pago_eliminadas) ? deletion.operaciones_pago_eliminadas : [],
+      'La reversión debe informar la operación financiera eliminada',
+    ).toContain(operationId);
+    expect(
+      Array.isArray(deletion?.archivos_eliminados) ? deletion.archivos_eliminados : [],
+      'Sin PDF no debe inventarse una eliminación de comprobante',
+    ).toHaveLength(0);
 
     await expectChequeState(page, chequeNumber, 'EN_CARTERA');
 

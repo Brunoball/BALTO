@@ -44,19 +44,26 @@ Para correr ambas suites juntas (principal + interna):
 
 npx playwright test --project=chromium --workers=1 --reporter=list
 
-También podés usar para la suite principal:
+También podés usar los runners actualizados:
+powershell -ExecutionPolicy Bypass -File src/scripts/test-lote.ps1 actuales
+  -> sólo suite principal (tests/*.spec.js, excepto example.spec.js)
+
+powershell -ExecutionPolicy Bypass -File src/scripts/test-lote.ps1 interno
+  -> sólo tests/internal/**/*.spec.js
+
 powershell -ExecutionPolicy Bypass -File src/scripts/test-lote.ps1 todo
 powershell -ExecutionPolicy Bypass -File src/scripts/test-lotes-todos.ps1
+  -> suite COMPLETA real: principal + tests/internal
 
-Los scripts ya NO tienen una lista vieja congelada: "todo" descubre automáticamente
-todos los tests/*.spec.js actuales (excepto example.spec.js). Al agregar un spec nuevo,
-queda incluido sin tener que editar el runner.
+Los scripts descubren los specs dinámicamente. "todo" ya no deja tests/internal afuera:
+al agregar un *.spec.js principal o interno queda incluido sin editar una lista congelada.
 
 LOTES ÚTILES
 ------------
 powershell -ExecutionPolicy Bypass -File src/scripts/test-lote.ps1 servicios
 powershell -ExecutionPolicy Bypass -File src/scripts/test-lote.ps1 stock
 powershell -ExecutionPolicy Bypass -File src/scripts/test-lote.ps1 movimientos
+powershell -ExecutionPolicy Bypass -File src/scripts/test-lote.ps1 pagos-agrupados
 powershell -ExecutionPolicy Bypass -File src/scripts/test-lote.ps1 documentos
 powershell -ExecutionPolicy Bypass -File src/scripts/test-lote.ps1 exportaciones
 powershell -ExecutionPolicy Bypass -File src/scripts/test-lote.ps1 configuracion
@@ -69,8 +76,12 @@ powershell -ExecutionPolicy Bypass -File src/scripts/test-segun-cambios.ps1
 El selector reconoce específicamente los cambios nuevos de BALTO Servicios:
 ServiceStockComposition, ProductStockAutocomplete, Servicios, StockImpactService,
 MovimientoRepository, Ventas, Presupuestos, Otros ingresos y builders de PDF.
-Si cambia infraestructura transversal, helpers del testing o listas globales,
-ejecuta la suite completa en vez de dejar módulos afuera.
+También cubre los cambios finales del backend:
+- Recibos / Órdenes de pago / PagoRepository / helpers de pago / Cuentas Corrientes
+  disparan la regresión específica de operacion_pago_id.
+- ARCA (WSAA/WSFE/Padrón/config) y config/r2.php disparan hardening fail-closed.
+- Cambios en tests/internal, helpers compartidos o scripts fuerzan la suite completa.
+Si cambia infraestructura transversal, ejecuta la suite completa en vez de dejar módulos afuera.
 
 COBERTURA NUEVA DE SERVICIOS / MOVIMIENTOS
 ------------------------------------------
@@ -140,6 +151,8 @@ La suite ahora también valida:
 - El tenant operativo se deriva sólo de SESSION_MASTER/AUTH_TENANT_ID/TENANT_MASTER_ROW; nunca GET/POST/REQUEST ni X-IdTenant.
 - Configuración y Movimientos/R2 fallan cerrado si dos fuentes autenticadas de tenant discrepan.
 - R2 y el fallback local guardan comprobantes bajo tenants/t_<tenant autenticado>.
+- config/r2.php exige HTTPS, verificación TLS real y no permite elegir tenant desde browser.
+- ARCA WSAA/WSFE/Padrón queda fail-closed: verify_peer/hostname activos, sin self-signed ni fallback inseguro.
 - CORS ya no permite X-IdTenant/X-Id-Tenant y el deploy conserva X-Frame-Options, CSP de framing/base, Permissions-Policy y HSTS.
 
 Sólo hardening:
@@ -147,12 +160,15 @@ npx playwright test tests/35-backend-hardening-regression.spec.js --project=chro
 
 REGRESIÓN RECIBOS / ÓRDENES DE PAGO AGRUPADOS
 ----------------------------------------------
-Valida el fix de cuenta corriente cuando una misma operación se paga con más de un medio:
-- Recibo con CHEQUE + otro medio aparece como una sola fila por el total.
-- Orden de pago con CHEQUE + otro medio aparece como una sola fila por el total.
-- La fila agrupada conserva un único comprobante y expone sus dos aplicaciones internas.
-- Al eliminar Recibo/Orden se eliminan juntas todas las aplicaciones y el comprobante.
-- No queda un pago parcial fantasma ni una fila sobreviviente sin PDF.
+Valida el contrato actual de cuenta corriente cuando una misma operación se paga con más de un medio:
+- Recibo con CHEQUE + otro medio devuelve un operacion_pago_id único y común a las dos aplicaciones.
+- Orden de pago con CHEQUE + otro medio devuelve un operacion_pago_id único y común a las dos aplicaciones.
+- La cuenta corriente agrupa ambas patas ANTES de generar cualquier PDF.
+- La fila agrupada expone dos aplicaciones y dos medios; cada aplicación conserva operacion_pago_id.
+- Recibo se elimina desde CC sólo con id_cobro: el backend resuelve toda la operación por operacion_pago_id.
+- Orden de pago se revierte por su endpoint propio enviando sólo una pata y el backend expande el grupo completo.
+- Sin PDF no se inventa una eliminación de comprobante ni se usa el fallback legacy por archivo.
+- No queda un pago parcial fantasma ni una fila sobreviviente.
 - En Orden de pago, el cheque utilizado vuelve a EN_CARTERA al revertir la operación completa.
 - En Recibo, el cheque recibido permanece correctamente en cartera.
 

@@ -192,7 +192,7 @@ export default function Configuracion() {
         action: "open-manual",
         status: { text: "Disponible", type: "success" },
         metaTop: "Versión 2026",
-        metaBottom: "86 páginas · Consulta · Descarga",
+        metaBottom: "88 páginas · Consulta · Descarga",
         icon: (
           <div className="cfg-cardLogo cfg-cardLogo--icon">
             <FontAwesomeIcon icon={faBookOpen} />

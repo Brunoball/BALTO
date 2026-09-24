@@ -158,6 +158,75 @@ test('@security @critical tenant/R2: el navegador no puede elegir tenant y almac
   expect(routesHtaccess).toMatch(/Strict-Transport-Security/i);
 });
 
+test('@security @critical ARCA/R2 fail-closed: TLS verificado y tenant autenticado', async () => {
+  const apiRoot = findLocalApiRoot();
+  test.skip(!apiRoot, 'El checkout local no incluye ../api; este contrato se valida cuando frontend y api están juntos.');
+
+  const readClean = (relative) => sourceWithoutComments(fs.readFileSync(path.join(apiRoot, relative), 'utf8'));
+
+  const arcaFiles = [
+    'modules/movimientos/facturacion/arca_wsaa.php',
+    'modules/movimientos/facturacion/arca_wsfev1.php',
+    'modules/movimientos/facturacion/arca_config.php',
+    'modules/movimientos/facturacion/padron.php',
+  ];
+  const insecureTlsPatterns = [
+    /verify_peer[\'\"]?\s*=>\s*false/i,
+    /verify_peer_name[\'\"]?\s*=>\s*false/i,
+    /allow_self_signed[\'\"]?\s*=>\s*true/i,
+    /CURLOPT_SSL_VERIFYPEER\s*,\s*false/i,
+    /CURLOPT_SSL_VERIFYHOST\s*,\s*0/i,
+    /ssl_verify\s*=\s*false/i,
+  ];
+
+  for (const relative of arcaFiles) {
+    const source = readClean(relative);
+    for (const pattern of insecureTlsPatterns) {
+      expect(source, `${relative} no debe permitir degradar validación TLS (${pattern})`).not.toMatch(pattern);
+    }
+  }
+
+  const arcaConfig = readClean('modules/movimientos/facturacion/arca_config.php');
+  expect(arcaConfig).toMatch(/['\"]ssl_fallback_if_fail['\"]\s*=>\s*false/i);
+  expect(arcaConfig).toMatch(/['\"]wsaa_ssl_verify['\"]\s*=>\s*true/i);
+  expect(arcaConfig).toMatch(/['\"]wsfe_ssl_verify['\"]\s*=>\s*true/i);
+
+  const wsaa = readClean('modules/movimientos/facturacion/arca_wsaa.php');
+  expect(wsaa).toMatch(/['\"]verify_peer['\"]\s*=>\s*true/i);
+  expect(wsaa).toMatch(/['\"]verify_peer_name['\"]\s*=>\s*true/i);
+  expect(wsaa).toMatch(/['\"]allow_self_signed['\"]\s*=>\s*false/i);
+  expect(wsaa).toMatch(/if\s*\(\s*!\s*\$sslVerify\s*\)/);
+
+  const wsfe = readClean('modules/movimientos/facturacion/arca_wsfev1.php');
+  expect(wsfe).toMatch(/['\"]verify_peer['\"]\s*=>\s*true/i);
+  expect(wsfe).toMatch(/['\"]verify_peer_name['\"]\s*=>\s*true/i);
+  expect(wsfe).toMatch(/['\"]allow_self_signed['\"]\s*=>\s*false/i);
+
+  const padron = readClean('modules/movimientos/facturacion/padron.php');
+  expect(padron).toMatch(/['\"]verify_peer['\"]\s*=>\s*true/i);
+  expect(padron).toMatch(/['\"]verify_peer_name['\"]\s*=>\s*true/i);
+  expect(padron).toMatch(/['\"]allow_self_signed['\"]\s*=>\s*false/i);
+
+  const r2 = readClean('config/r2.php');
+  // R2 no acepta tenant desde browser/env: deriva identidad de la sesión MASTER y
+  // falla si TENANT_MASTER_ROW contradice esa sesión.
+  expect(r2).toMatch(/\$GLOBALS\s*\[\s*['\"]SESSION_MASTER['\"]\s*\]/);
+  expect(r2).toMatch(/\$GLOBALS\s*\[\s*['\"]TENANT_MASTER_ROW['\"]\s*\]/);
+  expect(r2).toMatch(/\$resolved\s*!==\s*\$tenant/);
+  expect(r2).not.toMatch(/\$_(?:GET|POST|REQUEST)\s*\[\s*['\"](?:idTenant|id_tenant|tenant_id)['\"]\s*\]/i);
+  expect(r2).not.toMatch(/HTTP_X_IDTENANT|HTTP_X_ID_TENANT/i);
+
+  // Endpoint y cliente R2 quedan fail-closed en HTTPS/TLS, con verificación real.
+  expect(r2).toContain("#^https://#i");
+  expect(r2).toMatch(/['\"]verify['\"]\s*=>\s*true/i);
+  expect(r2).toMatch(/CURLOPT_SSLVERSION\s*=>\s*CURL_SSLVERSION_TLSv1_2/);
+
+  // Toda key queda namespaced por el tenant autenticado y se valida antes de exponerla.
+  expect(r2).toMatch(/r2_authenticated_tenant_id\s*\(\s*\)/);
+  expect(r2).toMatch(/tenants\/t_/i);
+  expect(r2).toMatch(/r2_assert_tenant_key\s*\(\s*\$key\s*\)/);
+});
+
 test('@security @roles @critical EMPLEADO conserva lo permitido y backend bloquea módulos administrativos', async ({ page, browser }) => {
   test.setTimeout(3 * 60_000);
   await requireMutations(test, page);
@@ -248,6 +317,9 @@ test('@hardening contrato local del backend: permisos, migraciones, errores y ru
   const modulesHtaccess = read('modules/.htaccess');
   const e2eRoute = read('modules/configuracion/testing/route.php');
   const errorResponse = read('modules/global/error_response.php');
+  const ccRoute = read('modules/cuentas_corrientes/route.php');
+  const ccHelpers = read('modules/cuentas_corrientes/helpers.php');
+  const ccRepository = read('modules/cuentas_corrientes/repository.php');
 
   expect(router).toMatch(/action_policy\.php/);
   expect(router).toMatch(/balto_authorize_private_action/);
@@ -263,6 +335,19 @@ test('@hardening contrato local del backend: permisos, migraciones, errores y ru
   expect(e2eRoute).toContain("BALTO_E2E_TOOLS_ENABLED");
   expect(e2eRoute).toMatch(/balto_env_bool\(['"]BALTO_E2E_TOOLS_ENABLED['"],\s*false\)/);
   expect(errorResponse).toMatch(/request_id/i);
+
+  // Cuenta Corriente debe poder construir el historial sin depender de haber
+  // cargado antes actions/transacciones.php. Este fue el bug detectado por la
+  // regresión de pagos multimétodo: repository.php llamaba a un helper que sólo
+  // existía dentro de otra acción y cc_historial_cliente terminaba en HTTP 500.
+  expect(ccHelpers).toMatch(/function\s+cuentas_corrientes_normalizar_catalogo\s*\(/);
+  expect(ccRepository).toMatch(/cuentas_corrientes_normalizar_catalogo\s*\(/);
+  const ccHelpersLoad = ccRoute.indexOf("require_once __DIR__ . '/helpers.php'");
+  const ccRepositoryLoad = ccRoute.indexOf("require_once __DIR__ . '/repository.php'");
+  const ccActionLoad = ccRoute.indexOf('require_once $actionFile');
+  expect(ccHelpersLoad, 'CC debe cargar helpers globales').toBeGreaterThanOrEqual(0);
+  expect(ccRepositoryLoad, 'CC debe cargar repository').toBeGreaterThan(ccHelpersLoad);
+  expect(ccActionLoad, 'CC debe cargar la acción después de helpers/repository').toBeGreaterThan(ccRepositoryLoad);
 
   const migrationFiles = [
     'migrations/master/2026-09-19_hardening_backend_master.sql',
