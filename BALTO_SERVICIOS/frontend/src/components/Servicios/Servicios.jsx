@@ -86,7 +86,64 @@ export default function Servicios() {
   const [quickCategory, setQuickCategory] = useState({ open: false, kind: null, apply: null });
   const [historyModal, setHistoryModal] = useState({ open: false, kind: null, item: null, rows: [], loading: false });
   const requestRef = useRef(0);
+  const pageRef = useRef(null);
   const [tableWrapRef, hasTableScroll] = useTableScrollGutter();
+
+  /*
+   * Servicios solo calcula cuánto alto queda disponible desde su tarjeta.
+   * El viewport visual real ya se publica GLOBALMENTE desde Principal mediante
+   * useVisualViewport; acá no se crea ni se elimina esa variable compartida.
+   */
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof document === "undefined") return undefined;
+
+    const root = document.documentElement;
+    let frame = 0;
+
+    const syncAvailableHeight = () => {
+      if (frame) window.cancelAnimationFrame(frame);
+
+      frame = window.requestAnimationFrame(() => {
+        const isResponsive = window.matchMedia("(max-width: 720px)").matches;
+
+        if (!isResponsive) {
+          root.style.removeProperty("--balto-servicios-available-height");
+          root.classList.remove("balto-servicios-mobile-viewport");
+          return;
+        }
+
+        const visualViewport = window.visualViewport;
+        const viewportHeight = visualViewport?.height || window.innerHeight;
+        const viewportTop = visualViewport?.offsetTop || 0;
+        const card = pageRef.current?.querySelector(".servicios-mainCard");
+        const cardTop = card?.getBoundingClientRect?.().top;
+
+        if (Number.isFinite(viewportHeight) && viewportHeight > 0 && Number.isFinite(cardTop)) {
+          const visibleCardTop = Math.max(cardTop, viewportTop);
+          const viewportBottom = viewportTop + viewportHeight;
+          const availableHeight = Math.max(0, viewportBottom - visibleCardTop);
+          root.style.setProperty("--balto-servicios-available-height", `${Math.floor(availableHeight)}px`);
+        }
+
+        root.classList.add("balto-servicios-mobile-viewport");
+      });
+    };
+
+    syncAvailableHeight();
+
+    window.addEventListener("balto:visualviewportchange", syncAvailableHeight);
+    window.addEventListener("resize", syncAvailableHeight, { passive: true });
+    window.addEventListener("orientationchange", syncAvailableHeight);
+
+    return () => {
+      if (frame) window.cancelAnimationFrame(frame);
+      window.removeEventListener("balto:visualviewportchange", syncAvailableHeight);
+      window.removeEventListener("resize", syncAvailableHeight);
+      window.removeEventListener("orientationchange", syncAvailableHeight);
+      root.style.removeProperty("--balto-servicios-available-height");
+      root.classList.remove("balto-servicios-mobile-viewport");
+    };
+  }, []);
 
   const notify = useCallback((tipo, mensaje, duracion = 3500) => setToast({ id: Date.now(), tipo, mensaje, duracion }), []);
 
@@ -486,7 +543,7 @@ export default function Servicios() {
     : "El registro volverá a estar disponible para nuevas selecciones.";
 
   return (
-    <section className="mov-page servicios-page">
+    <section ref={pageRef} className="mov-page servicios-page">
       {toast && <Toast key={toast.id} tipo={toast.tipo} mensaje={toast.mensaje} duracion={toast.duracion} onClose={() => setToast(null)} />}
       <section className="mov-card mov-card--table servicios-mainCard">
         <div className="mov-card__head">
@@ -496,9 +553,17 @@ export default function Servicios() {
               <div className="servicios-inventoryTabs" role="tablist">{tabs.map((key) => <button key={key} type="button" className={`servicios-inventoryTab ${tab === key ? "is-active" : ""}`} onClick={() => { setCurrentPage(1); setTab(key); }}>{META[key].title}</button>)}</div>
             </div>
             <div className="mov-headFilters servicios-headFilters">
-              <div className="cc-filter cc-filter--search servicios-searchFilter"><div className="cc-floatingField cc-floatingField--search is-active"><div className="cc-searchInput"><div className="cc-searchInput__fieldWrap"><input className="cc-input cc-input--floating servicios-searchInput" value={currentFilter.buscar} onChange={(e) => updateFilter("buscar", upper(e.target.value).slice(0, 100))} placeholder={META[tab].search} /><span className="cc-floatingLabel"><FontAwesomeIcon icon={faMagnifyingGlass} /> Búsqueda</span>{currentFilter.buscar && <button type="button" className="cc-clearSearch cc-clearSearch--inside" onClick={() => updateFilter("buscar", "")}><FontAwesomeIcon icon={faTimes} /></button>}</div></div></div></div>
+              <div className="servicios-searchExportRow">
+                <div className="cc-filter cc-filter--search servicios-searchFilter"><div className="cc-floatingField cc-floatingField--search is-active"><div className="cc-searchInput"><div className="cc-searchInput__fieldWrap"><input className="cc-input cc-input--floating servicios-searchInput" value={currentFilter.buscar} onChange={(e) => updateFilter("buscar", upper(e.target.value).slice(0, 100))} placeholder={META[tab].search} /><span className="cc-floatingLabel"><FontAwesomeIcon icon={faMagnifyingGlass} /> Búsqueda</span>{currentFilter.buscar && <button type="button" className="cc-clearSearch cc-clearSearch--inside" onClick={() => updateFilter("buscar", "")}><FontAwesomeIcon icon={faTimes} /></button>}</div></div></div></div>
+                <div className="servicios-mobileExport">
+                  <BotonExportar label="Exportar" opciones={exportOptions} disabled={loading || rows.length === 0} entityLabel={META[tab].title.toLocaleLowerCase("es-AR")} currentRows={visibleRows} allRows={rows} currentCount={visibleRows.length} allCount={rows.length} hasMore={rows.length > visibleRows.length} />
+                </div>
+              </div>
               {categoryTabs.has(tab) && <div className="cc-filter servicios-filterCompact"><div className="cc-floatingField is-active"><select className="servicios-globalSelect" value={currentFilter.categoria} onChange={(e) => updateFilter("categoria", e.target.value)}><option value="">TODAS LAS CATEGORÍAS</option>{categories.map((c) => <option key={c.id_categoria} value={c.id_categoria}>{c.nombre}{Number(c.activo) === 1 ? "" : " (BAJA)"}</option>)}</select><span className="cc-floatingLabel cc-floatingLabel--active">Categoría</span></div></div>}
-              <div className="mov-tabs servicios-statusTabs">{STATUS_TABS.map((status) => <button key={status.value} type="button" className={`mov-tab servicios-statusTab ${currentFilter.estado === status.value ? "is-active" : ""}`} onClick={() => updateFilter("estado", status.value)}>{status.label}</button>)}</div>
+              <div className="servicios-statusAddRow">
+                <div className="mov-tabs servicios-statusTabs">{STATUS_TABS.map((status) => <button key={status.value} type="button" className={`mov-tab servicios-statusTab ${currentFilter.estado === status.value ? "is-active" : ""}`} onClick={() => updateFilter("estado", status.value)}>{status.label}</button>)}</div>
+                {META[tab].add && <button type="button" className="mov-btn mov-btn--primary servicios-mobileAddBtn" onClick={openNew}><FontAwesomeIcon icon={faPlus} /> {META[tab].add}</button>}
+              </div>
             </div>
           </div>
           <div className="mov-card__actions servicios-headActions">
@@ -514,15 +579,15 @@ export default function Servicios() {
         </div>
 
         <div className={`mov-gridTable mov-gridTable--head ${hasTableScroll ? "has-y-scroll" : ""}`} style={{ gridTemplateColumns: gridCols }}>{columns.map((column) => <div key={column.k} className={`mov-gridCell mov-gridCell--head ${column.right ? "is-right" : ""} ${column.center ? "is-center" : ""} ${column.k === "acciones" ? "mov-gridCell--actions" : ""}`}>{column.l}</div>)}</div>
-        <div className="mov-tableWrap servicios-mainTableWrap" ref={tableWrapRef}>
+        <div className={`mov-tableWrap servicios-mainTableWrap ${categoryTabs.has(tab) ? "servicios-mainTableWrap--threeControlRows" : "servicios-mainTableWrap--twoControlRows"} ${totalPages <= 1 ? "servicios-mainTableWrap--expandMobile" : ""}`} ref={tableWrapRef}>
           <div className="mov-gridBody mov-gridBody--relative">
             {loading ? Array.from({ length: 8 }).map((_, i) => <div key={i} className="mov-gridTable mov-gridTable--row mov-row--skeleton" style={{ gridTemplateColumns: gridCols }}>{columns.map((column) => <div key={column.k} className="mov-gridCell"><span className="mov-skeletonBar" /></div>)}</div>) : visibleRows.length ? visibleRows.map((row) => {
               const display = values(row);
-              return <div key={`${tab}-${idFor(tab, row)}`} className={`mov-gridTable mov-gridTable--row ${Number(row.activo) === 1 ? "" : "servicios-row--inactive"}`} style={{ gridTemplateColumns: gridCols }}>{columns.map((column) => <div key={column.k} className={`mov-gridCell ${column.right ? "is-right" : ""} ${column.center ? "is-center" : ""} ${column.k === "acciones" ? "mov-gridCell--actions" : ""}`}>{column.k === "acciones" ? renderActions(row) : <span className="mov-ellipsissss">{display[column.k] ?? "—"}</span>}</div>)}</div>;
+              return <div key={`${tab}-${idFor(tab, row)}`} className={`mov-gridTable mov-gridTable--row ${Number(row.activo) === 1 ? "" : "servicios-row--inactive"}`} style={{ gridTemplateColumns: gridCols }}>{columns.map((column) => <div key={column.k} data-label={column.l} className={`mov-gridCell ${column.right ? "is-right" : ""} ${column.center ? "is-center" : ""} ${column.k === "acciones" ? "mov-gridCell--actions" : ""}`}>{column.k === "acciones" ? renderActions(row) : <span className="mov-ellipsissss">{display[column.k] ?? "—"}</span>}</div>)}</div>;
             }) : <div className="cc-emptyState"><FontAwesomeIcon icon={faBoxOpen} className="cc-emptyIcon" /><div className="cc-emptyText">No hay registros para los filtros actuales.</div></div>}
           </div>
         </div>
-        <div className="servicios-tableFooter">
+        <div className={`servicios-tableFooter ${totalPages <= 1 ? "servicios-tableFooter--emptyMobile" : ""}`}> 
           <div className="servicios-tableCount" aria-live="polite">
             {loading ? (
               <span>Cargando registros…</span>

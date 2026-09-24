@@ -1357,26 +1357,34 @@ export default function Presupuestos() {
                 </div>
               </div>
 
-              <div className="cc-filter">
-                <div className="cc-floatingField cc-floatingField--search is-active">
-                  <div className="cc-searchInput">
-                    <div className="cc-searchInput__fieldWrap">
-                      <input className="cc-input cc-input--floating" id="presu-docs-search" value={q} onChange={(e) => setQ(String(e.target.value ?? "").toLocaleUpperCase("es-AR"))} placeholder="Buscar por descripción..." disabled={loadingLists} />
-                      <span className="cc-floatingLabel"><FontAwesomeIcon icon={faMagnifyingGlass} /> Búsqueda</span>
-                      {q.trim() !== "" && <button type="button" className="cc-clearSearch cc-clearSearch--inside" title="Limpiar búsqueda" onClick={() => setQ("")}><FontAwesomeIcon icon={faTimes} /></button>}
+              <div className="doccom-presuSearchRow">
+                <div className="cc-filter doccom-presuSearchFilter">
+                  <div className="cc-floatingField cc-floatingField--search is-active">
+                    <div className="cc-searchInput">
+                      <div className="cc-searchInput__fieldWrap">
+                        <input className="cc-input cc-input--floating" id="presu-docs-search" value={q} onChange={(e) => setQ(String(e.target.value ?? "").toLocaleUpperCase("es-AR"))} placeholder="Buscar por descripción..." disabled={loadingLists} />
+                        <span className="cc-floatingLabel"><FontAwesomeIcon icon={faMagnifyingGlass} /> Búsqueda</span>
+                        {q.trim() !== "" && <button type="button" className="cc-clearSearch cc-clearSearch--inside" title="Limpiar búsqueda" onClick={() => setQ("")}><FontAwesomeIcon icon={faTimes} /></button>}
+                      </div>
                     </div>
                   </div>
+                </div>
+
+                <div className="doccom-presuExportMobile">
+                  <BotonExportar className="doccom-exportBtn" disabled={loadingRows || filteredRows.length === 0} loading={false} label="Exportar" title={filteredRows.length ? "Exportar archivo" : "No hay datos para exportar"} opciones={exportOptions} align="right" entityLabel="presupuestos" currentRows={filteredRows} allRows={hasMore ? null : filteredRows} loadAllRows={loadAllRowsForExport} currentCount={filteredRows.length} allCount={hasMore ? null : filteredRows.length} hasMore={hasMore} />
                 </div>
               </div>
             </div>
           </div>
 
           <div className="mov-card__actions" style={{ display: "flex", gap: 10, alignItems: "center" }}>
-            <BotonExportar className="doccom-exportBtn" disabled={loadingRows || filteredRows.length === 0} loading={false} label="Exportar" title={filteredRows.length ? "Exportar archivo" : "No hay datos para exportar"} opciones={exportOptions} align="right" entityLabel="presupuestos" currentRows={filteredRows} allRows={hasMore ? null : filteredRows} loadAllRows={loadAllRowsForExport} currentCount={filteredRows.length} allCount={hasMore ? null : filteredRows.length} hasMore={hasMore} />
-            <button type="button" className="mov-btn" onClick={() => setOpenModels(true)} title="Ver y administrar modelos de presupuesto">
+            <div className="doccom-presuExportDesktop">
+              <BotonExportar className="doccom-exportBtn" disabled={loadingRows || filteredRows.length === 0} loading={false} label="Exportar" title={filteredRows.length ? "Exportar archivo" : "No hay datos para exportar"} opciones={exportOptions} align="right" entityLabel="presupuestos" currentRows={filteredRows} allRows={hasMore ? null : filteredRows} loadAllRows={loadAllRowsForExport} currentCount={filteredRows.length} allCount={hasMore ? null : filteredRows.length} hasMore={hasMore} />
+            </div>
+            <button type="button" className="mov-btn doccom-presuModelsBtn" onClick={() => setOpenModels(true)} title="Ver y administrar modelos de presupuesto">
               Modelos
             </button>
-            <button type="button" className="mov-btn mov-btn--primary" onClick={handleOpenNuevoPresupuesto} title="Crear nuevo presupuesto">
+            <button type="button" className="mov-btn mov-btn--primary doccom-presuNewBtn" onClick={handleOpenNuevoPresupuesto} title="Crear nuevo presupuesto">
               <FontAwesomeIcon icon={faPlus} /> Nuevo presupuesto
             </button>
           </div>

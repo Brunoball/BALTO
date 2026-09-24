@@ -31,6 +31,7 @@ import { todayISO } from "../utils/configuracionUtils";
 import "../../Global/Global_css/GlobalsModalsV2.css";
 import "./ConfiguracionSaldosIniciales.css";
 import "./ConfiguracionSaldosInicialesVolver.css";
+import "../ConfiguracionResponsiveScroll.css";
 
 
 function parseMoney(value) {
@@ -676,7 +677,16 @@ export default function ConfiguracionSaldosIniciales() {
               <div className="cfg-si-tableWrap">
                 <table className="cfg-si-table"><thead><tr><th className="is-center">Tipo</th><th className="is-center">Número</th><th>Emisor</th><th>Apertura</th><th className="is-center">Vencimiento</th><th className="is-right">Importe</th><th className="is-center">Estado</th><th className="is-center">Acciones</th></tr></thead>
                   <tbody>{data.cheques.length ? data.cheques.map((r) => (
-                    <tr key={r.id_cheque}><td className="is-center">{r.tipo}</td><td className="is-center">{r.numero_cheque}</td><td>{r.emisor}</td><td>{fmtDate(r.fecha_saldo)}</td><td className="is-center">{fmtDate(r.fecha_pago)}</td><td className="is-right is-strong">{moneyARS(r.importe)}</td><td className="is-center"><span className={`cfg-si-state ${r.estado === "EN_CARTERA" ? "is-ok" : ""}`}>{String(r.estado || "").replaceAll("_", " ")}</span></td><td className="is-center"><div className="cfg-si-chequeActions"><button type="button" className="cfg-si-fileView" title={Number(r.tiene_archivo || 0) === 1 && Number(r.id_archivo) > 0 ? "Ver archivo del cheque" : "Sin archivo adjunto"} aria-label="Ver archivo del cheque" disabled={Number(r.tiene_archivo || 0) !== 1 || !(Number(r.id_archivo) > 0)} onClick={() => openChequeAttachment(r)}><FontAwesomeIcon icon={faEye} /></button><button type="button" className="cfg-si-dangerIcon" title="Eliminar carga inicial" onClick={() => setChequeAEliminar(r)} disabled={saving}><FontAwesomeIcon icon={faTrash} /></button></div></td></tr>
+                    <tr key={r.id_cheque}>
+                      <td className="is-center" data-label="Tipo">{r.tipo}</td>
+                      <td className="is-center" data-label="Número">{r.numero_cheque}</td>
+                      <td data-label="Emisor">{r.emisor}</td>
+                      <td data-label="Apertura">{fmtDate(r.fecha_saldo)}</td>
+                      <td className="is-center" data-label="Vencimiento">{fmtDate(r.fecha_pago)}</td>
+                      <td className="is-right is-strong" data-label="Importe">{moneyARS(r.importe)}</td>
+                      <td className="is-center" data-label="Estado"><span className={`cfg-si-state ${r.estado === "EN_CARTERA" ? "is-ok" : ""}`}>{String(r.estado || "").replaceAll("_", " ")}</span></td>
+                      <td className="is-center cfg-si-tableActionsCell" data-label="Acciones"><div className="cfg-si-chequeActions"><button type="button" className="cfg-si-fileView" title={Number(r.tiene_archivo || 0) === 1 && Number(r.id_archivo) > 0 ? "Ver archivo del cheque" : "Sin archivo adjunto"} aria-label="Ver archivo del cheque" disabled={Number(r.tiene_archivo || 0) !== 1 || !(Number(r.id_archivo) > 0)} onClick={() => openChequeAttachment(r)}><FontAwesomeIcon icon={faEye} /></button><button type="button" className="cfg-si-dangerIcon" title="Eliminar carga inicial" onClick={() => setChequeAEliminar(r)} disabled={saving}><FontAwesomeIcon icon={faTrash} /></button></div></td>
+                    </tr>
                   )) : <tr><td colSpan="8" className="cfg-si-tableEmpty">No hay cheques iniciales cargados.</td></tr>}</tbody></table>
               </div>
             </div>

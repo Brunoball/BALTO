@@ -17,6 +17,7 @@ import useConfiguracionToast from "../hooks/useConfiguracionToast";
 import ModalEliminar from "../../Global/Modales/ModalEliminar";
 import ModalUsuario from "./modales/ModalUsuario";
 import "./ConfiguracionUsuarios.css";
+import "../ConfiguracionResponsiveScroll.css";
 
 
 function normalizarMensajeError(mensaje) {
@@ -692,7 +693,7 @@ export default function ConfiguracionUsuarios() {
 
                     return (
                       <tr key={idUsuario || u.usuario} className={actual ? "cfg-users-current-row" : ""}>
-                        <td>
+                        <td data-label="Usuario">
                           <div className="cfg-users-userCell">
                             <span>{u.usuario}</span>
                             {actual && (
@@ -703,17 +704,17 @@ export default function ConfiguracionUsuarios() {
                           </div>
                         </td>
 
-                        <td>{rol?.nombre || rol?.tipo_rol || u.rol_nombre || u.tipo_rol || u.rol || "-"}</td>
+                        <td data-label="Rol">{rol?.nombre || rol?.tipo_rol || u.rol_nombre || u.tipo_rol || u.rol || "-"}</td>
 
-                        <td>{u.email_recuperacion || "-"}</td>
+                        <td data-label="Email">{u.email_recuperacion || "-"}</td>
 
-                        <td>
+                        <td data-label="Estado">
                           <span className={`cfg-users-pill ${activo ? "is-active" : "is-inactive"}`}>
                             {activo ? "Activo" : "Inactivo"}
                           </span>
                         </td>
 
-                        <td className="cfg-users-rowActions">
+                        <td className="cfg-users-rowActions" data-label="Acciones">
                           <button
                             type="button"
                             className="cfg-users-icon-btn"

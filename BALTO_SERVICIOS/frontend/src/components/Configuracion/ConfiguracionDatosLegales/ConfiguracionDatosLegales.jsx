@@ -14,6 +14,7 @@ import {
 import Toast from "../../Global/Toast";
 import { apiFetch, safeJsonParse } from "../api/configuracionApi";
 import "./ConfiguracionDatosLegales.css";
+import "../ConfiguracionResponsiveScroll.css";
 
 
 const emptyForm = {

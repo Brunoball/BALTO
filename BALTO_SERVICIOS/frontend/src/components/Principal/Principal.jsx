@@ -28,6 +28,7 @@ import {
 
 import "./principal.css";
 import ModalPerfil from "../Perfil/ModalPerfil";
+import useVisualViewport from "../Global/useVisualViewport";
 import {
   actualizarTemaBackend,
   cerrarSesionBackend,
@@ -145,6 +146,8 @@ const StableOutlet = memo(function StableOutlet() {
 const Principal = () => {
   const navigate = useNavigate();
   const location = useLocation();
+
+  useVisualViewport();
 
   const [usuario, setUsuario] = useState(null);
   const [tema, setTema] = useState("claro");

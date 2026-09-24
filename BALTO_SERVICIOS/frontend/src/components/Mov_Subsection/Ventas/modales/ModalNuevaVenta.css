@@ -474,7 +474,7 @@ html[data-theme="oscuro"] .modal-nc-summary__row--total b {
 /* =========================================================
    Notas de crédito parciales
 ========================================================= */
-.modal-nc-container { width: min(1080px, calc(100vw - 28px)); max-height: calc(100vh - 28px); }
+.modal-nc-container { width: min(1080px, calc(100vw - 28px)); max-height: calc(var(--balto-visual-viewport-height, 100dvh) - 28px); }
 .modal-nc-body { overflow: auto; }
 .modal-nc-grid--totals { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .modal-nc-grid--totals .modal-nc-card { display: flex; flex-direction: column; gap: 5px; min-height: 72px; justify-content: center; }

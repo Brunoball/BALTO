@@ -17,6 +17,7 @@ import "../../Global/Global_css/Global_oscuro.css";
 import "../../Global/Global_css/GlobalsModalsV2.css";
 import "../../Servicios/Servicios.css";
 import "./ConfiguracionListasCategorias.css";
+import "../ConfiguracionResponsiveScroll.css";
 import Toast from "../../Global/Toast";
 import ModalEliminar from "../../Global/Modales/ModalEliminar";
 import useTableScrollGutter from "../../Global/useTableScrollGutter";
@@ -444,22 +445,22 @@ export default function ConfiguracionListasCategorias() {
                   </div>
                 )) : rows.map((row) => (
                   <div key={rowId(tab, row)} className={`cfg-listas-gridRow ${Number(row.activo) === 1 ? "" : "is-inactive"}`} role="row">
-                    <div className="cfg-listas-gridCell cfg-listas-gridCell--name" role="cell">
+                    <div className="cfg-listas-gridCell cfg-listas-gridCell--name" role="cell" data-label="Nombre">
                       <strong>{row.nombre}</strong>
                       {tab === "detalles" && <small>Detalle de ingresos / egresos</small>}
                       {tab === "medios_pago" && <small>{Number(row.protegido_sistema || 0) === 1 ? "Medio reservado del sistema" : "Disponible para cobros y pagos"}</small>}
                       {categoriaActual && <small>{currentMeta.singular}</small>}
                     </div>
-                    {tab === "unidades" && <div className="cfg-listas-gridCell is-center" role="cell">{row.simbolo}</div>}
-                    {(tab === "detalles" || tab === "medios_pago") && <div className="cfg-listas-gridCell is-center" role="cell">{Number(row.cantidad_usos || 0).toLocaleString("es-AR")}</div>}
-                    {categoriaActual && <div className="cfg-listas-gridCell cfg-listas-gridCell--description" role="cell">{row.descripcion || "—"}</div>}
-                    {categoriaActual && <div className="cfg-listas-gridCell is-center" role="cell">{cantidadUsosCategoria(tab, row).toLocaleString("es-AR")}</div>}
-                    <div className="cfg-listas-gridCell is-center" role="cell">
+                    {tab === "unidades" && <div className="cfg-listas-gridCell is-center" role="cell" data-label="Símbolo">{row.simbolo}</div>}
+                    {(tab === "detalles" || tab === "medios_pago") && <div className="cfg-listas-gridCell is-center" role="cell" data-label="Usos históricos">{Number(row.cantidad_usos || 0).toLocaleString("es-AR")}</div>}
+                    {categoriaActual && <div className="cfg-listas-gridCell cfg-listas-gridCell--description" role="cell" data-label="Descripción">{row.descripcion || "—"}</div>}
+                    {categoriaActual && <div className="cfg-listas-gridCell is-center" role="cell" data-label="Registros">{cantidadUsosCategoria(tab, row).toLocaleString("es-AR")}</div>}
+                    <div className="cfg-listas-gridCell is-center" role="cell" data-label="Estado">
                       <span className={`cfg-listas-chip ${Number(row.activo) === 1 ? "is-active" : ""}`}>
                         {Number(row.activo) === 1 ? "ACTIVO" : "BAJA"}
                       </span>
                     </div>
-                    <div className="cfg-listas-gridCell is-center" role="cell">
+                    <div className="cfg-listas-gridCell is-center cfg-listas-gridCell--actions" role="cell" data-label="Acciones">
                       <div className="cfg-listas-actions">
                         <button type="button" title="Editar" onClick={() => setModal({ kind: tab, item: row })}>
                           <FontAwesomeIcon icon={faPenToSquare} />

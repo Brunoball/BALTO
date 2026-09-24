@@ -14,6 +14,7 @@ import { openAuthenticatedResourceInNewTab } from "../../../utils/authenticatedR
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faBoxesStacked,
+  faChevronDown,
   faDownload,
   faEye,
   faFileInvoiceDollar,
@@ -186,6 +187,7 @@ function DocumentosClientePanel({
 }) {
   const [tableWrapRef, hasTableScroll] = useTableScrollGutter();
   const [qClientes, setQClientes] = useState("");
+  const [personasOpen, setPersonasOpen] = useState(false);
   const [qDocumentos, setQDocumentos] = useState("");
   const [clientes, setClientes] = useState([]);
   const [documentos, setDocumentos] = useState([]);
@@ -536,7 +538,34 @@ function DocumentosClientePanel({
         {error ? <div className="doccom-alert">{error}</div> : null}
 
         <div className="doccom-clientDocs__layout">
-          <aside className="doccom-clientList" aria-label="Clientes">
+          <aside className="doccom-clientList" aria-label="Personas">
+            <button
+              type="button"
+              className={`doccom-personasToggle ${personasOpen ? "is-open" : ""}`}
+              aria-expanded={personasOpen}
+              aria-controls={`doccom-personas-panel-${grupo}`}
+              onClick={() => setPersonasOpen((open) => !open)}
+            >
+              <span className="doccom-personasToggle__main">
+                <span className="doccom-personasToggle__icon">
+                  <FontAwesomeIcon icon={faUsers} />
+                </span>
+                <span className="doccom-personasToggle__text">
+                  <strong>Personas</strong>
+                  <small>
+                    {selectedCliente
+                      ? getClienteDisplay(selectedCliente)
+                      : `${clientes.length} ${clientes.length === 1 ? "persona" : "personas"}`}
+                  </small>
+                </span>
+              </span>
+              <FontAwesomeIcon className="doccom-personasToggle__chevron" icon={faChevronDown} />
+            </button>
+
+            <div
+              id={`doccom-personas-panel-${grupo}`}
+              className={`doccom-clientList__collapsible ${personasOpen ? "is-open" : ""}`}
+            >
             <div className="cc-filter doccom-filter doccom-filter--clientes">
               <div className="cc-floatingField cc-floatingField--search is-active">
                 <div className="cc-searchInput">
@@ -585,6 +614,7 @@ function DocumentosClientePanel({
                         setQDocumentos("");
                         setDocumentos([]);
                         setDocumentosLoaded(false);
+                        setPersonasOpen(false);
                       }}
                     >
                       <span className="doccom-clientItem__icon">
@@ -607,6 +637,7 @@ function DocumentosClientePanel({
                   <span>Cuando existan {documentoPlural} guardados, van a aparecer acá.</span>
                 </div>
               )}
+            </div>
             </div>
           </aside>
 

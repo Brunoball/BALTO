@@ -1383,7 +1383,7 @@ body.dark .mov-page--analisisFinanciero .af-totalCard--neg .af-totalValue {
   .mov-page--analisisFinanciero {
     height: auto !important;
     min-height: 0 !important;
-    max-height: calc(100dvh - 54px) !important;
+    max-height: calc(var(--balto-visual-viewport-height, 100dvh) - 54px) !important;
     overflow-y: auto !important;
     overflow-x: hidden !important;
     -webkit-overflow-scrolling: touch;
@@ -1414,7 +1414,7 @@ body.dark .mov-page--analisisFinanciero .af-totalCard--neg .af-totalValue {
 
 @media (max-width: 640px) {
   .mov-page--analisisFinanciero {
-    max-height: calc(100dvh - 48px) !important;
+    max-height: calc(var(--balto-visual-viewport-height, 100dvh) - 48px) !important;
     padding-bottom: 20px !important;
   }
 }

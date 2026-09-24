@@ -248,8 +248,8 @@
   flex: 1;
   min-height: 0;
   overflow: auto;
-  max-height: calc(100vh - 320px);
-    min-height: calc(100vh - 320px);
+  max-height: calc(var(--balto-visual-viewport-height, 100dvh) - 320px);
+    min-height: calc(var(--balto-visual-viewport-height, 100dvh) - 320px);
 }
 
 .cmp-gridTable{

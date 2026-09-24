@@ -722,15 +722,15 @@
 
   .mi-modal__container{
     width: 100vw;
-    height: 100vh;
-    max-height: 100vh;
-    min-height: 100vh;
+    height: var(--balto-visual-viewport-height, 100dvh);
+    max-height: var(--balto-visual-viewport-height, 100dvh);
+    min-height: var(--balto-visual-viewport-height, 100dvh);
     border-radius: 0;
   }
 
   .mi-modal__container--mov{
-    min-height: 100vh;
-    max-height: 100vh;
+    min-height: var(--balto-visual-viewport-height, 100dvh);
+    max-height: var(--balto-visual-viewport-height, 100dvh);
   }
 
   .mi-modal__header{
@@ -1065,8 +1065,8 @@
 
 
   .mi-modal__container--mov{
-    min-height: 100vh;
-    max-height: 100vh;
+    min-height: var(--balto-visual-viewport-height, 100dvh);
+    max-height: var(--balto-visual-viewport-height, 100dvh);
   }
 
   .mi-modal__header{
@@ -1141,7 +1141,7 @@
     grid-column: -1/1;
   }
   .cc-cliente-table__body{
-    height: calc(100vh - 478px) !important;
+    height: calc(var(--balto-visual-viewport-height, 100dvh) - 478px) !important;
   }
   .mi-cr-row:last-child{
     margin-bottom: 0;
@@ -2123,7 +2123,7 @@ html[data-theme="oscuro"] .cc-cliente-table__totals .cc-cliente-table__cell:nth-
     width: min(100%, 100vw) !important;
     max-width: 100% !important;
     min-height: auto !important;
-    max-height: calc(100vh - 20px) !important;
+    max-height: calc(var(--balto-visual-viewport-height, 100dvh) - 20px) !important;
     margin: 0 auto;
     border-radius: 16px !important;
   }
@@ -2234,7 +2234,7 @@ html[data-theme="oscuro"] .cc-cliente-table__totals .cc-cliente-table__cell:nth-
   .mdp-container {
     width: 100% !important;
     max-width: 100% !important;
-    max-height: calc(100vh - 16px) !important;
+    max-height: calc(var(--balto-visual-viewport-height, 100dvh) - 16px) !important;
     border-radius: 14px !important;
   }
 
@@ -2410,8 +2410,8 @@ html[data-theme="oscuro"] .cc-cliente-table__totals .cc-cliente-table__cell:nth-
   .db{
     width: 100% !important;
     min-width: 0 !important;
-    height: calc(100dvh - 56px) !important;
-    max-height: calc(100dvh - 56px) !important;
+    height: calc(var(--balto-visual-viewport-height, 100dvh) - 56px) !important;
+    max-height: calc(var(--balto-visual-viewport-height, 100dvh) - 56px) !important;
     min-height: 0 !important;
     overflow-x: hidden !important;
     overflow-y: auto !important;
@@ -2600,8 +2600,8 @@ html[data-theme="oscuro"] .cc-cliente-table__totals .cc-cliente-table__cell:nth-
 
 @media (max-width: 480px){
   .db{
-    height: calc(100dvh - 52px) !important;
-    max-height: calc(100dvh - 72px) !important;
+    height: calc(var(--balto-visual-viewport-height, 100dvh) - 52px) !important;
+    max-height: calc(var(--balto-visual-viewport-height, 100dvh) - 72px) !important;
     padding: 10px !important;
   }
 
@@ -2635,8 +2635,8 @@ html[data-theme="oscuro"] .cc-cliente-table__totals .cc-cliente-table__cell:nth-
     .db{
       width: 100% !important;
       min-width: 0 !important;
-      height: calc(100dvh - 56px) !important;
-      max-height: calc(100dvh - 56px) !important;
+      height: calc(var(--balto-visual-viewport-height, 100dvh) - 56px) !important;
+      max-height: calc(var(--balto-visual-viewport-height, 100dvh) - 56px) !important;
       min-height: 0 !important;
       overflow-x: hidden !important;
       overflow-y: auto !important;

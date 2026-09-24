@@ -519,7 +519,7 @@ html[data-theme="oscuro"] .mfr-alert--error{
 @media (max-width: 640px){
   .mfr-modal{
     width: 100vw;
-    max-height: 100vh;
+    max-height: var(--balto-visual-viewport-height, 100dvh);
     border-radius: 0;
   }
 

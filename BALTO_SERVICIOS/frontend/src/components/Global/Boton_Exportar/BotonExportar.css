@@ -91,7 +91,7 @@
 
 .boton-exportar-modal {
   width: min(690px, calc(100vw - 36px));
-  max-height: min(720px, calc(100vh - 36px));
+  max-height: min(720px, calc(var(--balto-visual-viewport-height, 100dvh) - 36px));
   overflow: hidden;
   border-radius: 18px;
   background: var(--color-surface, #fff);

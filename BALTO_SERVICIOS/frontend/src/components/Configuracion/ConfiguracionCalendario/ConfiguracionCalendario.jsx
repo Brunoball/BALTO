@@ -18,6 +18,7 @@ import {
 import Toast from "../../Global/Toast";
 import { apiFetchJson as apiFetch } from "../api/configuracionApi";
 import "./configuracion_calendario.css";
+import "../ConfiguracionResponsiveScroll.css";
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 

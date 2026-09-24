@@ -5,6 +5,15 @@
 ========================================================= */
 
 :root {
+  /* Viewport visual real (JS actualiza estos valores globalmente). */
+  --balto-visual-viewport-height: 100dvh;
+  --balto-visual-viewport-width: 100vw;
+  --balto-visual-viewport-top: 0px;
+  --balto-visual-viewport-left: 0px;
+  --balto-visual-viewport-bottom: 100dvh;
+  --balto-visual-viewport-right: 100vw;
+  --balto-panel-viewport-height: calc(var(--balto-visual-viewport-height, 100dvh) - var(--mov-topbar-h, 58px));
+
   /* Marca */
   --color-primary-strong: #0A2540;
   --color-primary: #0055BB;

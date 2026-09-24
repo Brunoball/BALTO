@@ -1,5 +1,125 @@
 /* Responsive exclusivo de Documentos Comerciales. */
 
+/* Presupuestos: wrappers neutros en escritorio; solo se activan en responsive. */
+.doccom-presuSearchRow,
+.doccom-presuExportDesktop {
+  display: contents;
+}
+
+.doccom-presuExportMobile {
+  display: none;
+}
+
+/* Panel Personas: en escritorio conserva exactamente la disposición original. */
+.doccom-personasToggle {
+  display: none;
+}
+
+.doccom-clientList__collapsible {
+  display: contents;
+}
+
+
+@media (max-width: 1100px) {
+  /* En responsive el selector de personas deja de ocupar una columna completa. */
+  .doccom-clientList {
+    width: 100%;
+    min-width: 0;
+    padding: 0;
+    gap: 0;
+    overflow: hidden;
+    border-radius: 14px;
+  }
+
+  .doccom-personasToggle {
+    width: 100%;
+    min-height: 58px;
+    padding: 9px 12px;
+    border: 0;
+    background: transparent;
+    color: var(--balto-ink, var(--text-color, #111827));
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    cursor: pointer;
+    text-align: left;
+  }
+
+  .doccom-personasToggle__main {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .doccom-personasToggle__icon {
+    width: 36px;
+    height: 36px;
+    flex: 0 0 36px;
+    border-radius: 11px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 85, 187, 0.09);
+    color: var(--balto-action, var(--primary-color, #0055bb));
+  }
+
+  .doccom-personasToggle__text {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .doccom-personasToggle__text strong {
+    font-size: 0.9rem;
+    line-height: 1.1;
+  }
+
+  .doccom-personasToggle__text small {
+    max-width: min(64vw, 420px);
+    overflow: hidden;
+    color: var(--muted-color, #64748b);
+    font-size: 0.72rem;
+    line-height: 1.15;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .doccom-personasToggle__chevron {
+    flex: 0 0 auto;
+    color: var(--muted-color, #64748b);
+    transition: transform 0.18s ease;
+  }
+
+  .doccom-personasToggle.is-open .doccom-personasToggle__chevron {
+    transform: rotate(180deg);
+  }
+
+  .doccom-clientList__collapsible {
+    display: none;
+    border-top: 1px solid color-mix(in srgb, var(--doccom-border) 68%, transparent);
+  }
+
+  .doccom-clientList__collapsible.is-open {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 10px;
+  }
+
+  .doccom-clientList__body {
+    height: auto;
+    max-height: 300px;
+  }
+
+  html[data-theme="oscuro"] .doccom-personasToggle__icon,
+  body.dark .doccom-personasToggle__icon {
+    background: rgba(59, 130, 246, 0.14);
+  }
+}
+
 @media (max-width: 720px) {
   .doccom-subpage.mov-page,
   .mov-page:has(.doccom-presupuestosTable) {
@@ -83,6 +203,36 @@
     max-width: none;
   }
 
+  /* Búsqueda + Exportar comparten una fila solo en responsive. */
+  .doccom-presupuestosTable .doccom-presuSearchRow {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: stretch;
+    gap: 8px;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .doccom-presupuestosTable .doccom-presuSearchFilter {
+    min-width: 0;
+  }
+
+  .doccom-presupuestosTable .doccom-presuExportMobile {
+    display: flex;
+    align-items: stretch;
+    min-width: 0;
+  }
+
+  .doccom-presupuestosTable .doccom-presuExportMobile .doccom-exportBtn,
+  .doccom-presupuestosTable .doccom-presuExportMobile .boton-exportar-trigger {
+    height: 100%;
+  }
+
+  .doccom-presupuestosTable .doccom-presuExportDesktop {
+    display: none;
+  }
+
+  /* Segunda fila: Modelos + Nuevo presupuesto. */
   .doccom-presupuestosTable .mov-card__actions {
     display: grid !important;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -98,6 +248,16 @@
   .doccom-presupuestosTable .mov-card__actions .mov-btn {
     padding-inline: 8px;
     font-size: 12px;
+  }
+
+  /* El global responsive baja el 3er .mov-btn a una fila completa.
+     En Presupuestos eso afecta a “Nuevo presupuesto” porque Exportar
+     sigue siendo el primer hijo aunque esté oculto. Lo anulamos solo acá. */
+  .doccom-presupuestosTable .mov-card__actions .doccom-presuModelsBtn,
+  .doccom-presupuestosTable .mov-card__actions .doccom-presuNewBtn {
+    grid-column: auto !important;
+    min-width: 0;
+    white-space: nowrap;
   }
 
   /* Facturas y Remitos: pestañas arriba y contenido en una sola columna. */
@@ -143,12 +303,20 @@
   .doccom-docPanel {
     width: 100%;
     min-width: 0;
-    padding: 10px;
     border-radius: 14px;
   }
 
+  .doccom-clientList {
+    padding: 0;
+  }
+
+  .doccom-docPanel {
+    padding: 10px;
+  }
+
   .doccom-clientList__body {
-    max-height: 220px;
+    height: auto;
+    max-height: 260px;
   }
 
   .doccom-docPanel__top {
@@ -168,6 +336,52 @@
     overflow: auto;
     -webkit-overflow-scrolling: touch;
   }
+
+  /* En la tabla de Presupuestos, el Cliente no baja de línea: usa elipsis. */
+  .doccom-presupuestosTable .mov-gridTable--row .mov-gridCell {
+    min-width: 0;
+  }
+
+  .doccom-presupuestosTable .mov-gridTable--row .mov-gridCell[data-label="Cliente"] {
+    grid-template-columns: 120px minmax(0, 1fr);
+  }
+
+  .doccom-presupuestosTable .mov-gridTable--row .mov-gridCell[data-label="Cliente"] .mov-ellipsissss {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    line-height: 1.25;
+  }
+
+  /* Dentro del desplegable/listado de Personas el nombre sí puede verse completo. */
+  .doccom-clientItem__main strong {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    word-break: break-word;
+  }
+
+  /* Cliente seleccionado: siempre una sola línea en responsive.
+     min-width: 0 en el padre es clave para que text-overflow pueda actuar. */
+  .doccom-docPanel__top > div:first-child {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .doccom-docPanel__top h3 {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    word-break: normal;
+  }
 }
 
 @media (max-width: 390px) {
@@ -178,5 +392,84 @@
 
   .doccom-presupuestosTable .mov-card__actions .mov-btn {
     font-size: 11px;
+  }
+}
+
+
+
+/* =========================================================
+   Documentos Comerciales | Tablas responsive sin scroll X
+   - Facturas / Remitos: selector real .doccom-docTableWrap
+   - Presupuestos: wrapper global .mov-tableWrap
+   - Solo mobile; escritorio no se modifica.
+========================================================= */
+@media (max-width: 720px) {
+  /* Facturas / Remitos: el wrapper real NO tiene mov-tableWrap. */
+  .doccom-docTableWrap,
+  .doccom-docGridBody {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: hidden !important;
+  }
+
+  .doccom-docTableWrap {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .doccom-docGridBody {
+    overflow-y: auto;
+  }
+
+  /* Cada registro-card debe descontar sus propios márgenes del ancho. */
+  .doccom-docGridRow,
+  .doccom-presupuestosTable .mov-gridTable--row {
+    width: calc(100% - 12px) !important;
+    min-width: 0 !important;
+    max-width: calc(100% - 12px) !important;
+    margin-left: 6px !important;
+    margin-right: 6px !important;
+  }
+
+  /* Ninguna celda puede imponer un ancho mínimo al card. */
+  .doccom-docGridRow .mov-gridCell,
+  .doccom-presupuestosTable .mov-gridTable--row .mov-gridCell {
+    width: 100%;
+    min-width: 0 !important;
+    max-width: 100%;
+    grid-template-columns: 112px minmax(0, 1fr) !important;
+  }
+
+  /* Los contenidos internos también deben poder encogerse. */
+  .doccom-docGridRow .mov-gridCell > *,
+  .doccom-docMain,
+  .doccom-docMain > span,
+  .doccom-docDetalle,
+  .doccom-actions,
+  .doccom-presupuestosTable .mov-gridCell > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .doccom-docMain button,
+  .doccom-docDetalle strong {
+    max-width: 100%;
+  }
+
+  /* Presupuestos: el responsive global vuelve a overflow:auto; acá se anula X. */
+  .doccom-presupuestosTable .mov-tableWrap,
+  .doccom-presupuestosTable .mov-gridBody {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: hidden !important;
+  }
+}
+
+@media (max-width: 390px) {
+  .doccom-docGridRow .mov-gridCell,
+  .doccom-presupuestosTable .mov-gridTable--row .mov-gridCell {
+    grid-template-columns: 96px minmax(0, 1fr) !important;
   }
 }

@@ -35,7 +35,7 @@
    Base nueva para modales ya migrados a clases gm-*. */
 .gm-modal-overlay {
   width: 100vw;
-  height: 100vh;
+  height: var(--balto-visual-viewport-height, 100dvh);
   position: fixed;
   inset: 0;
   background: rgba(8, 16, 30, .52);
@@ -2065,7 +2065,7 @@ html[data-theme="oscuro"] .gm-view-card {
   width: 100%;
   min-height: 0;
   height: 100%;
-  max-height: calc(100vh - 180px);
+  max-height: calc(var(--balto-visual-viewport-height, 100dvh) - 180px);
   overflow: hidden;
   border-radius: 10px;
   background: #f8fafc;

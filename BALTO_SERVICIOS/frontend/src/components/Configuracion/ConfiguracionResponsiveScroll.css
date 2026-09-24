@@ -1,0 +1,119 @@
+/* =========================================================
+   CONFIGURACIÓN · SCROLL RESPONSIVE
+   Solo actúa en tablet/mobile. La vista de monitor queda intacta.
+
+   El layout global mantiene el body y los contenedores principales
+   con overflow:hidden. En Configuración eso dejaba sin un área de
+   scroll válida cuando el contenido crecía en responsive.
+
+   En <= 980px hacemos que .pp-content sea el único scroll vertical
+   de la sección y liberamos los scrolls/altos internos de Configuración.
+========================================================= */
+
+@media (max-width: 980px) {
+  .pp-content:has(
+    .cfg-page,
+    .cfg-users-page,
+    .cfg-legal-page,
+    .cal-page,
+    .cfg-listas-page,
+    .cfg-si-page
+  ) {
+    height: calc(var(--balto-visual-viewport-height, 100dvh) - var(--mov-topbar-h, 54px));
+    height: calc(var(--balto-visual-viewport-height, 100dvh) - var(--mov-topbar-h, 54px));
+    min-height: 0 !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    contain: none !important;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+  }
+
+  .pp-content__inner:has(
+    .cfg-page,
+    .cfg-users-page,
+    .cfg-legal-page,
+    .cal-page,
+    .cfg-listas-page,
+    .cfg-si-page
+  ) {
+    height: auto !important;
+    min-height: 100% !important;
+    overflow: visible !important;
+    contain: none !important;
+  }
+
+  /* La sección crece de forma natural; el scroll pertenece a pp-content. */
+  .cfg-page,
+  .cfg-users-page,
+  .cfg-legal-page,
+  .cal-page,
+  .cfg-listas-page,
+  .cfg-si-page {
+    height: auto !important;
+    max-height: none !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+
+  .cfg-contentScroll,
+  .cfg-users-contentScroll,
+  .cfg-legal-contentScroll,
+  .cal-contentScroll,
+  .cfg-si-scroll {
+    flex: 0 0 auto !important;
+    height: auto !important;
+    max-height: none !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    padding-right: 0;
+  }
+
+  /* Datos legales tenía un tercer nivel de scroll interno. */
+  .cfg-legal-grid,
+  .cfg-legal-card {
+    height: auto !important;
+    max-height: none !important;
+    min-height: 0 !important;
+  }
+
+  .cfg-legal-card__scroll {
+    flex: 0 0 auto !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    padding-right: 0 !important;
+    overscroll-behavior: auto;
+  }
+
+  /* Saldos iniciales deja de usar el viewport como alto fijo en responsive. */
+  .cfg-si-scroll > .cfg-si-panel {
+    flex: 0 0 auto !important;
+  }
+
+  /* Listas conserva solo el scroll horizontal de la tabla. */
+  .cfg-listas-card {
+    flex: 0 0 auto;
+    min-height: 0;
+  }
+
+  .cfg-listas-gridBodyScroll {
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+  }
+}
+
+/* Con el drawer abierto no permitimos desplazar el contenido por detrás. */
+@media (max-width: 720px) {
+  body.pp-lockScroll .pp-content:has(
+    .cfg-page,
+    .cfg-users-page,
+    .cfg-legal-page,
+    .cal-page,
+    .cfg-listas-page,
+    .cfg-si-page
+  ) {
+    overflow-y: hidden !important;
+  }
+}

@@ -53,8 +53,8 @@
 
 .contabilidad-cardTable {
   min-height: 0;
-  height: calc(100vh - 118px);
-  max-height: calc(100vh - 118px);
+  height: calc(var(--balto-visual-viewport-height, 100dvh) - 118px);
+  max-height: calc(var(--balto-visual-viewport-height, 100dvh) - 118px);
 }
 
 /* Buscador IVA: evita que se achique dentro del encabezado.

@@ -64,8 +64,13 @@ function SelectorMultipleRecursos({
     const rect = triggerRef.current.getBoundingClientRect();
     const margin = 12;
     const gap = 6;
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
+    const visualViewport = window.visualViewport;
+    const viewportLeft = visualViewport?.offsetLeft || 0;
+    const viewportTop = visualViewport?.offsetTop || 0;
+    const viewportWidth = visualViewport?.width || window.innerWidth;
+    const viewportHeight = visualViewport?.height || window.innerHeight;
+    const viewportRight = viewportLeft + viewportWidth;
+    const viewportBottom = viewportTop + viewportHeight;
     const maxWidth = Math.max(0, viewportWidth - (margin * 2));
     const width = Math.min(Math.max(rect.width, 460), maxWidth);
     const triggerStyles = window.getComputedStyle(triggerRef.current);
@@ -84,11 +89,11 @@ function SelectorMultipleRecursos({
     const gmMuted = readCssVar("--gm-muted", "#64748b");
 
     let left = rect.left;
-    if (left + width > viewportWidth - margin) left = viewportWidth - margin - width;
-    left = Math.max(margin, left);
+    if (left + width > viewportRight - margin) left = viewportRight - margin - width;
+    left = Math.max(viewportLeft + margin, left);
 
-    const spaceBelow = Math.max(0, viewportHeight - rect.bottom - gap - margin);
-    const spaceAbove = Math.max(0, rect.top - gap - margin);
+    const spaceBelow = Math.max(0, viewportBottom - rect.bottom - gap - margin);
+    const spaceAbove = Math.max(0, rect.top - viewportTop - gap - margin);
     const placeAbove = spaceBelow < 280 && spaceAbove > spaceBelow;
     const availableHeight = placeAbove ? spaceAbove : spaceBelow;
     const maxHeight = Math.max(150, Math.min(340, availableHeight));

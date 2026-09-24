@@ -662,6 +662,17 @@ body.dark .servicios-page {
   white-space: nowrap;
 }
 
+/* Agrupadores auxiliares: en escritorio no alteran el layout actual. */
+.servicios-searchExportRow,
+.servicios-statusAddRow {
+  display: contents;
+}
+
+.servicios-mobileExport,
+.servicios-mobileAddBtn {
+  display: none;
+}
+
 /* En escritorio, igual que el criterio usado en Ventas: una sola fila.
    El buscador es el primer control que cede ancho al abrir el sidebar. */
 @media (min-width: 721px) {
@@ -764,9 +775,9 @@ body.dark .servicios-page {
 
 .servicios-mainTableWrap {
   flex: 0 1 auto;
-  height: calc(100vh - 305px);
-  min-height: calc(100vh - 305px);
-  max-height: calc(100vh - 305px);
+  height: calc(var(--balto-visual-viewport-height, 100dvh) - 305px);
+  min-height: calc(var(--balto-visual-viewport-height, 100dvh) - 305px);
+  max-height: calc(var(--balto-visual-viewport-height, 100dvh) - 305px);
 }
 
 .servicios-mainTableWrap > .mov-gridBody--relative {
@@ -939,8 +950,7 @@ body.dark .servicios-page {
     align-items: flex-start;
   }
 
-  .servicios-inventoryTabs,
-  .servicios-statusTabs.mov-tabs {
+  .servicios-inventoryTabs {
     width: 100%;
     min-width: 0;
   }
@@ -949,27 +959,117 @@ body.dark .servicios-page {
     flex: 1 1 0;
   }
 
-  .servicios-searchFilter,
-  .servicios-filterCompact {
+  .servicios-headFilters {
+    display: flex !important;
+    width: 100%;
+    min-width: 0;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  /* Fila 1: buscador + Exportar. */
+  .servicios-searchExportRow {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: stretch;
+    gap: 8px;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .servicios-searchFilter {
     width: 100%;
     min-width: 0;
     max-width: none;
   }
 
-  .servicios-headActions {
-    display: block !important;
+  .servicios-mobileExport {
+    display: flex;
+    min-width: 0;
+    align-items: stretch;
   }
 
-  .servicios-addBtn {
-    width: 100%;
+  .servicios-mobileExport .boton-exportar-wrap {
+    display: flex;
+    height: 100%;
+  }
+
+  .servicios-mobileExport .boton-exportar-trigger {
+    width: auto;
+    min-width: 44px;
+    height: 44px;
+    padding-inline: 10px;
     justify-content: center;
+  }
+
+  .servicios-filterCompact {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    /* En escritorio usa flex-basis para controlar el ancho. En columna responsive
+       ese basis se convierte en alto y deja un hueco grande antes del select. */
+    flex: 0 0 auto;
+    height: auto;
+    min-height: 0;
+    justify-content: flex-start;
+  }
+
+  .servicios-headFilters {
+    flex: 0 0 auto;
+    justify-content: flex-start;
+  }
+
+  .servicios-headFilters > * {
+    flex-shrink: 0;
+  }
+
+  /* Fila 2: pestañas Activos/Bajas + botón Agregar. */
+  .servicios-statusAddRow {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: stretch;
+    gap: 8px;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .servicios-statusAddRow .servicios-statusTabs.mov-tabs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+    padding: 5px;
+  }
+
+  .servicios-statusAddRow .servicios-statusTab.mov-tab {
+    width: 100%;
+    min-width: 0;
+    padding-inline: 5px;
+  }
+
+  .servicios-mobileAddBtn {
+    display: inline-flex;
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+    padding-inline: 8px;
+    justify-content: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 12px;
+  }
+
+  /* Los controles originales quedan exclusivamente para escritorio. */
+  .servicios-headActions {
+    display: none !important;
   }
 
   .servicios-headSecondary {
     display: none;
   }
-
-
 
   .servicios-tableFooter {
     align-items: stretch;
@@ -978,8 +1078,48 @@ body.dark .servicios-page {
   }
 
   .servicios-tableCount {
-    width: 100%;
-    text-align: center;
+    display: none !important;
+  }
+
+  /* Si no hay paginación, el footer queda vacío en celular.
+     Se elimina y su espacio pasa al área útil de la tabla. */
+  .servicios-tableFooter--emptyMobile {
+    display: none !important;
+    min-height: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  /* Aprovechar todo el alto útil del celular.
+     La tarjeta llega hasta el borde inferior del viewport y la tabla toma
+     automáticamente TODO el espacio restante. Por eso, con 2 filas de
+     controles la tabla crece más y con 3 filas se reduce sola, sin cálculos
+     fijos por pestaña ni huecos al final. */
+  .servicios-mainCard {
+    /* Fallback para navegadores sin Visual Viewport. */
+    height: calc(var(--balto-visual-viewport-height, 100dvh) - 100px);
+    min-height: 0;
+    max-height: calc(var(--balto-visual-viewport-height, 100dvh) - 100px);
+
+    /* Cuando JS puede medir el viewport visual real, se usa el alto exacto
+       restante desde la tarjeta hasta el borde visible del celular. */
+    height: calc(var(--balto-servicios-available-height, 100dvh) - env(safe-area-inset-bottom, 0px));
+    max-height: calc(var(--balto-servicios-available-height, 100dvh) - env(safe-area-inset-bottom, 0px));
+  }
+
+  .servicios-mainCard > .mov-card__head {
+    flex: 0 0 auto;
+  }
+
+  .servicios-mainTableWrap,
+  .servicios-mainTableWrap--twoControlRows,
+  .servicios-mainTableWrap--threeControlRows,
+  .servicios-mainTableWrap--twoControlRows.servicios-mainTableWrap--expandMobile,
+  .servicios-mainTableWrap--threeControlRows.servicios-mainTableWrap--expandMobile {
+    flex: 1 1 0 !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    height: auto !important;
   }
 
   .servicios-tableFooter__right {
@@ -989,24 +1129,31 @@ body.dark .servicios-page {
     justify-content: center;
   }
 
+  /* Exportar ya vive junto al buscador en responsive: evitar duplicado abajo. */
   .servicios-bottomActions {
-    display: grid;
-    width: 100%;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .servicios-bottomActions .boton-exportar-wrap,
-  .servicios-bottomActions .boton-exportar-trigger,
-  .servicios-bottomActions .mov-btn {
-    width: 100%;
-    min-width: 0;
-    justify-content: center;
+    display: none !important;
   }
 }
 
 @media (max-width: 430px) {
-  .servicios-bottomActions {
-    grid-template-columns: 1fr;
+  .servicios-searchExportRow {
+    grid-template-columns: minmax(0, 1fr) 44px;
+  }
+
+  .servicios-mobileExport .boton-exportar-trigger {
+    width: 44px;
+    min-width: 44px;
+    padding-inline: 0;
+  }
+
+  .servicios-statusAddRow {
+    grid-template-columns: minmax(0, .95fr) minmax(0, 1.05fr);
+    gap: 6px;
+  }
+
+  .servicios-mobileAddBtn {
+    padding-inline: 6px;
+    font-size: 11px;
   }
 }
 
@@ -1076,7 +1223,7 @@ body.dark .servicios-tableFooter {
    scroll vertical aun en pantallas de escritorio. */
 .servicios-modal--stock.gm-modal-container {
   width: min(820px, 96vw);
-  max-height: calc(100vh - 32px);
+  max-height: calc(var(--balto-visual-viewport-height, 100dvh) - 32px);
 }
 
 .servicios-modal--stock .servicios-modal__content.gm-modal-content {
@@ -1255,7 +1402,7 @@ body.dark .servicios-field__counter {
 @media (max-width: 640px) {
   .servicios-modal--stock.gm-modal-container {
     width: 100%;
-    max-height: calc(100vh - 24px);
+    max-height: calc(var(--balto-visual-viewport-height, 100dvh) - 24px - env(safe-area-inset-bottom, 0px));
   }
 
   .servicios-modal--stock .servicios-stock-description .servicios-textarea {
@@ -3577,4 +3724,158 @@ body.dark .servicios-multi-select__menu {
   max-height: none;
   overscroll-behavior: contain;
   background: var(--gm-bg, #ffffff);
+}
+
+/* =========================================================
+   SERVICIOS | Responsive final de tarjetas + acciones modal
+   - Solo celular/tablet chica.
+   - No altera la tabla ni los modales de escritorio.
+========================================================= */
+@media (max-width: 720px) {
+  /* Las filas mobile heredan del global una grilla label/valor. En Servicios
+     ahora cada celda sí recibe data-label, por lo que usamos todo el ancho
+     disponible en vez de dejar la columna izquierda vacía. */
+  .servicios-mainTableWrap .mov-gridTable--row {
+    width: calc(100% - 12px);
+    max-width: calc(100% - 12px);
+    margin: 6px;
+    box-sizing: border-box;
+  }
+
+  .servicios-mainTableWrap .mov-gridTable--row .mov-gridCell,
+  .servicios-mainTableWrap .mov-gridTable--row .mov-gridCell--actions {
+    width: 100%;
+    min-width: 0;
+    grid-template-columns: minmax(92px, 31%) minmax(0, 1fr);
+    column-gap: 10px;
+    align-items: start;
+  }
+
+  .servicios-mainTableWrap .mov-gridTable--row .mov-gridCell::before {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .servicios-mainTableWrap .mov-gridTable--row .mov-ellipsissss,
+  .servicios-mainTableWrap .mov-gridTable--row .servicios-nameCell {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .servicios-mainTableWrap .mov-gridTable--row .mov-gridCell.is-center,
+  .servicios-mainTableWrap .mov-gridTable--row .mov-gridCell.is-right {
+    justify-items: stretch;
+    text-align: left;
+  }
+
+  .servicios-mainTableWrap .mov-gridTable--row .mov-actionsInline {
+    width: 100%;
+    min-width: 0;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  /* Modales propios de Servicios:
+     2 acciones => 2 columnas en una misma fila.
+     3 acciones => 3 columnas iguales en una misma fila. */
+  .servicios-modal .gm-modal-footer.gm-view-footer-actions {
+    width: 100%;
+    display: grid;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .servicios-modal .gm-modal-footer.gm-view-footer-actions:has(> .gm-action-btn:nth-child(2)):not(:has(> .gm-action-btn:nth-child(3))) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .servicios-modal .gm-modal-footer.gm-view-footer-actions:has(> .gm-action-btn:nth-child(3)) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .servicios-modal .gm-modal-footer.gm-view-footer-actions > .gm-action-btn {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    height: auto;
+    min-height: 42px;
+    margin: 0;
+    padding: 8px 7px;
+    white-space: normal;
+    line-height: 1.15;
+  }
+
+  /* Los modales globales de baja/eliminación se renderizan por portal en body.
+     Se limitan a Servicios verificando que la pantalla activa sea .servicios-page. */
+  body:has(.servicios-page) .mvdel-actions {
+    width: 100%;
+    display: grid;
+    gap: 8px;
+  }
+
+  body:has(.servicios-page) .mvdel-actions:has(> .mvdel-btn:nth-child(2)):not(:has(> .mvdel-btn:nth-child(3))) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  body:has(.servicios-page) .mvdel-actions:has(> .mvdel-btn:nth-child(3)) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  body:has(.servicios-page) .mvdel-actions > .mvdel-btn {
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+    padding-inline: 8px;
+    white-space: normal;
+    line-height: 1.15;
+  }
+}
+
+@media (max-width: 420px) {
+  .servicios-mainTableWrap .mov-gridTable--row .mov-gridCell,
+  .servicios-mainTableWrap .mov-gridTable--row .mov-gridCell--actions {
+    grid-template-columns: minmax(84px, 30%) minmax(0, 1fr);
+    column-gap: 8px;
+  }
+
+  .servicios-modal .gm-modal-footer.gm-view-footer-actions,
+  body:has(.servicios-page) .mvdel-actions {
+    gap: 6px;
+  }
+
+  .servicios-modal .gm-modal-footer.gm-view-footer-actions > .gm-action-btn,
+  body:has(.servicios-page) .mvdel-actions > .mvdel-btn {
+    font-size: 11px;
+    padding-inline: 5px;
+  }
+}
+
+
+
+/* =========================================================
+   SERVICIOS · VIEWPORT MÓVIL REAL
+   Mientras Servicios está montado, JS publica el alto de window.visualViewport.
+   Esto evita que la pantalla o los modales queden detrás de las barras
+   dinámicas del navegador / navegación del celular.
+========================================================= */
+@media (max-width: 720px) {
+  html.balto-servicios-mobile-viewport .gm-modal-overlay {
+    height: var(--balto-visual-viewport-height, 100dvh) !important;
+    min-height: 0 !important;
+    max-height: var(--balto-visual-viewport-height, 100dvh) !important;
+    padding-top: max(12px, env(safe-area-inset-top, 0px)) !important;
+    padding-bottom: max(12px, env(safe-area-inset-bottom, 0px)) !important;
+    overflow: hidden !important;
+  }
+
+  html.balto-servicios-mobile-viewport .gm-modal-container {
+    max-height: calc(
+      var(--balto-visual-viewport-height, 100dvh)
+      - 24px
+      - env(safe-area-inset-top, 0px)
+      - env(safe-area-inset-bottom, 0px)
+    ) !important;
+  }
 }

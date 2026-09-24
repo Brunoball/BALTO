@@ -113,7 +113,7 @@
 }
 .cfg-listas-gridHead.has-y-scroll { scrollbar-gutter: stable; }
 .cfg-listas-gridBodyScroll {
-  height: calc(100vh - 345px);
+  height: calc(var(--balto-visual-viewport-height, 100dvh) - 345px);
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -281,9 +281,9 @@ html[data-theme="oscuro"] .cfg-listas-gridCell--skeleton span {
   .cfg-listas-search { order: 3; }
   .cfg-listas-add { order: 4; }
   .cfg-listas-gridBodyScroll {
-    height: calc(100vh - 340px);
-    min-height: calc(100vh - 340px);
-    max-height: calc(100vh - 340px);
+    height: calc(var(--balto-visual-viewport-height, 100dvh) - 340px);
+    min-height: calc(var(--balto-visual-viewport-height, 100dvh) - 340px);
+    max-height: calc(var(--balto-visual-viewport-height, 100dvh) - 340px);
   }
 }
 
@@ -315,3 +315,145 @@ html[data-theme="oscuro"] .cfg-listas-gridCell--skeleton span {
 }
 
 .cfg-listas-actions button:disabled{opacity:.42;cursor:not-allowed}.cfg-listas-actions button:disabled:hover{background:inherit;border-color:#dce4ec;color:#52657b}
+
+/* =========================================================
+   RESPONSIVE · FILAS DE LISTAS/CATEGORÍAS COMO TARJETAS
+   Solo móvil. En escritorio sigue funcionando como grilla-tabla.
+========================================================= */
+@media (max-width: 720px) {
+  .cfg-listas-tableWrap {
+    overflow: visible;
+  }
+
+  .cfg-listas-grid,
+  .cfg-listas-grid.is-category,
+  .cfg-listas-grid.is-unit,
+  .cfg-listas-grid.is-detail {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .cfg-listas-gridHead {
+    display: none;
+  }
+
+  .cfg-listas-gridBodyScroll {
+    overflow: visible;
+  }
+
+  .cfg-listas-gridBody {
+    display: grid;
+    gap: 10px;
+    padding: 10px;
+  }
+
+  .cfg-listas-gridBody .cfg-listas-gridRow {
+    display: block;
+    overflow: hidden;
+    border: 1px solid #d9e1ea;
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 3px 10px rgba(15, 23, 42, .045);
+  }
+
+  .cfg-listas-gridBody .cfg-listas-gridRow:hover .cfg-listas-gridCell,
+  .cfg-listas-gridBody .cfg-listas-gridRow.is-inactive .cfg-listas-gridCell,
+  .cfg-listas-gridBody .cfg-listas-gridRow.is-inactive:hover .cfg-listas-gridCell {
+    background: transparent;
+  }
+
+  .cfg-listas-gridBody .cfg-listas-gridRow.is-inactive {
+    background: #fafbfc;
+  }
+
+  .cfg-listas-gridBody .cfg-listas-gridRow:not(.is-skeleton) .cfg-listas-gridCell {
+    min-height: 42px;
+    padding: 9px 11px;
+    display: grid;
+    grid-template-columns: minmax(88px, 36%) minmax(0, 1fr);
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1px solid #edf1f5;
+    text-align: right;
+    justify-content: initial;
+    white-space: normal;
+  }
+
+  .cfg-listas-gridBody .cfg-listas-gridRow:not(.is-skeleton) .cfg-listas-gridCell::before {
+    content: attr(data-label);
+    color: #7b8794;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: .045em;
+    text-transform: uppercase;
+    text-align: left;
+  }
+
+  .cfg-listas-gridBody .cfg-listas-gridRow:not(.is-skeleton) .cfg-listas-gridCell:last-child {
+    border-bottom: 0;
+  }
+
+  .cfg-listas-gridCell--name {
+    text-align: right;
+  }
+
+  .cfg-listas-gridCell--name strong,
+  .cfg-listas-gridCell--name small {
+    text-align: right;
+  }
+
+  .cfg-listas-gridCell--description {
+    overflow-wrap: anywhere;
+  }
+
+  .cfg-listas-gridCell--actions {
+    display: flex !important;
+    justify-content: flex-end !important;
+    gap: 10px !important;
+  }
+
+  .cfg-listas-gridCell--actions::before {
+    margin-right: auto;
+    align-self: center;
+  }
+
+  .cfg-listas-actions {
+    justify-content: flex-end;
+  }
+
+  .cfg-listas-gridRow.is-skeleton {
+    border: 0;
+    box-shadow: none;
+    background: transparent;
+  }
+
+  .cfg-listas-gridCell--skeleton {
+    min-height: 78px;
+    border: 1px solid #d9e1ea;
+    border-radius: 12px;
+    background: #fff;
+  }
+
+  html[data-theme="oscuro"] .cfg-listas-gridBody .cfg-listas-gridRow,
+  html[data-theme="oscuro"] .cfg-listas-gridBody .cfg-listas-gridRow.is-inactive {
+    background: var(--color-surface, #0f2336);
+    border-color: var(--color-border, rgba(255,255,255,.10));
+    box-shadow: none;
+  }
+
+  html[data-theme="oscuro"] .cfg-listas-gridBody .cfg-listas-gridRow:not(.is-skeleton) .cfg-listas-gridCell,
+  html[data-theme="oscuro"] .cfg-listas-gridBody .cfg-listas-gridRow:hover .cfg-listas-gridCell,
+  html[data-theme="oscuro"] .cfg-listas-gridBody .cfg-listas-gridRow.is-inactive .cfg-listas-gridCell,
+  html[data-theme="oscuro"] .cfg-listas-gridBody .cfg-listas-gridRow.is-inactive:hover .cfg-listas-gridCell {
+    background: transparent;
+  }
+
+  html[data-theme="oscuro"] .cfg-listas-gridBody .cfg-listas-gridRow:not(.is-skeleton) .cfg-listas-gridCell::before {
+    color: var(--color-text-muted, rgba(210,220,235,.70));
+  }
+
+  html[data-theme="oscuro"] .cfg-listas-gridCell--skeleton {
+    background: var(--color-surface, #0f2336);
+    border-color: var(--color-border, rgba(255,255,255,.10));
+  }
+}

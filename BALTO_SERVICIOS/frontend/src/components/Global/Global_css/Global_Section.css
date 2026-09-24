@@ -323,13 +323,13 @@ body{overflow: hidden;}
   min-height: 0;
   overflow: auto;
   overflow-x: hidden;
-  max-height: calc(100vh - 240px);
-  min-height: calc(100vh - 240px);
+  max-height: calc(var(--balto-visual-viewport-height, 100dvh) - 240px);
+  min-height: calc(var(--balto-visual-viewport-height, 100dvh) - 240px);
 }
 
 .mov-tableWrap--mov{
-    max-height: calc(100vh - 240px)  !important;
-    min-height: calc(100vh - 240px)  !important
+    max-height: calc(var(--balto-visual-viewport-height, 100dvh) - 240px)  !important;
+    min-height: calc(var(--balto-visual-viewport-height, 100dvh) - 240px)  !important
 }
 
 /* header sticky */
@@ -481,7 +481,7 @@ body{overflow: hidden;}
 
 .mov-gridBody--relative{
   position: relative;
-  height: calc(100vh - 250px);
+  height: calc(var(--balto-visual-viewport-height, 100dvh) - 250px);
 }
 
 /* =========================================================
