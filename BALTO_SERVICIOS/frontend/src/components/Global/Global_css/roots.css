@@ -6,11 +6,11 @@
 
 :root {
   /* Viewport visual real (JS actualiza estos valores globalmente). */
-  --balto-visual-viewport-height: 100dvh;
+  --balto-visual-viewport-height: 100vh;
   --balto-visual-viewport-width: 100vw;
   --balto-visual-viewport-top: 0px;
   --balto-visual-viewport-left: 0px;
-  --balto-visual-viewport-bottom: 100dvh;
+  --balto-visual-viewport-bottom: 100vh;
   --balto-visual-viewport-right: 100vw;
   --balto-panel-viewport-height: calc(var(--balto-visual-viewport-height, 100dvh) - var(--mov-topbar-h, 58px));
 
@@ -355,4 +355,11 @@ body.dark {
   0% { transform: scale(1); opacity: 0.92; }
   50% { transform: scale(1.05); opacity: 1; }
   100% { transform: scale(1); opacity: 0.92; }
+}
+
+@supports (height: 100dvh) {
+  :root {
+    --balto-visual-viewport-height: 100dvh;
+    --balto-visual-viewport-bottom: 100dvh;
+  }
 }

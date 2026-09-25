@@ -2781,3 +2781,372 @@ html[data-theme="oscuro"] .gm-action-btn--secondary:hover:not(:disabled) {
 
   color: #ffffff;
 }
+/* =========================================================
+   Nuevo Ingreso / Nuevo Egreso · responsive de carga
+   ---------------------------------------------------------
+   Variante global opt-in para formularios de movimientos que
+   apilan tabla + panel lateral. Evita que el panel quede fuera
+   del viewport visual y convierte la grilla de items en tarjetas
+   legibles en celular, sin modificar los modales ya existentes.
+========================================================= */
+
+@media (max-width: 980px) {
+  .gm-modal-container--new-entry {
+    width: min(920px, 100%);
+    height: 100%;
+    min-height: 0;
+    max-height: 100%;
+  }
+
+  .gm-modal-container--new-entry .gm-modal-content {
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .gm-modal-container--new-entry .gm-movement-layout {
+    display: flex;
+    flex: 0 0 auto;
+    flex-direction: column;
+    min-height: auto;
+    overflow: visible;
+  }
+
+  .gm-modal-container--new-entry .gm-movement-main,
+  .gm-modal-container--new-entry .gm-movement-side,
+  .gm-modal-container--new-entry .gm-aside {
+    flex: 0 0 auto;
+    min-height: 0;
+    overflow: visible;
+  }
+
+  .gm-modal-container--new-entry .gm-entry-table {
+    min-height: 0;
+    overflow: visible;
+  }
+
+  .gm-modal-container--new-entry .gm-entry-table .gm-table-body {
+    flex: 0 0 auto;
+    min-height: 0;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .gm-modal-container--new-entry .gm-actions--sticky {
+    bottom: 0;
+    z-index: 8;
+    background: var(--gm-bg);
+    border-top: 1px solid var(--gm-border);
+    box-shadow: 0 -10px 24px rgba(15, 23, 42, .12);
+    padding-bottom: max(10px, var(--balto-safe-bottom, 0px));
+  }
+
+  html[data-theme="oscuro"] .gm-modal-container--new-entry .gm-actions--sticky {
+    background: rgba(8, 19, 31, .98);
+    border-top-color: rgba(255, 255, 255, .10);
+    box-shadow: 0 -12px 28px rgba(0, 0, 0, .35);
+  }
+}
+
+@media (max-width: 720px) {
+  .gm-modal-overlay:has(.gm-modal-container--new-entry) {
+    align-items: stretch;
+    padding: max(6px, var(--balto-safe-top, 0px)) max(6px, var(--balto-safe-right, 0px)) max(6px, var(--balto-safe-bottom, 0px)) max(6px, var(--balto-safe-left, 0px));
+  }
+
+  .gm-modal-container--new-entry {
+    width: 100%;
+    border-radius: 12px;
+  }
+
+  .gm-modal-container--new-entry .gm-modal-header {
+    gap: 10px;
+    padding: 10px 12px;
+  }
+
+  .gm-modal-container--new-entry .gm-modal-head-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 9px;
+  }
+
+  .gm-modal-container--new-entry .gm-modal-title {
+    font-size: .98rem;
+  }
+
+  .gm-modal-container--new-entry .gm-modal-close {
+    width: 36px;
+    height: 36px;
+  }
+
+  .gm-modal-container--new-entry .gm-modal-content {
+    padding: 8px;
+  }
+
+  .gm-modal-container--new-entry .gm-movement-layout {
+    gap: 10px;
+  }
+
+  /* Tabla de renglones -> tarjetas de carga. */
+  .gm-modal-container--new-entry .gm-entry-table {
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .gm-modal-container--new-entry .gm-entry-table .gm-table-head {
+    display: none;
+  }
+
+  .gm-modal-container--new-entry .gm-entry-table .gm-table-body {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 0;
+  }
+
+  .gm-modal-container--new-entry .gm-entry-table .gm-table-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-areas:
+      "detail detail"
+      "qty amount"
+      "iva-rate iva-amount"
+      "total total";
+    gap: 8px;
+    min-height: 0;
+    padding: 10px;
+    border: 1px solid var(--gm-border);
+    border-radius: 12px;
+    background: var(--gm-bg);
+    position: relative;
+    overflow: visible;
+  }
+
+  .gm-modal-container--new-entry .gm-entry-table .gm-table-row:nth-child(even),
+  .gm-modal-container--new-entry .gm-entry-table .gm-table-row:hover {
+    background: var(--gm-bg);
+  }
+
+  html[data-theme="oscuro"] .gm-modal-container--new-entry .gm-entry-table .gm-table-row,
+  html[data-theme="oscuro"] .gm-modal-container--new-entry .gm-entry-table .gm-table-row:nth-child(even),
+  html[data-theme="oscuro"] .gm-modal-container--new-entry .gm-entry-table .gm-table-row:hover {
+    background: var(--gm-bg-soft);
+  }
+
+  .gm-modal-container--new-entry .gm-entry-table .gm-table-cell {
+    height: auto;
+    min-height: 0;
+    min-width: 0;
+    padding: 0;
+    border-left: 0 !important;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 5px;
+  }
+
+  .gm-modal-container--new-entry .gm-entry-table .gm-table-cell::before {
+    display: block;
+    font-size: 10px;
+    line-height: 1;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--gm-muted);
+  }
+
+  .gm-modal-container--new-entry .gm-entry-table .gm-table-cell:nth-child(1) {
+    grid-area: detail;
+    padding-right: 34px;
+  }
+  .gm-modal-container--new-entry .gm-entry-table .gm-table-cell:nth-child(1)::before { content: "Descripción"; }
+
+  .gm-modal-container--new-entry .gm-entry-table .gm-table-cell:nth-child(2) { grid-area: qty; }
+  .gm-modal-container--new-entry .gm-entry-table .gm-table-cell:nth-child(2)::before { content: "Cantidad"; }
+
+  .gm-modal-container--new-entry .gm-entry-table .gm-table-cell:nth-child(3) { grid-area: amount; }
+  .gm-modal-container--new-entry .gm-entry-table .gm-table-cell:nth-child(3)::before { content: "Importe"; }
+
+  .gm-modal-container--new-entry .gm-entry-table .gm-table-cell:nth-child(4) { grid-area: iva-rate; }
+  .gm-modal-container--new-entry .gm-entry-table .gm-table-cell:nth-child(4)::before { content: "IVA %"; }
+
+  .gm-modal-container--new-entry .gm-entry-table .gm-table-cell:nth-child(5) { grid-area: iva-amount; }
+  .gm-modal-container--new-entry .gm-entry-table .gm-table-cell:nth-child(5)::before { content: "IVA $"; }
+
+  .gm-modal-container--new-entry .gm-entry-table .gm-table-cell:nth-child(6) {
+    grid-area: total;
+    min-height: 42px;
+    padding: 8px 10px;
+    border: 1px solid rgba(16, 185, 129, .28);
+    border-radius: 10px;
+    background: rgba(16, 185, 129, .06);
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .gm-modal-container--new-entry .gm-entry-table .gm-table-cell:nth-child(6)::before { content: "Total"; }
+
+  .gm-modal-container--new-entry .gm-entry-table .gm-table-cell:nth-child(7) {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: auto;
+    height: auto;
+    display: block;
+  }
+
+  .gm-modal-container--new-entry .gm-entry-table .gm-table-cell:nth-child(7)::before {
+    display: none;
+  }
+
+  .gm-modal-container--new-entry .gm-entry-table .gm-cell-input {
+    width: 100%;
+    height: 40px;
+    min-height: 40px;
+    padding: 0 10px;
+    font-size: 13px;
+    border-radius: 9px;
+    box-sizing: border-box;
+  }
+
+  .gm-modal-container--new-entry .gm-entry-table .gm-table-cell--mono {
+    font-size: 13px;
+  }
+
+  .gm-modal-container--new-entry .gm-entry-table .gm-table-cell:nth-child(5) {
+    min-height: 40px;
+    padding: 0 10px;
+    border: 1px solid var(--gm-border);
+    border-radius: 9px;
+    background: var(--gm-bg-soft);
+    justify-content: center;
+  }
+
+  .gm-modal-container--new-entry .gm-entry-table .gm-row-delete {
+    width: 30px;
+    height: 30px;
+    border: 1px solid rgba(220, 38, 38, .22);
+    background: var(--gm-bg);
+    color: #b91c1c;
+  }
+
+  .gm-modal-container--new-entry .gm-table-foot {
+    margin-top: 8px;
+    padding: 9px;
+    border: 1px solid var(--gm-border);
+    border-radius: 12px;
+    background: var(--gm-bg);
+  }
+
+  .gm-modal-container--new-entry .gm-foot-actions,
+  .gm-modal-container--new-entry .gm-summary-chips {
+    width: 100%;
+  }
+
+  .gm-modal-container--new-entry .gm-summary-chips {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .gm-modal-container--new-entry .gm-summary-chip {
+    width: 100%;
+    min-width: 0;
+    padding: 6px 8px 6px 10px;
+    gap: 5px;
+    font-size: 11px;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .gm-modal-container--new-entry .gm-summary-chip span,
+  .gm-modal-container--new-entry .gm-summary-chip b {
+    width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .gm-modal-container--new-entry .gm-movement-side {
+    border-radius: 12px;
+  }
+
+  .gm-modal-container--new-entry .gm-section-body {
+    padding: 10px;
+    gap: 10px;
+  }
+
+  .gm-modal-container--new-entry .gm-upload-bar {
+    grid-template-columns: 1fr;
+  }
+
+  .gm-modal-container--new-entry .gm-upload-btn--primary {
+    width: 100%;
+  }
+
+  .gm-modal-container--new-entry .gm-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    padding: 9px;
+  }
+
+  .gm-modal-container--new-entry .gm-action-btn {
+    width: 100%;
+    min-width: 0;
+    height: 42px;
+    font-size: 13px;
+  }
+
+  html[data-theme="oscuro"] .gm-modal-container--new-entry .gm-actions {
+    background: rgba(8, 19, 31, .98);
+  }
+
+  html[data-theme="oscuro"] .gm-modal-container--new-entry .gm-action-btn--cancel {
+    background: #2a3543;
+    border-color: rgba(255, 255, 255, .12);
+    color: rgba(255, 255, 255, .90);
+  }
+
+  html[data-theme="oscuro"] .gm-modal-container--new-entry .gm-action-btn--cancel:hover:not(:disabled) {
+    background: #344252;
+    border-color: rgba(140, 190, 255, .34);
+    color: rgba(255, 255, 255, .96);
+  }
+}
+
+@media (max-width: 420px) {
+  .gm-modal-container--new-entry .gm-summary-chips {
+    grid-template-columns: 1fr;
+  }
+
+  .gm-modal-container--new-entry .gm-summary-chip {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .gm-modal-container--new-entry .gm-summary-chip span,
+  .gm-modal-container--new-entry .gm-summary-chip b {
+    width: auto;
+  }
+
+  .gm-modal-container--new-entry .gm-payment-row--amount {
+    align-items: stretch;
+    flex-wrap: wrap;
+  }
+
+  .gm-modal-container--new-entry .gm-payment-actions-col {
+    width: 100%;
+  }
+
+  .gm-modal-container--new-entry .gm-payment-actions-col .gm-payment-complete {
+    flex: 1 1 auto;
+  }
+}

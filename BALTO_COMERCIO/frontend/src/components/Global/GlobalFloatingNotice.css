@@ -1,0 +1,369 @@
+/* =========================================================
+   GLOBAL FLOATING NOTICE — BALTO
+   Tarjeta flotante reutilizable para eventos con acción.
+   Depende de las variables definidas en Global_css/roots.css.
+========================================================= */
+
+.gfn-card {
+  position: fixed;
+  right: 22px;
+  bottom: calc(22px + env(safe-area-inset-bottom, 0px));
+  z-index: 9999;
+  width: min(430px, calc(100vw - 32px));
+  max-height: calc(100dvh - 44px - env(safe-area-inset-bottom, 0px));
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  padding: 20px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: var(--shadow-lg), 0 4px 14px rgba(10, 37, 64, .08);
+  isolation: isolate;
+  animation: gfn-card-in 180ms cubic-bezier(.2, .8, .2, 1);
+}
+
+.gfn-card__accent {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 4px;
+  z-index: -1;
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  background: linear-gradient(90deg, var(--color-primary), var(--color-primary-hover));
+}
+
+@keyframes gfn-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.gfn-card__close {
+  position: absolute;
+  right: 12px;
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--color-text-soft);
+  font-size: 16px;
+  cursor: pointer;
+  transition: background-color var(--transition-fast), color var(--transition-fast), transform var(--transition-fast);
+}
+
+.gfn-card__close:hover {
+  background: var(--color-primary-soft);
+  color: var(--color-text);
+}
+
+.gfn-card__close:active {
+  transform: scale(.95);
+}
+
+.gfn-card__close:focus-visible,
+.gfn-card__action:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.gfn-card__brandRow {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-right: 42px;
+}
+
+.gfn-card__brandBadge {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-primary-soft-strong);
+  border-radius: 13px;
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: .01em;
+}
+
+.gfn-card__brandName {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-primary);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.gfn-card__title {
+  margin: 15px 0 0;
+  padding-right: 28px;
+  color: var(--color-text);
+  font-size: 22px;
+  line-height: 1.2;
+  font-weight: 600;
+  letter-spacing: -.025em;
+}
+
+.gfn-card__message {
+  margin: 7px 0 0;
+  color: var(--color-text-muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.gfn-card__details {
+  display: grid;
+  gap: 9px;
+  margin-top: 16px;
+  padding: 13px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background: var(--color-bg-soft);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .35);
+}
+
+.gfn-card__detailRow {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 82px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+}
+
+.gfn-card__detailLabel {
+  color: var(--color-text-soft);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: .055em;
+  text-transform: uppercase;
+}
+
+.gfn-card__detailValue {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-text);
+  font-size: 14px;
+  font-weight: 600;
+  text-align: right;
+}
+
+.gfn-card__meta {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.gfn-card__status {
+  min-height: 31px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface-alt);
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.15;
+}
+
+.gfn-card__status.is-success,
+.gfn-card__status.is-paid {
+  border-color: color-mix(in srgb, var(--color-success) 24%, transparent);
+  background: var(--color-success-soft);
+  color: var(--color-success);
+}
+
+.gfn-card__status.is-warning,
+.gfn-card__status.is-pending {
+  border-color: color-mix(in srgb, var(--color-warning) 24%, transparent);
+  background: var(--color-warning-soft);
+  color: var(--color-warning);
+}
+
+.gfn-card__status.is-danger {
+  border-color: color-mix(in srgb, var(--color-danger) 24%, transparent);
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+
+.gfn-card__status.is-info {
+  border-color: color-mix(in srgb, var(--color-info) 24%, transparent);
+  background: var(--color-info-soft);
+  color: var(--color-info);
+}
+
+.gfn-card__amount {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-text);
+  font-size: 20px;
+  font-weight: 650;
+  letter-spacing: -.015em;
+}
+
+.gfn-card__extra {
+  margin-top: 9px;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.gfn-card__footer {
+  margin-top: 17px;
+}
+
+.gfn-card__action {
+  width: 100%;
+  min-height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border: 1px solid transparent;
+  border-radius: 13px;
+  background: var(--color-primary);
+  color: var(--color-white);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--color-primary) 24%, transparent);
+  transition: transform var(--transition-fast), background-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.gfn-card__action:hover {
+  background: var(--color-primary-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 12px 28px color-mix(in srgb, var(--color-primary) 28%, transparent);
+}
+
+.gfn-card__action:active {
+  transform: translateY(0);
+}
+
+.gfn-card__action svg {
+  font-size: 11px;
+  transition: transform var(--transition-fast);
+}
+
+.gfn-card__action:hover svg {
+  transform: translateX(2px);
+}
+
+html[data-theme="oscuro"] .gfn-card,
+body.dark .gfn-card {
+  box-shadow: var(--shadow-lg), 0 4px 18px rgba(0, 0, 0, .28);
+}
+
+html[data-theme="oscuro"] .gfn-card__details,
+body.dark .gfn-card__details {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .035);
+}
+
+@media (max-width: 680px) {
+  .gfn-card {
+    right: 14px;
+    left: 14px;
+    bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+    width: auto;
+    max-height: calc(100dvh - 28px - env(safe-area-inset-bottom, 0px));
+    padding: 17px;
+    border-radius: 18px;
+  }
+
+  .gfn-card__brandBadge {
+    width: 38px;
+    height: 38px;
+    flex-basis: 38px;
+    border-radius: 11px;
+  }
+
+  .gfn-card__brandName {
+    font-size: 14px;
+  }
+
+  .gfn-card__title {
+    margin-top: 13px;
+    font-size: 20px;
+  }
+
+  .gfn-card__message {
+    font-size: 13px;
+  }
+
+  .gfn-card__details {
+    margin-top: 14px;
+    padding: 12px 13px;
+  }
+
+  .gfn-card__detailRow {
+    grid-template-columns: 70px minmax(0, 1fr);
+    gap: 9px;
+  }
+
+  .gfn-card__detailValue {
+    font-size: 13px;
+  }
+
+  .gfn-card__amount {
+    font-size: 18px;
+  }
+
+  .gfn-card__action {
+    min-height: 46px;
+  }
+}
+
+@media (max-width: 380px) {
+  .gfn-card__meta {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 9px;
+  }
+
+  .gfn-card__amount {
+    align-self: flex-end;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gfn-card {
+    animation: none;
+  }
+
+  .gfn-card__action,
+  .gfn-card__action svg,
+  .gfn-card__close {
+    transition: none;
+  }
+}

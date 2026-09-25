@@ -1547,3 +1547,148 @@ html[data-theme="oscuro"] .mi-detalle-title { color: var(--mi-text); }
 html[data-theme="oscuro"] .mi-detalle-monto { color: #60a5fa; }
 html[data-theme="oscuro"] .mi-detalle-block { border-top-color: rgba(255,255,255,.10); }
 
+
+/* Responsive del detalle: un solo scroll y tamaño dentro del viewport global.
+   El selector propio evita modificar otros modales de movimientos. */
+@media (max-width: 980px) {
+  html .mi-modal__overlay.mdm-overlay {
+    top: var(--balto-visual-viewport-top, 0px) !important;
+    left: var(--balto-visual-viewport-left, 0px) !important;
+    right: auto !important;
+    bottom: auto !important;
+    width: var(--balto-visual-viewport-width, 100vw) !important;
+    height: var(--balto-visual-viewport-height, 100dvh) !important;
+    padding: max(8px, env(safe-area-inset-top, 0px)) max(8px, env(safe-area-inset-right, 0px)) max(8px, env(safe-area-inset-bottom, 0px)) max(8px, env(safe-area-inset-left, 0px)) !important;
+    box-sizing: border-box;
+    overflow: hidden;
+  }
+  html .mdm-overlay .mdm-modal.mi-modal__container--mov {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    max-height: 100% !important;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-sizing: border-box;
+    border-radius: 12px;
+  }
+  .mdm-modal .mdm-header {
+    flex: 0 0 auto;
+    position: relative;
+    padding: 12px 52px 12px 12px;
+    gap: 8px;
+  }
+  .mdm-modal .mdm-header .mi-modal__close {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    margin: 0;
+    width: 36px;
+    height: 36px;
+  }
+  .mdm-modal .mdm-header .mi-modal__title { overflow-wrap: anywhere; }
+  .mdm-modal .mdm-subtitle {
+    max-width: 100%;
+    white-space: nowrap;
+  }
+  .mdm-modal .mi-modal__content.mdm-content {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 0;
+    min-width: 0;
+    min-height: 0;
+    padding: 10px;
+    gap: 10px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+  .mdm-modal .mdm-content > :is(.mdm-summary-card, .mdm-section) {
+    flex: 0 0 auto;
+    width: 100%;
+    min-height: 0;
+  }
+  .mdm-modal .mdm-items-scroll,
+  .mdm-modal .mdm-table-wrap,
+  .mdm-modal .mdm-medios-grid {
+    flex: 0 0 auto;
+    min-height: 0 !important;
+    max-height: none;
+    overflow: visible;
+    scrollbar-gutter: auto;
+  }
+  .mdm-modal .mdm-table { min-height: 0 !important; }
+  .mdm-modal .mdm-info-pill__value,
+  .mdm-modal .mdm-medio-card__meta .mdm-medio-card__sub {
+    overflow: visible;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .mdm-modal .mdm-medio-card__meta { flex-wrap: wrap; }
+  .mdm-modal :is(.mdm-foot-totals, .mdm-total-paid-totals) {
+    width: 100%;
+    min-width: 0;
+    flex-wrap: wrap;
+  }
+  .mdm-modal :is(.mdm-foot-totals, .mdm-total-paid-totals) > .mi-cr-totalLine {
+    max-width: 100%;
+    min-width: 0;
+    flex-wrap: wrap;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+}
+@media (max-width: 720px) {
+  .mdm-modal .mdm-summary-card { grid-template-columns: 1fr; }
+  .mdm-modal .mdm-table--items { padding: 10px; box-sizing: border-box; }
+  .mdm-modal .mdm-table__row--head { display: none; }
+  .mdm-modal .mdm-table__row:not(.mdm-table__row--head) {
+    display: block;
+    min-height: 0;
+    margin-bottom: 10px;
+    border: 1px solid var(--mi-border);
+    border-radius: 10px;
+    overflow: hidden;
+    background: var(--mi-bg);
+  }
+  .mdm-modal .mdm-table__row > span[data-label] {
+    display: grid;
+    grid-template-columns: minmax(80px, 36%) minmax(0, 1fr);
+    gap: 10px;
+    align-items: center;
+    min-height: 40px;
+    padding: 9px 10px !important;
+    border-left: 0;
+    border-bottom: 1px solid var(--mi-border);
+    white-space: normal;
+    overflow-wrap: anywhere;
+    text-align: right;
+    font-size: 12px;
+  }
+  .mdm-modal .mdm-table__row > span[data-label]:last-child { border-bottom: 0; }
+  .mdm-modal .mdm-table__row > span[data-label]::before {
+    content: attr(data-label);
+    text-align: left;
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--mi-muted);
+  }
+  .mdm-modal .mdm-product-line { justify-content: flex-end; }
+  .mdm-modal .mdm-product-main { align-items: flex-end; }
+  .mdm-modal .mdm-product-cell .mdm-product-name,
+  .mdm-modal .mdm-service-badge {
+    white-space: normal;
+    overflow: visible;
+    overflow-wrap: anywhere;
+    max-width: 100%;
+  }
+  .mdm-modal .mdm-service-components { margin: 0 0 10px; }
+  .mdm-modal .mdm-service-toggle { flex-basis: 32px; width: 32px; height: 32px; }
+  .mdm-modal .mdm-section-title { flex-wrap: wrap; gap: 6px; }
+}

@@ -1301,7 +1301,7 @@ export default function ModalNuevoEgreso({
     <>
       <div className="gm-modal-overlay">
         <div
-          className="gm-modal-container gm-modal-container--movement gm-modal-v2 oe-modal"
+          className="gm-modal-container gm-modal-container--movement gm-modal-container--new-entry gm-modal-v2 oe-modal"
           role="dialog"
           aria-modal="true"
           onMouseDown={(e) => e.stopPropagation()}
@@ -1327,7 +1327,7 @@ export default function ModalNuevoEgreso({
 
           <div className="gm-modal-content">
             <div className="gm-movement-layout">
-              <section className="gm-movement-main gm-table gm-table--movement oe-table">
+              <section className="gm-movement-main gm-table gm-table--movement gm-entry-table oe-table">
                 <div className={`gm-table-head${hasScroll ? " gm-table-head--body-scroll" : ""}`}>
                   <div className="gm-table-th" style={{ paddingLeft: 10 }}>Descripción</div>
                   <div className="gm-table-th">Cant.</div>

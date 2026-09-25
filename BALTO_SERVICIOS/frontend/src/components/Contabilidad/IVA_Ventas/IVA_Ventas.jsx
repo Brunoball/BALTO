@@ -190,6 +190,60 @@ function useTableScrollWatcher() {
   return { tableWrapRef, hasTableScroll };
 }
 
+function useResponsiveAvailableCardHeight() {
+  const cardRef = useRef(null);
+
+  useEffect(() => {
+    const card = cardRef.current;
+    if (!card) return undefined;
+
+    let frameId = 0;
+    const visualViewport = window.visualViewport;
+
+    const updateHeight = () => {
+      window.cancelAnimationFrame(frameId);
+      frameId = window.requestAnimationFrame(() => {
+        if (window.innerWidth > 768) {
+          card.style.removeProperty("--contabilidad-mobile-card-height");
+          return;
+        }
+
+        const rect = card.getBoundingClientRect();
+        const viewportBottom = visualViewport
+          ? visualViewport.offsetTop + visualViewport.height
+          : window.innerHeight;
+
+        const rootStyles = getComputedStyle(document.documentElement);
+        const safeBottom = parseFloat(rootStyles.getPropertyValue("--balto-safe-bottom")) || 0;
+        const available = Math.max(0, Math.floor(viewportBottom - rect.top - safeBottom - 8));
+
+        card.style.setProperty("--contabilidad-mobile-card-height", `${available}px`);
+      });
+    };
+
+    updateHeight();
+
+    const observer = new ResizeObserver(updateHeight);
+    observer.observe(card);
+
+    window.addEventListener("resize", updateHeight);
+    window.addEventListener("orientationchange", updateHeight);
+    visualViewport?.addEventListener("resize", updateHeight);
+    visualViewport?.addEventListener("scroll", updateHeight);
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      observer.disconnect();
+      window.removeEventListener("resize", updateHeight);
+      window.removeEventListener("orientationchange", updateHeight);
+      visualViewport?.removeEventListener("resize", updateHeight);
+      visualViewport?.removeEventListener("scroll", updateHeight);
+    };
+  }, []);
+
+  return cardRef;
+}
+
 function slugifySheetName(name) {
   return String(name || "IVA Ventas")
     .replace(/[\[\]\*\/\\\?\:]/g, " ")
@@ -220,6 +274,7 @@ function IvaTableSkeleton() {
                 "mov-gridCell",
                 colIndex >= 2 ? "is-right" : "",
               ].join(" ")}
+              data-label={columnas[colIndex]?.label || ""}
               role="cell"
             >
               <span className="mov-skeletonBar" style={{ width }} />
@@ -259,6 +314,7 @@ export default function IVAVentas() {
   }, [registros, range.from, range.to, q]);
 
   const { tableWrapRef, hasTableScroll } = useTableScrollWatcher();
+  const cardRef = useResponsiveAvailableCardHeight();
 
   const totales = useMemo(() => {
     return filteredRegistros.reduce(
@@ -375,6 +431,7 @@ export default function IVAVentas() {
       )}
 
       <section
+        ref={cardRef}
         className={[
           "mov-card mov-card--table contabilidad-cardTable",
           hasTableScroll ? "has-table-scroll" : "",
@@ -452,10 +509,23 @@ export default function IVAVentas() {
                   </div>
                 </div>
               </div>
+              <div className="mov-card__actions contabilidad-headerActions contabilidad-headerActions--mobile" style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                <BotonExportar
+                  disabled={loading || filteredRegistros.length === 0}
+                  loading={false}
+                  label="Exportar"
+                  title={filteredRegistros.length ? "Exportar archivo" : "No hay datos para exportar"}
+                  opciones={exportOptions}
+                  align="right"
+                  entityLabel="registros de IVA ventas"
+                  currentCount={filteredRegistros.length}
+                  scopeEnabled={false}
+                />
+              </div>
             </div>
           </div>
 
-          <div className="mov-card__actions" style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          <div className="mov-card__actions contabilidad-headerActions contabilidad-headerActions--desktop" style={{ display: "flex", gap: 10, alignItems: "center" }}>
             <BotonExportar
               disabled={loading || filteredRegistros.length === 0}
               loading={false}
@@ -506,15 +576,15 @@ export default function IVAVentas() {
               filteredRegistros.map((item) => (
                 <div
                   key={item.id || `${item.id_movimiento}-${item.id_item}-${item.fecha}`}
-                  className="mov-gridTable mov-gridTable--row"
+                  className="mov-gridTable mov-gridTable--row contabilidad-dataRow"
                   style={{ gridTemplateColumns: gridCols }}
                   role="row"
                 >
-                  <div className="mov-gridCell" role="cell">{formatFechaDMY(item.fecha)}</div>
-                  <div className="mov-gridCell" role="cell">{getCliente(item)}</div>
-                  <div className="mov-gridCell is-right" role="cell">{formatCurrency(item.subtotal)}</div>
-                  <div className="mov-gridCell is-right" role="cell">{formatCurrency(getIva(item))}</div>
-                  <div className="mov-gridCell is-right is-strong" role="cell">{formatCurrency(item.total)}</div>
+                  <div className="mov-gridCell" data-label="Fecha" role="cell">{formatFechaDMY(item.fecha)}</div>
+                  <div className="mov-gridCell" data-label="Cliente" role="cell">{getCliente(item)}</div>
+                  <div className="mov-gridCell is-right" data-label="Subtotal" role="cell">{formatCurrency(item.subtotal)}</div>
+                  <div className="mov-gridCell is-right" data-label="IVA" role="cell">{formatCurrency(getIva(item))}</div>
+                  <div className="mov-gridCell is-right is-strong" data-label="Total" role="cell">{formatCurrency(item.total)}</div>
                 </div>
               ))
             )}

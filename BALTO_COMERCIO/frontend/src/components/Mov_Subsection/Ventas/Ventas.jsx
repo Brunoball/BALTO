@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import BASE_URL from "../../../config/config.jsx";
 import "../../Global/Global_css/Global_Section.css";
 import "../../Global/Global_css/GlobalResponsiveV2.css";
@@ -8,6 +7,7 @@ import "../../Global/Global_css/Global_oscuro.css";
 import "./Ventas.css";
 
 import Toast from "../../Global/Toast.jsx";
+import GlobalFloatingNotice from "../../Global/GlobalFloatingNotice.jsx";
 import useTableScrollGutter from "../../Global/useTableScrollGutter.jsx";
 import Calendario from "../../Global/Calendario/Calendario.jsx";
 import "../../Global/Calendario/calendario.css";
@@ -521,7 +521,8 @@ export default function Ventas() {
     [ventasTiendaNubePendientes]
   );
   const tiendaNubePopupVenta = ventasTiendaNubePendientes[0] || null;
-  const tiendaNubePopupPagoLabel = tiendaNubePopupVenta ? tiendaNubePagoLabel(tiendaNubePopupVenta.tn_payment_status) : "";
+
+  const tiendaNubePopupPagoLabel = tiendaNubePagoLabel(tiendaNubePopupVenta?.tn_payment_status);
   const abrirCompletarTiendaNube = useCallback((venta) => {
     if (!venta) return;
     setTiendaNubeVenta(venta);
@@ -763,62 +764,41 @@ export default function Ventas() {
         <div className={`mov-gridTable mov-gridTable--head ${hasTableScroll ? "has-y-scroll" : ""}`} style={{ gridTemplateColumns: gridCols }} role="row">{columns.map((c) => <div key={c.key} className={["mov-gridCell", "mov-gridCell--head", c.align === "right" ? "is-right" : "", c.align === "center" ? "is-center" : ""].join(" ")} role="columnheader">{c.label}</div>)}</div>
         <div className="mov-tableWrap" role="rowgroup" ref={tableWrapRef}><div className={["mov-gridBody", "mov-gridBody--relative", loadingRows ? "mov-softLoading" : ""].join(" ")}>{loadingRows ? <div className="mov-skeletonWrap" aria-busy="true">{Array.from({ length: SKELETON_ROWS }).map((_, i) => renderSkeletonRow(i))}</div> : <>{filteredRows.map((r) => { const key = getRowKey(r); const tieneComprobante = buildComprobanteCandidatesFromRow(r).length > 0; return <div key={key} className="mov-gridTable mov-gridTable--row" style={{ gridTemplateColumns: gridCols }} role="row">{columns.map((c) => { if (c.key === "acciones") return <div key={c.key} className={["mov-gridCell", "mov-gridCell--actions", "is-center"].join(" ")} role="cell" data-label={c.label}><div className="mov-actionsInline"><button type="button" className={["mov-iconBtn", tieneComprobante ? "mov-iconBtn--comprobante" : "mov-iconBtn--disabled"].join(" ")} title={tieneComprobante ? "Ver comprobantes" : "Sin comprobantes"} disabled={!tieneComprobante || isAnyLoading} onMouseEnter={() => { if (tieneComprobante) handlePrewarmComprobante(r); }} onPointerEnter={() => { if (tieneComprobante) handlePrewarmComprobante(r); }} onFocus={() => { if (tieneComprobante) handlePrewarmComprobante(r); }} onClick={() => { if (tieneComprobante) handleVerComprobante(r); }} style={{ opacity: tieneComprobante ? 1 : 0.35, cursor: tieneComprobante ? "pointer" : "not-allowed" }}><FontAwesomeIcon icon={faEye} /></button><button type="button" className="mov-iconBtn" title="Ver información completa del movimiento" disabled={isAnyLoading} onClick={() => { setSelectedRow(r); setOpenDetalleMovimiento(true); }}><FontAwesomeIcon icon={faInfoCircle} /></button><button type="button" className="mov-iconBtn" title="Emitir nota de crédito" disabled={isAnyLoading || loadingListsCtx} onClick={() => { setSelectedRow(r); setModoNC("NORMAL"); setOpenNC(true); }}><FontAwesomeIcon icon={faFileInvoiceDollar} /></button><button type="button" className="mov-iconBtn mov-iconBtn--danger" title="Eliminar" disabled={isAnyLoading || loadingListsCtx || deletingId === r.id_movimiento} onClick={() => { setSelectedRow(r); setOpenDel(true); }}>{deletingId === r.id_movimiento ? "..." : <FontAwesomeIcon icon={faTrashCan} />}</button></div></div>; const val = c.render ? c.render(r) : safeText(r[c.key]); return <div key={c.key} className={["mov-gridCell", c.align === "right" ? "is-right" : "", c.align === "center" ? "is-center" : "", c.strong ? "is-strong" : ""].filter(Boolean).join(" ")} role="cell" data-label={c.label} title={typeof val === "string" ? val : undefined}><span className="mov-ellipsissss">{val}</span></div>; })}</div>; })}{!isAnyLoading && filteredRows.length === 0 && <div className="cc-emptyState"><FontAwesomeIcon icon={faBoxOpen} className="cc-emptyIcon" /><div className="cc-emptyText">{q.trim() ? `No se encontraron ventas para "${q.trim()}".` : "No hay ventas para mostrar en el rango de fechas seleccionado."}</div></div>}{!loadingRows && hasMore && filteredRows.length > 0 && <div style={{ display: "flex", justifyContent: "center", padding: "12px 0" }}><button type="button" className="mov-btn mov-btn--loadAll" onClick={handleLoadMore} disabled={loadingMore || loadingListsCtx} title="Cargar los próximos 100 registros">{loadingMore ? "Cargando…" : "Cargar 100 más"}</button></div>}{loadingMore && <div className="mov-skeletonMore" aria-busy="true" aria-label="Cargando más registros">{Array.from({ length: 6 }).map((_, i) => renderSkeletonRow(i))}</div>}</>}</div></div>
       </section>
-      {typeof document !== "undefined" && tiendaNubePopupVenta && tnPopupDismissedSignature !== tnPendingSignature && !openAdd && !openDel && !openNC && !openVerComprobante && !openDetalleMovimiento && createPortal(
-        <aside className="ventas-tn-float" role="status" aria-live="polite" aria-label="Venta recibida desde Tienda Nube">
-          <button
-            type="button"
-            className="ventas-tn-float__close"
-            aria-label="Cerrar aviso"
-            title="Cerrar aviso"
-            onClick={() => setTnPopupDismissedSignature(tnPendingSignature)}
-          >
-            <FontAwesomeIcon icon={faTimes} />
-          </button>
-
-          <div className="ventas-tn-float__eyebrow">
-            <span className="ventas-tn-float__brand">TN</span>
-            <span>Tienda Nube</span>
-          </div>
-
-          <div className="ventas-tn-float__title">Recibimos una venta nueva</div>
-          <div className="ventas-tn-float__text">
-            {tiendaNubePopupPagoLabel === "Pagada"
-              ? "El pedido ya está pagado. Elegí el medio de pago y generá los comprobantes."
-              : "El pedido está pendiente de pago. Completalo como cuenta corriente y generá los comprobantes."}
-          </div>
-
-          <div className="ventas-tn-float__details">
-            <div className="ventas-tn-float__detailRow">
-              <span>Orden</span>
-              <strong>TN #{tiendaNubePopupVenta.tn_order_id || "—"}</strong>
-            </div>
-            <div className="ventas-tn-float__detailRow">
-              <span>Cliente</span>
-              <strong title={safeText(tiendaNubePopupVenta.cliente)}>{safeText(tiendaNubePopupVenta.cliente)}</strong>
-            </div>
-          </div>
-
-          <div className="ventas-tn-float__meta">
-            <span className={`ventas-tn-float__status ${tiendaNubePopupPagoLabel === "Pagada" ? "is-paid" : ""}`}>{tiendaNubePopupPagoLabel}</span>
-            <strong className="ventas-tn-float__amount">{moneyARS(tiendaNubePopupVenta.monto_total ?? tiendaNubePopupVenta.total ?? 0)}</strong>
-          </div>
-
-          {ventasTiendaNubePendientes.length > 1 && (
-            <div className="ventas-tn-float__more">+ {ventasTiendaNubePendientes.length - 1} venta{ventasTiendaNubePendientes.length - 1 === 1 ? "" : "s"} pendiente{ventasTiendaNubePendientes.length - 1 === 1 ? "" : "s"} más</div>
-          )}
-
-          <div className="ventas-tn-float__footer">
-            <button
-              type="button"
-              className="ventas-tn-float__cta"
-              onClick={() => abrirCompletarTiendaNube(tiendaNubePopupVenta)}
-            >
-              Completar venta
-            </button>
-          </div>
-        </aside>,
-        document.body
-      )}
+      <GlobalFloatingNotice
+        open={
+          !!tiendaNubePopupVenta &&
+          tnPopupDismissedSignature !== tnPendingSignature &&
+          !openAdd &&
+          !openDel &&
+          !openNC &&
+          !openVerComprobante &&
+          !openDetalleMovimiento
+        }
+        ariaLabel="Venta recibida desde Tienda Nube"
+        brand="Tienda Nube"
+        brandShort="TN"
+        title="Recibimos una venta nueva"
+        message={
+          tiendaNubePopupPagoLabel === "Pagada"
+            ? "El pedido ya está pagado. Elegí el medio de pago y generá los comprobantes."
+            : "El pedido está pendiente de pago. Completalo como cuenta corriente y generá los comprobantes."
+        }
+        details={[
+          { label: "Orden", value: `TN #${tiendaNubePopupVenta?.tn_order_id || "—"}` },
+          { label: "Cliente", value: safeText(tiendaNubePopupVenta?.cliente) },
+        ]}
+        status={tiendaNubePopupPagoLabel}
+        statusTone={tiendaNubePopupPagoLabel === "Pagada" ? "success" : "warning"}
+        amount={moneyARS(tiendaNubePopupVenta?.monto_total ?? tiendaNubePopupVenta?.total ?? 0)}
+        extraText={
+          ventasTiendaNubePendientes.length > 1
+            ? `+ ${ventasTiendaNubePendientes.length - 1} venta${ventasTiendaNubePendientes.length - 1 === 1 ? "" : "s"} pendiente${ventasTiendaNubePendientes.length - 1 === 1 ? "" : "s"} más`
+            : ""
+        }
+        actionLabel="Completar venta"
+        onClose={() => setTnPopupDismissedSignature(tnPendingSignature)}
+        onAction={() => abrirCompletarTiendaNube(tiendaNubePopupVenta)}
+      />
       <ModalNuevaVenta
         open={openAdd}
         lists={lists}

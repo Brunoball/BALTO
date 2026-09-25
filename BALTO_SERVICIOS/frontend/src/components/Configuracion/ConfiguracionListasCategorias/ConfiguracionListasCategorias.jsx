@@ -18,6 +18,7 @@ import "../../Global/Global_css/GlobalsModalsV2.css";
 import "../../Servicios/Servicios.css";
 import "./ConfiguracionListasCategorias.css";
 import "../ConfiguracionResponsiveScroll.css";
+import "../ConfiguracionTableCards.css";
 import Toast from "../../Global/Toast";
 import ModalEliminar from "../../Global/Modales/ModalEliminar";
 import useTableScrollGutter from "../../Global/useTableScrollGutter";

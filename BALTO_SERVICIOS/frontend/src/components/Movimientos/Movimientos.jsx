@@ -88,6 +88,32 @@ export default function Movimientos() {
 
   const { dateRange, setDateRange } = useDateRange();
 
+  // La cabecera responsive usa una única instancia del botón Exportar.
+  // Esto evita que las reglas globales responsive puedan dejar visibles a la vez
+  // la variante desktop y la variante mobile.
+  const [isMobileHeader, setIsMobileHeader] = useState(() =>
+    typeof window !== "undefined"
+      ? window.matchMedia("(max-width: 768px)").matches
+      : false
+  );
+
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") return undefined;
+
+    const media = window.matchMedia("(max-width: 768px)");
+    const syncMobileHeader = (event) => setIsMobileHeader(event.matches);
+
+    setIsMobileHeader(media.matches);
+
+    if (typeof media.addEventListener === "function") {
+      media.addEventListener("change", syncMobileHeader);
+      return () => media.removeEventListener("change", syncMobileHeader);
+    }
+
+    media.addListener?.(syncMobileHeader);
+    return () => media.removeListener?.(syncMobileHeader);
+  }, []);
+
   const [rows, setRows] = useState([]);
   const [loadingRows, setLoadingRows] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -942,44 +968,48 @@ export default function Movimientos() {
                   </div>
                 </div>
 
-                <div className="mov-card__actions mov-card__actions--mobile">
-                  <BotonExportar
-                    disabled={loadingRows || filteredRows.length === 0}
-                    loading={false}
-                    label="Exportar"
-                    title={filteredRows.length ? "Exportar archivo" : "No hay datos para exportar"}
-                    opciones={exportOptions}
-                    align="right"
-                    entityLabel="movimientos"
-                    currentRows={filteredRows}
-                    allRows={hasMore ? null : filteredRows}
-                    loadAllRows={loadAllRowsForExport}
-                    currentCount={filteredRows.length}
-                    allCount={hasMore ? null : filteredRows.length}
-                    hasMore={hasMore}
-                  />
-                </div>
+                {isMobileHeader && (
+                  <div className="mov-card__actions mov-card__actions--mobile">
+                    <BotonExportar
+                      disabled={loadingRows || filteredRows.length === 0}
+                      loading={false}
+                      label="Exportar"
+                      title={filteredRows.length ? "Exportar archivo" : "No hay datos para exportar"}
+                      opciones={exportOptions}
+                      align="right"
+                      entityLabel="movimientos"
+                      currentRows={filteredRows}
+                      allRows={hasMore ? null : filteredRows}
+                      loadAllRows={loadAllRowsForExport}
+                      currentCount={filteredRows.length}
+                      allCount={hasMore ? null : filteredRows.length}
+                      hasMore={hasMore}
+                    />
+                  </div>
+                )}
               </div>
             </div>
           </div>
 
-          <div className="mov-card__actions mov-card__actions--desktop">
-            <BotonExportar
-              disabled={loadingRows || filteredRows.length === 0}
-              loading={false}
-              label="Exportar"
-              title={filteredRows.length ? "Exportar archivo" : "No hay datos para exportar"}
-              opciones={exportOptions}
-              align="right"
-              entityLabel="movimientos"
-              currentRows={filteredRows}
-              allRows={hasMore ? null : filteredRows}
-              loadAllRows={loadAllRowsForExport}
-              currentCount={filteredRows.length}
-              allCount={hasMore ? null : filteredRows.length}
-              hasMore={hasMore}
-            />
-          </div>
+          {!isMobileHeader && (
+            <div className="mov-card__actions mov-card__actions--desktop">
+              <BotonExportar
+                disabled={loadingRows || filteredRows.length === 0}
+                loading={false}
+                label="Exportar"
+                title={filteredRows.length ? "Exportar archivo" : "No hay datos para exportar"}
+                opciones={exportOptions}
+                align="right"
+                entityLabel="movimientos"
+                currentRows={filteredRows}
+                allRows={hasMore ? null : filteredRows}
+                loadAllRows={loadAllRowsForExport}
+                currentCount={filteredRows.length}
+                allCount={hasMore ? null : filteredRows.length}
+                hasMore={hasMore}
+              />
+            </div>
+          )}
         </div>
 
         <div

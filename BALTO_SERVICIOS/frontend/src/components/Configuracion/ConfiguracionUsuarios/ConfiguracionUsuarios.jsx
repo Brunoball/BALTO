@@ -18,6 +18,7 @@ import ModalEliminar from "../../Global/Modales/ModalEliminar";
 import ModalUsuario from "./modales/ModalUsuario";
 import "./ConfiguracionUsuarios.css";
 import "../ConfiguracionResponsiveScroll.css";
+import "../ConfiguracionTableCards.css";
 
 
 function normalizarMensajeError(mensaje) {

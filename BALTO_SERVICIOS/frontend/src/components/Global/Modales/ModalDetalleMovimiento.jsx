@@ -670,11 +670,12 @@ export default function ModalDetalleMovimiento({
     : `de la ${creditTraceEntityLabel}`;
 
   return createPortal(
-    <div className="mi-modal__overlay" role="presentation">
+    <div className="mi-modal__overlay mdm-overlay" role="presentation">
       <div
         className="mi-modal__container mi-modal__container--mov mdm-modal"
         role="dialog"
         aria-modal="true"
+        aria-label={title}
         onMouseDown={(e) => e.stopPropagation()}
       >
         <div className="mi-modal__header mdm-header">
@@ -905,7 +906,7 @@ export default function ModalDetalleMovimiento({
                       return (
                         <React.Fragment key={itemKey}>
                           <div className={["mdm-table__row", serviceItem ? "mdm-table__row--service" : ""].filter(Boolean).join(" ")}>
-                            <span className="mdm-product-cell" title={itemName}>
+                            <span className="mdm-product-cell" data-label="Producto / detalle" title={itemName}>
                               <span className="mdm-product-line">
                                 {serviceItem ? (
                                   <button
@@ -930,11 +931,11 @@ export default function ModalDetalleMovimiento({
                                 </span>
                               </span>
                             </span>
-                            <span>{formatNumber(item?.cantidad)}</span>
-                            <span>{moneyARS(item?.precio)}</span>
-                            <span>{formatNumber(item?.iva_pct)}%</span>
-                            <span>{moneyARS(item?.iva_monto)}</span>
-                            <span className="is-strong">{moneyARS(item?.total)}</span>
+                            <span data-label="Cantidad">{formatNumber(item?.cantidad)}</span>
+                            <span data-label="Precio">{moneyARS(item?.precio)}</span>
+                            <span data-label="IVA %">{formatNumber(item?.iva_pct)}%</span>
+                            <span data-label="IVA">{moneyARS(item?.iva_monto)}</span>
+                            <span className="is-strong" data-label="Total">{moneyARS(item?.total)}</span>
                           </div>
 
                           {serviceItem && serviceExpanded ? (

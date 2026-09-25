@@ -32,6 +32,7 @@ import "../../Global/Global_css/GlobalsModalsV2.css";
 import "./ConfiguracionSaldosIniciales.css";
 import "./ConfiguracionSaldosInicialesVolver.css";
 import "../ConfiguracionResponsiveScroll.css";
+import "../ConfiguracionTableCards.css";
 
 
 function parseMoney(value) {

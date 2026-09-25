@@ -2193,7 +2193,7 @@ export default function ModalNuevoIngreso({
     <>
       <div className={`gm-modal-overlay${dark ? " gm-modal-overlay--dark" : ""}`}>
         <div
-          className={`gm-modal-container gm-modal-container--movement gm-modal-v2 oi-modal${dark ? " gm-modal-container--dark" : ""}`}
+          className={`gm-modal-container gm-modal-container--movement gm-modal-container--new-entry gm-modal-v2 oi-modal${dark ? " gm-modal-container--dark" : ""}`}
           role="dialog"
           aria-modal="true"
           onMouseDown={(e) => e.stopPropagation()}
@@ -2224,7 +2224,7 @@ export default function ModalNuevoIngreso({
           <div className="gm-modal-content">
             <div className="gm-movement-layout">
               {/* Tabla de ítems */}
-              <section className="gm-movement-main gm-table gm-table--movement oi-table">
+              <section className="gm-movement-main gm-table gm-table--movement gm-entry-table oi-table">
                 <div className={`gm-table-head${hasScroll ? " gm-table-head--body-scroll" : ""}`}>
                   <div className="gm-table-th" style={{ paddingLeft: 10 }}>
                     Detalle

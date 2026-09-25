@@ -292,3 +292,462 @@ html[data-theme="oscuro"] .contabilidad-emptyState .cc-emptyText {
 .contabilidad-cardTable .contabilidad-totalRow--skeleton {
   background: color-mix(in srgb, var(--color-primary-soft) 64%, var(--color-surface));
 }
+
+/* Botonera duplicada solo para poder componer el encabezado responsive
+   sin alterar la estructura/posición de escritorio. */
+.contabilidad-headerActions--mobile {
+  display: none !important;
+}
+
+/* =========================================================
+   CONTABILIDAD — RESPONSIVE ESPECÍFICO
+   ---------------------------------------------------------
+   La vista de escritorio/monitor queda intacta.
+   Tablet: conserva tabla, pero sin forzar 760px.
+   Mobile: filtros fluidos + registros en tarjetas + totales compactos.
+========================================================= */
+
+@media (min-width: 769px) and (max-width: 900px) {
+  .contabilidad-cardTable .mov-card__head {
+    gap: 10px;
+  }
+
+  .contabilidad-cardTable .mov-headFilters {
+    display: grid;
+    grid-template-columns: minmax(0, .9fr) minmax(0, 1.25fr);
+    gap: 10px;
+    width: 100%;
+  }
+
+  .contabilidad-cardTable .cc-filter,
+  .contabilidad-cardTable .cc-filter--cal,
+  .contabilidad-cardTable .contabilidad-searchFilter,
+  .contabilidad-cardTable .cc-floatingField,
+  .contabilidad-cardTable .cc-calTrigger,
+  .contabilidad-cardTable .cc-searchInput,
+  .contabilidad-cardTable .cc-searchInput__fieldWrap {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+  }
+
+  .contabilidad-gridHead,
+  .contabilidad-cardTable .contabilidad-dataRow,
+  .contabilidad-totalRow,
+  .contabilidad-cardTable .contabilidad-skeletonRow {
+    min-width: 0;
+    grid-template-columns: 88px minmax(150px, 1.55fr) minmax(92px, 1fr) minmax(82px, .85fr) minmax(100px, 1fr) !important;
+  }
+
+  .contabilidad-tableWrap {
+    overflow-x: hidden;
+  }
+}
+
+@media (max-width: 768px) {
+  .contabilidad-page {
+    gap: 10px;
+    padding-inline: 0;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .contabilidad-cardTable {
+    width: 100%;
+    height: var(--contabilidad-mobile-card-height, auto);
+    max-height: var(--contabilidad-mobile-card-height, none);
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .contabilidad-cardTable .mov-card__head {
+    display: block;
+    flex: 0 0 auto;
+    padding: 12px;
+  }
+
+  .contabilidad-cardTable .mov-card__headLeft {
+    display: block;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .contabilidad-cardTable .title-mov {
+    display: block;
+    width: 100%;
+  }
+
+  .contabilidad-cardTable .mov-card__title {
+    font-size: 17px;
+    line-height: 1.2;
+  }
+
+  .contabilidad-cardTable .mov-card__hint {
+    margin-top: 4px;
+    font-size: 11.5px;
+    line-height: 1.35;
+  }
+
+  .contabilidad-cardTable .mov-headFilters {
+    width: 100%;
+    margin-top: 12px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 42px;
+    gap: 10px;
+    align-items: stretch;
+  }
+
+  .contabilidad-cardTable .mov-headFilters > .cc-filter--cal {
+    grid-column: 1 / -1;
+    grid-row: 1;
+  }
+
+  .contabilidad-cardTable .mov-headFilters > .contabilidad-searchFilter {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .contabilidad-cardTable .mov-headFilters > .contabilidad-headerActions--mobile {
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  .contabilidad-cardTable .cc-filter,
+  .contabilidad-cardTable .cc-filter--search,
+  .contabilidad-cardTable .cc-filter--cal,
+  .contabilidad-cardTable .contabilidad-searchFilter,
+  .contabilidad-cardTable .cc-floatingField,
+  .contabilidad-cardTable .cc-calTrigger,
+  .contabilidad-cardTable .cc-searchInput,
+  .contabilidad-cardTable .cc-searchInput__fieldWrap {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+  }
+
+  .contabilidad-cardTable .cc-calTrigger,
+  .contabilidad-cardTable .cc-input {
+    min-height: 44px;
+  }
+
+  .contabilidad-cardTable .contabilidad-headerActions--desktop {
+    display: none !important;
+  }
+
+  .contabilidad-cardTable .contabilidad-headerActions--mobile {
+    display: flex !important;
+    width: 42px;
+    min-width: 42px;
+    max-width: 42px;
+    margin: 0;
+    padding: 0;
+    align-items: stretch !important;
+  }
+
+  .contabilidad-cardTable .contabilidad-headerActions--mobile .boton-exportar-wrap,
+  .contabilidad-cardTable .contabilidad-headerActions--mobile .boton-exportar-trigger {
+    width: 42px;
+    min-width: 42px;
+    max-width: 42px;
+    margin: 0;
+  }
+
+  .contabilidad-cardTable .contabilidad-headerActions--mobile .boton-exportar-trigger {
+    width: 42px !important;
+    min-width: 42px !important;
+    max-width: 42px !important;
+    height: 44px;
+    min-height: 44px;
+    padding-inline: 0 !important;
+    justify-content: center;
+    white-space: nowrap;
+  }
+
+  .contabilidad-cardTable .contabilidad-headerActions--mobile .boton-exportar-trigger__text,
+  .contabilidad-cardTable .contabilidad-headerActions--mobile .boton-exportar-trigger__right {
+    display: none !important;
+  }
+
+  .contabilidad-gridHead {
+    display: none !important;
+  }
+
+  .contabilidad-tableWrap {
+    width: 100%;
+    min-height: 0 !important;
+    max-height: none !important;
+    height: auto;
+    flex: 1 1 auto;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 10px;
+    scrollbar-gutter: stable !important;
+    background: var(--color-bg-soft);
+    box-sizing: border-box;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+
+  .contabilidad-tableWrap .mov-gridBody--relative {
+    display: block;
+    width: 100%;
+    height: auto;
+    min-height: 100%;
+  }
+
+  .contabilidad-cardTable .contabilidad-dataRow,
+  .contabilidad-cardTable .contabilidad-skeletonRow {
+    min-width: 0 !important;
+    width: 100%;
+    margin: 0 0 10px;
+    padding: 12px;
+    box-sizing: border-box;
+    border: 1px solid var(--color-border);
+    border-radius: 14px;
+    background: var(--color-surface);
+    box-shadow: var(--shadow-xs);
+  }
+
+  .contabilidad-cardTable .contabilidad-dataRow {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    grid-template-areas:
+      "cliente cliente"
+      "fecha total"
+      "subtotal iva";
+    gap: 10px 12px;
+  }
+
+  .contabilidad-cardTable .contabilidad-dataRow:last-child,
+  .contabilidad-cardTable .contabilidad-skeletonRow:last-child {
+    margin-bottom: 0;
+  }
+
+  .contabilidad-cardTable .contabilidad-dataRow .mov-gridCell {
+    display: block;
+    min-width: 0;
+    min-height: 0;
+    padding: 0;
+    border: 0;
+    text-align: left !important;
+    overflow: visible;
+  }
+
+  .contabilidad-cardTable .contabilidad-dataRow .mov-gridCell::before {
+    content: attr(data-label);
+    display: block;
+    margin: 0 0 4px;
+    padding: 0;
+    font-size: 10px;
+    line-height: 1.1;
+    font-weight: 700;
+    letter-spacing: .045em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+  }
+
+  .contabilidad-cardTable .contabilidad-dataRow .mov-gridCell:nth-child(1) { grid-area: fecha; }
+
+  .contabilidad-cardTable .contabilidad-dataRow .mov-gridCell:nth-child(2) {
+    grid-area: cliente;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--color-border);
+    font-weight: 650;
+    color: var(--color-text);
+    overflow-wrap: anywhere;
+  }
+
+  .contabilidad-cardTable .contabilidad-dataRow .mov-gridCell:nth-child(3) { grid-area: subtotal; }
+  .contabilidad-cardTable .contabilidad-dataRow .mov-gridCell:nth-child(4) { grid-area: iva; }
+
+  .contabilidad-cardTable .contabilidad-dataRow .mov-gridCell:nth-child(5) {
+    grid-area: total;
+    padding: 7px 9px;
+    border: 1px solid color-mix(in srgb, var(--color-primary) 22%, var(--color-border));
+    border-radius: 10px;
+    background: var(--color-primary-soft);
+    color: var(--color-text);
+    font-weight: 700;
+  }
+
+  .contabilidad-cardTable .contabilidad-dataRow .mov-gridCell:nth-child(5)::before {
+    color: color-mix(in srgb, var(--color-primary) 72%, var(--color-text-muted));
+  }
+
+  .contabilidad-cardTable .contabilidad-skeletonWrap {
+    display: block;
+    min-height: 0;
+  }
+
+  .contabilidad-cardTable .contabilidad-skeletonRow {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    grid-template-areas:
+      "s2 s2"
+      "s1 s5"
+      "s3 s4";
+    gap: 12px;
+  }
+
+  .contabilidad-cardTable .contabilidad-skeletonRow .mov-gridCell {
+    display: block;
+    min-height: 16px;
+    padding: 0;
+    border: 0;
+  }
+
+  .contabilidad-cardTable .contabilidad-skeletonRow .mov-gridCell::before {
+    display: none;
+    content: none;
+  }
+
+  .contabilidad-cardTable .contabilidad-skeletonRow .mov-gridCell:nth-child(1) { grid-area: s1; }
+  .contabilidad-cardTable .contabilidad-skeletonRow .mov-gridCell:nth-child(2) { grid-area: s2; }
+  .contabilidad-cardTable .contabilidad-skeletonRow .mov-gridCell:nth-child(3) { grid-area: s3; }
+  .contabilidad-cardTable .contabilidad-skeletonRow .mov-gridCell:nth-child(4) { grid-area: s4; }
+  .contabilidad-cardTable .contabilidad-skeletonRow .mov-gridCell:nth-child(5) { grid-area: s5; }
+
+  .contabilidad-cardTable .contabilidad-skeletonRow .mov-skeletonBar {
+    width: 100% !important;
+    max-width: none;
+    margin: 0 !important;
+  }
+
+  .contabilidad-cardTable .contabilidad-totalRow {
+    min-width: 0 !important;
+    width: auto;
+    flex: 0 0 auto;
+    margin: 0 10px 10px;
+    padding: 10px;
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    grid-template-areas:
+      "titulo titulo titulo"
+      "subtotal iva total";
+    gap: 8px;
+    border: 1px solid var(--color-border);
+    border-radius: 14px;
+    background: color-mix(in srgb, var(--color-primary-soft) 58%, var(--color-surface));
+    box-shadow: var(--shadow-xs);
+  }
+
+  .contabilidad-cardTable .contabilidad-totalRow .mov-gridCell {
+    min-width: 0;
+    min-height: 0;
+    padding: 0;
+    border: 0;
+    text-align: left !important;
+  }
+
+  .contabilidad-cardTable .contabilidad-totalRow .mov-gridCell:nth-child(1) {
+    grid-area: titulo;
+    padding-bottom: 7px;
+    border-bottom: 1px solid var(--color-border);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .045em;
+    color: var(--color-text-muted);
+  }
+
+  .contabilidad-cardTable .contabilidad-totalRow .mov-gridCell:nth-child(2) { display: none; }
+  .contabilidad-cardTable .contabilidad-totalRow .mov-gridCell:nth-child(3) { grid-area: subtotal; }
+  .contabilidad-cardTable .contabilidad-totalRow .mov-gridCell:nth-child(4) { grid-area: iva; }
+  .contabilidad-cardTable .contabilidad-totalRow .mov-gridCell:nth-child(5) { grid-area: total; }
+
+  .contabilidad-cardTable .contabilidad-totalRow .mov-gridCell:nth-child(3)::before,
+  .contabilidad-cardTable .contabilidad-totalRow .mov-gridCell:nth-child(4)::before,
+  .contabilidad-cardTable .contabilidad-totalRow .mov-gridCell:nth-child(5)::before {
+    display: block;
+    margin-bottom: 4px;
+    font-size: 9.5px;
+    line-height: 1.1;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+  }
+
+  .contabilidad-cardTable .contabilidad-totalRow .mov-gridCell:nth-child(3)::before { content: "Subtotal"; }
+  .contabilidad-cardTable .contabilidad-totalRow .mov-gridCell:nth-child(4)::before { content: "IVA"; }
+  .contabilidad-cardTable .contabilidad-totalRow .mov-gridCell:nth-child(5)::before { content: "Total"; }
+
+  .contabilidad-cardTable .contabilidad-totalRow .mov-gridCell:nth-child(5) {
+    color: var(--color-primary);
+  }
+
+  .contabilidad-cardTable .contabilidad-totalRow--skeleton .mov-gridCell:nth-child(1) {
+    border-bottom: 0;
+  }
+
+  .contabilidad-cardTable .contabilidad-totalRow--skeleton .mov-gridCell::before {
+    display: none !important;
+    content: none !important;
+  }
+
+  .contabilidad-cardTable .contabilidad-totalRow--skeleton .mov-gridCell:nth-child(2) {
+    display: none;
+  }
+
+  .contabilidad-cardTable .contabilidad-emptyState {
+    min-height: 100%;
+    height: 100%;
+    padding: 28px 18px;
+    border-radius: 14px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+  }
+}
+
+@media (max-width: 480px) {
+  .contabilidad-cardTable .contabilidad-dataRow {
+    gap: 9px 10px;
+    padding: 11px;
+  }
+
+  .contabilidad-cardTable .contabilidad-totalRow {
+    grid-template-columns: 1fr 1fr !important;
+    grid-template-areas:
+      "titulo titulo"
+      "subtotal iva"
+      "total total";
+  }
+
+  .contabilidad-cardTable .contabilidad-totalRow .mov-gridCell:nth-child(5) {
+    margin-top: 2px;
+    padding-top: 7px;
+    border-top: 1px solid var(--color-border);
+  }
+}
+
+@media (max-width: 360px) {
+  .contabilidad-cardTable .contabilidad-dataRow {
+    grid-template-columns: 1fr !important;
+    grid-template-areas:
+      "cliente"
+      "fecha"
+      "subtotal"
+      "iva"
+      "total";
+  }
+
+  .contabilidad-cardTable .contabilidad-dataRow .mov-gridCell:nth-child(5) {
+    margin-top: 2px;
+  }
+}
+
+
+@media (max-width: 420px) {
+  .contabilidad-cardTable .mov-headFilters {
+    grid-template-columns: minmax(0, 1fr) 42px;
+    gap: 8px;
+  }
+
+  .contabilidad-cardTable .contabilidad-headerActions--mobile {
+    width: 42px;
+    min-width: 42px;
+    max-width: 42px;
+  }
+
+}

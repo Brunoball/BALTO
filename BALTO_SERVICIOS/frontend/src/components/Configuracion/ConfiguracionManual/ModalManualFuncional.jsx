@@ -13,8 +13,8 @@ import {
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 
-import manualPdfUrl from "../../../utils/manuales/Manual_Funcional_BALTO_Servicios.pdf";
-import manualDocxUrl from "../../../utils/manuales/Manual_Funcional_BALTO_Servicios.docx";
+import manualPdf from "../../../utils/manuales/manual_funcional_balto_servicios.pdf";
+import manualDocx from "../../../utils/manuales/manual_funcional_balto_servicios.docx";
 import "../../Global/Global_css/GlobalsModalsV2.css";
 import "./ModalManualFuncional.css";
 
@@ -73,8 +73,8 @@ export default function ModalManualFuncional({ open, onClose }) {
   const [fullscreen, setFullscreen] = useState(false);
   const searchRef = useRef(null);
 
-  const pdfUrl = manualPdfUrl;
-  const docxUrl = manualDocxUrl;
+  const pdfUrl = manualPdf;
+  const docxUrl = manualDocx;
 
   const filteredSections = useMemo(() => {
     const q = normalizeText(query);
