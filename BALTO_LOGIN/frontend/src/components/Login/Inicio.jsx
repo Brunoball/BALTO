@@ -46,28 +46,29 @@ function resolverDestinoLogin(data) {
     throw new Error("La URL de destino configurada no pertenece a BALTO.");
   }
 
-  // Además, el path debe coincidir con la vertical autenticada. Esto evita que
-  // un tenant de SERVICIOS sea enviado por error a COMERCIO (o viceversa).
-  const prefijosPorSistema = {
-    COMERCIO: ["/BALTO_COMERCIO/", "/BALTO/COMERCIO/"],
-    SERVICIOS: ["/BALTO_SERVICIOS/", "/BALTO/SERVICIOS/"],
-  };
+  // El path debe coincidir con la vertical autenticada. Se deriva del código
+  // recibido desde MASTER en vez de enumerar COMERCIO/SERVICIOS, por lo que
+  // nuevas verticales (por ejemplo ECOMMERCE) no requieren tocar este Login.
+  if (!/^[A-Z][A-Z0-9_]{1,29}$/.test(codigo)) {
+    throw new Error("El sistema asociado a la cuenta no es válido.");
+  }
 
-  const prefijosEsperados = prefijosPorSistema[codigo] || [];
-  if (prefijosEsperados.length > 0) {
-    const path = destino.pathname.endsWith("/")
-      ? destino.pathname
-      : `${destino.pathname}/`;
+  const prefijosEsperados = [
+    `/BALTO_${codigo}/`,
+    `/BALTO/${codigo}/`,
+  ];
+  const path = destino.pathname.endsWith("/")
+    ? destino.pathname
+    : `${destino.pathname}/`;
 
-    const coincide = prefijosEsperados.some(
-      (prefijo) => path === prefijo || path.startsWith(prefijo)
+  const coincide = prefijosEsperados.some(
+    (prefijo) => path === prefijo || path.startsWith(prefijo)
+  );
+
+  if (!coincide) {
+    throw new Error(
+      `La URL configurada para ${codigo} no coincide con su sistema BALTO.`
     );
-
-    if (!coincide) {
-      throw new Error(
-        `La URL configurada para ${codigo} no coincide con su sistema BALTO.`
-      );
-    }
   }
 
   // El login siempre entra directamente al Dashboard. Evita cargar primero
@@ -195,7 +196,7 @@ export default function Inicio() {
       });
       persistRemember(user, pass, remember);
 
-      // Si este login fue iniciado por BALTO_COMERCIO o BALTO_SERVICIOS
+      // Si este login fue iniciado por cualquier frontend BALTO local
       // ejecutándose en localhost, devolvemos la sesión directamente al
       // frontend local. El build productivo de Hostinger NO se abre ni se usa.
       try {
@@ -220,7 +221,7 @@ export default function Inicio() {
       }
 
       // Mientras desarrollamos el frontend del LOGIN en localhost no saltamos
-      // a Hostinger. Las carpetas BALTO_COMERCIO/BALTO_SERVICIOS pueden estar
+      // a Hostinger. Las carpetas de las verticales pueden estar
       // todavía vacías y Hostinger respondería 403. Conservamos la sesión local
       // y dejamos el login ejecutándose para poder seguir probándolo.
       const hostActual = String(window.location.hostname || "").toLowerCase();
@@ -238,7 +239,7 @@ export default function Inicio() {
         return;
       }
 
-      // En producción Login, Comercio y Servicios viven bajo balto.3devsnet.com.
+      // En producción LOGIN y las verticales BALTO comparten el origen público.
       // El overlay NO se apaga antes del replace: el siguiente documento de
       // BALTO reutiliza exactamente el mismo GIF y la transición queda limpia.
       redireccionando = true;

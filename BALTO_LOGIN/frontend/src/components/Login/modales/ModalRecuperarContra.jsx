@@ -36,19 +36,6 @@ const IconoModal = ({ tipo }) => {
   );
 };
 
-const ocultarEmail = (email) => {
-  const valor = String(email || "").trim();
-  const [usuario, dominio] = valor.split("@");
-
-  if (!usuario || !dominio) return "";
-
-  const visibles = usuario.length <= 2 ? 1 : 2;
-  const inicio = usuario.slice(0, visibles);
-  const ocultos = "*".repeat(Math.max(3, usuario.length - visibles));
-
-  return `${inicio}${ocultos}@${dominio}`;
-};
-
 export default function ModalRecuperarContra({
   onClose,
   usuarioPrefill = "",
@@ -57,7 +44,6 @@ export default function ModalRecuperarContra({
   const [step, setStep] = useState("form");
   const [usuario, setUsuario] = useState(usuarioPrefill);
   const [cargando, setCargando] = useState(false);
-  const [maskedEmail, setMaskedEmail] = useState("");
   const inputRef = useRef(null);
 
   useEffect(() => {
@@ -98,23 +84,16 @@ export default function ModalRecuperarContra({
         return;
       }
 
-      // Nunca mostramos el estado de éxito por un simple HTTP 200.
-      // El backend debe confirmar explícitamente que aceptó el correo para envío.
-      if (respuesta.data?.correo_enviado !== true) {
+      // La respuesta es deliberadamente genérica para no revelar si un usuario
+      // existe, está activo o tiene correo configurado.
+      if (respuesta.data?.solicitud_aceptada !== true) {
         onToast?.(
           "error",
-          respuesta.data?.mensaje ||
-            "El servidor no confirmó el envío del correo. Intentá nuevamente."
+          respuesta.data?.mensaje || "No se pudo procesar la recuperación."
         );
         return;
       }
 
-      const emailVisible =
-        String(respuesta.data?.email_mascarado || "").trim() ||
-        ocultarEmail(respuesta.data?.email) ||
-        "tu correo registrado";
-
-      setMaskedEmail(emailVisible);
       setStep("sent");
     } catch (error) {
       onToast?.(
@@ -148,8 +127,8 @@ export default function ModalRecuperarContra({
             <h2 className="modal-recuperar-title">Recuperar contraseña</h2>
             <p className="modal-recuperar-subtitle">
               {step === "form"
-                ? "Te enviaremos un enlace a tu correo registrado"
-                : "Revisá tu bandeja de entrada"}
+                ? "Solicitá un enlace de recuperación"
+                : "La solicitud fue procesada"}
             </p>
           </div>
 
@@ -221,14 +200,14 @@ export default function ModalRecuperarContra({
               </div>
 
               <p className="modal-recuperar-sent-title">
-                ¡Listo! Revisá tu correo
+                Solicitud recibida
               </p>
               <p className="modal-recuperar-sent-desc">
-                Enviamos las instrucciones para restablecer tu contraseña a:
+                Si la cuenta existe y tiene un correo de recuperación configurado,
+                vas a recibir las instrucciones en unos minutos.
               </p>
-              <div className="modal-recuperar-email-badge">{maskedEmail}</div>
               <p className="modal-recuperar-sent-hint">
-                Si no lo ves en unos minutos, revisá la carpeta de spam.
+                Revisá también la carpeta de spam.
               </p>
 
               <button
