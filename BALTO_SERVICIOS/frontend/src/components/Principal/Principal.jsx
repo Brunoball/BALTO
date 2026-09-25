@@ -1105,7 +1105,41 @@ const Principal = () => {
         </nav>
       </aside>
 
-      <main className="pp-content">
+      <main
+        className={`pp-content${
+          location.pathname === "/panel" ||
+          location.pathname === "/panel/" ||
+          location.pathname.startsWith("/panel/dashboard")
+            ? " pp-content--dashboard"
+            : ""
+        }${
+          location.pathname === "/panel/presupuesto" ||
+          location.pathname.startsWith("/panel/presupuesto/")
+            ? " pp-content--presupuestos"
+            : ""
+        }${
+          location.pathname.startsWith("/panel/servicios")
+            ? " pp-content--servicios"
+            : ""
+        }${
+          location.pathname.startsWith("/panel/contabilidad")
+            ? " pp-content--contabilidad"
+            : ""
+        }${
+          location.pathname.startsWith("/panel/analisis-financiero")
+            ? " pp-content--analisis-financiero"
+            : ""
+        }${
+          location.pathname === "/panel/movimientos" ||
+          location.pathname.startsWith("/panel/movimientos/")
+            ? " pp-content--movimientos"
+            : ""
+        }${
+          location.pathname.startsWith("/panel/cuentas-corrientes")
+            ? " pp-content--cuentas-corrientes"
+            : ""
+        }`}
+      >
         <div className="pp-content__inner">
           <StableOutlet />
         </div>

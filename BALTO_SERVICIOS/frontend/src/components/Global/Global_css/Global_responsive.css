@@ -2410,16 +2410,15 @@ html[data-theme="oscuro"] .cc-cliente-table__totals .cc-cliente-table__cell:nth-
   .db{
     width: 100% !important;
     min-width: 0 !important;
-    height: calc(var(--balto-visual-viewport-height, 100dvh) - 56px) !important;
-    max-height: calc(var(--balto-visual-viewport-height, 100dvh) - 56px) !important;
+    height: auto !important;
+    max-height: none !important;
     min-height: 0 !important;
     overflow-x: hidden !important;
-    overflow-y: auto !important;
-    overscroll-behavior: contain;
-    -webkit-overflow-scrolling: touch;
-    touch-action: pan-y;
+    overflow-y: visible !important;
+    overscroll-behavior-y: auto !important;
+    touch-action: auto !important;
     gap: 10px !important;
-    padding: 8px 8px calc(78px + env(safe-area-inset-bottom)) !important;
+    padding: 8px 8px calc(24px + env(safe-area-inset-bottom)) !important;
   }
 
   .db-header.db-header--dashboard{
@@ -2546,6 +2545,9 @@ html[data-theme="oscuro"] .cc-cliente-table__totals .cc-cliente-table__cell:nth-
     overflow-x: auto !important;
     overflow-y: hidden !important;
     -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain !important;
+    overscroll-behavior-y: auto !important;
+    touch-action: pan-x pan-y !important;
     padding-bottom: 6px !important;
   }
 
@@ -2600,9 +2602,9 @@ html[data-theme="oscuro"] .cc-cliente-table__totals .cc-cliente-table__cell:nth-
 
 @media (max-width: 480px){
   .db{
-    height: calc(var(--balto-visual-viewport-height, 100dvh) - 52px) !important;
-    max-height: calc(var(--balto-visual-viewport-height, 100dvh) - 72px) !important;
-    padding: 10px !important;
+    height: auto !important;
+    max-height: none !important;
+    padding: 10px 10px calc(22px + env(safe-area-inset-bottom)) !important;
   }
 
   .db-title{
@@ -2635,14 +2637,13 @@ html[data-theme="oscuro"] .cc-cliente-table__totals .cc-cliente-table__cell:nth-
     .db{
       width: 100% !important;
       min-width: 0 !important;
-      height: calc(var(--balto-visual-viewport-height, 100dvh) - 56px) !important;
-      max-height: calc(var(--balto-visual-viewport-height, 100dvh) - 56px) !important;
+      height: auto !important;
+      max-height: none !important;
       min-height: 0 !important;
       overflow-x: hidden !important;
-      overflow-y: auto !important;
-      -webkit-overflow-scrolling: touch;
-      touch-action: pan-y;
-      padding-bottom: calc(78px + env(safe-area-inset-bottom)) !important;
+      overflow-y: visible !important;
+      touch-action: auto !important;
+      padding-bottom: calc(24px + env(safe-area-inset-bottom)) !important;
     }
   }
 }
@@ -2943,5 +2944,48 @@ html[data-theme="oscuro"] .cc-cliente-table__totals .cc-cliente-table__cell:nth-
   .mov-page--analisisFinanciero .cal-panels {
     padding-left: 8px;
     padding-right: 8px;
+  }
+}
+
+
+/* =========================================================
+   DASHBOARD · SCROLL MOBILE FINAL
+   ---------------------------------------------------------
+   El Dashboard NO crea un segundo scroll. La ruta marca al
+   contenedor principal y .pp-content conserva el gesto vertical,
+   usando el alto real publicado por VisualViewport.
+========================================================= */
+@media (max-width: 768px){
+  html.balto-visual-viewport-ready .pp-content.pp-content--dashboard{
+    height: var(--balto-content-viewport-height, var(--balto-panel-viewport-height)) !important;
+    max-height: var(--balto-content-viewport-height, var(--balto-panel-viewport-height)) !important;
+    min-height: 0 !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior-x: none !important;
+    overscroll-behavior-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    touch-action: pan-y !important;
+  }
+
+  html.balto-visual-viewport-ready
+    .pp-content.pp-content--dashboard
+    > .pp-content__inner{
+    height: auto !important;
+    min-height: 100% !important;
+    max-height: none !important;
+    overflow: visible !important;
+    contain: none !important;
+  }
+
+  html.balto-visual-viewport-ready
+    .pp-content.pp-content--dashboard
+    .db{
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    overscroll-behavior: auto !important;
+    touch-action: auto !important;
   }
 }

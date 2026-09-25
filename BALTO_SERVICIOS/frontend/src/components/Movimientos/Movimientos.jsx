@@ -836,7 +836,7 @@ export default function Movimientos() {
   );
 
   return (
-    <div className="mov-page">
+    <div className="mov-page mov-page--movimientos">
       {toast && (
         <Toast
           tipo={toast.tipo}

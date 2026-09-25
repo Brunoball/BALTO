@@ -1090,21 +1090,13 @@ body.dark .servicios-page {
     border: 0;
   }
 
-  /* Aprovechar todo el alto útil del celular.
-     La tarjeta llega hasta el borde inferior del viewport y la tabla toma
-     automáticamente TODO el espacio restante. Por eso, con 2 filas de
-     controles la tabla crece más y con 3 filas se reduce sola, sin cálculos
-     fijos por pestaña ni huecos al final. */
+  /* El alto responsive lo controla el layout global (.pp-content--servicios).
+     Esta tarjeta solo consume el espacio que recibe; no vuelve a calcular el viewport. */
   .servicios-mainCard {
-    /* Fallback para navegadores sin Visual Viewport. */
-    height: calc(var(--balto-visual-viewport-height, 100dvh) - 100px);
+    flex: 1 1 0;
+    height: auto;
     min-height: 0;
-    max-height: calc(var(--balto-visual-viewport-height, 100dvh) - 100px);
-
-    /* Cuando JS puede medir el viewport visual real, se usa el alto exacto
-       restante desde la tarjeta hasta el borde visible del celular. */
-    height: calc(var(--balto-servicios-available-height, 100dvh) - env(safe-area-inset-bottom, 0px));
-    max-height: calc(var(--balto-servicios-available-height, 100dvh) - env(safe-area-inset-bottom, 0px));
+    max-height: none;
   }
 
   .servicios-mainCard > .mov-card__head {
@@ -3854,28 +3846,3 @@ body.dark .servicios-multi-select__menu {
 
 
 
-/* =========================================================
-   SERVICIOS · VIEWPORT MÓVIL REAL
-   Mientras Servicios está montado, JS publica el alto de window.visualViewport.
-   Esto evita que la pantalla o los modales queden detrás de las barras
-   dinámicas del navegador / navegación del celular.
-========================================================= */
-@media (max-width: 720px) {
-  html.balto-servicios-mobile-viewport .gm-modal-overlay {
-    height: var(--balto-visual-viewport-height, 100dvh) !important;
-    min-height: 0 !important;
-    max-height: var(--balto-visual-viewport-height, 100dvh) !important;
-    padding-top: max(12px, env(safe-area-inset-top, 0px)) !important;
-    padding-bottom: max(12px, env(safe-area-inset-bottom, 0px)) !important;
-    overflow: hidden !important;
-  }
-
-  html.balto-servicios-mobile-viewport .gm-modal-container {
-    max-height: calc(
-      var(--balto-visual-viewport-height, 100dvh)
-      - 24px
-      - env(safe-area-inset-top, 0px)
-      - env(safe-area-inset-bottom, 0px)
-    ) !important;
-  }
-}

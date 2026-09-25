@@ -1374,21 +1374,21 @@ body.dark .mov-page--analisisFinanciero .af-totalCard--neg .af-totalValue {
 }
 
 /* =========================================================
-   FIX MOBILE — scroll interno de Análisis Financiero
-   - Solo mobile/tablet
-   - Evita que el contenedor padre corte las tarjetas
-   - Vista monitor intacta
+   ANÁLISIS FINANCIERO · MOBILE
+   ---------------------------------------------------------
+   El módulo NO crea un segundo viewport vertical.
+   En responsive el scroll pertenece a .pp-content, igual que Dashboard.
 ========================================================= */
 @media (max-width: 900px) {
   .mov-page--analisisFinanciero {
+    width: 100% !important;
     height: auto !important;
     min-height: 0 !important;
-    max-height: calc(var(--balto-visual-viewport-height, 100dvh) - 54px) !important;
-    overflow-y: auto !important;
-    overflow-x: hidden !important;
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior-y: contain;
-    padding-bottom: calc(90px + env(safe-area-inset-bottom)) !important;
+    max-height: none !important;
+    overflow: visible !important;
+    overscroll-behavior: auto !important;
+    touch-action: auto !important;
+    padding-bottom: calc(24px + env(safe-area-inset-bottom)) !important;
     box-sizing: border-box;
   }
 
@@ -1408,13 +1408,7 @@ body.dark .mov-page--analisisFinanciero .af-totalCard--neg .af-totalValue {
   }
 
   .mov-page--analisisFinanciero .af-dispoSection {
-    padding-bottom: 32px;
+    padding-bottom: 20px;
   }
 }
 
-@media (max-width: 640px) {
-  .mov-page--analisisFinanciero {
-    max-height: calc(var(--balto-visual-viewport-height, 100dvh) - 48px) !important;
-    padding-bottom: 20px !important;
-  }
-}

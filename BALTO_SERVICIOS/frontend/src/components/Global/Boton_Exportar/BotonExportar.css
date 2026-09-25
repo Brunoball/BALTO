@@ -485,14 +485,25 @@ body.dark .boton-exportar-modal__cancel,
 
 @media (max-width: 720px) {
   .boton-exportar-modalOverlay {
-    padding: 8px;
-    align-items: flex-end;
+    /*
+      En responsive el selector de exportación debe seguir siendo un modal,
+      no un bottom-sheet. Mantenerlo centrado evita que cada sección lo
+      perciba a una altura distinta según su propio scroll.
+    */
+    align-items: center;
+    justify-content: center;
+    padding:
+      max(8px, var(--balto-safe-top, 0px))
+      max(8px, var(--balto-safe-right, 0px))
+      max(8px, var(--balto-safe-bottom, 0px))
+      max(8px, var(--balto-safe-left, 0px));
+    box-sizing: border-box;
   }
 
   .boton-exportar-modal {
     width: 100%;
-    max-height: 92vh;
-    border-radius: 18px 18px 10px 10px;
+    max-height: calc(var(--balto-visual-viewport-height, 100dvh) - 16px);
+    border-radius: 18px;
   }
 
   .boton-exportar-modal__header {

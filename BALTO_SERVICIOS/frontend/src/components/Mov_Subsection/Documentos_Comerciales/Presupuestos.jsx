@@ -1331,7 +1331,7 @@ export default function Presupuestos() {
   );
 
   return (
-    <div className="mov-page">
+    <div className="mov-page mov-page--presupuestos">
       {toast && <Toast tipo={toast.tipo} mensaje={toast.mensaje} duracion={toast.duracion} onClose={closeToast} />}
       {errorLists && <div className="mov-alert" role="alert">{errorLists}</div>}
       {error && <div className="mov-alert" role="alert">{error}</div>}

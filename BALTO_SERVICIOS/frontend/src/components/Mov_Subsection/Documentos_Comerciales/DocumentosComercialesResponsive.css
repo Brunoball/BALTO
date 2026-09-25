@@ -473,3 +473,28 @@
     grid-template-columns: 96px minmax(0, 1fr) !important;
   }
 }
+
+/* =========================================================
+   Presupuestos | responsive de tabla
+   El alto del viewport lo controla Principal + GlobalViewport.css.
+   Acá solo se evita que las reglas globales de 54vh vuelvan a
+   imponer una segunda altura dentro de la tabla.
+========================================================= */
+@media (max-width: 720px) {
+  .mov-page--presupuestos .doccom-presupuestosTable .mov-tableWrap {
+    flex: 1 1 0 !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .mov-page--presupuestos .doccom-presupuestosTable .mov-gridBody,
+  .mov-page--presupuestos .doccom-presupuestosTable .mov-gridBody--relative {
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+  }
+}

@@ -190,59 +190,6 @@ function useTableScrollWatcher() {
   return { tableWrapRef, hasTableScroll };
 }
 
-function useResponsiveAvailableCardHeight() {
-  const cardRef = useRef(null);
-
-  useEffect(() => {
-    const card = cardRef.current;
-    if (!card) return undefined;
-
-    let frameId = 0;
-    const visualViewport = window.visualViewport;
-
-    const updateHeight = () => {
-      window.cancelAnimationFrame(frameId);
-      frameId = window.requestAnimationFrame(() => {
-        if (window.innerWidth > 768) {
-          card.style.removeProperty("--contabilidad-mobile-card-height");
-          return;
-        }
-
-        const rect = card.getBoundingClientRect();
-        const viewportBottom = visualViewport
-          ? visualViewport.offsetTop + visualViewport.height
-          : window.innerHeight;
-
-        const rootStyles = getComputedStyle(document.documentElement);
-        const safeBottom = parseFloat(rootStyles.getPropertyValue("--balto-safe-bottom")) || 0;
-        const available = Math.max(0, Math.floor(viewportBottom - rect.top - safeBottom - 8));
-
-        card.style.setProperty("--contabilidad-mobile-card-height", `${available}px`);
-      });
-    };
-
-    updateHeight();
-
-    const observer = new ResizeObserver(updateHeight);
-    observer.observe(card);
-
-    window.addEventListener("resize", updateHeight);
-    window.addEventListener("orientationchange", updateHeight);
-    visualViewport?.addEventListener("resize", updateHeight);
-    visualViewport?.addEventListener("scroll", updateHeight);
-
-    return () => {
-      window.cancelAnimationFrame(frameId);
-      observer.disconnect();
-      window.removeEventListener("resize", updateHeight);
-      window.removeEventListener("orientationchange", updateHeight);
-      visualViewport?.removeEventListener("resize", updateHeight);
-      visualViewport?.removeEventListener("scroll", updateHeight);
-    };
-  }, []);
-
-  return cardRef;
-}
 
 function slugifySheetName(name) {
   return String(name || "IVA Ventas")
@@ -314,7 +261,6 @@ export default function IVAVentas() {
   }, [registros, range.from, range.to, q]);
 
   const { tableWrapRef, hasTableScroll } = useTableScrollWatcher();
-  const cardRef = useResponsiveAvailableCardHeight();
 
   const totales = useMemo(() => {
     return filteredRegistros.reduce(
@@ -431,7 +377,6 @@ export default function IVAVentas() {
       )}
 
       <section
-        ref={cardRef}
         className={[
           "mov-card mov-card--table contabilidad-cardTable",
           hasTableScroll ? "has-table-scroll" : "",

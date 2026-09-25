@@ -86,64 +86,7 @@ export default function Servicios() {
   const [quickCategory, setQuickCategory] = useState({ open: false, kind: null, apply: null });
   const [historyModal, setHistoryModal] = useState({ open: false, kind: null, item: null, rows: [], loading: false });
   const requestRef = useRef(0);
-  const pageRef = useRef(null);
   const [tableWrapRef, hasTableScroll] = useTableScrollGutter();
-
-  /*
-   * Servicios solo calcula cuánto alto queda disponible desde su tarjeta.
-   * El viewport visual real ya se publica GLOBALMENTE desde Principal mediante
-   * useVisualViewport; acá no se crea ni se elimina esa variable compartida.
-   */
-  useEffect(() => {
-    if (typeof window === "undefined" || typeof document === "undefined") return undefined;
-
-    const root = document.documentElement;
-    let frame = 0;
-
-    const syncAvailableHeight = () => {
-      if (frame) window.cancelAnimationFrame(frame);
-
-      frame = window.requestAnimationFrame(() => {
-        const isResponsive = window.matchMedia("(max-width: 720px)").matches;
-
-        if (!isResponsive) {
-          root.style.removeProperty("--balto-servicios-available-height");
-          root.classList.remove("balto-servicios-mobile-viewport");
-          return;
-        }
-
-        const visualViewport = window.visualViewport;
-        const viewportHeight = visualViewport?.height || window.innerHeight;
-        const viewportTop = visualViewport?.offsetTop || 0;
-        const card = pageRef.current?.querySelector(".servicios-mainCard");
-        const cardTop = card?.getBoundingClientRect?.().top;
-
-        if (Number.isFinite(viewportHeight) && viewportHeight > 0 && Number.isFinite(cardTop)) {
-          const visibleCardTop = Math.max(cardTop, viewportTop);
-          const viewportBottom = viewportTop + viewportHeight;
-          const availableHeight = Math.max(0, viewportBottom - visibleCardTop);
-          root.style.setProperty("--balto-servicios-available-height", `${Math.floor(availableHeight)}px`);
-        }
-
-        root.classList.add("balto-servicios-mobile-viewport");
-      });
-    };
-
-    syncAvailableHeight();
-
-    window.addEventListener("balto:visualviewportchange", syncAvailableHeight);
-    window.addEventListener("resize", syncAvailableHeight, { passive: true });
-    window.addEventListener("orientationchange", syncAvailableHeight);
-
-    return () => {
-      if (frame) window.cancelAnimationFrame(frame);
-      window.removeEventListener("balto:visualviewportchange", syncAvailableHeight);
-      window.removeEventListener("resize", syncAvailableHeight);
-      window.removeEventListener("orientationchange", syncAvailableHeight);
-      root.style.removeProperty("--balto-servicios-available-height");
-      root.classList.remove("balto-servicios-mobile-viewport");
-    };
-  }, []);
 
   const notify = useCallback((tipo, mensaje, duracion = 3500) => setToast({ id: Date.now(), tipo, mensaje, duracion }), []);
 
@@ -543,7 +486,7 @@ export default function Servicios() {
     : "El registro volverá a estar disponible para nuevas selecciones.";
 
   return (
-    <section ref={pageRef} className="mov-page servicios-page">
+    <section className="mov-page servicios-page">
       {toast && <Toast key={toast.id} tipo={toast.tipo} mensaje={toast.mensaje} duracion={toast.duracion} onClose={() => setToast(null)} />}
       <section className="mov-card mov-card--table servicios-mainCard">
         <div className="mov-card__head">

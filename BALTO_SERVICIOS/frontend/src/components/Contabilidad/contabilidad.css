@@ -354,8 +354,9 @@ html[data-theme="oscuro"] .contabilidad-emptyState .cc-emptyText {
 
   .contabilidad-cardTable {
     width: 100%;
-    height: var(--contabilidad-mobile-card-height, auto);
-    max-height: var(--contabilidad-mobile-card-height, none);
+    flex: 1 1 0;
+    height: auto;
+    max-height: none;
     min-height: 0;
     overflow: hidden;
     display: flex;

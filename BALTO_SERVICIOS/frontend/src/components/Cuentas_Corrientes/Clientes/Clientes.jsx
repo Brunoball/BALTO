@@ -749,7 +749,7 @@ export default function ClientesCC() {
   );
 
   return (
-    <div className="contenedor-cards mov-page">
+    <div className="contenedor-cards mov-page mov-page--cuentasCorrientes">
       {toast && (
         <Toast
           tipo={toast.tipo}

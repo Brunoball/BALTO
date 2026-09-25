@@ -1573,3 +1573,328 @@ body.dark .cc-entity-form-modal .fl-input:disabled:not(:placeholder-shown) + .fl
   background: rgba(6, 18, 28, .96) !important;
   color: rgba(180, 210, 255, .92) !important;
 }
+
+/* =========================================================
+   CUENTAS CORRIENTES · RESPONSIVE DE MODALES
+   ---------------------------------------------------------
+   Solo afecta los modales propios de Clientes / Proveedores.
+   La vista de escritorio se conserva sin cambios.
+   En mobile se usa el viewport disponible, se evita el doble
+   scroll y las acciones principales quedan accesibles.
+   ========================================================= */
+@media (max-width: 820px) {
+  /* Administrador de clientes / proveedores: aprovecha el alto visible. */
+  .mi-modal__container.cc-entity-modal {
+    width: 100%;
+    max-width: 100%;
+    height: calc(100dvh - 24px);
+    max-height: calc(100dvh - 24px);
+    min-height: 0;
+  }
+
+  .cc-entity-modal > .mi-modal__content {
+    min-height: 0;
+    overflow: hidden;
+    padding: 12px;
+  }
+
+  .cc-entity-modal .cc-entity-admin-grid,
+  .cc-entity-modal .cc-entity-admin-grid--list-only {
+    display: flex !important;
+    flex: 1 1 0;
+    flex-direction: column;
+    min-height: 0;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  .cc-entity-modal .cc-entity-list-panel {
+    display: flex;
+    flex: 1 1 0;
+    flex-direction: column;
+    min-height: 0;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  .cc-entity-modal .cc-entity-list-table,
+  .cc-entity-modal .cc-cliente-table {
+    flex: 1 1 0;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: hidden;
+  }
+
+  .cc-entity-modal .cc-cliente-table__body {
+    flex: 1 1 0;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Datos legales + nuevo/editar: un único scroll vertical del contenido. */
+  .mi-modal__container.cc-legal-modal,
+  .mi-modal__container.cc-entity-form-modal {
+    width: 100%;
+    max-width: 100%;
+    max-height: calc(100dvh - 24px);
+    min-height: 0;
+  }
+
+  .cc-legal-modal__content,
+  .cc-entity-form-modal__content {
+    min-height: 0;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .cc-legal-modal__layout,
+  .cc-entity-form-modal__layout {
+    grid-template-columns: 1fr !important;
+    min-height: 0;
+    overflow: visible;
+  }
+
+  .cc-legal-client-card,
+  .cc-entity-form-card,
+  .cc-entity-form-side-panel,
+  .cc-legal-side-panel {
+    min-height: 0;
+  }
+
+  .cc-entity-form-card,
+  .cc-entity-form-card__body,
+  .cc-entity-form-card__body .cc-entity-form-body,
+  .cc-entity-form-side-panel,
+  .cc-legal-side-panel {
+    overflow: visible !important;
+  }
+
+  .cc-entity-form-card__body {
+    scrollbar-gutter: auto;
+  }
+
+  /* Los modales con dos acciones mantienen ambos botones en la misma fila. */
+  .cc-legal-modal__actions,
+  .cc-entity-form-side-actions {
+    display: grid !important;
+    grid-template-columns: minmax(0, .72fr) minmax(0, 1.28fr) !important;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .cc-entity-form-side-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .cc-legal-modal__actions .mit-btn,
+  .cc-entity-form-side-actions .mit-btn {
+    width: 100%;
+    min-width: 0;
+    justify-content: center;
+    white-space: normal;
+    text-align: center;
+  }
+}
+
+@media (max-width: 560px) {
+  .mi-modal__container.cc-entity-modal,
+  .mi-modal__container.cc-legal-modal,
+  .mi-modal__container.cc-entity-form-modal {
+    width: 100%;
+    max-width: 100%;
+    border-radius: 12px;
+  }
+
+  .cc-entity-modal > .mi-modal__header,
+  .cc-legal-modal__head,
+  .cc-entity-form-modal__head {
+    padding: 12px 14px;
+    gap: 10px;
+  }
+
+  .cc-entity-modal > .mi-modal__header .mi-modal__head-icon,
+  .cc-legal-modal__headIcon {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    font-size: 14px;
+  }
+
+  .cc-entity-modal > .mi-modal__header .mi-modal__close,
+  .cc-legal-modal__head .mi-modal__close,
+  .cc-entity-form-modal__head .mi-modal__close {
+    width: 34px;
+    height: 34px;
+    flex: 0 0 34px;
+  }
+
+  .cc-entity-modal > .mi-modal__header .mi-modal__subtitle {
+    display: none;
+  }
+
+  .cc-entity-modal .mi-cr-table__foot--top {
+    gap: 8px;
+    padding: 10px;
+  }
+
+  /* Agregar ocupa su fila; Activos/Inactivos quedan juntos debajo. */
+  .cc-entity-modal .cc-entity-toolbar-actions {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    width: 100%;
+  }
+
+  .cc-entity-modal .cc-entity-toolbar-actions .mit-btn {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .cc-entity-modal .cc-entity-toolbar-actions .mit-btn:first-child {
+    grid-column: 1 / -1;
+  }
+
+  .cc-legal-modal__content,
+  .cc-entity-form-modal__content {
+    padding: 10px;
+  }
+
+  .cc-entity-form-card__body {
+    padding: 16px 14px 14px;
+  }
+
+  .cc-legal-client-card__top {
+    padding: 16px 14px 4px;
+  }
+
+  .cc-legal-client-data {
+    padding: 0 14px 14px;
+  }
+
+  .cc-legal-client-card__status {
+    margin-inline: 14px;
+    max-width: calc(100% - 28px);
+  }
+
+  .cc-legal-client-empty,
+  .cc-legal-client-card__loading {
+    margin: auto 14px 14px;
+  }
+
+  /* No volver a apilar los dos botones en teléfonos angostos. */
+  .cc-legal-modal__actions,
+  .cc-entity-form-side-actions {
+    flex-direction: initial;
+    grid-template-columns: minmax(0, .72fr) minmax(0, 1.28fr) !important;
+  }
+
+  .cc-entity-form-side-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 390px) {
+  .cc-entity-modal > .mi-modal__content,
+  .cc-legal-modal__content,
+  .cc-entity-form-modal__content {
+    padding: 8px;
+  }
+
+  .cc-entity-modal .cc-grid-header,
+  .cc-entity-modal .cc-grid-row {
+    grid-template-columns: minmax(0, 1fr) 70px 104px !important;
+  }
+
+  .cc-entity-modal .cc-action-btn {
+    width: 27px;
+    height: 27px;
+    min-width: 27px;
+  }
+
+  .cc-entity-form-card__body {
+    padding-inline: 12px;
+  }
+
+  .cc-legal-modal__actions,
+  .cc-entity-form-side-actions {
+    gap: 6px;
+  }
+
+  .cc-legal-modal__actions .mit-btn,
+  .cc-entity-form-side-actions .mit-btn {
+    padding-inline: 9px;
+    font-size: .82rem;
+  }
+}
+
+/* =========================================================
+   CUENTAS CORRIENTES · MODAL ADMIN · AJUSTE MOBILE DE TOOLBAR
+   ---------------------------------------------------------
+   Corrige únicamente el desborde horizontal del encabezado
+   del listado (resumen + búsqueda + acciones) en celulares.
+   No modifica escritorio ni otras secciones.
+   ========================================================= */
+@media (max-width: 560px) {
+  .cc-entity-modal .mi-cr-table__foot--top {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    align-items: stretch !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box;
+    overflow: hidden;
+  }
+
+  .cc-entity-modal .mi-cr-table__foot--top > .mi-cr-table__summary,
+  .cc-entity-modal .mi-cr-table__foot--top > .cc-filter,
+  .cc-entity-modal .mi-cr-table__foot--top > .cc-entity-toolbar-actions {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    box-sizing: border-box;
+  }
+
+  /* El id global tiene min/max-width propios; dentro de este modal no debe limitar el responsive. */
+  .cc-entity-modal #vents-comppr-wits,
+  .cc-entity-modal .cc-filter--search,
+  .cc-entity-modal .cc-floatingField,
+  .cc-entity-modal .cc-searchInput,
+  .cc-entity-modal .cc-searchInput__fieldWrap,
+  .cc-entity-modal .cc-searchInput__fieldWrap .cc-input {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box;
+  }
+
+  .cc-entity-modal .cc-entity-toolbar-actions {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+    overflow: hidden;
+  }
+
+  .cc-entity-modal .cc-entity-toolbar-actions .mit-btn {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box;
+    padding-inline: 10px;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  .cc-entity-modal .cc-entity-toolbar-actions .mit-btn:first-child {
+    grid-column: 1 / -1;
+  }
+}
