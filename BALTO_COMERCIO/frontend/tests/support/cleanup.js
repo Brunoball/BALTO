@@ -230,15 +230,28 @@ export async function cleanupE2EWithPage(
   // storageState del contexto y hacemos la llamada directamente desde Node.
   const state = await page.context().storageState();
   const auth = authFromStorageState(state);
-  const result = await nodeApiWithRetry(CLEANUP_ACTION, {
-    method: 'POST',
-    auth,
-    body: {
-      confirmacion: CONFIRMATION,
-      scope,
-      ...(prefix ? { prefix } : {}),
-    },
-  });
+  let result = null;
+  for (let pass = 1; pass <= 3; pass += 1) {
+    result = await nodeApiWithRetry(CLEANUP_ACTION, {
+      method: 'POST',
+      auth,
+      body: {
+        confirmacion: CONFIRMATION,
+        scope,
+        ...(prefix ? { prefix } : {}),
+      },
+    });
+
+    const remaining = Number(result.body?.restantes_total || 0);
+    if (!result.ok || result.body?.exito === false || remaining === 0 || pass === 3) {
+      return assertCleanupResult(result, pass > 1 ? `${phase} (pasada ${pass})` : phase);
+    }
+
+    // Puede existir una carrera corta con jobs/webhooks que ya estaban en vuelo.
+    // Repetimos sobre el mismo scope exacto antes de declarar residuos permanentes.
+    await cleanupSleep(500 * pass);
+  }
+
   return assertCleanupResult(result, phase);
 }
 
@@ -248,14 +261,25 @@ export async function cleanupE2EFromStorage(
   if (!shouldRunCleanup()) return null;
   assertSafeMutationConfiguration();
 
-  const result = await nodeApiWithRetry(CLEANUP_ACTION, {
-    method: 'POST',
-    body: {
-      confirmacion: CONFIRMATION,
-      scope,
-      ...(prefix ? { prefix } : {}),
-    },
-  });
+  let result = null;
+  for (let pass = 1; pass <= 3; pass += 1) {
+    result = await nodeApiWithRetry(CLEANUP_ACTION, {
+      method: 'POST',
+      body: {
+        confirmacion: CONFIRMATION,
+        scope,
+        ...(prefix ? { prefix } : {}),
+      },
+    });
+
+    const remaining = Number(result.body?.restantes_total || 0);
+    if (!result.ok || result.body?.exito === false || remaining === 0 || pass === 3) {
+      return assertCleanupResult(result, pass > 1 ? `${phase} (pasada ${pass})` : phase);
+    }
+
+    await cleanupSleep(500 * pass);
+  }
+
   return assertCleanupResult(result, phase);
 }
 

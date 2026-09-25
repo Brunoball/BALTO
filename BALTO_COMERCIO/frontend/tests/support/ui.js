@@ -566,8 +566,9 @@ export async function requireMutations(test, page) {
 
   // Todas las mutaciones de Playwright llevan e2e_run=PW-... para que la
   // auditoría y el limpiador puedan reconocerlas sin confundirlas con datos
-  // reales. La sincronización externa ya no puede deshabilitarse desde el request:
-  // el backend ignora deliberadamente cualquier skip_tiendanube_sync enviado por el cliente.
+  // reales. En staging, y sólo con BALTO_E2E_TOOLS_ENABLED=1, esa misma marca
+  // permite al backend aislar las fixtures de integraciones externas. No usamos
+  // skip_tiendanube_sync: los flags genéricos del cliente siguen ignorándose.
   if (page) {
     await page.context().route('**/api.php**', async (route) => {
       const request = route.request();

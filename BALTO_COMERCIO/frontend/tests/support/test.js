@@ -4,6 +4,34 @@ import { RUN_PREFIX } from './data.js';
 import { cleanupE2EFromStorage } from './cleanup.js';
 import { ensureAdministratorSession } from './users.js';
 
+let workerCleanupCompleted = false;
+let processFallbackStarted = false;
+
+// Red de seguridad adicional. El teardown del fixture sigue siendo el mecanismo
+// principal; beforeExit sólo actúa si el worker llega a cerrarse sin haber podido
+// completar esa limpieza (por ejemplo, un fallo del worker después del último test).
+// No intenta scope=all: usa exclusivamente el RUN_PREFIX de este proceso, por lo que
+// sigue siendo seguro incluso si alguna vez se ejecutan varios workers en paralelo.
+process.once('beforeExit', () => {
+  if (workerCleanupCompleted || processFallbackStarted || !ENV.cleanup || !ENV.allowMutations) return;
+  processFallbackStarted = true;
+
+  cleanupE2EFromStorage({
+    scope: 'prefix',
+    prefix: RUN_PREFIX,
+    phase: 'fallback cierre de worker',
+  })
+    .then(() => {
+      workerCleanupCompleted = true;
+    })
+    .catch((error) => {
+      console.error(
+        '[Playwright cleanup] Fallback de cierre no pudo completar la limpieza:',
+        error?.message || error,
+      );
+    });
+});
+
 /**
  * Fixture automática de seguridad para toda la suite Balto.
  *
@@ -33,6 +61,7 @@ export const test = base.extend({
             prefix: RUN_PREFIX,
             phase: `fin worker ${workerInfo.workerIndex}`,
           });
+          workerCleanupCompleted = true;
         }
       }
     },
