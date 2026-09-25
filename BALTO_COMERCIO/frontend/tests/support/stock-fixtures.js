@@ -1,5 +1,6 @@
 import { expect } from '@playwright/test';
 import { ENV, assertSafeMutationConfiguration } from './env.js';
+import { RUN_PREFIX } from './data.js';
 
 function endpoint(action) {
   const base = String(ENV.apiURL || '').trim().replace(/\/+$/, '');
@@ -11,6 +12,9 @@ function endpoint(action) {
     ? new URL(base)
     : new URL(`${base}/api.php`);
   url.searchParams.set('action', action);
+  // page.request usa APIRequestContext y no atraviesa context.route(). Marcamos
+  // también estos fixtures directos para que el backend no los publique en TN.
+  url.searchParams.set('e2e_run', RUN_PREFIX);
   return url.toString();
 }
 
