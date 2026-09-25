@@ -10,7 +10,7 @@ function Get-UniqueOrderedItems([string[]]$Items) {
   return $result.ToArray()
 }
 
-function Get-BaltoAllCurrentTests {
+function Get-BaltoMainCurrentTests {
   if (-not (Test-Path '.\tests')) {
     throw 'No existe .\tests. Ejecutá el script desde la raíz del frontend.'
   }
@@ -23,8 +23,27 @@ function Get-BaltoAllCurrentTests {
   )
 }
 
+function Get-BaltoInternalTests {
+  if (-not (Test-Path '.\tests\internal')) { return @() }
+
+  $repoRoot = (Resolve-Path '.').Path
+  return @(
+    Get-ChildItem -Path '.\tests\internal' -Filter '*.spec.js' -File -Recurse |
+      Sort-Object FullName |
+      ForEach-Object {
+        $_.FullName.Substring($repoRoot.Length + 1) -replace '\\', '/'
+      }
+  )
+}
+
+function Get-BaltoAllCurrentTests {
+  # Suite realmente completa: specs principales + tests/internal. Se mantiene
+  # example.spec.js fuera porque es sólo el ejemplo mínimo de Playwright.
+  return Get-UniqueOrderedItems (@(Get-BaltoMainCurrentTests) + @(Get-BaltoInternalTests))
+}
+
 function Get-BaltoTestBatches {
-  $all = Get-BaltoAllCurrentTests
+  $main = Get-BaltoMainCurrentTests
 
   return [ordered]@{
     'smoke' = @(
@@ -78,15 +97,23 @@ function Get-BaltoTestBatches {
       'tests/28-purchase-ui-health.spec.js',
       'tests/29-final-services-hardening.spec.js',
       'tests/31-services-pricing-selection-delete-guards.spec.js',
-      'tests/32-services-movement-latest-regression.spec.js'
+      'tests/32-services-movement-latest-regression.spec.js',
+      'tests/36-grouped-payment-current-account-regression.spec.js'
     )
     'cuentas-corrientes' = @(
       'tests/08-current-accounts.spec.js',
-      'tests/19-current-account-entities.spec.js'
+      'tests/19-current-account-entities.spec.js',
+      'tests/36-grouped-payment-current-account-regression.spec.js'
+    )
+    'pagos-agrupados' = @(
+      'tests/08-current-accounts.spec.js',
+      'tests/15-cheques-lifecycle.spec.js',
+      'tests/36-grouped-payment-current-account-regression.spec.js'
     )
     'cheques' = @(
       'tests/09-cheques-smoke.spec.js',
-      'tests/15-cheques-lifecycle.spec.js'
+      'tests/15-cheques-lifecycle.spec.js',
+      'tests/36-grouped-payment-current-account-regression.spec.js'
     )
     'configuracion' = @(
       'tests/10-config-accounting.spec.js',
@@ -117,18 +144,11 @@ function Get-BaltoTestBatches {
       'tests/12-documents-readonly.spec.js',
       'tests/27-movement-search-health.spec.js'
     )
-    # Alias mantenidos para no romper comandos/scripts viejos. Ya no quedan
-    # congelados en “93 tests”: siempre apuntan a todos los *.spec.js actuales.
-    'actuales' = $all
-    'actuales-93' = $all
+    # Alias mantenidos para no romper comandos/scripts viejos: apuntan a toda la
+    # suite principal actual. Para principal + internal usar el lote "todo".
+    'actuales' = $main
+    'actuales-93' = $main
   }
-}
-
-function Get-BaltoInternalTests {
-  # Cambios transversales (routes, auth común, listas globales, helpers compartidos)
-  # pueden afectar cualquier módulo. Ejecutar TODO es más seguro y, al descubrir
-  # los specs dinámicamente, esta lista no vuelve a quedar desactualizada.
-  return Get-BaltoAllCurrentTests
 }
 
 function Assert-BaltoTestFilesExist([string[]]$Files) {

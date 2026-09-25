@@ -1,8 +1,8 @@
 import { test, expect } from './support/test.js';
 import { waitForBusyToFinish } from './support/ui.js';
 
-const MANUAL_TOTAL_PAGES = 86;
-const MANUAL_DOCX_NAME = 'Manual_Funcional_BALTO_Servicios_FINAL.docx';
+const MANUAL_TOTAL_PAGES = 88;
+const MANUAL_DOCX_NAME = 'Manual_Funcional_BALTO_Servicios.docx';
 
 async function openManual(page) {
   await page.goto('/panel/configuracion', { waitUntil: 'domcontentloaded' });
@@ -11,7 +11,7 @@ async function openManual(page) {
   const card = page.getByRole('button', { name: /Manual funcional/i }).first();
   await expect(card).toBeVisible({ timeout: 30_000 });
   await expect(card).toContainText(/Disponible/i);
-  await expect(card).toContainText(/86 páginas/i);
+  await expect(card).toContainText(new RegExp(`${MANUAL_TOTAL_PAGES} páginas`, 'i'));
 
   await card.click();
 

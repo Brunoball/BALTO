@@ -29,13 +29,20 @@ foreach ($rawPath in $Archivos) {
 
   # Infraestructura transversal o el propio harness: cualquier spec puede verse
   # afectado. En estos casos la selección parcial sería una falsa seguridad.
-  if ($path -match 'routes/api\.php|config/config|context/|components/global/|modules/global/|configuracion/testing/|tests/support/|tests/setup/|playwright\.config|global-setup|global-teardown|src/scripts/') {
+  if ($path -match 'routes/api\.php|config/(db|db_master|bootstrap_env|mysql_connection_gate)\.php|context/|components/global/|modules/global/|configuracion/testing/|tests/support/|tests/setup/|tests/internal/|playwright\.config|global-setup|global-teardown|src/scripts/') {
     $runAll = $true
     continue
   }
 
   if ($path -match 'migrations/|modules/\.htaccess|action_policy|error_response|hardening') { [void]$selected.Add('hardening') }
   if ($path -match 'login|require_session|sesion|auth') { [void]$selected.Add('auth'); [void]$selected.Add('hardening') }
+
+  # Hardening externo sin tocar servicios reales: cualquier cambio de TLS ARCA o
+  # almacenamiento R2 debe ejecutar el contrato fail-closed local.
+  if ($path -match 'config/r2\.php|modules/movimientos/facturacion/(arca_|padron\.php|wsfe_)|arcatlsfailclosedtest') {
+    [void]$selected.Add('hardening')
+    [void]$selected.Add('documentos')
+  }
 
   if ($path -match 'components/servicios|modules/servicios|servicio_articulos|servicio_servicios|servicio_trabajadores') {
     [void]$selected.Add('servicios')
@@ -62,6 +69,14 @@ foreach ($rawPath in $Archivos) {
     [void]$selected.Add('cuentas-corrientes')
   }
 
+  # Identidad financiera de Recibos/OP: estos archivos pueden romper agrupación,
+  # reversión atómica o devolución de cheques aun cuando el CRUD general siga verde.
+  if ($path -match 'modules/movimientos/(recibos|ordenes_pago)/|modules/movimientos/global/(helpers\.php|repositories/pagorepository\.php|services/pagobaseservice\.php|services/pagopolicy\.php)|modules/cuentas_corrientes/|36-grouped-payment-current-account-regression') {
+    [void]$selected.Add('pagos-agrupados')
+    [void]$selected.Add('cuentas-corrientes')
+    [void]$selected.Add('movimientos')
+  }
+
   if ($path -match 'cheques|echeq') {
     [void]$selected.Add('cheques')
     [void]$selected.Add('movimientos')
@@ -80,6 +95,10 @@ foreach ($rawPath in $Archivos) {
   if ($path -match 'export|boton_exportar|exportscopeutils') {
     [void]$selected.Add('exportaciones')
   }
+
+  # Si se modifica directamente uno de los specs críticos nuevos, ejecutar su lote.
+  if ($path -match 'tests/35-backend-hardening-regression\.spec\.js') { [void]$selected.Add('hardening') }
+  if ($path -match 'tests/36-grouped-payment-current-account-regression\.spec\.js') { [void]$selected.Add('pagos-agrupados') }
 }
 
 if ($runAll) {
@@ -89,7 +108,7 @@ if ($runAll) {
   if ($selected.Count -eq 0) { [void]$selected.Add('smoke') }
   $preferredOrder = @(
     'smoke', 'auth', 'hardening', 'servicios', 'stock', 'movimientos',
-    'cuentas-corrientes', 'cheques', 'configuracion',
+    'pagos-agrupados', 'cuentas-corrientes', 'cheques', 'configuracion',
     'documentos', 'exportaciones', 'navegacion'
   )
   $orderedSelection = @($preferredOrder | Where-Object { $selected.Contains($_) })

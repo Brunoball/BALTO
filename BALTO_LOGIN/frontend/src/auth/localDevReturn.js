@@ -21,6 +21,10 @@ function normalizeSystem(value) {
   return String(value || "").trim().toUpperCase();
 }
 
+function isValidSystemCode(value) {
+  return /^[A-Z][A-Z0-9_]{1,29}$/.test(normalizeSystem(value));
+}
+
 function isAllowedLocalReturn(raw) {
   try {
     const url = new URL(String(raw || ""));
@@ -67,7 +71,7 @@ function parseStoredIntent(raw, fallbackSystem = "") {
     const issuedAt = Number(parsed?.created_at || parsed?.issued_at || 0);
 
     if (!isAllowedLocalReturn(returnTo) || !isFresh(issuedAt)) return null;
-    if (!["COMERCIO", "SERVICIOS"].includes(system)) return null;
+    if (!isValidSystemCode(system)) return null;
 
     return { returnTo, system, issuedAt };
   } catch {
@@ -86,7 +90,7 @@ function readIntentFromQuery() {
   const issuedAt = Number(params.get(QUERY_ISSUED) || 0);
 
   if (!isAllowedLocalReturn(returnTo) || !isFresh(issuedAt)) return null;
-  if (!["COMERCIO", "SERVICIOS"].includes(system)) return null;
+  if (!isValidSystemCode(system)) return null;
 
   return { returnTo, system, issuedAt, source: "query" };
 }
@@ -129,7 +133,8 @@ function clearPendingIntent() {
 /**
  * Si el login fue abierto por un frontend local, devuelve la nueva sesión
  * directamente a localhost mediante #balto_auth=..., sin abrir el build
- * productivo de COMERCIO/SERVICIOS en Hostinger.
+ * productivo de la vertical autenticada en Hostinger. El código de sistema
+ * es data-driven para soportar futuras verticales como ECOMMERCE.
  *
  * Retorna true cuando realizó el redirect local; false cuando fue un login
  * productivo normal. Lanza error si hay un retorno local válido pero la cuenta
