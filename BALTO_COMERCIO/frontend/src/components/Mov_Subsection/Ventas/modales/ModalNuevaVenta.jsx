@@ -262,6 +262,16 @@ function makeNuevaVentaArcaOperationKey() {
   return `factura-venta-${Number(idUsuario || 0)}-${randomPart}`.slice(0, 100);
 }
 
+function makeTiendaNubeArcaOperationKey(venta) {
+  const idMovimiento = Number(venta?.id_movimiento || 0);
+  const storeId = Number(venta?.tn_store_id || 0);
+  const orderId = Number(venta?.tn_order_id || 0);
+
+  // La orden ya tiene un movimiento local persistido: una clave determinista
+  // permite recuperar el mismo CAE aunque el navegador falle después de emitir.
+  return `factura-venta-tn-${storeId || 0}-${orderId || 0}-${idMovimiento || 0}`.slice(0, 100);
+}
+
 function getOrCreateNuevaVentaArcaKey() {
   try {
     const storageKey = nuevaVentaArcaStorageKey();
@@ -1482,6 +1492,7 @@ export default function ModalNuevaVenta({ open, lists, tiendaNubeVenta = null, o
   const esCompletarTiendaNube = Number(tiendaNubeVenta?.id_movimiento ?? 0) > 0;
   const tnTieneComprobanteVenta = Number(tiendaNubeVenta?.tn_tiene_comprobante_venta ?? 0) === 1;
   const tnTieneRemito = Number(tiendaNubeVenta?.tn_tiene_remito ?? 0) === 1;
+  const tnTieneFacturaFiscal = Number(tiendaNubeVenta?.factura_emitida_en_arca ?? 0) === 1;
 
   const [dark, setDark] = useState(isTemaOscuro);
 
@@ -1614,7 +1625,7 @@ export default function ModalNuevaVenta({ open, lists, tiendaNubeVenta = null, o
         id_cuenta_corriente: NULL_OPTION,
       });
       setAccionContado("guardar");
-      setCliInput(ventaTn ? safeStr(ventaTn?.cliente || ventaTn?.cliente_nombre || "") : "");
+      setCliInput(ventaTn ? safeStr(ventaTn?.tn_cliente_nombre || ventaTn?.cliente || ventaTn?.cliente_nombre || "") : "");
       setRows(ventaTn && rowsTn.length ? rowsTn : [buildEmptyRow()]);
       setDescuentoTipo("PORCENTAJE");
       setDescuentoValor("");
@@ -1632,7 +1643,11 @@ export default function ModalNuevaVenta({ open, lists, tiendaNubeVenta = null, o
       setOpenResumenFactura(false);
       setResumenFacturaData(null);
       totalVentaAnteriorRef.current = null;
-      setArcaOperationKey(ventaTn ? "" : getOrCreateNuevaVentaArcaKey());
+      setArcaOperationKey(
+        ventaTn
+          ? makeTiendaNubeArcaOperationKey(ventaTn)
+          : getOrCreateNuevaVentaArcaKey()
+      );
       setTimeout(() => closeBtnRef.current?.focus(), 0);
     }
   }, [open]);
@@ -1930,6 +1945,51 @@ export default function ModalNuevaVenta({ open, lists, tiendaNubeVenta = null, o
         ? String(clienteResolvedFromInput.nombre).trim()
         : String(cliInput || "").trim(),
     [clienteResolvedFromInput, cliInput]
+  );
+
+  const tiendaNubeClienteNombreOperativo = useMemo(() => {
+    if (!esCompletarTiendaNube) return "";
+    return safeStr(
+      selectedClienteNombre ||
+        cliInput ||
+        tiendaNubeVenta?.tn_cliente_nombre ||
+        tiendaNubeVenta?.cliente ||
+        tiendaNubeVenta?.cliente_nombre ||
+        "Cliente"
+    );
+  }, [
+    esCompletarTiendaNube,
+    selectedClienteNombre,
+    cliInput,
+    tiendaNubeVenta,
+  ]);
+
+  const tiendaNubeClienteOperativo = useMemo(
+    () =>
+      normalizeClienteSimple({
+        id_cliente: Number(selectedClienteId || tiendaNubeVenta?.id_cliente || 0) || null,
+        nombre: tiendaNubeClienteNombreOperativo || "Cliente",
+      }),
+    [
+      selectedClienteId,
+      tiendaNubeVenta,
+      tiendaNubeClienteNombreOperativo,
+    ]
+  );
+
+  const tiendaNubeClientePdf = useMemo(
+    () => ({
+      doc_tipo: null,
+      doc_nro: "",
+      cuit: "",
+      razon_social: tiendaNubeClienteNombreOperativo || "Cliente",
+      nombre: tiendaNubeClienteNombreOperativo || "Cliente",
+      condicion_iva: "",
+      cond_iva: "",
+      domicilio: "",
+      origen: "tiendanube_orden",
+    }),
+    [tiendaNubeClienteNombreOperativo]
   );
 
   useEffect(() => {
@@ -2684,14 +2744,16 @@ export default function ModalNuevaVenta({ open, lists, tiendaNubeVenta = null, o
         total_bruto: Number(resumen.totalBruto || resumen.total || 0),
         operacion_key: arcaOperationKey || getOrCreateNuevaVentaArcaKey(),
         operacion_contexto: "FACTURA_VENTA",
-        operacion_id_origen: null,
+        operacion_id_origen: esCompletarTiendaNube
+          ? (Number(tiendaNubeVenta?.id_movimiento || 0) || null)
+          : null,
         observaciones: resumen.descuento > 0
           ? `Descuento comercial aplicado: ${resumen.descuentoTipo === "PORCENTAJE" ? `${Number(resumen.descuentoValor || 0).toLocaleString("es-AR")}%` : moneyARS(resumen.descuento)}.`
           : "",
         emisor: emisorPdf.emisor,
       };
     },
-    [rowsCalc, mediosFilas, mediosPagoList, selectedClienteNombre, selectedClienteId, filters.id_tipo_venta, fecha, isContado, resumen, arcaOperationKey]
+    [rowsCalc, mediosFilas, mediosPagoList, selectedClienteNombre, selectedClienteId, filters.id_tipo_venta, fecha, isContado, resumen, arcaOperationKey, esCompletarTiendaNube, tiendaNubeVenta]
   );
 
   const buildVentaNoFacturadaPayload = useCallback(
@@ -2718,10 +2780,13 @@ export default function ModalNuevaVenta({ open, lists, tiendaNubeVenta = null, o
 
       const mediosPayload = buildMediosPagoPayload(mediosFilas, mediosPagoList);
       const primerMedioId = mediosPayload[0]?.id_medio_pago || null;
-      const clienteFiscal = clienteFiscalOverride || clienteFiscalDb || fiscalArcaData || {};
+      const clienteFiscal = esCompletarTiendaNube
+        ? tiendaNubeClientePdf
+        : (clienteFiscalOverride || clienteFiscalDb || fiscalArcaData || {});
       const emisorPdf = normalizeConfigFacturacionPdf(cfg || {});
-      const nombreCliente =
-        selectedClienteNombre || safeStr(cliInput) || safeStr(clienteFiscal?.razon_social) || "Cliente";
+      const nombreCliente = esCompletarTiendaNube
+        ? (tiendaNubeClienteNombreOperativo || "Cliente")
+        : (selectedClienteNombre || safeStr(cliInput) || safeStr(clienteFiscal?.razon_social) || "Cliente");
 
       return {
         id_pago: null,
@@ -2767,6 +2832,9 @@ export default function ModalNuevaVenta({ open, lists, tiendaNubeVenta = null, o
       selectedClienteNombre,
       cliInput,
       selectedClienteId,
+      esCompletarTiendaNube,
+      tiendaNubeClientePdf,
+      tiendaNubeClienteNombreOperativo,
       filters.id_tipo_venta,
       tipoVentaSelected,
       isContado,
@@ -2884,13 +2952,20 @@ export default function ModalNuevaVenta({ open, lists, tiendaNubeVenta = null, o
       const nombreClienteParaGuardar = clienteFinal?.nombre || selectedClienteNombre || safeStr(clienteFiscalResuelto?.razon_social) || null;
 
       if (esCompletarTiendaNube) {
-        if (esFacturadaFinal) {
-          throw new Error("Primero completá la venta de Tienda Nube. Después podés facturarla desde el flujo habitual.");
-        }
+        const operacionFiscalKey = esFacturadaFinal
+          ? safeStr(
+              facturaArca?.operacion_arca?.key ||
+                facturaArca?.operacion_key ||
+                resumenFacturaData?.operacion_key ||
+                arcaOperationKey
+            )
+          : "";
         const data = await apiPostJson(API_TN_COMPLETAR, {
           id_movimiento: Number(tiendaNubeVenta?.id_movimiento || 0),
           id_cliente: idClienteParaGuardar,
+          preservar_cliente_tienda_nube: 1,
           medios_pago: isContado ? mediosPayload : [],
+          operacion_key: operacionFiscalKey || undefined,
         });
         if (!data?.exito) throw new Error(data?.mensaje || "No se pudo completar la venta de Tienda Nube.");
         return {
@@ -2898,12 +2973,13 @@ export default function ModalNuevaVenta({ open, lists, tiendaNubeVenta = null, o
           periodoApi,
           fecha,
           cliente_fiscal: clienteFiscalResuelto,
-          cliente_id: idClienteParaGuardar,
+          cliente_id: Number(data?.id_cliente || idClienteParaGuardar || 0) || null,
           cliente_nombre: nombreClienteParaGuardar,
-          accion_venta: "guardar",
-          es_facturada: false,
+          accion_venta: esFacturadaFinal ? "facturar" : accionFinal,
+          es_facturada: !!esFacturadaFinal,
           origen: "TIENDA_NUBE",
           tn_order_id: tiendaNubeVenta?.tn_order_id ?? data?.tn_order_id ?? null,
+          operacion_key: operacionFiscalKey || data?.operacion_arca_key || null,
         };
       }
 
@@ -3356,16 +3432,25 @@ export default function ModalNuevaVenta({ open, lists, tiendaNubeVenta = null, o
         }
       }
 
-      const clienteFiscalPdf = await resolveClienteFiscalForPdf();
+      const clienteFiscalPdf = esCompletarTiendaNube
+        ? tiendaNubeClientePdf
+        : await resolveClienteFiscalForPdf();
       const sourceData = baseData && typeof baseData === "object"
         ? {
             ...baseData,
+            labelCliente: esCompletarTiendaNube
+              ? (tiendaNubeClienteNombreOperativo || baseData.labelCliente || "Cliente")
+              : baseData.labelCliente,
             config_facturacion: baseData.config_facturacion || cfg || {},
             ...normalizeConfigFacturacionPdf(baseData.config_facturacion || cfg || {}),
             cliente_facturacion: buildClienteFiscalPdf(
-              baseData.cliente_facturacion || clienteFiscalPdf,
+              esCompletarTiendaNube
+                ? tiendaNubeClientePdf
+                : (baseData.cliente_facturacion || clienteFiscalPdf),
               clienteResolvedFromInput,
-              baseData.labelCliente || selectedClienteNombre || cliInput
+              esCompletarTiendaNube
+                ? (tiendaNubeClienteNombreOperativo || "Cliente")
+                : (baseData.labelCliente || selectedClienteNombre || cliInput)
             ),
           }
         : buildVentaNoFacturadaPayload(cfg || {}, clienteFiscalPdf);
@@ -3410,6 +3495,9 @@ export default function ModalNuevaVenta({ open, lists, tiendaNubeVenta = null, o
       clienteResolvedFromInput,
       selectedClienteNombre,
       cliInput,
+      esCompletarTiendaNube,
+      tiendaNubeClientePdf,
+      tiendaNubeClienteNombreOperativo,
       subirRemitoPdfYVincular,
     ]
   );
@@ -3506,10 +3594,12 @@ export default function ModalNuevaVenta({ open, lists, tiendaNubeVenta = null, o
 
         let remito = null;
         const remitoWarnings = [];
-        try {
-          remito = await generarYVincularRemitoPdf(info, resumenFacturaData);
-        } catch (remitoError) {
-          remitoWarnings.push(remitoError?.message || "La venta se guardó, pero no se pudo generar el remito.");
+        if (!esCompletarTiendaNube || !tnTieneRemito) {
+          try {
+            remito = await generarYVincularRemitoPdf(info, resumenFacturaData);
+          } catch (remitoError) {
+            remitoWarnings.push(remitoError?.message || "La venta se guardó, pero no se pudo generar el remito.");
+          }
         }
 
         const chequeWarnings = await subirArchivosChequesCreados(info);
@@ -3521,10 +3611,16 @@ export default function ModalNuevaVenta({ open, lists, tiendaNubeVenta = null, o
             resumenFacturaData?.operacion_key ||
             arcaOperationKey
         );
-        clearNuevaVentaArcaKey(completedOperationKey);
+        if (!esCompletarTiendaNube) clearNuevaVentaArcaKey(completedOperationKey);
         setArcaOperationKey("");
 
-        showToast("exito", "Venta agregada correctamente.", 3000);
+        showToast(
+          "exito",
+          esCompletarTiendaNube
+            ? "Venta de Tienda Nube completada y facturada correctamente."
+            : "Venta agregada correctamente.",
+          3000
+        );
         if (warnings.length) showToast("advertencia", warnings.join(" "), 6200);
 
         onSaved?.({
@@ -3559,6 +3655,8 @@ export default function ModalNuevaVenta({ open, lists, tiendaNubeVenta = null, o
       generarYVincularRemitoPdf,
       subirArchivosChequesCreados,
       arcaOperationKey,
+      esCompletarTiendaNube,
+      tnTieneRemito,
     ]
   );
 
@@ -3682,6 +3780,16 @@ export default function ModalNuevaVenta({ open, lists, tiendaNubeVenta = null, o
         fiscal = await buscarFiscalEnArcaPorCuit(cuit);
       }
 
+      if (esCompletarTiendaNube) {
+        // El CUIT ingresado es el receptor FISCAL de esta factura. No debe
+        // renombrar, fusionar ni persistirse sobre el cliente operativo de la orden.
+        const fiscalFactura = normalizeClienteFiscalDb(fiscal);
+        setFiscalPanelOpen(false);
+        showToast("exito", "CUIT validado. Se usará solo para esta factura.", 2600);
+        await abrirResumenFactura(fiscalFactura, tiendaNubeClienteOperativo);
+        return;
+      }
+
       const result = await guardarClienteFiscalDesdeArca(fiscal, {
         id_cliente: selectedClienteId || null,
         actualizar_nombre_cliente: true,
@@ -3709,11 +3817,18 @@ export default function ModalNuevaVenta({ open, lists, tiendaNubeVenta = null, o
     guardarClienteFiscalDesdeArca,
     selectedClienteId,
     abrirResumenFactura,
+    esCompletarTiendaNube,
+    tiendaNubeClienteOperativo,
   ]);
 
   const onClickFacturar = useCallback(async () => {
     if (isBaltoDemoMode()) {
       showToast("advertencia", DEMO_BLOCK_MESSAGE, 5200);
+      return;
+    }
+
+    if (esCompletarTiendaNube && tnTieneFacturaFiscal) {
+      showToast("advertencia", "Esta venta de Tienda Nube ya tiene una factura fiscal emitida.", 4200);
       return;
     }
 
@@ -3723,6 +3838,13 @@ export default function ModalNuevaVenta({ open, lists, tiendaNubeVenta = null, o
     const v = validate({ skipCliente: !selectedClienteId });
     if (!v.ok) {
       showToast("advertencia", v.msg || "Faltan datos.", 4200);
+      return;
+    }
+
+    if (esCompletarTiendaNube) {
+      // El destinatario fiscal puede ser distinto del nombre que hizo la compra.
+      // Por eso no heredamos clientes_fiscales por id_cliente en ventas TN.
+      setFiscalPanelOpen(true);
       return;
     }
 
@@ -3745,7 +3867,7 @@ export default function ModalNuevaVenta({ open, lists, tiendaNubeVenta = null, o
     } finally {
       setSaving(false);
     }
-  }, [selectedClienteId, clienteFiscalDb, fetchClienteFiscal, abrirResumenFactura, showToast, validate]);
+  }, [selectedClienteId, clienteFiscalDb, fetchClienteFiscal, abrirResumenFactura, showToast, validate, esCompletarTiendaNube, tnTieneFacturaFiscal]);
 
   const shouldNeedFiscalPanel = false;
 
@@ -3783,7 +3905,10 @@ export default function ModalNuevaVenta({ open, lists, tiendaNubeVenta = null, o
             {esCompletarTiendaNube && (
               <div className="nv-tn-completion-note">
                 <strong>Venta ya importada desde Tienda Nube.</strong>
-                <span>Los productos y el stock ya fueron registrados. Acá sólo confirmás el cliente/medio de pago y generás los comprobantes faltantes, sin descontar stock otra vez.</span>
+                <span>
+                  Los productos y el stock ya fueron registrados. Acá confirmás el cliente/medio de pago y generás los comprobantes faltantes, incluida la factura si corresponde, sin descontar stock otra vez.
+                  {tnTieneFacturaFiscal ? " Esta venta ya tiene una factura fiscal emitida." : ""}
+                </span>
               </div>
             )}
             <div className="gm-movement-layout">
@@ -4189,7 +4314,7 @@ export default function ModalNuevaVenta({ open, lists, tiendaNubeVenta = null, o
                         ? "Completar venta"
                         : "Guardar venta"}
                   </button>
-                  {!esCompletarTiendaNube && (
+                  {(!esCompletarTiendaNube || !tnTieneFacturaFiscal) && (
                     <button
                       type="button"
                       onClick={onClickFacturar}
@@ -4236,7 +4361,11 @@ export default function ModalNuevaVenta({ open, lists, tiendaNubeVenta = null, o
         title="Datos fiscales para facturar"
         infoTitle="Factura por CUIT"
         description={
-          selectedClienteNombre ? (
+          esCompletarTiendaNube ? (
+            <>
+              Venta de Tienda Nube de <b>{tiendaNubeClienteNombreOperativo || "Cliente"}</b>. El CUIT se usará solo como receptor de esta factura y no cambiará el cliente de la venta.
+            </>
+          ) : selectedClienteNombre ? (
             <>
               Cliente seleccionado: <b>{selectedClienteNombre}</b>. Al confirmar, se actualizará con la razón social obtenida.
             </>

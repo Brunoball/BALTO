@@ -93,6 +93,17 @@ function getMovimientoId(r) {
   const n = Number(cand);
   return Number.isFinite(n) && n > 0 ? n : null;
 }
+function getTiendaNubeNoticeKey(row) {
+  if (!row) return "";
+  return [
+    getMovimientoId(row) || 0,
+    String(row?.tn_order_id || ""),
+    String(row?.tn_payment_status || "").trim().toLowerCase(),
+    Number(row?.tn_tiene_comprobante_venta || 0) === 1 ? 1 : 0,
+    Number(row?.tn_tiene_remito || 0) === 1 ? 1 : 0,
+    Number(row?.tn_manual_pago_count || 0),
+  ].join(":");
+}
 function getRowItemId(r) {
   const cand = r?.id_item ?? r?.id_movimiento_item ?? r?.id_item_movimiento ?? r?.item_id ?? r?.id_detalle_item ?? null;
   const n = Number(cand);
@@ -247,7 +258,7 @@ function isVentaRow(row) {
   return isSalida(row);
 }
 function normalizeVentaRow(r) {
-  const cliente = r?.cliente ?? r?.cliente_nombre ?? r?.nombre_cliente ?? r?.razon_social_cliente ?? "";
+  const cliente = r?.tn_cliente_nombre ?? r?.cliente ?? r?.cliente_nombre ?? r?.nombre_cliente ?? r?.razon_social_cliente ?? "";
   const tipoVentaTxt = r?.pago_tipo_venta ?? r?.tipo_venta ?? "";
   const medioPagoNombre = r?.medio_pago_nombre ?? r?.medio_pago ?? r?.pago_medio_pago ?? "";
   const idMov = getMovimientoId(r);
@@ -340,7 +351,8 @@ export default function Ventas() {
   const [nextOffset, setNextOffset] = useState(null);
   const [openAdd, setOpenAdd] = useState(false);
   const [tiendaNubeVenta, setTiendaNubeVenta] = useState(null);
-  const [tnPopupDismissedSignature, setTnPopupDismissedSignature] = useState("");
+  const [tnPopupDismissedKeys, setTnPopupDismissedKeys] = useState([]);
+  const [tnPopupCollapsed, setTnPopupCollapsed] = useState(false);
   const [openDel, setOpenDel] = useState(false);
   const [openNC, setOpenNC] = useState(false);
   const [modoNC, setModoNC] = useState("NORMAL");
@@ -510,24 +522,35 @@ export default function Ventas() {
   }, [dateRange.from, dateRange.to, q, loadingRows, loadingMore, loadingListsCtx, showCalendario, openAdd, openDel, openNC, openVerComprobante, openDetalleMovimiento, hasMore, fetchLiveToken, loadRows, showToast]);
 
   const filteredRows = useMemo(() => (Array.isArray(rows) ? rows : []).filter((r) => isVentaRow(r)).filter((r) => rowInDateRange(r, dateRange.from, dateRange.to)).filter((r) => rowMatchesQuery(r, q)), [rows, dateRange, q]);
-  const ventasTiendaNubePendientes = useMemo(
-    () => filteredRows.filter((row) => isTiendaNubePendienteDeCompletar(row)),
-    [filteredRows]
+  const ventasTiendaNubePendientes = useMemo(() => {
+    // Cola FIFO real: el orden visual/búsqueda no debe decidir qué aviso se procesa
+    // primero. Si entran varias órdenes casi juntas, atendemos el movimiento más viejo.
+    const pending = (Array.isArray(rows) ? rows : [])
+      .filter((row) => isVentaRow(row))
+      .filter((row) => isTiendaNubePendienteDeCompletar(row));
+    return pending.slice().sort((a, b) => {
+      const aId = getMovimientoId(a) || Number.MAX_SAFE_INTEGER;
+      const bId = getMovimientoId(b) || Number.MAX_SAFE_INTEGER;
+      if (aId !== bId) return aId - bId;
+      return Number(a?.tn_order_id || 0) - Number(b?.tn_order_id || 0);
+    });
+  }, [rows]);
+  const ventasTiendaNubePendientesVisibles = useMemo(
+    () => ventasTiendaNubePendientes.filter((venta) => !tnPopupDismissedKeys.includes(getTiendaNubeNoticeKey(venta))),
+    [ventasTiendaNubePendientes, tnPopupDismissedKeys]
   );
-  const tnPendingSignature = useMemo(
-    () => ventasTiendaNubePendientes
-      .map((venta) => `${getMovimientoId(venta) || ""}:${String(venta?.tn_order_id || "")}:${String(venta?.tn_payment_status || "")}`)
-      .join("|"),
-    [ventasTiendaNubePendientes]
-  );
-  const tiendaNubePopupVenta = ventasTiendaNubePendientes[0] || null;
+  const tiendaNubePopupVenta = ventasTiendaNubePendientesVisibles[0] || null;
 
   const tiendaNubePopupPagoLabel = tiendaNubePagoLabel(tiendaNubePopupVenta?.tn_payment_status);
   const abrirCompletarTiendaNube = useCallback((venta) => {
     if (!venta) return;
+    setTnPopupCollapsed(false);
     setTiendaNubeVenta(venta);
     setOpenAdd(true);
   }, []);
+  useEffect(() => {
+    if (!tiendaNubePopupVenta) setTnPopupCollapsed(false);
+  }, [tiendaNubePopupVenta]);
   const columns = useMemo(() => [
     { key: "fecha", label: "FECHA", align: "center", fr: 0.9, render: (r) => safeText(formatFechaDMY(r.fecha)) },
     { key: "detalle", label: "DESCRIPCIÓN", fr: 2.2, strong: true, align: "left", render: (r) => productosLabel(r) },
@@ -767,7 +790,6 @@ export default function Ventas() {
       <GlobalFloatingNotice
         open={
           !!tiendaNubePopupVenta &&
-          tnPopupDismissedSignature !== tnPendingSignature &&
           !openAdd &&
           !openDel &&
           !openNC &&
@@ -791,12 +813,30 @@ export default function Ventas() {
         statusTone={tiendaNubePopupPagoLabel === "Pagada" ? "success" : "warning"}
         amount={moneyARS(tiendaNubePopupVenta?.monto_total ?? tiendaNubePopupVenta?.total ?? 0)}
         extraText={
-          ventasTiendaNubePendientes.length > 1
-            ? `+ ${ventasTiendaNubePendientes.length - 1} venta${ventasTiendaNubePendientes.length - 1 === 1 ? "" : "s"} pendiente${ventasTiendaNubePendientes.length - 1 === 1 ? "" : "s"} más`
+          ventasTiendaNubePendientesVisibles.length > 1
+            ? `+ ${ventasTiendaNubePendientesVisibles.length - 1} venta${ventasTiendaNubePendientesVisibles.length - 1 === 1 ? "" : "s"} pendiente${ventasTiendaNubePendientesVisibles.length - 1 === 1 ? "" : "s"} más en cola`
             : ""
         }
         actionLabel="Completar venta"
-        onClose={() => setTnPopupDismissedSignature(tnPendingSignature)}
+        collapsed={tnPopupCollapsed}
+        collapsedLabel={
+          ventasTiendaNubePendientesVisibles.length > 1
+            ? `${ventasTiendaNubePendientesVisibles.length} ventas TN pendientes`
+            : "1 venta TN pendiente"
+        }
+        onClose={() => setTnPopupCollapsed(true)}
+        onRestore={() => setTnPopupCollapsed(false)}
+        dismissLabel="Cerrar aviso"
+        dismissConfirmTitle="¿Cerrar este aviso de Tienda Nube?"
+        dismissConfirmMessage="Este aviso dejará de mostrarse durante esta sesión. La venta NO se elimina: seguirá guardada en Movimientos."
+        onDismiss={() => {
+          const key = getTiendaNubeNoticeKey(tiendaNubePopupVenta);
+          if (!key) return;
+          setTnPopupDismissedKeys((prev) => (
+            prev.includes(key) ? prev : [...prev, key].slice(-100)
+          ));
+          setTnPopupCollapsed(false);
+        }}
         onAction={() => abrirCompletarTiendaNube(tiendaNubePopupVenta)}
       />
       <ModalNuevaVenta
@@ -810,6 +850,7 @@ export default function Ventas() {
           try {
             setOpenAdd(false);
             setTiendaNubeVenta(null);
+            setTnPopupCollapsed(false);
             setQ("");
             skipSearchRef.current = true;
             liveTokenRef.current = null;

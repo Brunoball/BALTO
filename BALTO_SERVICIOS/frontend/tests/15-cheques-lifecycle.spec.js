@@ -42,6 +42,13 @@ function paymentIdFrom(body) {
   return extractPaymentId(body?.data || body);
 }
 
+function addDaysISO(base, days) {
+  const [year, month, day] = String(base).split('-').map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  date.setUTCDate(date.getUTCDate() + Number(days || 0));
+  return date.toISOString().slice(0, 10);
+}
+
 test.beforeEach(async ({}, testInfo) => {
   testInfo.setTimeout(6 * 60_000);
 });
@@ -62,6 +69,25 @@ async function findChequeRow(page, numero) {
 }
 
 test.describe.serial('@crud @critical ciclo profundo de cheques', () => {
+  test('alta: emisión y fecha de pago del cheque aceptan fechas futuras', async ({ page }) => {
+    await requireMutations(test, page);
+    const description = uniqueName('CHQ-FECHAS-LIBRES');
+    const today = todayISO();
+    const cheque = buildCheque('FECHAS-LIBRES', 119);
+    cheque.fechaEmision = addDaysISO(today, 20);
+    cheque.fechaPago = addDaysISO(today, 75);
+
+    await createOtherIncomeWithIncomingCheque(page, { description, amount: cheque.importe }, cheque);
+    const snapshot = await expectChequeState(page, cheque.numero, 'EN_CARTERA');
+    expect(String(snapshot.cartera?.fecha_emision || '')).toBe(cheque.fechaEmision);
+    expect(String(snapshot.cartera?.fecha_pago || '')).toBe(cheque.fechaPago);
+
+    await page.goto('/panel/cheques/cartera');
+    await waitForBusyToFinish(page);
+    const row = await findChequeRow(page, cheque.numero);
+    await expect(row).toContainText(cheque.emisor);
+  });
+
   test('venta: el cheque recibido sigue EN_CARTERA aunque se elimine la venta', async ({ page }) => {
     await requireMutations(test, page);
     const productName = uniqueName('CHQ-VENTA-ORIGEN');

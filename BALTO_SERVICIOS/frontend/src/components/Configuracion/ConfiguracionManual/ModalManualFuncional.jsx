@@ -13,8 +13,8 @@ import {
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 
-import manualPdf from "../../../utils/manuales/manual_funcional_balto_servicios.pdf";
-import manualDocx from "../../../utils/manuales/manual_funcional_balto_servicios.docx";
+import manualPdf from "../../../utils/manuales/Manual_Funcional_BALTO_Servicios.pdf";
+import manualDocx from "../../../utils/manuales/Manual_Funcional_BALTO_Servicios.docx";
 import "../../Global/Global_css/GlobalsModalsV2.css";
 import "./ModalManualFuncional.css";
 

@@ -598,12 +598,7 @@ function ChequeFields({ cheque, saving, onUpdate }) {
             className="gm-cell-input"
             type="date"
             value={cheque?.fecha_emision || ""}
-            max={todayISO()}
-            onChange={(e) => {
-              const nuevaFecha = e.target.value;
-              if (nuevaFecha && nuevaFecha > todayISO()) return;
-              onUpdate("fecha_emision", nuevaFecha);
-            }}
+            onChange={(e) => onUpdate("fecha_emision", e.target.value)}
             disabled={saving}
             onClick={(e) => {
               e.stopPropagation();
@@ -1323,10 +1318,6 @@ export default function ModalEditarEgreso({
   }, [form]);
 
   const updateChequeField = useCallback((field, value) => {
-    if (field === "fecha_emision" && value && value > todayISO()) {
-      showToast("advertencia", "La fecha de emisión no puede ser posterior al día actual.", 3000);
-      return;
-    }
     setForm((prev) => ({
       ...prev,
       cheque: {
@@ -1338,7 +1329,7 @@ export default function ModalEditarEgreso({
             : value,
       },
     }));
-  }, [showToast]);
+  }, []);
 
   const openDatePicker = useCallback(() => {
     const el = fechaRef.current;
@@ -1547,7 +1538,6 @@ export default function ModalEditarEgreso({
         const importe = round2(safeNumber(form?.cheque?.importe));
         if (!(id_cheque > 0)) throw new Error("No se encontró el cheque vinculado.");
         if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha_emision)) throw new Error("La fecha de emisión del cheque es obligatoria.");
-        if (fecha_emision > todayISO()) throw new Error("La fecha de emisión del cheque no puede ser posterior al día actual.");
         if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha_pago)) throw new Error("La fecha de pago del cheque es obligatoria.");
         if (!emisor) throw new Error("El emisor del cheque es obligatorio.");
         if (!numero_cheque) throw new Error("El número de cheque es obligatorio.");

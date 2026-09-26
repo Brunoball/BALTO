@@ -24,14 +24,6 @@ function todayISO() {
   ).padStart(2, "0")}`;
 }
 
-function clampDateToToday(value) {
-  const fecha = String(value || "").trim();
-  if (!fecha) return "";
-
-  const hoy = todayISO();
-  return fecha > hoy ? hoy : fecha;
-}
-
 function isFutureDateISO(value) {
   const fecha = String(value || "").trim();
   return !!fecha && fecha > todayISO();
@@ -361,13 +353,13 @@ export default function ModalNuevoCheque({
         tipo: String(initialData.tipo || tipoChequeProp).toLowerCase(),
         fecha_saldo: initialData.fecha_saldo || todayISO(),
         observaciones: initialData.observaciones || "",
-        fecha_emision: clampDateToToday(initialData.fecha_emision || todayISO()),
+        fecha_emision: initialData.fecha_emision || todayISO(),
         emisor: sanitizeEmitter(initialData.emisor || ""),
         numero_cheque: onlyDigits(initialData.numero_cheque || ""),
         importe: safeNumber(initialData.importe),
         importeDraft: "",
         importeFocused: false,
-        fecha_pago: saldoInicial ? initialData.fecha_pago || todayISO() : clampDateToToday(initialData.fecha_pago || todayISO()),
+        fecha_pago: initialData.fecha_pago || todayISO(),
       });
 
       if (initialData.archivo instanceof File) {
@@ -557,20 +549,6 @@ export default function ModalNuevoCheque({
 
     if (!String(form.fecha_pago || "").trim()) {
       notify("advertencia", "Ingresá la fecha de pago.", 3200);
-      return;
-    }
-
-    if (isFutureDateISO(form.fecha_emision)) {
-      notify("advertencia", "La fecha de emisión no puede ser posterior al día actual.", 3600);
-      setField("fecha_emision", todayISO());
-      fechaEmisionRef.current?.focus();
-      return;
-    }
-
-    if (!saldoInicial && isFutureDateISO(form.fecha_pago)) {
-      notify("advertencia", "La fecha de pago no puede ser posterior al día actual.", 3600);
-      setField("fecha_pago", todayISO());
-      fechaPagoRef.current?.focus();
       return;
     }
 
@@ -912,12 +890,9 @@ export default function ModalNuevoCheque({
                           type="date"
                           placeholder=" "
                           value={form.fecha_emision}
-                          max={todayISO()}
                           onClick={() => abrirCalendario(fechaEmisionRef)}
                           onFocus={() => abrirCalendario(fechaEmisionRef)}
-                          onChange={(e) =>
-                            setField("fecha_emision", clampDateToToday(e.target.value))
-                          }
+                          onChange={(e) => setField("fecha_emision", e.target.value)}
                           disabled={saving || checkingNumero}
                         />
                         <label
@@ -938,10 +913,9 @@ export default function ModalNuevoCheque({
                           type="date"
                           placeholder=" "
                           value={form.fecha_pago}
-                          max={saldoInicial ? undefined : todayISO()}
                           onClick={() => abrirCalendario(fechaPagoRef)}
                           onFocus={() => abrirCalendario(fechaPagoRef)}
-                          onChange={(e) => setField("fecha_pago", saldoInicial ? e.target.value : clampDateToToday(e.target.value))}
+                          onChange={(e) => setField("fecha_pago", e.target.value)}
                           disabled={saving || checkingNumero}
                         />
                         <label
