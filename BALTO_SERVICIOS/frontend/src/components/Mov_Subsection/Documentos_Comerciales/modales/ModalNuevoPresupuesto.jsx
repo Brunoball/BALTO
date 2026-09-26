@@ -1791,13 +1791,7 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
           </div>
 
           <div className="gm-movement-layout">
-            <div
-              className={[
-                "gm-movement-main",
-                "dc-presupuesto-main",
-                activeAccordion === "terms" ? "dc-presupuesto-main--terms-open" : "",
-              ].filter(Boolean).join(" ")}
-            >
+            <div className="gm-movement-main dc-presupuesto-main">
               <section className="gm-table gm-table--movement dc-presupuesto-table">
               <div className="gm-table-head">
                 <div className="gm-table-th" style={{ paddingLeft: 10 }}>Detalle</div>

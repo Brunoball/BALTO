@@ -653,25 +653,57 @@ function tableRowHeight(doc, item, cols) {
   return blockH + 5;
 }
 
-function drawServiceGroupHeader(doc, item, cols, y, maxBodyY) {
-  const rowH = 20;
-  if (y + rowH > maxBodyY) return { y, drawn: false };
+function drawServiceBlockTitle(doc, item, y, maxBodyY) {
+  const W = doc.internal.pageSize.getWidth();
+  const B = 10;
+  const innerW = W - B * 2;
+  const rowH = 26;
+  const gapAfter = 7;
+  if (y + rowH + gapAfter > maxBodyY) return { y, drawn: false };
 
-  fillRect(doc, cols.x0, y - 5, cols.x7 - cols.x0, rowH, 0.94);
-  line(doc, cols.x0, y - 5, cols.x7, y - 5, 0.35);
-  line(doc, cols.x0, y - 5 + rowH, cols.x7, y - 5 + rowH, 0.35);
+  fillRect(doc, B, y, innerW, rowH, 0.93);
+  rect(doc, B, y, innerW, rowH, 0.45);
 
-  set(doc, "helvetica", "bold", 8.8);
-  if (item.grupoCodigo) {
-    text(doc, clampToWidth(doc, item.grupoCodigo, cols.x1 - cols.x0 - cols.padL - cols.padR), cols.x0 + cols.padL, y + 8);
-  }
+  set(doc, "helvetica", "bold", 9.4);
+  const servicio = sanitizePdfText(item?.grupoServicio || "SERVICIO");
+  const codigo = sanitizePdfText(item?.grupoCodigo || "");
+  const codigoSuffix = codigo ? ` · ${codigo}` : "";
   text(
     doc,
-    clampToWidth(doc, item.grupoServicio || "SERVICIO", cols.x7 - cols.x1 - cols.padL - cols.padR),
-    cols.x1 + cols.padL,
-    y + 8
+    clampToWidth(doc, `SERVICIO: ${servicio}${codigoSuffix}`, innerW - 20),
+    B + 10,
+    y + 17
   );
-  return { y: y + rowH, drawn: true };
+
+  return { y: y + rowH + gapAfter, drawn: true };
+}
+
+function groupBudgetItems(items) {
+  const blocks = [];
+
+  items.forEach((item, index) => {
+    const groupName = String(item?.grupoServicio || "").trim();
+    const groupKey = String(item?.grupoClave || groupName).trim();
+    const isServiceGroup = Boolean(groupName);
+    const previous = blocks[blocks.length - 1];
+
+    if (
+      previous &&
+      previous.isServiceGroup === isServiceGroup &&
+      (!isServiceGroup || previous.groupKey === groupKey)
+    ) {
+      previous.rows.push({ item, index });
+      return;
+    }
+
+    blocks.push({
+      isServiceGroup,
+      groupKey: isServiceGroup ? groupKey : "",
+      rows: [{ item, index }],
+    });
+  });
+
+  return blocks;
 }
 
 function drawTotalsAndFooter(doc, items, data, y) {
@@ -762,52 +794,75 @@ export async function buildPresupuestoPdf({ data } = {}) {
   const doc = new jsPDF({ unit: "pt", format: "a4", compress: true });
   const logoDataUrl = await fetchTenantLogoDataUrl();
   const items = normalizeItems(data || {});
+  const blocks = groupBudgetItems(items);
   const H = doc.internal.pageSize.getHeight();
   const B = 10;
   const bottomLimit = H - B - presupuestoFooterRequiredHeight();
   let y;
-  let cols;
+  let cols = getColumns(doc);
 
+  // La página arranca sólo con encabezado/cliente. El título del servicio se
+  // dibuja ANTES de la grilla, para que el nombre comercial no se mezcle con
+  // materiales, insumos o mano de obra.
   const startPage = () => {
     drawOuter(doc);
     y = drawHeader(doc, data || {}, logoDataUrl) + 14;
+    cols = getColumns(doc);
+  };
+
+  const drawColumnsHeader = () => {
     const header = drawTableHeader(doc, y);
     y = header.nextY;
     cols = header.cols;
   };
 
+  const startServiceBlock = (firstItem) => {
+    const title = drawServiceBlockTitle(doc, firstItem, y, bottomLimit);
+    if (!title.drawn) return false;
+    y = title.y;
+    drawColumnsHeader();
+    return true;
+  };
+
   startPage();
-  let activeServiceGroup = "";
-  items.forEach((it, idx) => {
-    const group = String(it?.grupoServicio || "").trim();
-    const groupKey = String(it?.grupoClave || group).trim();
-    if (group && groupKey !== activeServiceGroup) {
-      const needed = 20 + tableRowHeight(doc, it, cols);
-      if (y + needed > bottomLimit) {
+
+  blocks.forEach((block, blockIndex) => {
+    const firstEntry = block.rows[0];
+    const firstItem = firstEntry?.item;
+    if (!firstItem) return;
+
+    // Un pequeño aire entre bloques hace evidente dónde termina un servicio y
+    // comienza el siguiente, sin convertir el nombre del servicio en otra fila.
+    if (blockIndex > 0) y += 5;
+
+    if (block.isServiceGroup) {
+      const firstNeeded = 26 + 7 + 22 + 15 + tableRowHeight(doc, firstItem, cols);
+      if (y + firstNeeded > bottomLimit) {
         doc.addPage();
         startPage();
       }
-      const groupHeader = drawServiceGroupHeader(doc, it, cols, y, bottomLimit);
-      if (groupHeader.drawn) y = groupHeader.y;
-      activeServiceGroup = groupKey;
-    } else if (!group) {
-      activeServiceGroup = "";
+      startServiceBlock(firstItem);
+    } else {
+      const firstNeeded = 22 + 15 + tableRowHeight(doc, firstItem, cols);
+      if (y + firstNeeded > bottomLimit) {
+        doc.addPage();
+        startPage();
+      }
+      drawColumnsHeader();
     }
 
-    const res = drawTableRow(doc, it, idx, cols, y, bottomLimit);
-    if (!res.drawn) {
-      doc.addPage();
-      startPage();
-      if (group) {
-        const groupHeader = drawServiceGroupHeader(doc, it, cols, y, bottomLimit);
-        if (groupHeader.drawn) y = groupHeader.y;
-        activeServiceGroup = groupKey;
+    block.rows.forEach(({ item, index }) => {
+      const rowHeight = tableRowHeight(doc, item, cols);
+      if (y + rowHeight > bottomLimit) {
+        doc.addPage();
+        startPage();
+        if (block.isServiceGroup) startServiceBlock(firstItem);
+        else drawColumnsHeader();
       }
-      const next = drawTableRow(doc, it, idx, cols, y, bottomLimit);
-      y = next.y;
-    } else {
-      y = res.y;
-    }
+
+      const res = drawTableRow(doc, item, index, cols, y, bottomLimit);
+      if (res.drawn) y = res.y;
+    });
   });
 
   if (y + presupuestoFooterRequiredHeight() > H - B) {

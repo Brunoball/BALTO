@@ -290,19 +290,28 @@ html[data-theme="oscuro"] .dc-total-line--total {
 .presupuesto-terms__row--split .presupuesto-terms__block { min-width: 0; }
 
 .presupuesto-modal__content .dc-presupuesto-main {
-  display: flex;
-  flex-direction: column;
+  /*
+   * Layout estable del modal:
+   *  1) la tabla absorbe todo el espacio libre;
+   *  2) Condiciones comerciales crece hacia arriba;
+   *  3) Agregar fila + chips permanecen siempre en la misma posición inferior.
+   *
+   * No usamos position: fixed/sticky: la barra forma parte del modal y no tapa
+   * contenido. Al abrir el acordeón sólo se reduce el viewport interno de la tabla.
+   */
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto auto;
   min-width: 0;
   min-height: 0;
+  height: 100%;
   overflow: hidden;
 }
 
-/* La tabla, Condiciones comerciales y el pie quedan en contenedores hermanos.
-   Al abrir Condiciones, la tabla se achica y el botón Agregar fila + chips siguen visibles. */
 .presupuesto-modal__content .dc-presupuesto-main > .dc-presupuesto-table {
-  flex: 1 1 0;
+  grid-row: 1;
   min-width: 0;
   min-height: 0;
+  height: 100%;
   overflow: hidden;
 }
 
@@ -313,32 +322,13 @@ html[data-theme="oscuro"] .dc-total-line--total {
   overflow-x: hidden;
 }
 
-/* Cuando Condiciones comerciales está abierto, Materiales / insumos ya está cerrado
-   por el acordeón compartido. En ese estado la tabla debe tomar la altura real de
-   sus filas: no reservamos un viewport interno ni mostramos un scrollbar pequeño. */
-.presupuesto-modal__content .dc-presupuesto-main--terms-open > .dc-presupuesto-table {
-  flex: 0 0 auto;
-  height: auto !important;
-  min-height: 0;
-  max-height: none !important;
-  overflow: visible;
-}
-
-.presupuesto-modal__content .dc-presupuesto-main--terms-open > .dc-presupuesto-table .gm-table-body {
-  flex: 0 0 auto;
-  height: auto !important;
-  min-height: 0;
-  max-height: none !important;
-  overflow-y: visible;
-  overflow-x: hidden;
-}
-
 .presupuesto-modal__content .dc-presupuesto-main > .presupuesto-terms {
+  grid-row: 2;
   position: relative;
   z-index: 1;
-  flex: 0 0 auto;
   width: 100%;
   max-width: 100%;
+  min-height: 0;
   box-sizing: border-box;
   margin: 8px 0 0;
   border-left: 0;
@@ -350,11 +340,12 @@ html[data-theme="oscuro"] .dc-total-line--total {
 }
 
 .presupuesto-modal__content .dc-presupuesto-main > .dc-presupuesto-foot {
+  grid-row: 3;
   position: relative !important;
   inset: auto !important;
   z-index: 2;
-  flex: 0 0 auto;
   width: 100%;
+  min-height: 52px;
   box-sizing: border-box;
   display: flex;
   align-items: center;
