@@ -1,0 +1,497 @@
+/* =========================================================
+   BALTO · VIEWPORT TABULAR RESPONSIVE GLOBAL
+   ---------------------------------------------------------
+   Objetivo (<= 980px):
+   - La SECCIÓN no genera scroll vertical.
+   - La tarjeta ocupa exactamente el alto visible disponible.
+   - Cabeceras, filtros, tabs, acciones y totales conservan su alto natural.
+   - SOLAMENTE la tabla/listado consume el espacio restante y scrollea.
+
+   Activación:
+   - Principal agrega .pp-content--table-scroll-only a todas las rutas /panel
+     salvo Dashboard, Flujo de Caja y Análisis Financiero.
+   - El patrón es opt-in por estructura: detecta las tablas estándar .mov-* y
+     también las tablas de Configuración (Usuarios, Listas y Cheques iniciales).
+     Una pantalla sin tabla no queda bloqueada por esta hoja.
+
+   Ventaja:
+   - Elimina medidas locales tipo 40vh / 54vh / 70vh / 100dvh - Npx.
+   - Todas las tablas estándar reciben exactamente la MISMA medida: el espacio
+     libre real del viewport calculado por useVisualViewport.
+   - Las excepciones particulares viven al final de este mismo archivo.
+========================================================= */
+
+@media (max-width: 980px) {
+  /* =======================================================
+     1) SHELL GLOBAL: el viewport pertenece a la sección.
+     Solo se activa si realmente existe una tarjeta tabular estándar.
+  ======================================================= */
+  html.balto-visual-viewport-ready
+    .pp-content.pp-content--table-scroll-only:is(
+      :has(.mov-page > .mov-card--table),
+      :has(.cfg-users-tableWrap),
+      :has(.cfg-listas-tableWrap),
+      :has(.cfg-si-tableWrap)
+    ) {
+    width: 100% !important;
+    height: var(
+      --balto-content-viewport-height,
+      var(--balto-panel-viewport-height)
+    ) !important;
+    min-height: 0 !important;
+    max-height: var(
+      --balto-content-viewport-height,
+      var(--balto-panel-viewport-height)
+    ) !important;
+    overflow-x: hidden !important;
+    overflow-y: hidden !important;
+    overscroll-behavior: none !important;
+  }
+
+  html.balto-visual-viewport-ready
+    .pp-content.pp-content--table-scroll-only:is(
+      :has(.mov-page > .mov-card--table),
+      :has(.cfg-users-tableWrap),
+      :has(.cfg-listas-tableWrap),
+      :has(.cfg-si-tableWrap)
+    )
+    > .pp-content__inner {
+    display: flex !important;
+    flex: 1 1 0 !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    max-height: 100% !important;
+    overflow: hidden !important;
+    overscroll-behavior: none !important;
+  }
+
+  /* =======================================================
+     2) PÁGINA + CARD ESTÁNDAR
+  ======================================================= */
+  html.balto-visual-viewport-ready
+    .pp-content.pp-content--table-scroll-only
+    .mov-page:has(> .mov-card--table) {
+    display: flex !important;
+    flex: 1 1 0 !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    max-height: 100% !important;
+    overflow: hidden !important;
+    overscroll-behavior: none !important;
+  }
+
+  /* Alertas externas a la tarjeta sólo consumen su alto natural. */
+  html.balto-visual-viewport-ready
+    .pp-content.pp-content--table-scroll-only
+    .mov-page:has(> .mov-card--table)
+    > .mov-alert {
+    flex: 0 0 auto !important;
+  }
+
+  html.balto-visual-viewport-ready
+    .pp-content.pp-content--table-scroll-only
+    .mov-page
+    > .mov-card--table {
+    display: flex !important;
+    flex: 1 1 0 !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: 100% !important;
+
+    /* Los calendarios/menús del header pueden salir visualmente del header.
+       El scroll queda delegado a la tabla, no al card. */
+    overflow: visible !important;
+  }
+
+  /* Todo lo que no sea la tabla conserva su medida natural. */
+  html.balto-visual-viewport-ready
+    .pp-content.pp-content--table-scroll-only
+    .mov-page
+    > .mov-card--table
+    > :not(.mov-tableWrap) {
+    flex-shrink: 0 !important;
+  }
+
+  /* =======================================================
+     3) MEDIDA GLOBAL DE TABLA RESPONSIVE
+     No hay vh fijo: flex toma exactamente el espacio sobrante.
+  ======================================================= */
+  html.balto-visual-viewport-ready
+    .pp-content.pp-content--table-scroll-only
+    .mov-page
+    > .mov-card--table
+    > .mov-tableWrap,
+  html.balto-visual-viewport-ready
+    .pp-content.pp-content--table-scroll-only
+    #cheques-st {
+    flex: 1 1 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    scrollbar-gutter: stable;
+    overscroll-behavior-y: contain !important;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+  }
+
+  /* Neutraliza el alto heredado 100dvh - 250px del body global. */
+  html.balto-visual-viewport-ready
+    .pp-content.pp-content--table-scroll-only
+    .mov-page
+    > .mov-card--table
+    > .mov-tableWrap
+    > .mov-gridBody--relative {
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+  }
+
+  /* =======================================================
+     4) CUENTAS CORRIENTES
+     Su tabla no usa .mov-tableWrap: el scroll vive en __body.
+  ======================================================= */
+  html.balto-visual-viewport-ready
+    .pp-content.pp-content--table-scroll-only
+    .mov-page--cuentasCorrientes
+    > .cc-accountCard {
+    overflow: hidden !important;
+  }
+
+  html.balto-visual-viewport-ready
+    .pp-content.pp-content--table-scroll-only
+    .mov-page--cuentasCorrientes
+    .cc-accountHeader,
+  html.balto-visual-viewport-ready
+    .pp-content.pp-content--table-scroll-only
+    .mov-page--cuentasCorrientes
+    .cc-detailTabs--bottom {
+    flex: 0 0 auto !important;
+    min-height: 0 !important;
+  }
+
+  html.balto-visual-viewport-ready
+    .pp-content.pp-content--table-scroll-only
+    .mov-page--cuentasCorrientes
+    > .cc-accountCard
+    > .cc-cliente-table {
+    display: flex !important;
+    flex: 1 1 0 !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: hidden !important;
+  }
+
+  html.balto-visual-viewport-ready
+    .pp-content.pp-content--table-scroll-only
+    .mov-page--cuentasCorrientes
+    .cc-cliente-table__body,
+  html.balto-visual-viewport-ready
+    .pp-content.pp-content--table-scroll-only
+    .mov-page--cuentasCorrientes
+    .cc-cliente-table
+    .mov-gridBody {
+    flex: 1 1 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior-y: contain !important;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+  }
+
+  html.balto-visual-viewport-ready
+    .pp-content.pp-content--table-scroll-only
+    .mov-page--cuentasCorrientes
+    .cc-cliente-table__footWrap {
+    flex: 0 0 auto !important;
+  }
+
+  /* =======================================================
+     5) DOCUMENTOS COMERCIALES (Facturas / Remitos)
+     Estructura especial: layout -> panel -> docTableWrap.
+  ======================================================= */
+  html.balto-visual-viewport-ready
+    .pp-content.pp-content--table-scroll-only
+    .doccom-clientDocs
+    > .doccom-clientDocs__layout {
+    display: flex !important;
+    flex: 1 1 0 !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: hidden !important;
+  }
+
+  html.balto-visual-viewport-ready
+    .pp-content.pp-content--table-scroll-only
+    .doccom-clientDocs__layout
+    > .doccom-clientList {
+    flex: 0 0 auto !important;
+  }
+
+  html.balto-visual-viewport-ready
+    .pp-content.pp-content--table-scroll-only
+    .doccom-clientDocs__layout
+    > .doccom-docPanel {
+    display: flex !important;
+    flex: 1 1 0 !important;
+    flex-direction: column !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: hidden !important;
+  }
+
+  html.balto-visual-viewport-ready
+    .pp-content.pp-content--table-scroll-only
+    .doccom-docPanel
+    > .doccom-docPanel__top {
+    flex: 0 0 auto !important;
+  }
+
+  html.balto-visual-viewport-ready
+    .pp-content.pp-content--table-scroll-only
+    .doccom-docPanel
+    > .doccom-docTableWrap {
+    flex: 1 1 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior-y: contain !important;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+  }
+
+  html.balto-visual-viewport-ready
+    .pp-content.pp-content--table-scroll-only
+    .doccom-docTableWrap
+    > .doccom-docGridBody {
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+  }
+
+  /* =======================================================
+     6) CONFIGURACIÓN · pantallas realmente tabulares
+     - Usuarios
+     - Listas y categorías
+     - Saldos iniciales / Cheques (solo cuando esa tabla está visible)
+
+     Las pantallas de Configuración sin tabla mantienen su scroll natural.
+  ======================================================= */
+
+  /* Usuarios */
+  html.balto-visual-viewport-ready
+    .pp-content.pp-content--table-scroll-only:has(.cfg-users-tableWrap)
+    .cfg-users-page {
+    display: flex !important;
+    flex: 1 1 0 !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    max-height: 100% !important;
+    overflow: hidden !important;
+  }
+
+  html.balto-visual-viewport-ready
+    .pp-content.pp-content--table-scroll-only:has(.cfg-users-tableWrap)
+    .cfg-users-hero {
+    flex: 0 0 auto !important;
+  }
+
+  html.balto-visual-viewport-ready
+    .pp-content.pp-content--table-scroll-only:has(.cfg-users-tableWrap)
+    .cfg-users-contentScroll {
+    display: flex !important;
+    flex: 1 1 0 !important;
+    flex-direction: column !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: hidden !important;
+  }
+
+  html.balto-visual-viewport-ready
+    .pp-content.pp-content--table-scroll-only:has(.cfg-users-tableWrap)
+    .cfg-users-metaGrid,
+  html.balto-visual-viewport-ready
+    .pp-content.pp-content--table-scroll-only:has(.cfg-users-tableWrap)
+    .cfg-users-metaCard--full {
+    display: flex !important;
+    flex: 1 1 0 !important;
+    flex-direction: column !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: hidden !important;
+  }
+
+  html.balto-visual-viewport-ready
+    .pp-content.pp-content--table-scroll-only:has(.cfg-users-tableWrap)
+    .cfg-users-tableWrap {
+    flex: 1 1 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior-y: contain !important;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+  }
+
+  /* Listas y categorías */
+  html.balto-visual-viewport-ready
+    .pp-content.pp-content--table-scroll-only:has(.cfg-listas-tableWrap)
+    .cfg-listas-page {
+    display: flex !important;
+    flex: 1 1 0 !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    max-height: 100% !important;
+    overflow: hidden !important;
+  }
+
+  html.balto-visual-viewport-ready
+    .pp-content.pp-content--table-scroll-only:has(.cfg-listas-tableWrap)
+    .cfg-listas-hero {
+    flex: 0 0 auto !important;
+  }
+
+  html.balto-visual-viewport-ready
+    .pp-content.pp-content--table-scroll-only:has(.cfg-listas-tableWrap)
+    .cfg-listas-card {
+    display: flex !important;
+    flex: 1 1 0 !important;
+    flex-direction: column !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: hidden !important;
+  }
+
+  html.balto-visual-viewport-ready
+    .pp-content.pp-content--table-scroll-only:has(.cfg-listas-tableWrap)
+    .cfg-listas-toolbar {
+    flex: 0 0 auto !important;
+  }
+
+  html.balto-visual-viewport-ready
+    .pp-content.pp-content--table-scroll-only:has(.cfg-listas-tableWrap)
+    .cfg-listas-tableWrap {
+    flex: 1 1 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior-y: contain !important;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+  }
+
+  html.balto-visual-viewport-ready
+    .pp-content.pp-content--table-scroll-only:has(.cfg-listas-tableWrap)
+    .cfg-listas-gridBodyScroll {
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  /* Saldos iniciales · pestaña Cheques */
+  html.balto-visual-viewport-ready
+    .pp-content.pp-content--table-scroll-only:has(.cfg-si-tableWrap)
+    .cfg-si-page {
+    display: flex !important;
+    flex: 1 1 0 !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    max-height: 100% !important;
+    overflow: hidden !important;
+  }
+
+  html.balto-visual-viewport-ready
+    .pp-content.pp-content--table-scroll-only:has(.cfg-si-tableWrap)
+    :is(.cfg-si-hero, .cfg-si-tabs, .cfg-si-panelHead) {
+    flex: 0 0 auto !important;
+  }
+
+  html.balto-visual-viewport-ready
+    .pp-content.pp-content--table-scroll-only:has(.cfg-si-tableWrap)
+    .cfg-si-scroll,
+  html.balto-visual-viewport-ready
+    .pp-content.pp-content--table-scroll-only:has(.cfg-si-tableWrap)
+    .cfg-si-panel {
+    display: flex !important;
+    flex: 1 1 0 !important;
+    flex-direction: column !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: hidden !important;
+  }
+
+  html.balto-visual-viewport-ready
+    .pp-content.pp-content--table-scroll-only:has(.cfg-si-tableWrap)
+    .cfg-si-tableWrap {
+    flex: 1 1 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior-y: contain !important;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+  }
+}
+
+/* =========================================================
+   MOBILE ANGOSTO
+   Neutraliza únicamente alturas antiguas de las tablas estándar.
+   Dashboard, Flujo de Caja y Análisis Financiero no reciben la clase global,
+   por lo que sus reglas propias quedan intactas.
+========================================================= */
+@media (max-width: 720px) {
+  html.balto-visual-viewport-ready
+    .pp-content.pp-content--table-scroll-only
+    .mov-page
+    > .mov-card--table
+    > .mov-tableWrap,
+  html.balto-visual-viewport-ready
+    .pp-content.pp-content--table-scroll-only
+    #cheques-st,
+  html.balto-visual-viewport-ready
+    .pp-content.pp-content--table-scroll-only
+    .doccom-docTableWrap {
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+  }
+}

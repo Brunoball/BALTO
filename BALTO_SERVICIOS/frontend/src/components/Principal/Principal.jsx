@@ -29,6 +29,7 @@ import {
 import "./principal.css";
 import ModalPerfil from "../Perfil/ModalPerfil";
 import useVisualViewport from "../Global/useVisualViewport";
+import "../Global/Global_css/GlobalTableScrollResponsive.css";
 import {
   actualizarTemaBackend,
   cerrarSesionBackend,
@@ -846,6 +847,22 @@ const Principal = () => {
     ]
   );
 
+  /*
+    Responsive tabular viewport (global):
+    cualquier sección que use la estructura estándar mov-page + mov-card--table
+    puede adoptar el alto unificado. Dashboard, Flujo de Caja y Análisis
+    Financiero quedan expresamente fuera porque tienen un comportamiento propio.
+  */
+  const responsivePath = location.pathname.toLowerCase();
+  const tableScrollGlobalExcluded =
+    responsivePath === "/panel" ||
+    responsivePath === "/panel/" ||
+    responsivePath.startsWith("/panel/dashboard") ||
+    responsivePath.startsWith("/panel/flujo-de-caja") ||
+    responsivePath.startsWith("/panel/analisis-financiero");
+  const tableScrollGlobalEnabled =
+    responsivePath.startsWith("/panel") && !tableScrollGlobalExcluded;
+
   return (
     <div className="pp-shell">
       <header className="mov-topbar">
@@ -1137,6 +1154,10 @@ const Principal = () => {
         }${
           location.pathname.startsWith("/panel/cuentas-corrientes")
             ? " pp-content--cuentas-corrientes"
+            : ""
+        }${
+          tableScrollGlobalEnabled
+            ? " pp-content--table-scroll-only"
             : ""
         }`}
       >
