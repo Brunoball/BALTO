@@ -96,10 +96,12 @@
   min-height: 0;
 }
 
-/* La tabla ocupa el espacio interno del card sin crear otra tarjeta local. */
+/* La tabla ocupa el espacio interno del card sin crear otra tarjeta local.
+   IMPORTANTE: no forzar height:auto aca. En monitor, .cc-cliente-table
+   necesita conservar su alto limitado por viewport para que el body sea
+   el que genere scroll. El responsive <=980px redefine el alto a auto. */
 .cc-accountCard > .cc-cliente-table{
   flex: 1 1 auto;
-  height: auto;
   min-height: 0;
 }
 

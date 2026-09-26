@@ -1147,6 +1147,10 @@ const Principal = () => {
             ? " pp-content--analisis-financiero"
             : ""
         }${
+          location.pathname.startsWith("/panel/flujo-de-caja")
+            ? " pp-content--flujo-caja"
+            : ""
+        }${
           location.pathname === "/panel/movimientos" ||
           location.pathname.startsWith("/panel/movimientos/")
             ? " pp-content--movimientos"

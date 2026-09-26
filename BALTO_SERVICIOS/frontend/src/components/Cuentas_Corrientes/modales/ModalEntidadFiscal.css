@@ -312,6 +312,75 @@
   min-height: 365px;
 }
 
+/* =========================================================
+   MONITOR · SCROLL INTERNO DEL LISTADO
+   ---------------------------------------------------------
+   El modal administrador (Clientes / Proveedores) necesita una
+   cadena de alturas/flex acotada para que overflow-y: auto del
+   body pueda actuar. Se aplica solo en escritorio; el responsive
+   <= 980px conserva sus reglas propias sin cambios.
+   ========================================================= */
+@media (min-width: 981px) {
+  .mi-modal__container.cc-entity-modal {
+    height: min(92vh, 820px);
+    min-height: 0;
+  }
+
+  .cc-entity-modal > .mi-modal__content {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .cc-entity-modal .cc-entity-admin-grid--list-only {
+    display: flex !important;
+    flex: 1 1 0;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .cc-entity-modal .cc-entity-list-panel {
+    display: flex;
+    flex: 1 1 0;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .cc-entity-modal .cc-entity-list-table {
+    display: flex;
+    flex: 1 1 0;
+    flex-direction: column;
+    width: 100%;
+    height: auto;
+    min-height: 0;
+    max-height: none;
+    overflow: hidden;
+  }
+
+  .cc-entity-modal .cc-cliente-table__desktopHead,
+  .cc-entity-modal .mi-cr-table__foot--top {
+    flex: 0 0 auto;
+  }
+
+  .cc-entity-modal .cc-cliente-table__body {
+    flex: 1 1 0;
+    width: 100%;
+    height: auto;
+    min-height: 0;
+    max-height: none;
+    overflow-x: hidden;
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+    overscroll-behavior-y: contain;
+  }
+}
+
 /* Modal específico de Datos legales */
 .cc-legal-modal__overlay{
   z-index: 10000000001;
