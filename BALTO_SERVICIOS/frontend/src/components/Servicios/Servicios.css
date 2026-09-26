@@ -343,7 +343,7 @@
 
 .servicios-component-row {
   display: grid;
-  grid-template-columns: minmax(0, 1.3fr) 120px auto 30px;
+  grid-template-columns: minmax(0, 1.3fr) 112px auto 92px 30px;
   align-items: center;
   gap: 7px;
   padding: 9px;
@@ -399,6 +399,16 @@
   font-size: 9px;
   font-weight: 900;
   opacity: .55;
+}
+
+.servicios-component-row .gm-field.servicios-component-iva {
+  min-width: 0;
+}
+
+.servicios-component-row .servicios-component-iva__select.gm-input {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .servicios-component-remove {

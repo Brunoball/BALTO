@@ -20,8 +20,12 @@ import {
 } from './support/flows.js';
 import {
   createServiceArticleFixture,
+  createServiceFixture,
+  deleteServiceFixture,
   deleteServiceArticleFixture,
+  ensureActiveServiceUnit,
   expectServiceStock,
+  serviciosApi,
 } from './support/services.js';
 
 const IVA_VALUES = ['0', '10.5', '21', '27'];
@@ -38,6 +42,139 @@ async function authenticatedApiGet(page, actionAndQuery) {
     return { status: response.status, body };
   }, { url: `${apiBase}/api.php?${actionAndQuery}` });
 }
+
+test('@crud @critical presupuesto PDF desglosa servicio en materiales, unidad, mano de obra e importe', async ({ page }, testInfo) => {
+  test.setTimeout(4 * 60_000);
+  await requireMutations(test, page);
+  const diagnostics = installDiagnostics(page);
+  const materialName = uniqueName('PRESU-PDF-MATERIAL');
+  const workerName = uniqueName('PRESU-PDF-TRABAJADOR');
+  const serviceName = uniqueName('PRESU-PDF-SERVICIO');
+  const unit = await ensureActiveServiceUnit(page);
+  let material = null;
+  let service = null;
+  let workerId = 0;
+  let budgetCreated = false;
+
+  try {
+    material = await createServiceArticleFixture(page, {
+      type: 'MATERIAL',
+      name: materialName,
+      idUnit: Number(unit.id_unidad),
+      controlStock: true,
+      stock: 50,
+      cost: 100,
+      price: 180,
+      ivaPct: 21,
+    });
+
+    const workerCreate = await serviciosApi(page, 'servicios_trabajador_crear', {
+      method: 'POST',
+      body: {
+        nombre: workerName,
+        documento: uniqueName('DOC-PRESU-PDF', 28),
+        rol: 'TECNICO E2E',
+        tipo_trabajador: 'CONTRATADO',
+        modalidad_pago: 'HORA',
+        monto_periodo: 120,
+        horas_periodo: 1,
+        notas: `FIXTURE ${workerName}`,
+      },
+    });
+    expect(workerCreate.status, JSON.stringify(workerCreate.body || {})).toBeLessThan(400);
+    expect(workerCreate.body?.exito !== false, workerCreate.body?.mensaje || 'Alta de trabajador fallida').toBeTruthy();
+    workerId = Number(workerCreate.body?.id_trabajador || workerCreate.body?.data?.id_trabajador || 0);
+    expect(workerId).toBeGreaterThan(0);
+
+    service = await createServiceFixture(page, {
+      name: serviceName,
+      idUnit: Number(unit.id_unidad),
+      baseCost: 40,
+      price: 1000,
+      ivaPct: 21,
+      // El material global tiene 21 %, pero dentro de ESTE servicio lo dejamos
+      // en 10,5 % para verificar que el IVA por componente sea independiente.
+      articles: [{ id_articulo: Number(material.id_articulo), cantidad: 2, iva_pct: 10.5 }],
+      workers: [{ id_trabajador: workerId, horas_estimadas: 3 }],
+    });
+
+    const serviceDetail = await serviciosApi(page, 'servicios_servicio_obtener', {
+      query: { id_servicio: Number(service.id_servicio) },
+    });
+    expect(serviceDetail.status, JSON.stringify(serviceDetail.body || {})).toBeLessThan(400);
+    const savedComponents = serviceDetail.body?.articulos
+      || serviceDetail.body?.data?.articulos
+      || serviceDetail.body?.servicio?.articulos
+      || serviceDetail.body?.data?.servicio?.articulos
+      || [];
+    const savedMaterial = savedComponents.find((row) => Number(row?.id_articulo) === Number(material.id_articulo));
+    expect(savedMaterial, 'El servicio debe devolver el material de la composición').toBeTruthy();
+    expect(Number(savedMaterial?.iva_pct)).toBeCloseTo(10.5, 2);
+
+    // Los fixtures se crean por API y ListasContext puede conservar el catálogo
+    // anterior en memoria. La recarga fuerza a Presupuestos a leer la composición
+    // recién creada, igual que ocurriría al entrar normalmente al sistema.
+    await page.goto('/panel/presupuesto');
+    await page.reload({ waitUntil: 'domcontentloaded' });
+
+    const uploadRequestPromise = page.waitForRequest(
+      (request) =>
+        request.method() === 'POST' &&
+        request.url().includes('action=ventas_comprobantes_vincular_movimiento'),
+      { timeout: 90_000 },
+    );
+
+    await createBudget(page, {
+      serviceName,
+      quantity: 1,
+      price: 1000,
+      ivaPct: 21,
+    });
+    budgetCreated = true;
+
+    const uploadRequest = await uploadRequestPromise;
+    const multipart = uploadRequest.postDataBuffer()?.toString('utf8') || uploadRequest.postData() || '';
+    const normalizedMultipart = multipart.toLocaleUpperCase('es-AR');
+    const unitSymbol = String(unit.simbolo || unit.simbolo_unidad || '').trim().toLocaleUpperCase('es-AR');
+
+    expect(normalizedMultipart).toContain(materialName.toLocaleUpperCase('es-AR'));
+    expect(normalizedMultipart).toContain('MANO DE OBRA');
+    expect(normalizedMultipart).not.toContain('MANO DE OBRA / SERVICIO');
+    expect(normalizedMultipart).toContain(`\"UNIDAD\":\"H\"`);
+    if (unitSymbol) expect(normalizedMultipart).toContain(`\"UNIDAD\":\"${unitSymbol}\"`);
+    expect(normalizedMultipart).toContain(`\"DESGLOSE_SERVICIO\":TRUE`);
+    expect(normalizedMultipart).toContain(`\"GRUPO_SERVICIO\":\"${serviceName.toLocaleUpperCase('es-AR')}\"`);
+    expect(normalizedMultipart).toContain(`\"IVA_PCT\":10.5`);
+    expect(normalizedMultipart).toContain(`\"IVA_PCT\":21`);
+    expect(normalizedMultipart).toContain(`\"TOTAL\":403.33`);
+    expect(normalizedMultipart).toContain(`\"TOTAL\":806.67`);
+    expect(normalizedMultipart).toContain(`\"DESCRIPCION\":\"${materialName.toLocaleUpperCase('es-AR')}\"`);
+    expect(normalizedMultipart).not.toContain(`${serviceName.toLocaleUpperCase('es-AR')} - ${materialName.toLocaleUpperCase('es-AR')}`);
+    expect(normalizedMultipart).not.toContain(`${serviceName.toLocaleUpperCase('es-AR')} | INCLUYE:`);
+
+    await deleteBudget(page, serviceName);
+    budgetCreated = false;
+  } finally {
+    if (budgetCreated) {
+      await page.goto('/panel/presupuesto').catch(() => null);
+      await deleteBudget(page, serviceName).catch(() => null);
+    }
+    if (service?.id_servicio) {
+      await deleteServiceFixture(page, service.id_servicio, { tolerateHistoricalUse: true }).catch(() => null);
+    }
+    if (material?.id_articulo) {
+      await deleteServiceArticleFixture(page, materialName, { tolerateHistoricalUse: true }).catch(() => null);
+    }
+    if (workerId) {
+      await serviciosApi(page, 'servicios_trabajador_eliminar', {
+        method: 'POST',
+        body: { id_trabajador: workerId },
+      }).catch(() => null);
+    }
+  }
+
+  await assertNoCriticalErrors(diagnostics, testInfo, { allowConsole: [/PDF/i, /imagen/i] });
+});
 
 test('@crud @critical presupuesto: crear, eliminar y convertir sin doble impacto', async ({ page }, testInfo) => {
   // Este recorrido hace dos altas de stock, dos presupuestos, conversión,

@@ -116,29 +116,131 @@ function upperStr(v) {
   return upperInput(v).trim();
 }
 
-function formatQtyPdf(v) {
-  const n = Number(v);
-  if (!Number.isFinite(n)) return "";
-  return n.toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 6 });
+function roundMoney(value) {
+  return Math.round((safeNumber(value) + Number.EPSILON) * 100) / 100;
 }
 
-function buildServiceDocumentDescription(row) {
-  const nombre = safeStr(row?.detalleText) || "Servicio";
-  if (!(Number(row?.id_servicio || 0) > 0)) return nombre;
+function roundQty(value) {
+  return Math.round((safeNumber(value) + Number.EPSILON) * 1000000) / 1000000;
+}
+
+function allocateMoneyByWeights(totalRaw, weightsRaw) {
+  const weights = (Array.isArray(weightsRaw) ? weightsRaw : []).map((x) => Math.max(0, safeNumber(x)));
+  if (!weights.length) return [];
+  const total = roundMoney(totalRaw);
+  const weightTotal = weights.reduce((acc, x) => acc + x, 0);
+  if (!(weightTotal > 0)) return weights.map(() => 0);
+  let lastPositive = -1;
+  weights.forEach((weight, idx) => {
+    if (weight > 0) lastPositive = idx;
+  });
+
+  let assigned = 0;
+  return weights.map((weight, idx) => {
+    if (!(weight > 0)) return 0;
+    if (idx === lastPositive) return roundMoney(total - assigned);
+    const value = roundMoney(total * (weight / weightTotal));
+    assigned = roundMoney(assigned + value);
+    return value;
+  });
+}
+
+function buildPdfItemsForBudgetRow(row) {
+  const nombre = upperStr(row?.detalleText) || "PRODUCTO / SERVICIO";
+  const cantidad = safeNumber(row?.cantidad);
+  const precio = safeNumber(row?.precio);
+  const ivaPct = safeNumber(row?.ivaPct);
+  const subtotal = roundMoney(row?.subtotal ?? cantidad * precio);
+  const ivaMonto = roundMoney(row?.iva_monto ?? subtotal * ivaPct / 100);
+  const total = roundMoney(row?.total ?? subtotal + ivaMonto);
+  const unidad = upperStr(row?.unidad_simbolo || row?.unidad_nombre || (row?.tipo_item === "SERVICIO" ? "SERV." : "U"));
+  const base = {
+    tipo_item: row?.tipo_item === "SERVICIO" ? "SERVICIO" : (row?.tipo_item === "ARTICULO" ? "ARTICULO" : "MANUAL"),
+    id_servicio: row?.tipo_item === "SERVICIO" ? (row?.id_servicio || null) : null,
+    id_articulo: row?.tipo_item === "ARTICULO" ? (row?.id_articulo || row?.id_stock_producto || null) : null,
+    id_detalle: null,
+    id_stock_producto: row?.tipo_item === "ARTICULO" ? (row?.id_articulo || row?.id_stock_producto || null) : null,
+    id_stock_variante: null,
+    codigo: row?.codigo || "",
+    descripcion: nombre,
+    detalle: nombre,
+    cantidad,
+    unidad,
+    precio,
+    precio_unitario: precio,
+    iva_pct: ivaPct,
+    subtotal,
+    iva_monto: ivaMonto,
+    total,
+    id_tipo_precio_stock: row?.id_tipo_precio_stock || null,
+    tipo_precio: row?.precio_tipo_label || "",
+  };
+
+  if (!(row?.tipo_item === "SERVICIO" && Number(row?.id_servicio || 0) > 0)) return [base];
 
   const componentes = normalizeServiceStockComponents(row?.consumos_snapshot);
-  if (!componentes.length) return nombre;
+  const costoManoObra = Math.max(0, safeNumber(row?.costo_mano_obra));
+  const costoBase = Math.max(0, safeNumber(row?.costo_base));
+  const horasManoObra = Math.max(0, safeNumber(row?.horas_mano_obra));
+  const detalles = componentes.map((componente) => ({
+    kind: "MATERIAL",
+    nombre: upperStr(componente?.nombre) || "MATERIAL / INSUMO",
+    cantidad: roundQty(cantidad * safeNumber(componente?.cantidad_por_unidad)),
+    unidad: upperStr(componente?.unidad_simbolo || componente?.unidad_nombre || "U"),
+    weight: Math.max(0, safeNumber(componente?.cantidad_por_unidad) * safeNumber(componente?.costo_unitario)),
+    ivaPct: Math.max(0, safeNumber(componente?.iva_pct)),
+  }));
 
-  const detalle = componentes
-    .map((c) => {
-      const qty = formatQtyPdf(c?.cantidad_por_unidad);
-      const unidad = safeStr(c?.unidad_simbolo);
-      const recurso = safeStr(c?.nombre) || "Material / insumo";
-      return `${recurso}${qty ? ` x ${qty}${unidad ? ` ${unidad}` : ""}` : ""}`;
-    })
-    .join(" · ");
+  if (costoManoObra > 0 || costoBase > 0 || horasManoObra > 0) {
+    detalles.push({
+      kind: "MANO_OBRA",
+      nombre: "MANO DE OBRA / SERVICIO",
+      cantidad: horasManoObra > 0 ? roundQty(cantidad * horasManoObra) : cantidad,
+      unidad: horasManoObra > 0 ? "H" : unidad,
+      weight: costoManoObra + costoBase,
+      ivaPct,
+    });
+  }
 
-  return `${nombre} | Incluye: ${detalle}`;
+  if (!detalles.length) return [base];
+
+  // El importe FINAL del servicio no cambia. Para que cada renglón pueda mostrar
+  // su propio IVA sin alterar el total comercial, distribuimos el bruto del
+  // servicio según la composición de costos y luego reconstruimos neto + IVA de
+  // cada componente con la alícuota configurada para ese material/insumo.
+  const hayPesos = detalles.some((item) => item.weight > 0);
+  const weights = detalles.map((item) => hayPesos ? item.weight : 1);
+  const totalesBrutos = allocateMoneyByWeights(total, weights);
+
+  return detalles.map((item, idx) => {
+    const itemIvaPct = Math.max(0, safeNumber(item.ivaPct));
+    const itemTotal = roundMoney(totalesBrutos[idx] || 0);
+    const divisorIva = 1 + itemIvaPct / 100;
+    const itemSubtotal = roundMoney(divisorIva > 0 ? itemTotal / divisorIva : itemTotal);
+    const itemIva = roundMoney(itemTotal - itemSubtotal);
+    const itemCantidad = safeNumber(item.cantidad);
+    const precioUnitario = itemCantidad > 0 ? itemSubtotal / itemCantidad : itemSubtotal;
+    const descripcion = item.kind === "MANO_OBRA" ? "MANO DE OBRA" : item.nombre;
+    return {
+      ...base,
+      codigo: "",
+      descripcion,
+      detalle: descripcion,
+      cantidad: itemCantidad > 0 ? itemCantidad : cantidad,
+      unidad: item.unidad || unidad,
+      precio: precioUnitario,
+      precio_unitario: precioUnitario,
+      iva_pct: itemIvaPct,
+      subtotal: itemSubtotal,
+      iva_monto: itemIva,
+      total: itemTotal,
+      desglose_servicio: true,
+      componente_tipo: item.kind,
+      grupo_servicio: nombre,
+      grupo_codigo: base.codigo,
+      grupo_clave: String(row?.id || row?.id_servicio || nombre),
+    };
+  });
 }
 
 function normalizeText(v) {
@@ -725,6 +827,8 @@ function buildEmptyRow() {
     id_stock_variante: NULL_OPTION,
     detalleText: "",
     codigo: "",
+    unidad_nombre: "",
+    unidad_simbolo: "",
     cantidad: 1,
     precio: 0,
     precioDraft: "",
@@ -737,6 +841,9 @@ function buildEmptyRow() {
     controla_stock: null,
     sinStock: false,
     consumos_snapshot: [],
+    costo_base: 0,
+    costo_mano_obra: 0,
+    horas_mano_obra: 0,
   };
 }
 
@@ -753,6 +860,10 @@ function buildRowFromModelItem(item, catalogo = []) {
   const servicioCatalogo = idServicio > 0
     ? (Array.isArray(catalogo) ? catalogo.find((x) => Number(getServicioId(x) || 0) === idServicio) : null)
     : null;
+  const articuloCatalogo = idStockProducto > 0
+    ? (Array.isArray(catalogo) ? catalogo.find((x) => Number(getStockProductoId(x) || 0) === idStockProducto) : null)
+    : null;
+  const catalogoItem = servicioCatalogo || articuloCatalogo || null;
   const consumosServicio = idServicio > 0
     ? (snapshotModelo.length ? snapshotModelo : normalizeServiceStockComponents(servicioCatalogo))
     : [];
@@ -767,6 +878,8 @@ function buildRowFromModelItem(item, catalogo = []) {
     id_stock_variante: idStockVariante > 0 ? idStockVariante : NULL_OPTION,
     detalleText: upperStr(raw.descripcion || raw.detalle || raw.nombre || raw.detalle_nombre),
     codigo: upperStr(raw.codigo || raw.sku || raw.stock_producto_sku || raw.stock_variante_sku),
+    unidad_nombre: upperStr(raw.unidad_nombre || catalogoItem?.unidad_nombre),
+    unidad_simbolo: upperStr(raw.unidad_simbolo || catalogoItem?.unidad_simbolo),
     cantidad: cantidad > 0 ? cantidad : 1,
     precio: precio >= 0 ? precio : 0,
     ivaPct: ivaPct >= 0 ? ivaPct : 0,
@@ -774,6 +887,9 @@ function buildRowFromModelItem(item, catalogo = []) {
     controla_stock: null,
     sinStock: false,
     consumos_snapshot: consumosServicio,
+    costo_base: idServicio > 0 ? safeNumber(servicioCatalogo?.costo_base) : 0,
+    costo_mano_obra: idServicio > 0 ? safeNumber(servicioCatalogo?.costo_mano_obra) : 0,
+    horas_mano_obra: idServicio > 0 ? safeNumber(servicioCatalogo?.horas_mano_obra) : 0,
     precios_disponibles: [],
     id_tipo_precio_stock: NULL_OPTION,
     precio_tipo_label: "",
@@ -1012,6 +1128,8 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
       id_stock_variante: NULL_OPTION,
       detalleText: "",
       codigo: "",
+      unidad_nombre: "",
+      unidad_simbolo: "",
       cantidad: 1,
       precio: 0,
       precioDraft: "",
@@ -1023,6 +1141,9 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
       controla_stock: null,
       sinStock: false,
       consumos_snapshot: [],
+      costo_base: 0,
+      costo_mano_obra: 0,
+      horas_mano_obra: 0,
     });
   }, [updateRow]);
 
@@ -1208,6 +1329,8 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
       id_stock_variante: idStockVariante || NULL_OPTION,
       detalleText: nombreDetalle,
       codigo: getDetalleCodigo(detalle),
+      unidad_nombre: upperStr(detalle?.unidad_nombre),
+      unidad_simbolo: upperStr(detalle?.unidad_simbolo),
       cantidad: 1,
       precio: inicial ? safeNumber(inicial.monto) : 0,
       precioDraft: "",
@@ -1218,7 +1341,11 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
       stock_disponible: stockDisponible,
       controla_stock: esServicio ? null : (Number(detalle?.controla_stock ?? detalle?.mueve_stock ?? 1) === 1 ? 1 : 0),
       sinStock,
+      ivaPct: safeNumber(detalle?.iva_pct ?? detalle?.ivaPct ?? 0),
       consumos_snapshot: esServicio ? normalizeServiceStockComponents(detalle) : [],
+      costo_base: esServicio ? safeNumber(detalle?.costo_base) : 0,
+      costo_mano_obra: esServicio ? safeNumber(detalle?.costo_mano_obra) : 0,
+      horas_mano_obra: esServicio ? safeNumber(detalle?.horas_mano_obra) : 0,
     });
   }, [updateRow]);
 
@@ -1232,6 +1359,8 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
       id_stock_producto: NULL_OPTION,
       id_stock_variante: NULL_OPTION,
       codigo: "",
+      unidad_nombre: "",
+      unidad_simbolo: "",
       precios_disponibles: [],
       precio_tipo_label: "",
       precioDraft: "",
@@ -1240,6 +1369,9 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
       controla_stock: null,
       sinStock: false,
       consumos_snapshot: [],
+      costo_base: 0,
+      costo_mano_obra: 0,
+      horas_mano_obra: 0,
     });
   }, [updateRow]);
 
@@ -1416,6 +1548,8 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
         id_stock_producto: r.tipo_item === "ARTICULO" ? (r.id_articulo || r.id_stock_producto || null) : null,
         id_stock_variante: null,
         codigo: r.codigo || "",
+        unidad_nombre: r.unidad_nombre || "",
+        unidad_simbolo: r.unidad_simbolo || "",
         descripcion: upperStr(r.detalleText),
         detalle: upperStr(r.detalleText),
         cantidad: r.cantidad,
@@ -1433,38 +1567,14 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
       }));
   }, [computedRows]);
 
-  // El payload persistido conserva la descripción corta para no cambiar datos del
-  // movimiento. El PDF, en cambio, debe ser descriptivo: si la fila es un servicio
-  // se imprime la composición vigente elegida en el presupuesto (materiales e insumos).
+  // El payload persistido conserva exactamente el ítem comercial original para no
+  // cambiar movimientos, stock ni conversión a venta. Sólo el PDF expande un servicio
+  // en materiales/insumos + mano de obra y distribuye su importe comercial según la
+  // composición de costos. La suma del desglose sigue siendo exactamente la del servicio.
   const buildPdfItemsPayload = useCallback(() => {
     return computedRows
       .filter((r) => safeStr(r.detalleText) && r.cantidad > 0 && r.precio > 0)
-      .map((r) => {
-        const descripcionPdf = upperStr(buildServiceDocumentDescription(r));
-        return {
-          tipo_item: r.tipo_item === "SERVICIO" ? "SERVICIO" : (r.tipo_item === "ARTICULO" ? "ARTICULO" : "MANUAL"),
-          id_servicio: r.tipo_item === "SERVICIO" ? (r.id_servicio || null) : null,
-          id_articulo: r.tipo_item === "ARTICULO" ? (r.id_articulo || r.id_stock_producto || null) : null,
-          id_detalle: null,
-          id_stock_producto: r.tipo_item === "ARTICULO" ? (r.id_articulo || r.id_stock_producto || null) : null,
-          id_stock_variante: null,
-          codigo: r.codigo || "",
-          descripcion: descripcionPdf,
-          detalle: descripcionPdf,
-          cantidad: r.cantidad,
-          precio: r.precio,
-          precio_unitario: r.precio,
-          iva_pct: r.ivaPct,
-          subtotal: r.subtotal,
-          iva_monto: r.iva_monto,
-          total: r.total,
-          id_tipo_precio_stock: r.id_tipo_precio_stock || null,
-          tipo_precio: r.precio_tipo_label || "",
-          consumos_snapshot: Number(r.id_servicio || 0) > 0
-            ? serializeServiceStockComponents(r.consumos_snapshot)
-            : undefined,
-        };
-      });
+      .flatMap((r) => buildPdfItemsForBudgetRow(r));
   }, [computedRows]);
 
   const uploadPresupuestoPdf = useCallback(async ({ idMovimiento, payload, items }) => {

@@ -67,6 +67,9 @@ export function normalizeServiceStockComponents(source) {
       nombre: text(item?.nombre ?? item?.articulo_nombre ?? item?.descripcion) || `Artículo #${id}`,
       articulo_tipo: articleType(item),
       cantidad_por_unidad: qty,
+      costo_unitario: n(item?.costo_unitario ?? item?.costo_unitario_snapshot, 0),
+      precio_venta: n(item?.precio_venta ?? item?.precio_unitario ?? item?.precio, 0),
+      iva_pct: n(item?.iva_pct ?? item?.ivaPct ?? item?.iva_pct_servicio ?? 0, 0),
       stock_actual: currentStock(item),
       stock_disponible: currentStock(item),
       unidad_nombre: text(item?.unidad_nombre),
@@ -82,6 +85,7 @@ export function serializeServiceStockComponents(components) {
   return normalizeServiceStockComponents(components).map((item) => ({
     id_articulo: item.id_articulo,
     cantidad_por_unidad: Math.round(item.cantidad_por_unidad * 1000000) / 1000000,
+    iva_pct: Math.round(n(item.iva_pct, 0) * 100) / 100,
   }));
 }
 
@@ -126,6 +130,9 @@ function optionToComponent(option, qty = 1) {
     nombre: text(option?.nombre ?? option?.articulo_nombre ?? option?.descripcion) || `Artículo #${id}`,
     articulo_tipo: articleType(option),
     cantidad_por_unidad: Math.max(EPS, n(qty, 1)),
+    costo_unitario: n(option?.costo_unitario ?? option?.costo_unitario_snapshot, 0),
+    precio_venta: n(option?.precio_venta ?? option?.precio_unitario ?? option?.precio, 0),
+    iva_pct: n(option?.iva_pct ?? option?.ivaPct ?? 0, 0),
     stock_actual: currentStock(option),
     stock_disponible: currentStock(option),
     unidad_nombre: text(option?.unidad_nombre),

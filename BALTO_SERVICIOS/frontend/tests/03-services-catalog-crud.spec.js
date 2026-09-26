@@ -320,7 +320,7 @@ test.describe('BALTO Servicios - catálogo principal', () => {
         precio_venta: 1000,
         iva_pct: 21,
         composicion: {
-          articulos: [{ id_articulo: Number(article.id_articulo), cantidad: 2 }],
+          articulos: [{ id_articulo: Number(article.id_articulo), cantidad: 2, iva_pct: 10.5 }],
           trabajadores: [{ id_trabajador: workerId, horas_estimadas: 1.5 }],
         },
       });
@@ -330,6 +330,7 @@ test.describe('BALTO Servicios - catálogo principal', () => {
       let serviceGet = await apiGet(page, 'servicios_servicio_obtener', { id_servicio: serviceId });
       expect(serviceGet.servicio?.nombre).toBe(serviceName);
       expect(serviceGet.servicio?.articulos?.some((row) => Number(row.id_articulo) === Number(article.id_articulo))).toBe(true);
+      expect(Number(serviceGet.servicio?.articulos?.find((row) => Number(row.id_articulo) === Number(article.id_articulo))?.iva_pct)).toBeCloseTo(10.5, 6);
       expect(serviceGet.servicio?.trabajadores?.some((row) => Number(row.id_trabajador) === workerId)).toBe(true);
 
       let catalog = (await apiGet(page, 'servicios_catalogo_listar', { activo: 'todos', q: serviceName })).servicios;
@@ -338,12 +339,13 @@ test.describe('BALTO Servicios - catálogo principal', () => {
       await apiPost(page, 'servicios_composicion_guardar', {
         id_servicio: serviceId,
         composicion: {
-          articulos: [{ id_articulo: Number(article.id_articulo), cantidad: 3 }],
+          articulos: [{ id_articulo: Number(article.id_articulo), cantidad: 3, iva_pct: 27 }],
           trabajadores: [{ id_trabajador: workerId, horas_estimadas: 2 }],
         },
       });
       serviceGet = await apiGet(page, 'servicios_servicio_obtener', { id_servicio: serviceId });
       expect(Number(serviceGet.servicio?.articulos?.[0]?.cantidad)).toBeCloseTo(3, 6);
+      expect(Number(serviceGet.servicio?.articulos?.[0]?.iva_pct)).toBeCloseTo(27, 6);
       expect(Number(serviceGet.servicio?.trabajadores?.[0]?.horas_estimadas)).toBeCloseTo(2, 6);
 
       await apiPost(page, 'servicios_servicio_actualizar', {
@@ -375,6 +377,17 @@ test.describe('BALTO Servicios - catálogo principal', () => {
       for (const title of ['Ver historial', 'Editar', 'Dar de baja', 'Eliminar']) {
         await expect(row.getByTitle(title)).toBeVisible();
       }
+
+      // La alícuota pertenece a la composición de ESTE servicio y debe volver a
+      // mostrarse al editarlo, sin modificar el IVA global del material.
+      await row.getByTitle('Editar').click();
+      const editServiceDialog = await waitDialog(page, 'Editar servicio');
+      await editServiceDialog.getByRole('tab', { name: 'Composición del servicio', exact: true }).click();
+      const articleCompositionRow = editServiceDialog.locator('.servicios-component-row').filter({ hasText: articleName }).first();
+      await expect(articleCompositionRow).toBeVisible();
+      await expect(articleCompositionRow.getByRole('combobox')).toHaveValue('27');
+      await editServiceDialog.getByRole('button', { name: 'Cerrar', exact: true }).click();
+      await expect(editServiceDialog).toBeHidden();
 
       await page.getByRole('tablist').getByRole('button', { name: /^Trabajadores$/ }).click();
       const workerSearch = page.getByPlaceholder('Buscar trabajador o rol...');

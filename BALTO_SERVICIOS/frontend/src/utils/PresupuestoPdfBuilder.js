@@ -341,16 +341,21 @@ function normalizeItems(data) {
       const subtotal = safeNumber(it?.subtotal ?? cantidad * precio, cantidad * precio);
       const ivaMonto = safeNumber(it?.iva_monto ?? subtotal * ivaPct / 100, subtotal * ivaPct / 100);
       const total = safeNumber(it?.total ?? subtotal + ivaMonto, subtotal + ivaMonto);
+      const desgloseServicio = Boolean(it?.desglose_servicio ?? it?.desgloseServicio);
       return {
-        codigo: sanitizePdfText(it?.codigo || it?.sku || String(idx + 1)),
+        codigo: sanitizePdfText(it?.codigo || it?.sku || (desgloseServicio ? "" : String(idx + 1))),
         descripcion: sanitizePdfText(it?.descripcion || it?.detalle || it?.nombre || "Producto / Servicio"),
         cantidad,
-        unidad: sanitizePdfText(it?.unidad || "u"),
+        unidad: sanitizePdfText(it?.unidad || it?.unidad_simbolo || it?.unidad_nombre || "u"),
         precio,
         ivaPct,
         subtotal,
         ivaMonto,
         total,
+        desgloseServicio,
+        grupoServicio: sanitizePdfText(it?.grupo_servicio || it?.grupoServicio || ""),
+        grupoCodigo: sanitizePdfText(it?.grupo_codigo || it?.grupoCodigo || ""),
+        grupoClave: sanitizePdfText(it?.grupo_clave || it?.grupoClave || it?.grupo_servicio || it?.grupoServicio || ""),
       };
     })
     .filter((it) => it.descripcion && it.cantidad > 0);
@@ -360,6 +365,16 @@ function getTotales(items, data) {
   const subtotal = items.reduce((a, it) => a + safeNumber(it.subtotal, 0), 0);
   const iva = items.reduce((a, it) => a + safeNumber(it.ivaMonto, 0), 0);
   const total = items.reduce((a, it) => a + safeNumber(it.total, 0), 0);
+  const tieneDesgloseServicio = items.some((it) => Boolean(it?.desgloseServicio));
+
+  // Cuando un servicio se presenta desglosado, cada material/insumo puede tener
+  // una alícuota propia. En ese caso el PDF debe cerrar contra sus renglones
+  // visibles; el total bruto se conserva exactamente, pero neto e IVA se
+  // reconstruyen según esas alícuotas.
+  if (tieneDesgloseServicio) {
+    return { subtotal, iva, total };
+  }
+
   return {
     subtotal: safeNumber(data?.subtotal_ars ?? data?.subtotal, subtotal),
     iva: safeNumber(data?.iva_ars ?? data?.iva, iva),
@@ -598,7 +613,7 @@ function drawTableHeader(doc, y) {
   text(doc, "U.M.", c.x4 - c.padR, y + 15, { align: "right" });
   text(doc, "Precio Unit.", c.x5 - c.padR, y + 15, { align: "right" });
   text(doc, "IVA %", c.x6 - c.padR, y + 15, { align: "right" });
-  text(doc, "Subtotal", c.x7 - c.padR, y + 15, { align: "right" });
+  text(doc, "Importe", c.x7 - c.padR, y + 15, { align: "right" });
   return { nextY: y + rowH + 15, cols: c };
 }
 
@@ -608,7 +623,7 @@ function drawTableRow(doc, item, idx, cols, y, maxBodyY) {
   const descMaxW = cols.x2 - cols.padR - (cols.x1 + cols.padL);
   const codeLines = wrapCompactByWidth(
     doc,
-    item.codigo || String(idx + 1),
+    item.desgloseServicio ? (item.codigo || "") : (item.codigo || String(idx + 1)),
     Math.max(20, codeMaxW)
   );
   const descLines = wrapByWidth(doc, item.descripcion, Math.max(20, descMaxW));
@@ -622,8 +637,41 @@ function drawTableRow(doc, item, idx, cols, y, maxBodyY) {
   text(doc, s(item.unidad || "u"), cols.x4 - cols.padR, y, { align: "right" });
   text(doc, moneyEs(item.precio), cols.x5 - cols.padR, y, { align: "right" });
   text(doc, numEs(item.ivaPct, 2), cols.x6 - cols.padR, y, { align: "right" });
-  text(doc, moneyEs(item.subtotal), cols.x7 - cols.padR, y, { align: "right" });
+  text(doc, moneyEs(item.total), cols.x7 - cols.padR, y, { align: "right" });
   return { y: y + blockH + 5, drawn: true };
+}
+
+function tableRowHeight(doc, item, cols) {
+  set(doc, "helvetica", "normal", 8.7);
+  const codeMaxW = cols.x1 - cols.padR - (cols.x0 + cols.padL);
+  const descMaxW = cols.x2 - cols.padR - (cols.x1 + cols.padL);
+  const codeText = item.desgloseServicio ? (item.codigo || "") : (item.codigo || "1");
+  const codeLines = wrapCompactByWidth(doc, codeText, Math.max(20, codeMaxW));
+  const descLines = wrapByWidth(doc, item.descripcion, Math.max(20, descMaxW));
+  const lh = 11;
+  const blockH = Math.max(14, Math.max(codeLines.length, descLines.length) * lh);
+  return blockH + 5;
+}
+
+function drawServiceGroupHeader(doc, item, cols, y, maxBodyY) {
+  const rowH = 20;
+  if (y + rowH > maxBodyY) return { y, drawn: false };
+
+  fillRect(doc, cols.x0, y - 5, cols.x7 - cols.x0, rowH, 0.94);
+  line(doc, cols.x0, y - 5, cols.x7, y - 5, 0.35);
+  line(doc, cols.x0, y - 5 + rowH, cols.x7, y - 5 + rowH, 0.35);
+
+  set(doc, "helvetica", "bold", 8.8);
+  if (item.grupoCodigo) {
+    text(doc, clampToWidth(doc, item.grupoCodigo, cols.x1 - cols.x0 - cols.padL - cols.padR), cols.x0 + cols.padL, y + 8);
+  }
+  text(
+    doc,
+    clampToWidth(doc, item.grupoServicio || "SERVICIO", cols.x7 - cols.x1 - cols.padL - cols.padR),
+    cols.x1 + cols.padL,
+    y + 8
+  );
+  return { y: y + rowH, drawn: true };
 }
 
 function drawTotalsAndFooter(doc, items, data, y) {
@@ -729,11 +777,32 @@ export async function buildPresupuestoPdf({ data } = {}) {
   };
 
   startPage();
+  let activeServiceGroup = "";
   items.forEach((it, idx) => {
+    const group = String(it?.grupoServicio || "").trim();
+    const groupKey = String(it?.grupoClave || group).trim();
+    if (group && groupKey !== activeServiceGroup) {
+      const needed = 20 + tableRowHeight(doc, it, cols);
+      if (y + needed > bottomLimit) {
+        doc.addPage();
+        startPage();
+      }
+      const groupHeader = drawServiceGroupHeader(doc, it, cols, y, bottomLimit);
+      if (groupHeader.drawn) y = groupHeader.y;
+      activeServiceGroup = groupKey;
+    } else if (!group) {
+      activeServiceGroup = "";
+    }
+
     const res = drawTableRow(doc, it, idx, cols, y, bottomLimit);
     if (!res.drawn) {
       doc.addPage();
       startPage();
+      if (group) {
+        const groupHeader = drawServiceGroupHeader(doc, it, cols, y, bottomLimit);
+        if (groupHeader.drawn) y = groupHeader.y;
+        activeServiceGroup = groupKey;
+      }
       const next = drawTableRow(doc, it, idx, cols, y, bottomLimit);
       y = next.y;
     } else {

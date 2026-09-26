@@ -177,11 +177,14 @@ function positiveId(...values) {
 function isServiceItem(item) {
   const tipoDb = String(item?.tipo_item_db ?? item?.tipoItemDb ?? "").trim().toUpperCase();
   if (tipoDb === "SERVICIO") return true;
-  if (["ARTICULO", "PRODUCTO", "STOCK", "CONSUMO_ARTICULO"].includes(tipoDb)) return false;
+  // DETALLE/MANUAL son conceptos libres del movimiento. Nunca deben heredar
+  // la presentación expandible de un servicio aunque algún alias legacy venga
+  // con tipo_item="servicio".
+  if (["ARTICULO", "PRODUCTO", "STOCK", "CONSUMO_ARTICULO", "DETALLE", "MANUAL"].includes(tipoDb)) return false;
 
   const tipo = String(item?.tipo_item ?? item?.tipoItem ?? item?.tipo ?? "").trim().toUpperCase();
   if (["SERVICIO", "SERVICE"].includes(tipo)) return true;
-  if (["ARTICULO", "PRODUCTO", "STOCK", "CONSUMO_ARTICULO"].includes(tipo)) return false;
+  if (["ARTICULO", "PRODUCTO", "STOCK", "CONSUMO_ARTICULO", "DETALLE", "MANUAL"].includes(tipo)) return false;
 
   if (positiveId(item?.id_servicio, item?.idServicio, item?.servicio_id) > 0) return true;
 
@@ -446,6 +449,7 @@ export default function ModalDetalleMovimiento({
   showCreditTrace = false,
   unifiedItemsScroll = false,
   creditTraceEntity = "venta",
+  detailsOnly = false,
 }) {
   const [creditTraceExpanded, setCreditTraceExpanded] = useState(false);
   const [expandedServiceItems, setExpandedServiceItems] = useState(() => new Set());
@@ -728,8 +732,8 @@ export default function ModalDetalleMovimiento({
             ].filter(Boolean).join(" ")}
           >
             <SectionTitle
-              icon={faShoppingCart}
-              title={hasCreditTrace ? "Productos / detalle original" : "Productos / detalle"}
+              icon={detailsOnly ? faInfoCircle : faShoppingCart}
+              title={detailsOnly ? "Detalle" : (hasCreditTrace ? "Productos / detalle original" : "Productos / detalle")}
               subtitle={hasCreditTrace ? "La operación original se conserva; abajo se informa el valor vigente." : ""}
             />
 
@@ -882,13 +886,13 @@ export default function ModalDetalleMovimiento({
               {items.length === 0 ? (
                 <div className="mdm-empty">
                   <FontAwesomeIcon icon={faBoxOpen} />
-                  <span>Este movimiento no tiene productos o detalles cargados.</span>
+                  <span>{detailsOnly ? "Este movimiento no tiene detalles cargados." : "Este movimiento no tiene productos o detalles cargados."}</span>
                 </div>
               ) : (
                 <div className="mdm-table-wrap">
                   <div className="mdm-table mdm-table--items">
                     <div className="mdm-table__row mdm-table__row--head">
-                      <span>Producto / detalle</span>
+                      <span>{detailsOnly ? "Detalle" : "Producto / detalle"}</span>
                       <span>Cant.</span>
                       <span>Precio</span>
                       <span>IVA %</span>
@@ -897,7 +901,7 @@ export default function ModalDetalleMovimiento({
                     </div>
 
                     {items.map((item, index) => {
-                      const serviceItem = isServiceItem(item);
+                      const serviceItem = !detailsOnly && isServiceItem(item);
                       const components = serviceItem ? getServiceComponents(item) : [];
                       const itemKey = getServiceItemKey(item, index);
                       const serviceExpanded = serviceItem && expandedServiceItems.has(itemKey);
@@ -906,7 +910,7 @@ export default function ModalDetalleMovimiento({
                       return (
                         <React.Fragment key={itemKey}>
                           <div className={["mdm-table__row", serviceItem ? "mdm-table__row--service" : ""].filter(Boolean).join(" ")}>
-                            <span className="mdm-product-cell" data-label="Producto / detalle" title={itemName}>
+                            <span className="mdm-product-cell" data-label={detailsOnly ? "Detalle" : "Producto / detalle"} title={itemName}>
                               <span className="mdm-product-line">
                                 {serviceItem ? (
                                   <button
@@ -1135,6 +1139,7 @@ export function ModalDetalleMovimientoIngreso(props) {
       showCreditTrace
       unifiedItemsScroll
       creditTraceEntity="ingreso"
+      detailsOnly
       title={props.title || "Detalle de ingreso"}
     />
   );
@@ -1145,6 +1150,7 @@ export function ModalDetalleMovimientoEgreso(props) {
     <ModalDetalleMovimiento
       {...props}
       hideTerceroYTipo
+      detailsOnly
       title={props.title || "Detalle de egreso"}
     />
   );

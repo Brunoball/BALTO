@@ -16,6 +16,13 @@ const EMPTY = {
   iva_pct: "0",
 };
 
+const IVA_OPTIONS = ["0", "10.5", "21", "27"];
+
+const ivaSelectValue = (value) => {
+  const number = Number(value);
+  return Number.isFinite(number) ? String(number) : "0";
+};
+
 const percentageInputValue = (value) => {
   const number = Number(value);
   if (!Number.isFinite(number)) return "";
@@ -310,7 +317,14 @@ function ArticulosCard({ rows, setRows, catalog }) {
     const selected = new Set(ids.map((id) => Number(id)));
     const additions = catalog
       .filter((row) => selected.has(Number(row.id_articulo)) && Number(row.activo) === 1)
-      .map((row) => ({ id_articulo: row.id_articulo, cantidad: "1,00" }));
+      .map((row) => ({
+        id_articulo: row.id_articulo,
+        cantidad: "1,00",
+        // El IVA de la composición es propio de ESTE servicio. Al agregar un
+        // recurso arrancamos con el IVA definido en el catálogo del artículo,
+        // pero después puede ajustarse sin modificar al material/insumo global.
+        iva_pct: ivaSelectValue(row.iva_pct),
+      }));
 
     if (additions.length === 0) return;
     setRows((prev) => {
@@ -324,7 +338,7 @@ function ArticulosCard({ rows, setRows, catalog }) {
       <div className="gm-section-head servicios-component-card__title">
         <div>
           <h4>Materiales e insumos</h4>
-          <p>Seleccioná uno o varios recursos y después ajustá la cantidad utilizada de cada uno.</p>
+          <p>Seleccioná uno o varios recursos y después ajustá la cantidad utilizada y el IVA de cada uno.</p>
         </div>
         <strong><span>{rows.length}</span><small>asignados</small></strong>
       </div>
@@ -350,6 +364,7 @@ function ArticulosCard({ rows, setRows, catalog }) {
             const id = Number(row.id_articulo);
             const found = catalog.find((r) => Number(r.id_articulo) === id);
             const unit = found?.unidad_simbolo || row.unidad_simbolo || "";
+            const ivaValue = ivaSelectValue(row.iva_pct ?? found?.iva_pct);
 
             return (
               <div className="servicios-component-row" key={id}>
@@ -369,6 +384,16 @@ function ArticulosCard({ rows, setRows, catalog }) {
                   <span className="gm-label gm-label--up">Cantidad</span>
                 </label>
                 <span className="servicios-component-unit">{unit}</span>
+                <label className="gm-field servicios-component-iva">
+                  <select
+                    className="gm-input gm-select servicios-component-iva__select"
+                    value={ivaValue}
+                    onChange={(e) => setRows((prev) => prev.map((x) => Number(x.id_articulo) === id ? { ...x, iva_pct: e.target.value } : x))}
+                  >
+                    {IVA_OPTIONS.map((value) => <option key={value} value={value}>{value} %</option>)}
+                  </select>
+                  <span className="gm-label gm-label--up">IVA</span>
+                </label>
                 <button type="button" className="gm-action-btn gm-action-btn--danger servicios-component-remove" onClick={() => setRows((prev) => prev.filter((x) => Number(x.id_articulo) !== id))}>×</button>
               </div>
             );
@@ -500,13 +525,14 @@ export default function ModalServicio({
       costo_base: item ? moneyInputValue(item.costo_base) : "",
       duracion_estimada_minutos: item?.duracion_estimada_minutos == null ? "" : String(item.duracion_estimada_minutos),
       precio_venta: item ? moneyInputValue(item.precio_venta) : "",
-      iva_pct: String(item?.iva_pct ?? "0"),
+      iva_pct: ivaSelectValue(item?.iva_pct),
     });
 
     setArticleRows(
       (item?.articulos || item?.composicion?.articulos || []).map((r) => ({
         ...r,
         cantidad: compositionDecimalInputValue(r.cantidad),
+        iva_pct: ivaSelectValue(r.iva_pct_servicio ?? r.iva_pct ?? r.iva_pct_articulo),
       }))
     );
 
@@ -632,6 +658,7 @@ export default function ModalServicio({
         articulos: articleRows.map((row) => ({
           ...row,
           cantidad: decimalNumber(row.cantidad),
+          iva_pct: decimalNumber(row.iva_pct),
         })),
         trabajadores: workerRows.map((row) => ({
           ...row,
@@ -762,7 +789,7 @@ export default function ModalServicio({
                   </label>
                   <label className="gm-field servicios-service-priceField">
                     <select className="gm-input gm-select" value={form.iva_pct} onChange={(e) => set("iva_pct", e.target.value)}>
-                      {["0", "10.5", "21", "27"].map((v) => <option key={v} value={v}>{v} %</option>)}
+                      {IVA_OPTIONS.map((v) => <option key={v} value={v}>{v} %</option>)}
                     </select>
                     <span className="gm-label gm-label--up">IVA aplicado</span>
                   </label>
