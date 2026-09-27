@@ -4,7 +4,7 @@ import path from 'node:path';
 import { authenticatedApi } from './support/api.js';
 import { waitForBusyToFinish } from './support/ui.js';
 
-test('@critical @documentos contrato PDF: el renglón conserva el nombre del servicio, agrega la composición sin precios internos y usa el servicio en el nombre del archivo', async () => {
+test('@critical @documentos contratos PDF: venta conserva composición informativa y presupuesto agrupa/desglosa el servicio', async () => {
   const root = process.cwd();
   const saleSource = await fs.readFile(
     path.join(root, 'src/components/Mov_Subsection/Ventas/modales/ModalNuevaVenta.jsx'),
@@ -14,10 +14,13 @@ test('@critical @documentos contrato PDF: el renglón conserva el nombre del ser
     path.join(root, 'src/components/Mov_Subsection/Documentos_Comerciales/modales/ModalNuevoPresupuesto.jsx'),
     'utf8',
   );
+  const budgetBuilderSource = await fs.readFile(path.join(root, 'src/utils/PresupuestoPdfBuilder.js'), 'utf8');
   const facturaSource = await fs.readFile(path.join(root, 'src/utils/FacturaPdfBuilder.js'), 'utf8');
   const remitoSource = await fs.readFile(path.join(root, 'src/utils/RemitoPdfBuilder.js'), 'utf8');
   const internalSource = await fs.readFile(path.join(root, 'src/utils/VentaNoFacturadaPdfBuilder.js'), 'utf8');
 
+  // Venta/factura/remito siguen usando una descripción informativa del servicio:
+  // nombre + composición, sin exponer costos/precios internos de la receta.
   const start = saleSource.indexOf('function buildServiceDocumentDescription');
   const end = saleSource.indexOf('function getServiceFilenameLabel', start);
   expect(start).toBeGreaterThanOrEqual(0);
@@ -30,18 +33,34 @@ test('@critical @documentos contrato PDF: el renglón conserva el nombre del ser
   expect(descriptionContract).toMatch(/unidad_simbolo/);
   expect(descriptionContract).not.toMatch(/costo_unitario|precio_unitario|precio_venta|monto/i);
 
-  const budgetStart = budgetSource.indexOf('function buildServiceDocumentDescription');
+  // Presupuestos cambió de contrato: ya NO arma "SERVICIO | Incluye: ...".
+  // Expande visualmente el servicio en renglones (materiales/insumos + mano de obra),
+  // los marca como un mismo grupo y conserva importes/IVA por componente para el PDF.
+  const budgetStart = budgetSource.indexOf('function buildPdfItemsForBudgetRow');
   const budgetEnd = budgetSource.indexOf('function normalizeText', budgetStart);
   expect(budgetStart).toBeGreaterThanOrEqual(0);
   expect(budgetEnd).toBeGreaterThan(budgetStart);
-  const budgetDescriptionContract = budgetSource.slice(budgetStart, budgetEnd);
-  expect(budgetDescriptionContract).toContain('normalizeServiceStockComponents(row?.consumos_snapshot)');
-  expect(budgetDescriptionContract).toContain('Incluye:');
-  expect(budgetDescriptionContract).toMatch(/cantidad_por_unidad/);
-  expect(budgetDescriptionContract).toMatch(/unidad_simbolo/);
-  expect(budgetDescriptionContract).not.toMatch(/costo_unitario|precio_unitario|precio_venta|monto/i);
+  const budgetPdfContract = budgetSource.slice(budgetStart, budgetEnd);
+
+  expect(budgetPdfContract).toContain('normalizeServiceStockComponents(row?.consumos_snapshot)');
+  expect(budgetPdfContract).toMatch(/cantidad_por_unidad/);
+  expect(budgetPdfContract).toMatch(/unidad_simbolo/);
+  expect(budgetPdfContract).toContain('MANO DE OBRA');
+  expect(budgetPdfContract).toContain('desglose_servicio: true');
+  expect(budgetPdfContract).toContain('grupo_servicio: nombre');
+  expect(budgetPdfContract).toMatch(/iva_pct:\s*itemIvaPct/);
+  expect(budgetPdfContract).not.toContain('Incluye:');
+
   expect(budgetSource).toContain('const pdfItems = buildPdfItemsPayload();');
   expect(budgetSource).toContain('uploadPresupuestoPdf({ idMovimiento, payload, items: pdfItems })');
+
+  // El builder del presupuesto debe reconocer los metadatos del grupo y dibujar
+  // una sola cabecera del servicio antes de sus componentes.
+  expect(budgetBuilderSource).toMatch(/grupoServicio:\s*sanitizePdfText/);
+  expect(budgetBuilderSource).toMatch(/grupoClave:\s*sanitizePdfText/);
+  expect(budgetBuilderSource).toContain('function drawServiceBlockTitle');
+  expect(budgetBuilderSource).toContain('const title = drawServiceBlockTitle(doc, firstItem, y, bottomLimit);');
+  expect(budgetBuilderSource).toContain('const blocks = groupBudgetItems(items);');
 
   expect(saleSource.match(/nombre_servicio_archivo:\s*getServiceFilenameLabel\(rowsCalc\)/g)?.length || 0).toBeGreaterThanOrEqual(2);
   expect(facturaSource).toMatch(/nombre_servicio_archivo/);

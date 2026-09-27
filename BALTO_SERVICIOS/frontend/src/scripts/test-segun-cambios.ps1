@@ -48,6 +48,13 @@ foreach ($rawPath in $Archivos) {
     [void]$selected.Add('servicios')
   }
 
+  # La composición de un servicio alimenta también Presupuestos/PDF (detalle,
+  # unidades e IVA por componente). No alcanza con correr sólo CRUD de Servicios.
+  if ($path -match 'components/servicios/modales/modalservicio|modules/servicios/catalogo|servicio_servicios_articulos') {
+    [void]$selected.Add('movimientos')
+    [void]$selected.Add('documentos')
+  }
+
   if ($path -match 'servicestockcomposition|productstockautocomplete') {
     [void]$selected.Add('servicios')
     [void]$selected.Add('stock')

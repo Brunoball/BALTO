@@ -54,6 +54,16 @@ async function expectMovementDetail(dialog, expected) {
     await expect(dialog, 'El modal debe mostrar el cliente/proveedor correcto').toContainText(expected.thirdParty);
   }
 
+  if (expected.detailsOnly) {
+    // Otros ingresos/egresos son conceptos financieros libres. Un DETALLE/MANUAL
+    // jamás debe heredar la presentación de un SERVICIO aunque algún alias legacy
+    // llegue con tipo_item=servicio.
+    await expect(dialog.locator('.mdm-service-badge')).toHaveCount(0);
+    await expect(dialog.locator('.mdm-service-toggle')).toHaveCount(0);
+    await expect(dialog.locator('.mdm-service-components')).toHaveCount(0);
+    await expect(dialog).not.toContainText(/Insumos \/ productos del servicio/i);
+  }
+
   const itemRow = dialog
     .locator('.mdm-table--items .mdm-table__row:not(.mdm-table__row--head)')
     .filter({ hasText: expected.description })
@@ -231,6 +241,7 @@ test('@crud @critical modales: cada módulo y Movimientos muestran los datos exa
     quantity: 2,
     price: 83,
     total: 166,
+    detailsOnly: true,
   };
   await openModuleDetail(incomeRow, incomeExpected);
 
@@ -244,6 +255,7 @@ test('@crud @critical modales: cada módulo y Movimientos muestran los datos exa
     quantity: 3,
     price: 47,
     total: 141,
+    detailsOnly: true,
   };
   await openModuleDetail(expenseRow, expenseExpected);
 

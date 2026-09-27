@@ -66,6 +66,7 @@ function Get-BaltoTestBatches {
     )
     'servicios' = @(
       'tests/03-services-catalog-crud.spec.js',
+      'tests/06-budgets.spec.js',
       'tests/20-services-inventory-lifecycle.spec.js',
       'tests/25-services-movements-integration.spec.js',
       'tests/26-services-action-surface.spec.js',
@@ -117,6 +118,7 @@ function Get-BaltoTestBatches {
     )
     'configuracion' = @(
       'tests/10-config-accounting.spec.js',
+      'tests/34-manual-functional.spec.js',
       'tests/21-configuration-actions.spec.js',
       'tests/22-configuration-lists-categories.spec.js',
       'tests/24-initial-balances.spec.js',

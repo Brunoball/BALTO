@@ -93,10 +93,12 @@ COBERTURA NUEVA DE SERVICIOS / MOVIMIENTOS
 - Sólo componentes con controla_stock=1 descuentan/reponen inventario.
 - Stock insuficiente: bloqueo preventivo frontend + validación backend.
 - Cantidad de servicio entera en UI y backend.
-- Selector Precio de venta / Precio de costo en Ventas, Presupuestos y Otros ingresos.
+- Selector Precio de venta / Precio de costo en Ventas y Presupuestos.
+- Otros ingresos/egresos son detalle financiero libre: no permiten Servicio/Stock ni muestran composición de servicio.
 - Presupuesto no consume stock; al asignarlo como venta sí.
-- Contrato de PDFs/remitos: nombre del servicio + "Incluye" sin precios internos,
-  y nombre del servicio incorporado al nombre del archivo.
+- Presupuesto PDF: el servicio se muestra una sola vez como grupo y debajo se desglosan
+  materiales/insumos y mano de obra con cantidad, U.M., IVA e importe por renglón.
+- El desglose visual no altera el movimiento ni duplica el impacto de stock.
 
 TESTING INTERNO - BACKEND
 -------------------------
@@ -130,7 +132,7 @@ El testing también valida la tarjeta Manual funcional de Configuración:
 - El visor PDF apunta al manual integrado y comienza en la página 1.
 - El botón Descargar Word referencia el .docx correcto.
 - El buscador encuentra módulos y salta a la página esperada.
-- Se validan página anterior/siguiente, límites 1/86, pantalla completa y cierre.
+- Se validan página anterior/siguiente, límites 1/88, pantalla completa y cierre.
 - El smoke interno visita /panel/configuracion y confirma que la tarjeta está disponible.
 
 Para correr sólo esta cobertura:
@@ -174,6 +176,12 @@ Valida el contrato actual de cuenta corriente cuando una misma operación se pag
 
 Sólo esta regresión:
 npx playwright test tests/36-grouped-payment-current-account-regression.spec.js --project=chromium --workers=1 --reporter=list
+
+REGRESIÓN MODAL DE DETALLE DE OTROS INGRESOS / EGRESOS
+---------------------------------------------------------
+- Los conceptos DETALLE/MANUAL no pueden mostrarse con badge SERVICIO.
+- No aparece flecha de composición ni bloque "Insumos / productos del servicio".
+- Se valida tanto Otros ingresos como Otros egresos dentro de la integridad de modales.
 
 REGRESIÓN OTROS INGRESOS LIBRE / CLIENTE FISCAL OPCIONAL
 --------------------------------------------------------
