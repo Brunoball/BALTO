@@ -10,7 +10,7 @@ const EMPTY = {
   id_categoria: "",
   id_unidad: "",
   descripcion: "",
-  controla_stock: true,
+  controla_stock: false,
   stock_actual: "",
   costo_unitario: "",
   precio_venta: "",
@@ -42,7 +42,9 @@ export default function ModalArticulo({
       id_categoria: item?.id_categoria ? String(item.id_categoria) : "",
       id_unidad: item?.id_unidad ? String(item.id_unidad) : "",
       descripcion: item?.descripcion || "",
-      controla_stock: controlaStockFijo ? true : Number(item?.controla_stock ?? 1) === 1,
+      controla_stock: item
+        ? (controlaStockFijo ? true : Number(item?.controla_stock ?? 1) === 1)
+        : controlaStockFijo,
       stock_actual: item ? stockInputValue(item.stock_actual) : "",
       costo_unitario: item ? moneyInputValue(item.costo_unitario) : "",
       precio_venta: item?.precio_venta == null ? "" : moneyInputValue(item.precio_venta),

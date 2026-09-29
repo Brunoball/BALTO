@@ -126,6 +126,17 @@ test.describe('BALTO Servicios - catálogo principal', () => {
       await page.getByRole('button', { name: addLabel, exact: true }).click();
 
       const articleDialog = await waitDialog(page, dialogTitle);
+      const stockToggle = articleDialog.locator('.servicios-stock-control input[type="checkbox"]');
+      if (tab === 'Stock') {
+        await expect(stockToggle).toHaveCount(0);
+        await expect(articleDialog.getByText(/El producto siempre controla existencias\./i)).toBeVisible();
+        await expect(articleDialog.getByRole('textbox', { name: 'Stock inicial', exact: true })).toBeVisible();
+      } else {
+        await expect(stockToggle).toHaveCount(1);
+        await expect(stockToggle).not.toBeChecked();
+        await expect(articleDialog.getByRole('textbox', { name: 'Stock inicial', exact: true })).toHaveCount(0);
+        await expect(articleDialog.getByText(/no aparecerá ni impactará en Stock/i)).toBeVisible();
+      }
       const categorySelect = articleDialog.getByRole('combobox', { name: 'Categoría', exact: true });
       await expect(categorySelect.getByRole('option', { name: '+ AGREGAR CATEGORÍA', exact: true })).toHaveCount(1);
       await expect(categorySelect.getByRole('option', { name: 'SIN CATEGORÍA', exact: true })).toHaveCount(1);

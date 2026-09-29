@@ -191,6 +191,7 @@ async function runTypedLifecycle(page, type) {
     // En los modales nuevos el nombre vive en el value del input, no como nodo de texto.
     // Validamos los controles reales y, de paso, el formato visual vigente de stock/importes.
     await expect(editDialog.getByRole('textbox', { name: `Nombre del ${cfg.label}`, exact: true })).toHaveValue(itemEdited);
+    await expect(editDialog.locator('.servicios-stock-control input[type="checkbox"]')).toBeChecked();
     await expect(editDialog.getByRole('textbox', { name: 'Stock actual', exact: true })).toHaveValue('5');
     await expect(editDialog.getByRole('textbox', { name: 'Costo unitario', exact: true })).toHaveValue('125,00');
     await expect(editDialog.getByRole('textbox', { name: 'Precio de venta (opcional)', exact: true })).toHaveValue('190,00');

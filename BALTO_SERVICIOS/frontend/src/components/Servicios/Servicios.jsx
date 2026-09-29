@@ -39,7 +39,8 @@ const META = {
 const RESOURCE_TABS = new Set(["materiales", "insumos"]);
 const INVENTORY_TABS = new Set(["materiales", "insumos", "stock"]);
 const RESPONSIVE_FOOTER_TABS = new Set(["servicios", "materiales", "insumos"]);
-const PAGE_SIZE = 10;
+const DEFAULT_PAGE_SIZE = 10;
+const INVENTORY_PAGE_SIZE = 20;
 
 const paginationItems = (current, total) => {
   if (total <= 5) return Array.from({ length: total }, (_, index) => index + 1);
@@ -148,14 +149,15 @@ export default function Servicios() {
     });
   }, [rawRows, filters, tab]);
 
-  const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+  const pageSize = INVENTORY_TABS.has(tab) ? INVENTORY_PAGE_SIZE : DEFAULT_PAGE_SIZE;
+  const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
   const resolvedPage = Math.min(currentPage, totalPages);
   const visibleRows = useMemo(() => {
-    const start = (resolvedPage - 1) * PAGE_SIZE;
-    return rows.slice(start, start + PAGE_SIZE);
-  }, [rows, resolvedPage]);
-  const firstVisible = rows.length ? ((resolvedPage - 1) * PAGE_SIZE) + 1 : 0;
-  const lastVisible = rows.length ? Math.min(resolvedPage * PAGE_SIZE, rows.length) : 0;
+    const start = (resolvedPage - 1) * pageSize;
+    return rows.slice(start, start + pageSize);
+  }, [rows, resolvedPage, pageSize]);
+  const firstVisible = rows.length ? ((resolvedPage - 1) * pageSize) + 1 : 0;
+  const lastVisible = rows.length ? Math.min(resolvedPage * pageSize, rows.length) : 0;
   const pageItems = useMemo(() => paginationItems(resolvedPage, totalPages), [resolvedPage, totalPages]);
 
   useEffect(() => {
