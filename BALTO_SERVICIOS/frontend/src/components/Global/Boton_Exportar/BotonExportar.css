@@ -543,3 +543,33 @@ body.dark .boton-exportar-modal__cancel,
     flex: 1;
   }
 }
+
+/* =========================================================
+   BOTÓN EXPORTAR · MOBILE ICON-ONLY
+   Migrado desde Global_responsive.css en Fase 2.
+   ========================================================= */
+@media (max-width: 720px){
+  .boton-exportar-trigger{
+    width: 42px !important;
+    min-width: 42px !important;
+    height: 42px !important;
+    padding: 0 !important;
+    justify-content: center !important;
+    gap: 0 !important;
+  }
+
+  .boton-exportar-trigger__left{
+    gap: 0 !important;
+  }
+
+  .boton-exportar-trigger__iconWrap{
+    width: 32px !important;
+    height: 32px !important;
+  }
+
+  .boton-exportar-trigger__text,
+  .boton-exportar-trigger__right{
+    display: none !important;
+  }
+}
+

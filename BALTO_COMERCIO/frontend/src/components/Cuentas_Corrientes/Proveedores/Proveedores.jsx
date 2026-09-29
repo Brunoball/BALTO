@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as XLSX from "xlsx";
 import "../cuentas_corrientes.css";
+import "../cuentas_corrientes.responsive.css";
 import "../../Global/Global_css/Global_oscuro.css";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -731,7 +732,7 @@ export default function ProveedoresCC() {
   );
 
   return (
-    <div className="contenedor-cards mov-page">
+    <div className="contenedor-cards mov-page mov-page--cuentasCorrientes balto-rsp-table-page">
       {toast && (
         <Toast
           tipo={toast.tipo}
@@ -800,7 +801,7 @@ export default function ProveedoresCC() {
         onToast={showToast}
       />
 
-      <section className="mov-card mov-card--table cc-accountCard">
+      <section className="mov-card mov-card--table cc-accountCard balto-rsp-table-shell balto-rsp-table-clip">
       <div className={`mov-card__head cc-accountHeader ${isDetailMode ? "is-detail" : ""}`}>
         <div className="mov-card__headLeft">
           <div className="title-mov">
@@ -960,7 +961,7 @@ export default function ProveedoresCC() {
       </div>
 
       {!isDetailMode ? (
-        <div className="cc-cliente-table">
+        <div className="cc-cliente-table balto-rsp-table-fill">
           <div
             className="mov-gridTable mov-gridTable--head cc-cliente-table__desktopHead"
             style={{ gridTemplateColumns: "2fr 1fr" }}
@@ -969,7 +970,7 @@ export default function ProveedoresCC() {
             <div className="mov-gridCell mov-gridCell--head is-right">Saldo actual</div>
           </div>
 
-          <div className="cc-cliente-table__body">
+          <div className="cc-cliente-table__body balto-rsp-table-scroll">
             {loading ? (
               <div className="mov-emptyRow">Cargando proveedores…</div>
             ) : filteredSummaryRows.length > 0 ? (
@@ -998,7 +999,7 @@ export default function ProveedoresCC() {
           </div>
         </div>
       ) : (
-        <div className="cc-cliente-table cc-cliente-table--detail">
+        <div className="cc-cliente-table cc-cliente-table--detail balto-rsp-table-fill">
           <div
             className="mov-gridTable mov-gridTable--head cc-cliente-table__desktopHead"
             style={{ gridTemplateColumns: ".8fr 2.2fr 1fr 1fr 1fr .9fr" }}
@@ -1011,7 +1012,7 @@ export default function ProveedoresCC() {
             <div className="mov-gridCell mov-gridCell--head is-center">Acciones</div>
           </div>
 
-          <div className="cc-cliente-table__body">
+          <div className="cc-cliente-table__body balto-rsp-table-scroll">
             {loading ? (
               <div className="mov-emptyRow">{isHistorialTab ? "Cargando historial completo…" : "Cargando cuenta corriente del proveedor…"}</div>
             ) : detailRows.length > 0 ? (

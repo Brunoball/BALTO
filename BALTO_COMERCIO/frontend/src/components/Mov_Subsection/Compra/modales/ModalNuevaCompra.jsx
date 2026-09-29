@@ -4,6 +4,7 @@ import { filtrarMediosPagoPorPlan } from "../../_shared/planMediosPago";
 import { createPortal } from "react-dom";
 import "../../../Global/Global_css/GlobalsModalsV2.css";
 import "./ModalCompra.css";
+import "../../../Global/Global_css/GlobalMovementEntryResponsive.css";
 import "../../../Global/Global_css/roots.css";
 import BASE_URL from "../../../../config/config";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -1879,7 +1880,7 @@ export default function ModalNuevaCompra({ open, lists, onClose, onToast, onSave
     <>
       <div className="gm-modal-overlay">
         <div
-          className="gm-modal-container gm-modal-container--movement gm-modal-v2 nc-modal"
+          className="gm-modal-container gm-modal-container--movement gm-modal-container--movement-entry-responsive gm-modal-v2 nc-modal"
           role="dialog"
           aria-modal="true"
           onMouseDown={(e) => e.stopPropagation()}

@@ -1,0 +1,489 @@
+/* =========================================================
+   BALTO — MOVIMIENTOS DE CARGA · RESPONSIVE UNIFICADO
+   ---------------------------------------------------------
+   Contrato opt-in para los modales de carga de movimientos:
+   - Nueva Compra (referencia visual)
+   - Nueva Venta
+   - Nuevo Ingreso
+   - Nuevo Egreso
+
+   Se activa agregando la clase:
+     gm-modal-container--movement-entry-responsive
+
+   IMPORTANTE:
+   - Sólo actúa <= 980px.
+   - Escritorio conserva los estilos particulares de cada módulo.
+   - Unifica navegación, scroll, tabla, pie y panel lateral.
+========================================================= */
+
+@media (max-width: 980px) {
+  .gm-modal-container--movement-entry-responsive.gm-modal-container--movement {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    min-height: min(94dvh, 100%) !important;
+    max-height: 100% !important;
+  }
+
+  .gm-modal-container--movement-entry-responsive > .gm-modal-header {
+    flex: 0 0 auto;
+  }
+
+  /* Un solo recorrido vertical para todo el modal. */
+  .gm-modal-container--movement-entry-responsive > .gm-modal-content {
+    flex: 1 1 auto;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+    touch-action: pan-y;
+    scroll-padding-top: 12px;
+    scroll-padding-bottom: calc(86px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .gm-modal-container--movement-entry-responsive .gm-movement-layout {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+
+  /* Igual a Nueva Compra: tabla de altura natural y cuerpo con límite propio. */
+  .gm-modal-container--movement-entry-responsive .gm-movement-main.gm-table {
+    flex: 0 0 auto !important;
+    width: 100%;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: hidden !important;
+  }
+
+  .gm-modal-container--movement-entry-responsive .gm-movement-main.gm-table > .gm-table-body {
+    flex: 0 1 auto !important;
+    min-height: 0 !important;
+    max-height: min(460px, 52dvh);
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+
+  /* Panel lateral dentro del mismo recorrido, sin segundo scroll vertical. */
+  .gm-modal-container--movement-entry-responsive .gm-movement-side,
+  .gm-modal-container--movement-entry-responsive .gm-movement-side .gm-aside,
+  .gm-modal-container--movement-entry-responsive .gm-aside {
+    flex: 0 0 auto !important;
+    width: 100%;
+    min-height: 0 !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  .gm-modal-container--movement-entry-responsive .gm-movement-side .gm-section {
+    flex: 0 0 auto !important;
+  }
+
+  .gm-modal-container--movement-entry-responsive .gm-section,
+  .gm-modal-container--movement-entry-responsive .gm-section-body {
+    overflow: visible;
+  }
+
+  .gm-modal-container--movement-entry-responsive .gm-actions--sticky {
+    bottom: 0;
+    z-index: 8;
+    background: var(--gm-bg, var(--mi-bg, #fff));
+    border-top: 1px solid var(--gm-border, var(--mi-border));
+    padding-bottom: max(10px, env(safe-area-inset-bottom, 0px));
+  }
+
+  html[data-theme="oscuro"] .gm-modal-container--movement-entry-responsive .gm-actions--sticky {
+    background: var(--gm-bg, rgba(6, 18, 28, .98));
+    border-top-color: rgba(255, 255, 255, .10);
+  }
+}
+
+/* Mismo reparto intermedio de columnas que Nueva Compra. */
+@media (min-width: 721px) and (max-width: 900px) {
+  .gm-modal-container--movement-entry-responsive .gm-table-head,
+  .gm-modal-container--movement-entry-responsive .gm-table-row {
+    grid-template-columns: minmax(180px, 1.7fr) 64px minmax(88px, .9fr) 70px minmax(88px, .9fr) minmax(96px, .9fr) 34px !important;
+  }
+}
+
+/* =========================================================
+   MOBILE — composición tomada de Nueva Compra
+========================================================= */
+@media (max-width: 720px) {
+  .gm-modal-container--movement-entry-responsive > .gm-modal-content {
+    padding: 10px !important;
+  }
+
+  .gm-modal-container--movement-entry-responsive .gm-movement-main.gm-table .gm-table-head {
+    display: none !important;
+  }
+
+  .gm-modal-container--movement-entry-responsive .gm-movement-main.gm-table .gm-table-row {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    min-height: 0 !important;
+    height: auto !important;
+  }
+
+  .gm-modal-container--movement-entry-responsive .gm-movement-main.gm-table .gm-table-cell {
+    min-width: 0 !important;
+    min-height: 36px !important;
+    height: auto !important;
+    padding: 8px 10px !important;
+    display: flex !important;
+    align-items: center;
+    justify-content: stretch;
+  }
+
+  /* Sin tarjetas/labels artificiales: misma lectura limpia de Compra. */
+  .gm-modal-container--movement-entry-responsive .gm-movement-main.gm-table .gm-table-cell::before {
+    content: none !important;
+    display: none !important;
+  }
+
+  .gm-modal-container--movement-entry-responsive .gm-table-cell--detail {
+    align-items: stretch !important;
+    justify-content: center !important;
+  }
+
+  .gm-modal-container--movement-entry-responsive .stock_cant {
+    align-items: stretch !important;
+  }
+
+  .gm-modal-container--movement-entry-responsive .gm-cell-input,
+  .gm-modal-container--movement-entry-responsive .gm-cell-input--select,
+  .gm-modal-container--movement-entry-responsive .gm-movement-main.gm-table input,
+  .gm-modal-container--movement-entry-responsive .gm-movement-main.gm-table select {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .gm-modal-container--movement-entry-responsive .gm-table-cell--mono,
+  .gm-modal-container--movement-entry-responsive .gm-table-cell--soft,
+  .gm-modal-container--movement-entry-responsive .gm-table-cell--total {
+    min-height: 36px !important;
+    justify-content: flex-start !important;
+    text-align: left !important;
+    font-size: .88rem;
+  }
+
+  .gm-modal-container--movement-entry-responsive .gm-movement-main.gm-table #delete_cell,
+  .gm-modal-container--movement-entry-responsive .gm-movement-main.gm-table .gm-table-cell:nth-child(7) {
+    justify-content: flex-end !important;
+    padding-top: 6px !important;
+    padding-bottom: 8px !important;
+  }
+
+  .gm-modal-container--movement-entry-responsive .gm-row-delete {
+    width: 32px;
+    height: 32px;
+    margin: 0;
+    font-size: 13px;
+  }
+
+  .gm-modal-container--movement-entry-responsive .gm-table-foot {
+    flex: 0 0 auto;
+  }
+
+  .gm-modal-container--movement-entry-responsive .gm-upload-bar {
+    grid-template-columns: 1fr;
+  }
+
+  .gm-modal-container--movement-entry-responsive .gm-upload-btn--primary {
+    width: 100%;
+  }
+
+  /* Evita variantes locales como nv-actions en columna. */
+  .gm-modal-container--movement-entry-responsive .gm-actions {
+    flex-direction: row !important;
+  }
+}
+
+@media (max-width: 520px) {
+  .gm-modal-container--movement-entry-responsive .gm-modal-header {
+    padding-left: 12px;
+    padding-right: 10px;
+  }
+
+  .gm-modal-container--movement-entry-responsive .gm-actions {
+    gap: 8px;
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+
+  .gm-modal-container--movement-entry-responsive .gm-action-btn {
+    min-width: 0;
+    padding-left: 8px;
+    padding-right: 8px;
+    font-size: .84rem;
+  }
+}
+
+/* =========================================================
+   BOTONERA FINAL — FONDOS OPACOS EN RESPONSIVE
+   ---------------------------------------------------------
+   Los botones secundarios globales usan rgba por defecto.
+   En los modales de carga unificados deben ser opacos para
+   que el contenido desplazado por detras no sea visible.
+========================================================= */
+@media (max-width: 980px) {
+  .gm-modal-container--movement-entry-responsive .gm-actions--sticky {
+    background: #ffffff !important;
+    border-top-color: #d9e2ec !important;
+    box-shadow: 0 -10px 24px rgba(15, 23, 42, .10);
+    isolation: isolate;
+  }
+
+  .gm-modal-container--movement-entry-responsive .gm-action-btn--invoice {
+    background: #eef4fb !important;
+    border-color: #b9cce3 !important;
+    color: #163a63 !important;
+  }
+
+  .gm-modal-container--movement-entry-responsive .gm-action-btn--invoice:hover:not(:disabled) {
+    background: #e2edf8 !important;
+    border-color: #8fafd0 !important;
+    color: #0d3159 !important;
+  }
+
+  .gm-modal-container--movement-entry-responsive .gm-action-btn--cancel {
+    background: #f1f4f7 !important;
+    border-color: #cfd8e3 !important;
+    color: #334155 !important;
+  }
+
+  .gm-modal-container--movement-entry-responsive .gm-action-btn--cancel:hover:not(:disabled) {
+    background: #e5eaf0 !important;
+    border-color: #aebdcd !important;
+    color: #172033 !important;
+  }
+
+  html[data-theme="oscuro"] .gm-modal-container--movement-entry-responsive .gm-actions--sticky {
+    background: #071a2c !important;
+    border-top-color: #1f3447 !important;
+    box-shadow: 0 -12px 28px rgba(0, 0, 0, .34);
+  }
+
+  html[data-theme="oscuro"] .gm-modal-container--movement-entry-responsive .gm-action-btn--invoice {
+    background: #223142 !important;
+    border-color: #3a4c60 !important;
+    color: #f1f5f9 !important;
+  }
+
+  html[data-theme="oscuro"] .gm-modal-container--movement-entry-responsive .gm-action-btn--invoice:hover:not(:disabled) {
+    background: #2c3d50 !important;
+    border-color: #58728e !important;
+    color: #ffffff !important;
+  }
+
+  html[data-theme="oscuro"] .gm-modal-container--movement-entry-responsive .gm-action-btn--cancel {
+    background: #2a3543 !important;
+    border-color: #435062 !important;
+    color: #f1f5f9 !important;
+  }
+
+  html[data-theme="oscuro"] .gm-modal-container--movement-entry-responsive .gm-action-btn--cancel:hover:not(:disabled) {
+    background: #344252 !important;
+    border-color: #5b6d82 !important;
+    color: #ffffff !important;
+  }
+}
+
+/* =========================================================
+   FOOTER RESPONSIVE REAL — ANCLADO AL BORDE INFERIOR
+   ---------------------------------------------------------
+   El sticky dentro del panel lateral podía quedar flotando
+   sobre campos del formulario. En responsive la botonera se
+   posiciona respecto del modal completo y el contenido reserva
+   su altura, por lo que nunca se transparenta ni tapa datos.
+========================================================= */
+@media (max-width: 980px) {
+  .gm-modal-container--movement-entry-responsive.gm-modal-container--movement {
+    position: relative !important;
+  }
+
+  .gm-modal-container--movement-entry-responsive > .gm-modal-content {
+    /* Reserva real para la botonera anclada + safe area. */
+    padding-bottom: calc(78px + env(safe-area-inset-bottom, 0px)) !important;
+    scroll-padding-bottom: calc(92px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  .gm-modal-container--movement-entry-responsive .gm-actions--sticky {
+    position: absolute !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100% !important;
+    margin: 0 !important;
+    z-index: 60 !important;
+    flex: 0 0 auto !important;
+    box-sizing: border-box !important;
+    padding: 10px 12px max(10px, env(safe-area-inset-bottom, 0px)) !important;
+    border-top: 1px solid #d9e2ec !important;
+    background: #ffffff !important;
+    box-shadow: 0 -10px 24px rgba(15, 23, 42, .14) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    opacity: 1 !important;
+    isolation: isolate;
+  }
+
+  .gm-modal-container--movement-entry-responsive .gm-actions--sticky::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: #ffffff;
+    opacity: 1;
+    pointer-events: none;
+  }
+
+  html[data-theme="oscuro"] .gm-modal-container--movement-entry-responsive .gm-actions--sticky {
+    background: #071a2c !important;
+    border-top-color: #1f3447 !important;
+    box-shadow: 0 -12px 28px rgba(0, 0, 0, .42) !important;
+  }
+
+  html[data-theme="oscuro"] .gm-modal-container--movement-entry-responsive .gm-actions--sticky::before {
+    background: #071a2c !important;
+  }
+
+  /* Los botones también quedan totalmente opacos. */
+  .gm-modal-container--movement-entry-responsive .gm-action-btn {
+    opacity: 1 !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  .gm-modal-container--movement-entry-responsive .gm-action-btn--save {
+    background: #0b63ce !important;
+    border-color: #0b63ce !important;
+    color: #ffffff !important;
+  }
+
+  .gm-modal-container--movement-entry-responsive .gm-action-btn--invoice {
+    background: #eef4fb !important;
+    border-color: #b9cce3 !important;
+    color: #163a63 !important;
+  }
+
+  .gm-modal-container--movement-entry-responsive .gm-action-btn--cancel {
+    background: #f1f4f7 !important;
+    border-color: #cfd8e3 !important;
+    color: #334155 !important;
+  }
+
+  html[data-theme="oscuro"] .gm-modal-container--movement-entry-responsive .gm-action-btn--save {
+    background: #0b63ce !important;
+    border-color: #0b63ce !important;
+    color: #ffffff !important;
+  }
+
+  html[data-theme="oscuro"] .gm-modal-container--movement-entry-responsive .gm-action-btn--invoice {
+    background: #314154 !important;
+    border-color: #52677f !important;
+    color: #ffffff !important;
+  }
+
+  html[data-theme="oscuro"] .gm-modal-container--movement-entry-responsive .gm-action-btn--cancel {
+    background: #2a3543 !important;
+    border-color: #435062 !important;
+    color: #f1f5f9 !important;
+  }
+}
+
+/* =========================================================
+   SCROLL RESPONSIVE V2 — UN SOLO RECORRIDO VERTICAL
+   ---------------------------------------------------------
+   Corrige el corte del final del formulario y el "doble scroll".
+   El overlay deja de desplazarse, el modal ocupa exactamente el
+   viewport disponible y gm-modal-content es el unico scroll vertical.
+   La tabla participa del mismo recorrido (sin scroll Y anidado).
+========================================================= */
+@media (max-width: 980px) {
+  html.balto-visual-viewport-ready .gm-modal-overlay.gm-modal-overlay--movement-entry-responsive,
+  .gm-modal-overlay.gm-modal-overlay--movement-entry-responsive {
+    overflow: hidden !important;
+    overflow-y: hidden !important;
+    overscroll-behavior: none !important;
+    touch-action: pan-y !important;
+  }
+
+  html.balto-visual-viewport-ready
+    .gm-modal-overlay.gm-modal-overlay--movement-entry-responsive
+    > .gm-modal-container--movement-entry-responsive.gm-modal-container--movement,
+  .gm-modal-overlay.gm-modal-overlay--movement-entry-responsive
+    > .gm-modal-container--movement-entry-responsive.gm-modal-container--movement {
+    height: 100% !important;
+    min-height: 0 !important;
+    max-height: 100% !important;
+    overflow: hidden !important;
+  }
+
+  .gm-modal-container--movement-entry-responsive > .gm-modal-content {
+    flex: 1 1 0 !important;
+    min-height: 0 !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    box-sizing: border-box !important;
+    padding-bottom: calc(104px + env(safe-area-inset-bottom, 0px)) !important;
+    scroll-padding-top: 12px;
+    scroll-padding-bottom: calc(118px + env(safe-area-inset-bottom, 0px)) !important;
+    scrollbar-gutter: stable;
+    overscroll-behavior-y: contain;
+    touch-action: pan-y !important;
+  }
+
+  .gm-modal-container--movement-entry-responsive .gm-movement-layout {
+    flex: 0 0 auto !important;
+    min-height: max-content !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  /* Un unico scroll Y: la tabla ya no captura el gesto vertical. */
+  .gm-modal-container--movement-entry-responsive
+    .gm-movement-main.gm-table
+    > .gm-table-body {
+    flex: 0 0 auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    height: auto !important;
+    overflow-y: visible !important;
+    overscroll-behavior: auto !important;
+    touch-action: pan-y !important;
+  }
+
+  .gm-modal-container--movement-entry-responsive .gm-movement-side,
+  .gm-modal-container--movement-entry-responsive .gm-movement-side .gm-aside,
+  .gm-modal-container--movement-entry-responsive .gm-aside,
+  .gm-modal-container--movement-entry-responsive .gm-section,
+  .gm-modal-container--movement-entry-responsive .gm-section-body {
+    max-height: none !important;
+    height: auto !important;
+    overflow-y: visible !important;
+    overscroll-behavior: auto !important;
+  }
+
+  /* El ultimo bloque debe poder despegarse visualmente del footer. */
+  .gm-modal-container--movement-entry-responsive .gm-movement-side {
+    padding-bottom: 10px;
+  }
+
+  .gm-modal-container--movement-entry-responsive .gm-actions--sticky {
+    position: absolute !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+  }
+}

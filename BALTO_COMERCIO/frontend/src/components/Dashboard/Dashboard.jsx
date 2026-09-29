@@ -16,7 +16,7 @@ import {
 
 import Toast from "../Global/Toast.jsx";
 import "./dashboard.css";
-import "../Global/Global_css/Global_responsive.css";
+import "./dashboard.responsive.css";
 import useCountUp from "./hooks/useCountUp";
 import useDashboardDatos from "./hooks/useDashboardDatos";
 import {

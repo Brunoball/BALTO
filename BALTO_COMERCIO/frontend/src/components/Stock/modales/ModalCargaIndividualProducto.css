@@ -204,3 +204,36 @@ html[data-theme="oscuro"] .cmi-unitDecimalOption input:checked {
 html[data-theme="oscuro"] .cmi-unitDecimalOption small {
   color: rgba(203, 213, 225, 0.72);
 }
+
+
+/* =========================================================
+   RESPONSIVE · ALTA INDIVIDUAL
+   El footer móvil no debe reservar una columna vertical de 260px.
+   ModalCargaMasiva.css define .cmi-footer__hint con flex-basis:260px;
+   al apilar el footer en <=640px ese basis pasa a ser altura.
+   Se neutraliza únicamente para el modal de alta individual.
+   ========================================================= */
+@media (max-width: 640px) {
+  .cmi-content--individual + .cmi-footer {
+    flex: 0 0 auto;
+    min-height: 0;
+    gap: 10px;
+    padding: 10px 14px 12px;
+  }
+
+  .cmi-content--individual + .cmi-footer .cmi-footer__hint {
+    flex: 0 0 auto;
+    min-height: 0;
+    margin: 0;
+  }
+
+  .cmi-content--individual + .cmi-footer .cmi-footer__btns {
+    width: 100%;
+    justify-content: flex-end;
+    flex-wrap: nowrap;
+  }
+
+  .cmi-content--individual + .cmi-footer .cmi-footer__btns > .mit-btn {
+    min-width: 0;
+  }
+}

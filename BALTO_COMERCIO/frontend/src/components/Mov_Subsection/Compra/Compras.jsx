@@ -1468,7 +1468,7 @@ export default function Compras() {
   }, [selectedRow, tieneNotasCreditoSeleccionadas, cantidadNotasCreditoSeleccionadas]);
 
   return (
-    <div className="mov-page mov-page--compras">
+    <div className="mov-page mov-page--compras balto-rsp-table-page">
       {toast && (
         <Toast
           tipo={toast.tipo}
@@ -1489,7 +1489,7 @@ export default function Compras() {
         </div>
       )}
 
-      <section className="mov-card mov-card--table">
+      <section className="mov-card mov-card--table balto-rsp-table-shell">
         <div className="mov-card__head">
           <div className="mov-card__headLeft">
             <div className="title-mov">
@@ -1658,7 +1658,7 @@ export default function Compras() {
         </div>
 
         <div
-          className="mov-tableWrap mov-tableWrap--compras"
+          className="mov-tableWrap mov-tableWrap--compras balto-rsp-table-scroll"
           role="rowgroup"
           ref={tableWrapRef}
         >
@@ -1666,6 +1666,7 @@ export default function Compras() {
             className={[
               "mov-gridBody",
               "mov-gridBody--relative",
+              "balto-rsp-table-body-reset",
               softLoading ? "mov-softLoading" : "",
             ].join(" ")}
           >

@@ -1,0 +1,299 @@
+/* =========================================================
+   BALTO · DASHBOARD · RESPONSIVE PROPIO
+   Migrado desde Global_responsive.css en Fase 2.
+   Conserva exactamente el comportamiento móvil existente.
+   ========================================================= */
+
+@media (max-width: 768px){
+  body:has(.db){
+    overflow-x: hidden !important;
+  }
+
+  body:has(.db) #root,
+  body:has(.db) main,
+  body:has(.db) [class*="Principal"],
+  body:has(.db) [class*="principal"],
+  body:has(.db) [class*="Layout"],
+  body:has(.db) [class*="layout"],
+  body:has(.db) [class*="Content"],
+  body:has(.db) [class*="content"],
+  body:has(.db) [class*="contenido"],
+  body:has(.db) [class*="Contenido"]{
+    min-height: 0 !important;
+  }
+
+  .db{
+    width: 100% !important;
+    min-width: 0 !important;
+    height: auto !important;
+    max-height: none !important;
+    min-height: 0 !important;
+    overflow-x: hidden !important;
+    overflow-y: visible !important;
+    overscroll-behavior-y: auto !important;
+    touch-action: auto !important;
+    gap: 10px !important;
+    padding: 8px 8px calc(24px + env(safe-area-inset-bottom)) !important;
+  }
+
+  .db-header.db-header--dashboard{
+    flex-direction: column !important;
+    align-items: stretch !important;
+    justify-content: flex-start !important;
+    gap: 12px !important;
+    padding: 0 !important;
+  }
+
+  .db-header__left,
+  .db-header__right{
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+
+  .db-title{
+    font-size: 16px !important;
+  }
+
+  .db-subtitle{
+    max-width: 100% !important;
+    font-size: 12px !important;
+    line-height: 1.35 !important;
+  }
+
+  .db-actions,
+  .db-header__right{
+    justify-content: stretch !important;
+  }
+
+  .db-period-chip--header{
+    width: 100% !important;
+    min-height: 42px !important;
+    justify-content: center !important;
+    border-radius: 14px !important;
+    padding-inline: 12px !important;
+  }
+
+  .db-kpi-grid{
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+    flex: 0 0 auto !important;
+  }
+
+  .db-kpi{
+    min-height: 84px !important;
+    padding: 12px !important;
+    border-radius: 16px !important;
+    gap: 11px !important;
+  }
+
+  .db-kpi__icon{
+    width: 38px !important;
+    height: 38px !important;
+    min-width: 38px !important;
+    border-radius: 13px !important;
+  }
+
+  .db-kpi__label{
+    font-size: 10px !important;
+  }
+
+  .db-kpi__value{
+    font-size: clamp(17px, 5vw, 22px) !important;
+  }
+
+  .db-kpi__detail{
+    font-size: 10.5px !important;
+  }
+
+  .db-main-grid{
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+    flex: 0 0 auto !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    align-items: stretch !important;
+  }
+
+  .db-panel,
+  .db-panel--chart,
+  .db-panel--side{
+    width: 100% !important;
+    min-width: 0 !important;
+    height: auto !important;
+    min-height: auto !important;
+    max-height: none !important;
+  }
+
+  .db-panel{
+    padding: 12px !important;
+    border-radius: 16px !important;
+    overflow: visible !important;
+  }
+
+  .db-panel__head{
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+    margin-bottom: 10px !important;
+  }
+
+  .db-panel__head h2{
+    font-size: 14px !important;
+  }
+
+  .db-panel__head p{
+    font-size: 11px !important;
+    line-height: 1.35 !important;
+  }
+
+  .db-legend{
+    width: 100% !important;
+    justify-content: flex-start !important;
+    gap: 10px !important;
+    white-space: normal !important;
+  }
+
+  .db-chart{
+    width: 100% !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain !important;
+    overscroll-behavior-y: auto !important;
+    touch-action: pan-x pan-y !important;
+    padding-bottom: 6px !important;
+  }
+
+  .db-chart__plot{
+    min-width: 420px !important;
+    min-height: 170px !important;
+    gap: 8px !important;
+    padding-top: 16px !important;
+  }
+
+  .db-chart__item{
+    height: 150px !important;
+  }
+
+  .db-chart__bar{
+    width: min(24px, 82%) !important;
+  }
+
+  .db-chart__label{
+    font-size: 9.5px !important;
+  }
+
+  .db-ind-wrapper{
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+    overflow: visible !important;
+    max-height: none !important;
+  }
+
+  .db-ind-row{
+    display: contents !important;
+  }
+
+  .db-ind-resultado,
+  .db-ind-item{
+    min-height: 68px !important;
+    padding: 11px !important;
+    border-radius: 15px !important;
+  }
+
+  .db-ind-value,
+  .db-ind-resultado .db-ind-value{
+    font-size: 14px !important;
+  }
+
+  .db-footer{
+    text-align: center !important;
+    font-size: 11px !important;
+    padding-bottom: 8px !important;
+  }
+}
+
+@media (max-width: 480px){
+  .db{
+    height: auto !important;
+    max-height: none !important;
+    padding: 10px 10px calc(22px + env(safe-area-inset-bottom)) !important;
+  }
+
+  .db-title{
+    font-size: 15px !important;
+  }
+
+  .db-subtitle{
+    font-size: 11.5px !important;
+  }
+
+  .db-period-chip--header{
+    font-size: 12px !important;
+    gap: 7px !important;
+  }
+
+  .db-period-chip--header strong{
+    max-width: 145px !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  .db-chart__plot{
+    min-width: 390px !important;
+  }
+}
+
+@supports not selector(body:has(.db)){
+  @media (max-width: 768px){
+    .db{
+      width: 100% !important;
+      min-width: 0 !important;
+      height: auto !important;
+      max-height: none !important;
+      min-height: 0 !important;
+      overflow-x: hidden !important;
+      overflow-y: visible !important;
+      touch-action: auto !important;
+      padding-bottom: calc(24px + env(safe-area-inset-bottom)) !important;
+    }
+  }
+}
+
+@media (max-width: 768px){
+  html.balto-visual-viewport-ready .pp-content.pp-content--dashboard{
+    height: var(--balto-content-viewport-height, var(--balto-panel-viewport-height)) !important;
+    max-height: var(--balto-content-viewport-height, var(--balto-panel-viewport-height)) !important;
+    min-height: 0 !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior-x: none !important;
+    overscroll-behavior-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    touch-action: pan-y !important;
+  }
+
+  html.balto-visual-viewport-ready
+    .pp-content.pp-content--dashboard
+    > .pp-content__inner{
+    height: auto !important;
+    min-height: 100% !important;
+    max-height: none !important;
+    overflow: visible !important;
+    contain: none !important;
+  }
+
+  html.balto-visual-viewport-ready
+    .pp-content.pp-content--dashboard
+    .db{
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    overscroll-behavior: auto !important;
+    touch-action: auto !important;
+  }
+}

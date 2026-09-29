@@ -516,9 +516,9 @@ function DocumentosClientePanel({
   return (
     <div
       id={`doccom-${normalizeText(grupo) || "documentos"}-section`}
-      className="doccom-subpage mov-page"
+      className="doccom-subpage mov-page balto-rsp-table-page"
     >
-      <section className="mov-card mov-card--table doccom-clientDocs">
+      <section className="mov-card mov-card--table doccom-clientDocs balto-rsp-table-shell">
         <div className="mov-card__head doccom-clientDocs__head">
           <div className="mov-card__headLeft">
             <div className="title-mov doccom-titleBlock">
@@ -548,7 +548,7 @@ function DocumentosClientePanel({
 
         {error ? <div className="doccom-alert">{error}</div> : null}
 
-        <div className="doccom-clientDocs__layout">
+        <div className="doccom-clientDocs__layout balto-rsp-table-fill">
           <aside className="doccom-clientList" aria-label="Clientes">
             <div className="cc-filter doccom-filter doccom-filter--clientes">
               <div className="cc-floatingField cc-floatingField--search is-active">
@@ -623,7 +623,7 @@ function DocumentosClientePanel({
             </div>
           </aside>
 
-          <main className="doccom-docPanel" aria-label="Documentos del cliente">
+          <main className="doccom-docPanel balto-rsp-table-fill" aria-label="Documentos del cliente">
             {showTablePanel ? (
               <>
                 <div className="doccom-docPanel__top">
@@ -667,7 +667,7 @@ function DocumentosClientePanel({
 
                 <div
                   id={`doccom-${normalizeText(grupo) || "documentos"}-tableWrap`}
-                  className="doccom-docTableWrap"
+                  className="doccom-docTableWrap balto-rsp-table-scroll"
                   role="rowgroup"
                   ref={tableWrapRef}
                 >
@@ -688,7 +688,7 @@ function DocumentosClientePanel({
                     <div className="mov-gridCell mov-gridCell--head is-center" role="columnheader">PDF</div>
                   </div>
 
-                  <div className={["mov-gridBody", "doccom-docGridBody", showPanelSkeleton ? "mov-softLoading" : ""].join(" ")}>
+                  <div className={["mov-gridBody", "doccom-docGridBody", "balto-rsp-table-body-reset", showPanelSkeleton ? "mov-softLoading" : ""].join(" ")}>
                     {showPanelSkeleton ? (
                       <div className="mov-skeletonWrap" aria-busy="true">
                         {Array.from({ length: SKELETON_ROWS }).map((_, idx) => renderSkeletonRow(idx))}

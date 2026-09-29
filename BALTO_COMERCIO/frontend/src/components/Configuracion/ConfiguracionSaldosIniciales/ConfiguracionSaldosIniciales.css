@@ -6,7 +6,7 @@
    El header con Volver queda fijo; solo scrollea el contenido.
 ========================================================= */
 .cfg-si-page {
-  height: calc(100vh - 110px);
+  height: calc(var(--balto-visual-viewport-height, 100dvh) - 110px);
   min-height: 0;
   overflow: hidden;
 }
@@ -59,7 +59,7 @@
 ========================================================= */
 .cfg-si-serviceModal.gm-modal-container {
   width: min(720px, 96vw);
-  max-height: calc(100vh - 32px);
+  max-height: calc(var(--balto-visual-viewport-height, 100dvh) - 32px);
   color: var(--gm-text);
 }
 
@@ -229,7 +229,7 @@ body.dark .cfg-si-serviceModal__content::-webkit-scrollbar-thumb {
 @media (max-width: 720px) {
   .cfg-si-serviceModal.gm-modal-container {
     width: 96vw;
-    max-height: calc(100vh - 20px);
+    max-height: calc(var(--balto-visual-viewport-height, 100dvh) - 20px);
   }
 
   .cfg-si-serviceModal__content.gm-modal-content {

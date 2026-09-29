@@ -1,5 +1,11 @@
-
-
+/* =========================================================
+   BALTO · CONTRATO RESPONSIVE · FASE 1
+   DUEÑO: primitivas visuales compartidas de secciones y tablas.
+   NO AGREGAR: alturas responsive por sección ni lógica de viewport.
+   DEUDA LEGACY existente se migrará por fases, sin alterar diseño.
+   Ver: RESPONSIVE_ARCHITECTURE.md
+   ========================================================= */
+body{overflow: hidden;}
 /* =========================
    BASE
 ========================= */
@@ -10,11 +16,9 @@
   width: 100%;
   min-height: 100%;
   color: var(--color-text);
-  /*
-   * El fondo general lo pinta el layout principal de BALTO.
-   * Mantener este wrapper transparente evita que aparezca un bloque
-   * rectangular detrás de las esquinas redondeadas de .mov-card.
-   */
+  /* El fondo general lo pinta el layout principal de BALTO.
+     Mantener este wrapper transparente evita el bloque rectangular
+     detrás de las esquinas redondeadas de las tarjetas. */
   background: transparent;
   font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
 }
@@ -61,12 +65,8 @@
   justify-content: space-between;
   gap: 12px;
 
-  /*
-   * El header lleva un fondo propio (especialmente visible en modo oscuro).
-   * Como .mov-card no puede recortar overflow —los calendarios y menús de
-   * acciones deben poder salir del card—, redondeamos el propio header para
-   * que su fondo nunca pinte esquinas cuadradas por encima del radio del card.
-   */
+  /* El header tiene fondo propio en oscuro. Se redondea directamente
+     para no necesitar overflow:hidden, que rompería calendarios y menús. */
   border-top-left-radius: var(--radius-lg, 18px);
   border-top-right-radius: var(--radius-lg, 18px);
   background-clip: padding-box;
@@ -330,13 +330,13 @@
   min-height: 0;
   overflow: auto;
   overflow-x: hidden;
-  max-height: calc(100vh - 240px);
-  min-height: calc(100vh - 240px);
+  max-height: calc(var(--balto-visual-viewport-height, 100dvh) - 240px);
+  min-height: calc(var(--balto-visual-viewport-height, 100dvh) - 240px);
 }
 
 .mov-tableWrap--mov{
-    max-height: calc(100vh - 240px)  !important;
-    min-height: calc(100vh - 240px)  !important
+    max-height: calc(var(--balto-visual-viewport-height, 100dvh) - 240px)  !important;
+    min-height: calc(var(--balto-visual-viewport-height, 100dvh) - 240px)  !important
 }
 
 /* header sticky */
@@ -488,7 +488,7 @@
 
 .mov-gridBody--relative{
   position: relative;
-  height: calc(100vh - 250px);
+  height: calc(var(--balto-visual-viewport-height, 100dvh) - 250px);
 }
 
 /* =========================================================

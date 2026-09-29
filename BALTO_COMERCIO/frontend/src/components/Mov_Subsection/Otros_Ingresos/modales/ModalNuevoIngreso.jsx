@@ -16,6 +16,7 @@ import "../../../Global/Global_css/GlobalsModalsV2.css";
 import "../../../Global/Global_css/Global_responsive.css";
 import "../../../Global/Global_css/roots.css";
 import "./ModalIngreso.css";
+import "../../../Global/Global_css/GlobalMovementEntryResponsive.css";
 import { otrosIngresosFetch } from "../api/otrosIngresosApi.js";
 
 // ─── Constantes ────────────────────────────────────────────────────────────────
@@ -2318,7 +2319,7 @@ export default function ModalNuevoIngreso({
     <>
       <div className={`gm-modal-overlay${dark ? " gm-modal-overlay--dark" : ""}`}>
         <div
-          className={`gm-modal-container gm-modal-container--movement gm-modal-v2 oi-modal${dark ? " gm-modal-container--dark" : ""}`}
+          className={`gm-modal-container gm-modal-container--movement gm-modal-container--movement-entry-responsive gm-modal-v2 oi-modal${dark ? " gm-modal-container--dark" : ""}`}
           role="dialog"
           aria-modal="true"
           onMouseDown={(e) => e.stopPropagation()}

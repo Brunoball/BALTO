@@ -1,0 +1,117 @@
+/* Tarjetas móviles de tablas de Configuración.
+   Referencia visual: Listas y categorías. Un único estilo para las tres tablas.
+   Se importa después de los estilos propios y no altera las tablas de escritorio. */
+@media (max-width: 720px) {
+  :is(.cfg-users-tableWrap, .cfg-si-tableWrap, .cfg-listas-tableWrap) {
+    --cfg-card-bg: #fff;
+    --cfg-card-border: #d9e1ea;
+    --cfg-card-divider: #edf1f5;
+    --cfg-card-muted: #7b8794;
+    --cfg-card-text: #425466;
+    --cfg-card-shadow: 0 3px 10px rgba(15, 23, 42, .045);
+    overflow: visible;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+  }
+  :is([data-theme="oscuro"], body.dark) :is(.cfg-users-tableWrap, .cfg-si-tableWrap, .cfg-listas-tableWrap) {
+    --cfg-card-bg: var(--color-surface, #0f2336);
+    --cfg-card-border: var(--color-border, rgba(255,255,255,.10));
+    --cfg-card-divider: var(--color-border, rgba(255,255,255,.10));
+    --cfg-card-muted: var(--color-text-muted, rgba(210,220,235,.70));
+    --cfg-card-text: var(--color-text, #e6edf5);
+    --cfg-card-shadow: none;
+  }
+  :is(.cfg-users-table, .cfg-si-table, .cfg-listas-tableWrap .cfg-listas-grid) {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    font-size: 12px;
+  }
+  :is(.cfg-users-table, .cfg-si-table) thead,
+  .cfg-listas-tableWrap .cfg-listas-gridHead { display: none; }
+  .cfg-listas-tableWrap .cfg-listas-gridBodyScroll { overflow: visible; }
+  :is(.cfg-users-table, .cfg-si-table) tbody,
+  .cfg-listas-tableWrap .cfg-listas-gridBody {
+    display: grid;
+    gap: 10px;
+    padding: 10px;
+    min-width: 0;
+  }
+  :is(.cfg-users-table, .cfg-si-table) tbody tr,
+  .cfg-listas-gridBody .cfg-listas-gridRow {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    overflow: hidden;
+    border: 1px solid var(--cfg-card-border);
+    border-radius: 12px;
+    background: var(--cfg-card-bg) !important;
+    box-shadow: var(--cfg-card-shadow);
+  }
+  :is(.cfg-users-table, .cfg-si-table) tbody tr td[data-label],
+  .cfg-listas-gridBody .cfg-listas-gridRow .cfg-listas-gridCell[data-label] {
+    width: 100%;
+    min-width: 0;
+    min-height: 42px;
+    padding: 9px 11px;
+    display: grid;
+    grid-template-columns: minmax(88px, 36%) minmax(0, 1fr);
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1px solid var(--cfg-card-divider);
+    background: transparent !important;
+    color: var(--cfg-card-text);
+    font-size: 12px;
+    text-align: right !important;
+    justify-content: initial;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    box-sizing: border-box;
+  }
+  :is(.cfg-users-table, .cfg-si-table) tbody tr td[data-label]::before,
+  .cfg-listas-gridBody .cfg-listas-gridRow .cfg-listas-gridCell[data-label]::before {
+    content: attr(data-label);
+    color: var(--cfg-card-muted);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: .045em;
+    text-transform: uppercase;
+    text-align: left;
+  }
+  :is(.cfg-users-table, .cfg-si-table) tbody tr td[data-label]:last-child,
+  .cfg-listas-gridBody .cfg-listas-gridRow .cfg-listas-gridCell[data-label]:last-child { border-bottom: 0; }
+
+  /* Nombre y aclaración permanecen juntos en la columna del valor. */
+  .cfg-listas-gridBody .cfg-listas-gridCell--name > :is(strong, small) {
+    grid-column: 2;
+    min-width: 0;
+    text-align: right;
+  }
+  .cfg-listas-gridBody .cfg-listas-gridCell--name > small { margin-top: -8px; }
+  .cfg-users-table .cfg-users-userCell { justify-content: flex-end; flex-wrap: wrap; min-width: 0; }
+  :is(.cfg-users-table, .cfg-si-table) td > :is(.cfg-users-pill, .cfg-si-state),
+  .cfg-listas-gridBody .cfg-listas-gridCell > .cfg-listas-chip { justify-self: end; }
+
+  :is(.cfg-users-table, .cfg-si-table) tbody tr td[data-label="Acciones"],
+  .cfg-listas-gridBody .cfg-listas-gridRow .cfg-listas-gridCell--actions {
+    display: flex !important;
+    justify-content: flex-end !important;
+    gap: 5px;
+  }
+  :is(.cfg-users-table, .cfg-si-table) td[data-label="Acciones"]::before,
+  .cfg-listas-gridBody .cfg-listas-gridCell--actions::before { margin-right: auto; }
+  :is(.cfg-si-chequeActions, .cfg-listas-actions) { justify-content: flex-end; gap: 5px; }
+  :is(.cfg-users-table, .cfg-si-table, .cfg-listas-gridBody) [data-label="Acciones"] button {
+    flex: 0 0 31px;
+    width: 31px;
+    height: 31px;
+    min-width: 31px;
+    padding: 0;
+    border-radius: 8px;
+  }
+  .cfg-si-table tbody tr:has(.cfg-si-tableEmpty) { border-style: dashed; box-shadow: none; }
+  .cfg-si-table .cfg-si-tableEmpty { display: block; width: 100%; padding: 20px 14px !important; border: 0; white-space: normal; }
+  .cfg-listas-gridBody .cfg-listas-gridRow.is-skeleton { border: 0; box-shadow: none; background: transparent !important; }
+  .cfg-listas-gridBody .cfg-listas-gridCell--skeleton { min-height: 78px; border: 1px solid var(--cfg-card-border); border-radius: 12px; background: var(--cfg-card-bg); }
+}

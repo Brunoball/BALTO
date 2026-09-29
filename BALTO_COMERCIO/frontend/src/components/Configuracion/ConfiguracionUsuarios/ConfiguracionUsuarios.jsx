@@ -17,6 +17,8 @@ import useConfiguracionToast from "../hooks/useConfiguracionToast";
 import ModalEliminar from "../../Global/Modales/ModalEliminar";
 import ModalUsuario from "./modales/ModalUsuario";
 import "./ConfiguracionUsuarios.css";
+import "../ConfiguracionResponsiveScroll.css";
+import "../ConfiguracionTableCards.css";
 
 
 function normalizarMensajeError(mensaje) {
@@ -602,7 +604,7 @@ export default function ConfiguracionUsuarios() {
     : `¿Seguro que querés activar el usuario "${usuarioACambiarEstado?.usuario || ""}"?`;
 
   return (
-    <section className="cfg-users-page">
+    <section className="cfg-users-page balto-rsp-table-page">
       {toast && (
         <Toast
           key={toast.key}
@@ -647,12 +649,12 @@ export default function ConfiguracionUsuarios() {
         </div>
       </div>
 
-      <div className="cfg-users-contentScroll">
+      <div className="cfg-users-contentScroll balto-rsp-table-fill">
         {/* ── GRID ── */}
-        <div className="cfg-users-metaGrid">
+        <div className="cfg-users-metaGrid balto-rsp-table-fill">
 
         {/* Tarjeta — tabla de usuarios */}
-        <div className="cfg-users-metaCard cfg-users-metaCard--full">
+        <div className="cfg-users-metaCard cfg-users-metaCard--full balto-rsp-table-fill">
           <div className="cfg-users-metaCard__top">
             <div className="cfg-users-metaCard__icon">
               <FontAwesomeIcon icon={faUsers} />
@@ -671,7 +673,7 @@ export default function ConfiguracionUsuarios() {
           ) : usuarios.length === 0 ? (
             <div className="cfg-users-empty">Todavía no hay usuarios en este sistema.</div>
           ) : (
-            <div className="cfg-users-tableWrap">
+            <div className="cfg-users-tableWrap balto-rsp-table-scroll">
               <table className="cfg-users-table">
                 <thead>
                   <tr>
@@ -692,7 +694,7 @@ export default function ConfiguracionUsuarios() {
 
                     return (
                       <tr key={idUsuario || u.usuario} className={actual ? "cfg-users-current-row" : ""}>
-                        <td>
+                        <td data-label="Usuario">
                           <div className="cfg-users-userCell">
                             <span>{u.usuario}</span>
                             {actual && (
@@ -703,17 +705,17 @@ export default function ConfiguracionUsuarios() {
                           </div>
                         </td>
 
-                        <td>{rol?.nombre || rol?.tipo_rol || u.rol_nombre || u.tipo_rol || u.rol || "-"}</td>
+                        <td data-label="Rol">{rol?.nombre || rol?.tipo_rol || u.rol_nombre || u.tipo_rol || u.rol || "-"}</td>
 
-                        <td>{u.email_recuperacion || "-"}</td>
+                        <td data-label="Email">{u.email_recuperacion || "-"}</td>
 
-                        <td>
+                        <td data-label="Estado">
                           <span className={`cfg-users-pill ${activo ? "is-active" : "is-inactive"}`}>
                             {activo ? "Activo" : "Inactivo"}
                           </span>
                         </td>
 
-                        <td className="cfg-users-rowActions">
+                        <td className="cfg-users-rowActions" data-label="Acciones">
                           <button
                             type="button"
                             className="cfg-users-icon-btn"

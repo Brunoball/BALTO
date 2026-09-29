@@ -5,6 +5,7 @@ import ModalVerComprobante from "../Ver_Comprobantes/ModalVerComprobante.jsx";
 import BASE_URL from "../../../config/config";
 import { singleFlightFetch } from "../../../utils/singleFlightFetch";
 import "../Global_css/Global_Modals.css";
+import "./ModalNuevoChequeResponsive.css";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faFileInvoiceDollar,

@@ -52,7 +52,7 @@ input[type="number"]::-webkit-outer-spin-button {
    ========================================================= */
 .mi-modal__overlay {
   width: 100vw;
-  height: 100vh;
+  height: var(--balto-visual-viewport-height, 100dvh);
   position: fixed;
   inset: 0;
   background: rgba(8, 16, 30, .52);

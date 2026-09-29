@@ -1,0 +1,1592 @@
+{
+  "generatedAt": "2026-09-26T23:05:58.423Z",
+  "scope": "src/components/**/*.css",
+  "totals": {
+    "cssFiles": 69,
+    "cssLines": 44931,
+    "mediaQueries": 280,
+    "important": 1679,
+    "cssFilesWithMedia": 54
+  },
+  "breakpointFrequency": [
+    {
+      "px": 720,
+      "count": 45
+    },
+    {
+      "px": 980,
+      "count": 31
+    },
+    {
+      "px": 560,
+      "count": 24
+    },
+    {
+      "px": 900,
+      "count": 23
+    },
+    {
+      "px": 640,
+      "count": 22
+    },
+    {
+      "px": 520,
+      "count": 16
+    },
+    {
+      "px": 420,
+      "count": 16
+    },
+    {
+      "px": 768,
+      "count": 15
+    },
+    {
+      "px": 760,
+      "count": 13
+    },
+    {
+      "px": 1100,
+      "count": 11
+    },
+    {
+      "px": 820,
+      "count": 9
+    },
+    {
+      "px": 920,
+      "count": 7
+    },
+    {
+      "px": 860,
+      "count": 5
+    },
+    {
+      "px": 480,
+      "count": 5
+    },
+    {
+      "px": 1200,
+      "count": 4
+    },
+    {
+      "px": 1180,
+      "count": 4
+    },
+    {
+      "px": 620,
+      "count": 4
+    },
+    {
+      "px": 42,
+      "count": 4
+    },
+    {
+      "px": 1500,
+      "count": 3
+    },
+    {
+      "px": 390,
+      "count": 3
+    },
+    {
+      "px": 360,
+      "count": 3
+    },
+    {
+      "px": 150,
+      "count": 3
+    },
+    {
+      "px": 120,
+      "count": 3
+    },
+    {
+      "px": 1024,
+      "count": 2
+    },
+    {
+      "px": 800,
+      "count": 2
+    },
+    {
+      "px": 780,
+      "count": 2
+    },
+    {
+      "px": 700,
+      "count": 2
+    },
+    {
+      "px": 400,
+      "count": 2
+    },
+    {
+      "px": 330,
+      "count": 2
+    },
+    {
+      "px": 220,
+      "count": 2
+    },
+    {
+      "px": 1499,
+      "count": 1
+    },
+    {
+      "px": 1199,
+      "count": 1
+    },
+    {
+      "px": 1080,
+      "count": 1
+    },
+    {
+      "px": 1050,
+      "count": 1
+    },
+    {
+      "px": 1000,
+      "count": 1
+    },
+    {
+      "px": 850,
+      "count": 1
+    },
+    {
+      "px": 680,
+      "count": 1
+    },
+    {
+      "px": 600,
+      "count": 1
+    },
+    {
+      "px": 460,
+      "count": 1
+    },
+    {
+      "px": 430,
+      "count": 1
+    },
+    {
+      "px": 380,
+      "count": 1
+    },
+    {
+      "px": 350,
+      "count": 1
+    },
+    {
+      "px": 340,
+      "count": 1
+    },
+    {
+      "px": 300,
+      "count": 1
+    },
+    {
+      "px": 290,
+      "count": 1
+    },
+    {
+      "px": 250,
+      "count": 1
+    },
+    {
+      "px": 235,
+      "count": 1
+    },
+    {
+      "px": 190,
+      "count": 1
+    },
+    {
+      "px": 180,
+      "count": 1
+    },
+    {
+      "px": 145,
+      "count": 1
+    },
+    {
+      "px": 142,
+      "count": 1
+    },
+    {
+      "px": 140,
+      "count": 1
+    },
+    {
+      "px": 130,
+      "count": 1
+    },
+    {
+      "px": 126,
+      "count": 1
+    },
+    {
+      "px": 122,
+      "count": 1
+    },
+    {
+      "px": 118,
+      "count": 1
+    },
+    {
+      "px": 116,
+      "count": 1
+    },
+    {
+      "px": 112,
+      "count": 1
+    },
+    {
+      "px": 105,
+      "count": 1
+    },
+    {
+      "px": 92,
+      "count": 1
+    },
+    {
+      "px": 70,
+      "count": 1
+    }
+  ],
+  "globalResponsiveFiles": [
+    {
+      "file": "components/Global/Global_css/GlobalViewport.css",
+      "sha256": "a25c2441a33b609889cf6395e348401690ad13164fb9885e98b5b5c324762418",
+      "lines": 204,
+      "mediaQueries": 1,
+      "important": 76,
+      "mediaConditions": [
+        "(max-width: 980px)"
+      ],
+      "maxWidthBreakpoints": [
+        980
+      ],
+      "sectionPrefixHits": {}
+    },
+    {
+      "file": "components/Global/Global_css/Global_Section.css",
+      "sha256": "09341550bc792e43fe3f4b8178fa66b2b6f713d249a6fda1279cbf5b246dbe72",
+      "lines": 1611,
+      "mediaQueries": 0,
+      "important": 3,
+      "mediaConditions": [],
+      "maxWidthBreakpoints": [
+        250,
+        350
+      ],
+      "sectionPrefixHits": {
+        ".cc-": 104,
+        ".flujo-": 6
+      }
+    },
+    {
+      "file": "components/Global/Global_css/GlobalTableScrollResponsive.css",
+      "sha256": "26138dbec016d88cfdd09e808492223067161ad80beca86a04580af536c5842d",
+      "lines": 505,
+      "mediaQueries": 2,
+      "important": 178,
+      "mediaConditions": [
+        "(max-width: 980px)",
+        "(max-width: 720px)"
+      ],
+      "maxWidthBreakpoints": [
+        980,
+        720
+      ],
+      "sectionPrefixHits": {
+        ".cc-": 8,
+        ".cfg-": 42,
+        ".doccom-": 13
+      }
+    },
+    {
+      "file": "components/Global/Global_css/GlobalsModalsV2.css",
+      "sha256": "bb645da44c0e8b39f0bb5b57d119b144af5ddb73d53c4b5508285b78330cf80e",
+      "lines": 3159,
+      "mediaQueries": 20,
+      "important": 38,
+      "mediaConditions": [
+        "(max-width: 980px)",
+        "(max-width: 720px)",
+        "(max-width: 520px)",
+        "(max-width: 980px)",
+        "(max-width: 640px)",
+        "(max-width: 980px)",
+        "(max-width: 720px)",
+        "(max-width: 520px)",
+        "(max-width: 640px)",
+        "(max-width: 640px)",
+        "(max-width: 768px)",
+        "(max-width: 1100px)",
+        "(max-width: 768px)",
+        "(max-width: 520px)",
+        "(max-width: 1100px)",
+        "(max-width: 768px)",
+        "(max-width: 520px)",
+        "(max-width: 980px)",
+        "(max-width: 720px)",
+        "(max-width: 420px)"
+      ],
+      "maxWidthBreakpoints": [
+        980,
+        720,
+        520,
+        980,
+        640,
+        980,
+        720,
+        520,
+        120,
+        640,
+        640,
+        768,
+        1100,
+        768,
+        520,
+        1100,
+        768,
+        520,
+        980,
+        720,
+        420
+      ],
+      "sectionPrefixHits": {}
+    },
+    {
+      "file": "components/Global/Global_css/Global_responsive.css",
+      "sha256": "9d4abfc77edb0349e99c98e78892d504439cf3334a7d1124f32fdfec60b3fd5b",
+      "lines": 1779,
+      "mediaQueries": 30,
+      "important": 147,
+      "mediaConditions": [
+        "(max-width: 980px)",
+        "(max-width: 720px)",
+        "(max-width: 720px)",
+        "(max-width: 980px)",
+        "(max-width: 720px)",
+        "(max-width: 720px)",
+        "(max-width: 980px)",
+        "(max-width: 980px)",
+        "(max-width: 560px)",
+        "(max-width: 980px)",
+        "(max-width: 900px)",
+        "(max-width: 780px)",
+        "(max-width: 600px)",
+        "(max-width: 720px)",
+        "(max-width: 720px)",
+        "(max-width: 420px)",
+        "(max-width: 1200px)",
+        "(max-width: 1024px)",
+        "(max-width: 768px)",
+        "(max-width: 560px)",
+        "(max-width: 420px)",
+        "(max-width: 1024px)",
+        "(max-width: 768px)",
+        "(max-width: 560px)",
+        "(max-width: 420px)",
+        "(max-width: 900px)",
+        "(max-width: 640px)",
+        "(max-width: 768px)",
+        "(max-width: 560px)",
+        "(max-width: 420px)"
+      ],
+      "maxWidthBreakpoints": [
+        980,
+        720,
+        720,
+        980,
+        720,
+        720,
+        980,
+        980,
+        560,
+        980,
+        900,
+        780,
+        600,
+        720,
+        720,
+        420,
+        1200,
+        1024,
+        768,
+        560,
+        420,
+        1024,
+        768,
+        560,
+        420,
+        900,
+        640,
+        768,
+        560,
+        420,
+        180
+      ],
+      "sectionPrefixHits": {
+        ".mi-em-": 29,
+        ".mi-cr-": 170
+      }
+    },
+    {
+      "file": "components/Global/Global_css/GlobalResponsiveV2.css",
+      "sha256": "3031ce5ce0437aa16cbbc220c2e20a9c882226d6b2e78f1591a5bb7d86735508",
+      "lines": 99,
+      "mediaQueries": 2,
+      "important": 3,
+      "mediaConditions": [
+        "(max-width: 720px)",
+        "(max-width: 420px)"
+      ],
+      "maxWidthBreakpoints": [
+        720,
+        420
+      ],
+      "sectionPrefixHits": {
+        ".cc-": 7
+      }
+    }
+  ],
+  "largestResponsiveFiles": [
+    {
+      "file": "components/Servicios/Servicios.css",
+      "sha256": "bc1980f9ada6661e45d4e0b1dfa4dc4c85f076eb0a1b44e281bb80796af71dd3",
+      "lines": 3859,
+      "mediaQueries": 26,
+      "important": 44,
+      "mediaConditions": [
+        "(max-width: 860px)",
+        "(max-width: 640px)",
+        "(min-width: 721px)",
+        "(max-width: 1499px) and (min-width: 721px)",
+        "(max-width: 720px)",
+        "(max-width: 430px)",
+        "(max-width: 860px)",
+        "(max-width: 640px)",
+        "(max-width: 900px)",
+        "(max-width: 560px)",
+        "(max-width: 920px)",
+        "(max-width: 640px)",
+        "(max-width: 920px)",
+        "(max-width: 560px)",
+        "(max-width: 760px)",
+        "(max-width: 520px)",
+        "(max-width: 920px)",
+        "(max-width: 560px)",
+        "(max-width: 920px)",
+        "(max-width: 640px)",
+        "(max-width: 760px)",
+        "(max-width: 760px)",
+        "(max-width: 760px)",
+        "(max-width: 640px)",
+        "(max-width: 720px)",
+        "(max-width: 420px)"
+      ],
+      "maxWidthBreakpoints": [
+        70,
+        860,
+        640,
+        330,
+        150,
+        330,
+        150,
+        1080,
+        130,
+        1499,
+        720,
+        430,
+        860,
+        640,
+        900,
+        560,
+        920,
+        640,
+        920,
+        560,
+        760,
+        520,
+        920,
+        560,
+        920,
+        640,
+        760,
+        760,
+        760,
+        640,
+        720,
+        420
+      ],
+      "sectionPrefixHits": {
+        ".cc-": 9
+      }
+    },
+    {
+      "file": "components/Global/Global_css/GlobalsModalsV2.css",
+      "sha256": "bb645da44c0e8b39f0bb5b57d119b144af5ddb73d53c4b5508285b78330cf80e",
+      "lines": 3159,
+      "mediaQueries": 20,
+      "important": 38,
+      "mediaConditions": [
+        "(max-width: 980px)",
+        "(max-width: 720px)",
+        "(max-width: 520px)",
+        "(max-width: 980px)",
+        "(max-width: 640px)",
+        "(max-width: 980px)",
+        "(max-width: 720px)",
+        "(max-width: 520px)",
+        "(max-width: 640px)",
+        "(max-width: 640px)",
+        "(max-width: 768px)",
+        "(max-width: 1100px)",
+        "(max-width: 768px)",
+        "(max-width: 520px)",
+        "(max-width: 1100px)",
+        "(max-width: 768px)",
+        "(max-width: 520px)",
+        "(max-width: 980px)",
+        "(max-width: 720px)",
+        "(max-width: 420px)"
+      ],
+      "maxWidthBreakpoints": [
+        980,
+        720,
+        520,
+        980,
+        640,
+        980,
+        720,
+        520,
+        120,
+        640,
+        640,
+        768,
+        1100,
+        768,
+        520,
+        1100,
+        768,
+        520,
+        980,
+        720,
+        420
+      ],
+      "sectionPrefixHits": {}
+    },
+    {
+      "file": "components/Global/Global_css/Global_oscuro.css",
+      "sha256": "fadaabfd89a23b80aae7d9308b23e5aa15742b6a5a4c4c8ebdbd4a2af2e96555",
+      "lines": 2500,
+      "mediaQueries": 4,
+      "important": 236,
+      "mediaConditions": [
+        "(max-width: 1000px)",
+        "(max-width: 720px)",
+        "(max-width: 420px)",
+        "(max-width: 560px)"
+      ],
+      "maxWidthBreakpoints": [
+        1000,
+        720,
+        420,
+        560
+      ],
+      "sectionPrefixHits": {
+        ".cc-": 115,
+        ".cfg-": 18,
+        ".af-": 14,
+        ".mi-cr-": 9
+      }
+    },
+    {
+      "file": "components/Cuentas_Corrientes/modales/ModalEntidadFiscal.css",
+      "sha256": "493a16cd22ae5dd20fa718d6c06cd48fd951e96ae5c9f7b57057d23aeb97ba5a",
+      "lines": 1970,
+      "mediaQueries": 15,
+      "important": 98,
+      "mediaConditions": [
+        "(min-width: 981px)",
+        "(max-width: 980px)",
+        "(max-width: 700px)",
+        "(max-width: 460px)",
+        "(max-width: 820px)",
+        "(max-width: 520px)",
+        "(max-width: 900px)",
+        "(max-width: 820px)",
+        "(max-width: 560px)",
+        "(max-width: 520px)",
+        "(max-width: 420px)",
+        "(max-width: 820px)",
+        "(max-width: 560px)",
+        "(max-width: 390px)",
+        "(max-width: 560px)"
+      ],
+      "maxWidthBreakpoints": [
+        1180,
+        760,
+        980,
+        700,
+        460,
+        920,
+        820,
+        520,
+        860,
+        900,
+        820,
+        560,
+        520,
+        420,
+        820,
+        560,
+        390,
+        560
+      ],
+      "sectionPrefixHits": {
+        ".cc-": 437,
+        ".mi-cr-": 10
+      }
+    },
+    {
+      "file": "components/Global/Global_css/Global_responsive.css",
+      "sha256": "9d4abfc77edb0349e99c98e78892d504439cf3334a7d1124f32fdfec60b3fd5b",
+      "lines": 1779,
+      "mediaQueries": 30,
+      "important": 147,
+      "mediaConditions": [
+        "(max-width: 980px)",
+        "(max-width: 720px)",
+        "(max-width: 720px)",
+        "(max-width: 980px)",
+        "(max-width: 720px)",
+        "(max-width: 720px)",
+        "(max-width: 980px)",
+        "(max-width: 980px)",
+        "(max-width: 560px)",
+        "(max-width: 980px)",
+        "(max-width: 900px)",
+        "(max-width: 780px)",
+        "(max-width: 600px)",
+        "(max-width: 720px)",
+        "(max-width: 720px)",
+        "(max-width: 420px)",
+        "(max-width: 1200px)",
+        "(max-width: 1024px)",
+        "(max-width: 768px)",
+        "(max-width: 560px)",
+        "(max-width: 420px)",
+        "(max-width: 1024px)",
+        "(max-width: 768px)",
+        "(max-width: 560px)",
+        "(max-width: 420px)",
+        "(max-width: 900px)",
+        "(max-width: 640px)",
+        "(max-width: 768px)",
+        "(max-width: 560px)",
+        "(max-width: 420px)"
+      ],
+      "maxWidthBreakpoints": [
+        980,
+        720,
+        720,
+        980,
+        720,
+        720,
+        980,
+        980,
+        560,
+        980,
+        900,
+        780,
+        600,
+        720,
+        720,
+        420,
+        1200,
+        1024,
+        768,
+        560,
+        420,
+        1024,
+        768,
+        560,
+        420,
+        900,
+        640,
+        768,
+        560,
+        420,
+        180
+      ],
+      "sectionPrefixHits": {
+        ".mi-em-": 29,
+        ".mi-cr-": 170
+      }
+    },
+    {
+      "file": "components/Cuentas_Corrientes/cuentas_corrientes.css",
+      "sha256": "fe7c56c66993e2cf639e38edb429427244b3e204411564d5825ed9ba163df698",
+      "lines": 1723,
+      "mediaQueries": 16,
+      "important": 89,
+      "mediaConditions": [
+        "(max-width: 1100px)",
+        "(max-width: 980px)",
+        "(max-width: 820px)",
+        "(max-width: 640px)",
+        "(max-width: 480px)",
+        "(max-width: 980px)",
+        "(max-width: 640px)",
+        "(max-width: 420px)",
+        "(max-width: 768px)",
+        "(max-width: 1500px)",
+        "(max-width: 820px)",
+        "(max-width: 1500px)",
+        "(max-width: 1500px)",
+        "(max-width: 1200px)",
+        "(max-width: 980px)",
+        "(max-width: 820px)"
+      ],
+      "maxWidthBreakpoints": [
+        1100,
+        980,
+        820,
+        640,
+        480,
+        980,
+        640,
+        420,
+        768,
+        1500,
+        820,
+        1500,
+        1500,
+        1200,
+        980,
+        820
+      ],
+      "sectionPrefixHits": {
+        ".cc-": 344,
+        ".mi-cr-": 14
+      }
+    },
+    {
+      "file": "components/Global/Global_css/ModalDetalleMovimiento.css",
+      "sha256": "aa09748b6456e09564f088607a362586b30ca5cdce50f00a5bef82ca69017317",
+      "lines": 1695,
+      "mediaQueries": 6,
+      "important": 51,
+      "mediaConditions": [
+        "(max-width: 980px)",
+        "(max-width: 640px)",
+        "(max-width: 760px)",
+        "(max-width: 640px)",
+        "(max-width: 980px)",
+        "(max-width: 720px)"
+      ],
+      "maxWidthBreakpoints": [
+        780,
+        760,
+        980,
+        640,
+        220,
+        760,
+        640,
+        980,
+        720
+      ],
+      "sectionPrefixHits": {
+        ".mi-cr-": 9
+      }
+    },
+    {
+      "file": "components/Global/Global_css/Global_Modals.css",
+      "sha256": "5a8ba195e5388c2975ed87aaa5def6c52c708964af93521036a62decb9f536eb",
+      "lines": 1553,
+      "mediaQueries": 4,
+      "important": 82,
+      "mediaConditions": [
+        "(max-width: 980px)",
+        "(max-width: 720px)",
+        "(max-width: 520px)",
+        "(max-width: 480px)"
+      ],
+      "maxWidthBreakpoints": [
+        980,
+        720,
+        520,
+        220,
+        720,
+        480,
+        150
+      ],
+      "sectionPrefixHits": {
+        ".mi-cr-": 78
+      }
+    },
+    {
+      "file": "components/Principal/principal.css",
+      "sha256": "e9408c3585b62512b82c3d7fda85ebd889edd001309aeb7288056a2eecdbbbe9",
+      "lines": 1500,
+      "mediaQueries": 19,
+      "important": 84,
+      "mediaConditions": [
+        "(hover:hover) and (pointer:fine)",
+        "(hover:hover) and (pointer:fine)",
+        "(hover:hover) and (pointer:fine)",
+        "(hover:hover) and (pointer:fine)",
+        "(hover:hover) and (pointer:fine)",
+        "(min-width: 721px)",
+        "(hover:hover) and (pointer:fine)",
+        "(hover:hover) and (pointer:fine)",
+        "(hover:hover) and (pointer:fine)",
+        "(hover:hover) and (pointer:fine)",
+        "(max-width: 980px)",
+        "(max-width: 720px)",
+        "(max-width: 560px)",
+        "(max-width: 400px)",
+        "(min-width: 721px)",
+        "(max-width: 980px)",
+        "(max-width: 720px)",
+        "(max-width: 560px)",
+        "(max-width: 400px)"
+      ],
+      "maxWidthBreakpoints": [
+        520,
+        980,
+        720,
+        560,
+        400,
+        980,
+        140,
+        720,
+        120,
+        560,
+        105,
+        400,
+        92
+      ],
+      "sectionPrefixHits": {
+        ".mi-em-": 1
+      }
+    },
+    {
+      "file": "components/Analisis_Financiero/analisis_financiero.css",
+      "sha256": "ea4790e69577942b1ae63e94b189cd18815269cda0c8c6d0427b09454e6ed0d7",
+      "lines": 1415,
+      "mediaQueries": 10,
+      "important": 69,
+      "mediaConditions": [
+        "(max-width: 1200px)",
+        "(max-width: 760px)",
+        "(max-width: 760px)",
+        "(max-width: 760px)",
+        "(max-width: 1200px)",
+        "(max-width: 760px)",
+        "(max-width: 900px)",
+        "(max-width: 640px)",
+        "(max-width: 420px)",
+        "(max-width: 900px)"
+      ],
+      "maxWidthBreakpoints": [
+        1200,
+        760,
+        760,
+        760,
+        1200,
+        760,
+        900,
+        640,
+        420,
+        900
+      ],
+      "sectionPrefixHits": {
+        ".cc-": 2,
+        ".af-": 282
+      }
+    },
+    {
+      "file": "components/Mov_Subsection/Documentos_Comerciales/DocumentosComerciales.css",
+      "sha256": "48e1135de42571765bb0c2a8d742ce74f6c7808765fda6296c742e77625a99bd",
+      "lines": 1266,
+      "mediaQueries": 9,
+      "important": 19,
+      "mediaConditions": [
+        "(max-width: 720px)",
+        "(max-width: 900px)",
+        "(max-width: 1100px)",
+        "(max-width: 900px)",
+        "(max-width: 700px)",
+        "(max-width: 980px)",
+        "(max-width: 720px)",
+        "(max-width: 980px)",
+        "(max-width: 720px)"
+      ],
+      "maxWidthBreakpoints": [
+        720,
+        760,
+        900,
+        235,
+        300,
+        1100,
+        900,
+        700,
+        980,
+        720,
+        980,
+        720
+      ],
+      "sectionPrefixHits": {
+        ".cc-": 12,
+        ".doccom-": 294
+      }
+    },
+    {
+      "file": "components/Configuracion/ConfiguracionDatosLegales/ConfiguracionDatosLegales.css",
+      "sha256": "094aa426471364049f48ee24152b6b81ec64e5c9e7b9dbc6a148aaad25102e68",
+      "lines": 1198,
+      "mediaQueries": 3,
+      "important": 0,
+      "mediaConditions": [
+        "(max-width: 920px)",
+        "(max-width: 620px)",
+        "(max-width: 620px)"
+      ],
+      "maxWidthBreakpoints": [
+        920,
+        620,
+        620
+      ],
+      "sectionPrefixHits": {
+        ".cfg-": 250
+      }
+    },
+    {
+      "file": "components/Dashboard/dashboard.css",
+      "sha256": "3f11de9e154779760670e9c059df32c2d68a76ab6d0e72a85a20acb54ceb6b1e",
+      "lines": 1179,
+      "mediaQueries": 2,
+      "important": 6,
+      "mediaConditions": [
+        "(prefers-reduced-motion: reduce)",
+        "(min-width: 769px)"
+      ],
+      "maxWidthBreakpoints": [
+        760,
+        640,
+        112,
+        126
+      ],
+      "sectionPrefixHits": {}
+    },
+    {
+      "file": "components/Mov_Subsection/Documentos_Comerciales/modales/ModalPresupuesto.css",
+      "sha256": "7ac46eb15cdd5225cf3e52d09ef461857100d529c102e5afe8cf6438691932d9",
+      "lines": 1014,
+      "mediaQueries": 2,
+      "important": 17,
+      "mediaConditions": [
+        "(max-width: 980px)",
+        "(max-width: 850px)"
+      ],
+      "maxWidthBreakpoints": [
+        980,
+        142,
+        290,
+        850
+      ],
+      "sectionPrefixHits": {}
+    },
+    {
+      "file": "components/Configuracion/ConfiguracionUsuarios/ConfiguracionUsuarios.css",
+      "sha256": "a284d2ccc060d6afc7d9c5101c23b29c9f2b514512b1e95cb72ed55e81ab53a4",
+      "lines": 947,
+      "mediaQueries": 2,
+      "important": 3,
+      "mediaConditions": [
+        "(max-width: 980px)",
+        "(max-width: 640px)"
+      ],
+      "maxWidthBreakpoints": [
+        980,
+        640
+      ],
+      "sectionPrefixHits": {
+        ".cfg-": 177
+      }
+    }
+  ],
+  "mostImportantFiles": [
+    {
+      "file": "components/Global/Global_css/Global_oscuro.css",
+      "sha256": "fadaabfd89a23b80aae7d9308b23e5aa15742b6a5a4c4c8ebdbd4a2af2e96555",
+      "lines": 2500,
+      "mediaQueries": 4,
+      "important": 236,
+      "mediaConditions": [
+        "(max-width: 1000px)",
+        "(max-width: 720px)",
+        "(max-width: 420px)",
+        "(max-width: 560px)"
+      ],
+      "maxWidthBreakpoints": [
+        1000,
+        720,
+        420,
+        560
+      ],
+      "sectionPrefixHits": {
+        ".cc-": 115,
+        ".cfg-": 18,
+        ".af-": 14,
+        ".mi-cr-": 9
+      }
+    },
+    {
+      "file": "components/Global/Global_css/GlobalTableScrollResponsive.css",
+      "sha256": "26138dbec016d88cfdd09e808492223067161ad80beca86a04580af536c5842d",
+      "lines": 505,
+      "mediaQueries": 2,
+      "important": 178,
+      "mediaConditions": [
+        "(max-width: 980px)",
+        "(max-width: 720px)"
+      ],
+      "maxWidthBreakpoints": [
+        980,
+        720
+      ],
+      "sectionPrefixHits": {
+        ".cc-": 8,
+        ".cfg-": 42,
+        ".doccom-": 13
+      }
+    },
+    {
+      "file": "components/Global/Global_css/Global_responsive.css",
+      "sha256": "9d4abfc77edb0349e99c98e78892d504439cf3334a7d1124f32fdfec60b3fd5b",
+      "lines": 1779,
+      "mediaQueries": 30,
+      "important": 147,
+      "mediaConditions": [
+        "(max-width: 980px)",
+        "(max-width: 720px)",
+        "(max-width: 720px)",
+        "(max-width: 980px)",
+        "(max-width: 720px)",
+        "(max-width: 720px)",
+        "(max-width: 980px)",
+        "(max-width: 980px)",
+        "(max-width: 560px)",
+        "(max-width: 980px)",
+        "(max-width: 900px)",
+        "(max-width: 780px)",
+        "(max-width: 600px)",
+        "(max-width: 720px)",
+        "(max-width: 720px)",
+        "(max-width: 420px)",
+        "(max-width: 1200px)",
+        "(max-width: 1024px)",
+        "(max-width: 768px)",
+        "(max-width: 560px)",
+        "(max-width: 420px)",
+        "(max-width: 1024px)",
+        "(max-width: 768px)",
+        "(max-width: 560px)",
+        "(max-width: 420px)",
+        "(max-width: 900px)",
+        "(max-width: 640px)",
+        "(max-width: 768px)",
+        "(max-width: 560px)",
+        "(max-width: 420px)"
+      ],
+      "maxWidthBreakpoints": [
+        980,
+        720,
+        720,
+        980,
+        720,
+        720,
+        980,
+        980,
+        560,
+        980,
+        900,
+        780,
+        600,
+        720,
+        720,
+        420,
+        1200,
+        1024,
+        768,
+        560,
+        420,
+        1024,
+        768,
+        560,
+        420,
+        900,
+        640,
+        768,
+        560,
+        420,
+        180
+      ],
+      "sectionPrefixHits": {
+        ".mi-em-": 29,
+        ".mi-cr-": 170
+      }
+    },
+    {
+      "file": "components/Dashboard/dashboard.responsive.css",
+      "sha256": "5c9560a3a7e6b2248ba0f6f051020e6be351e9d0bacf59239a9c70ba0a115000",
+      "lines": 300,
+      "mediaQueries": 4,
+      "important": 138,
+      "mediaConditions": [
+        "(max-width: 768px)",
+        "(max-width: 480px)",
+        "(max-width: 768px)",
+        "(max-width: 768px)"
+      ],
+      "maxWidthBreakpoints": [
+        768,
+        480,
+        145,
+        768,
+        768
+      ],
+      "sectionPrefixHits": {}
+    },
+    {
+      "file": "components/Cuentas_Corrientes/modales/ModalEntidadFiscal.css",
+      "sha256": "493a16cd22ae5dd20fa718d6c06cd48fd951e96ae5c9f7b57057d23aeb97ba5a",
+      "lines": 1970,
+      "mediaQueries": 15,
+      "important": 98,
+      "mediaConditions": [
+        "(min-width: 981px)",
+        "(max-width: 980px)",
+        "(max-width: 700px)",
+        "(max-width: 460px)",
+        "(max-width: 820px)",
+        "(max-width: 520px)",
+        "(max-width: 900px)",
+        "(max-width: 820px)",
+        "(max-width: 560px)",
+        "(max-width: 520px)",
+        "(max-width: 420px)",
+        "(max-width: 820px)",
+        "(max-width: 560px)",
+        "(max-width: 390px)",
+        "(max-width: 560px)"
+      ],
+      "maxWidthBreakpoints": [
+        1180,
+        760,
+        980,
+        700,
+        460,
+        920,
+        820,
+        520,
+        860,
+        900,
+        820,
+        560,
+        520,
+        420,
+        820,
+        560,
+        390,
+        560
+      ],
+      "sectionPrefixHits": {
+        ".cc-": 437,
+        ".mi-cr-": 10
+      }
+    },
+    {
+      "file": "components/Cuentas_Corrientes/cuentas_corrientes.css",
+      "sha256": "fe7c56c66993e2cf639e38edb429427244b3e204411564d5825ed9ba163df698",
+      "lines": 1723,
+      "mediaQueries": 16,
+      "important": 89,
+      "mediaConditions": [
+        "(max-width: 1100px)",
+        "(max-width: 980px)",
+        "(max-width: 820px)",
+        "(max-width: 640px)",
+        "(max-width: 480px)",
+        "(max-width: 980px)",
+        "(max-width: 640px)",
+        "(max-width: 420px)",
+        "(max-width: 768px)",
+        "(max-width: 1500px)",
+        "(max-width: 820px)",
+        "(max-width: 1500px)",
+        "(max-width: 1500px)",
+        "(max-width: 1200px)",
+        "(max-width: 980px)",
+        "(max-width: 820px)"
+      ],
+      "maxWidthBreakpoints": [
+        1100,
+        980,
+        820,
+        640,
+        480,
+        980,
+        640,
+        420,
+        768,
+        1500,
+        820,
+        1500,
+        1500,
+        1200,
+        980,
+        820
+      ],
+      "sectionPrefixHits": {
+        ".cc-": 344,
+        ".mi-cr-": 14
+      }
+    },
+    {
+      "file": "components/Principal/principal.css",
+      "sha256": "e9408c3585b62512b82c3d7fda85ebd889edd001309aeb7288056a2eecdbbbe9",
+      "lines": 1500,
+      "mediaQueries": 19,
+      "important": 84,
+      "mediaConditions": [
+        "(hover:hover) and (pointer:fine)",
+        "(hover:hover) and (pointer:fine)",
+        "(hover:hover) and (pointer:fine)",
+        "(hover:hover) and (pointer:fine)",
+        "(hover:hover) and (pointer:fine)",
+        "(min-width: 721px)",
+        "(hover:hover) and (pointer:fine)",
+        "(hover:hover) and (pointer:fine)",
+        "(hover:hover) and (pointer:fine)",
+        "(hover:hover) and (pointer:fine)",
+        "(max-width: 980px)",
+        "(max-width: 720px)",
+        "(max-width: 560px)",
+        "(max-width: 400px)",
+        "(min-width: 721px)",
+        "(max-width: 980px)",
+        "(max-width: 720px)",
+        "(max-width: 560px)",
+        "(max-width: 400px)"
+      ],
+      "maxWidthBreakpoints": [
+        520,
+        980,
+        720,
+        560,
+        400,
+        980,
+        140,
+        720,
+        120,
+        560,
+        105,
+        400,
+        92
+      ],
+      "sectionPrefixHits": {
+        ".mi-em-": 1
+      }
+    },
+    {
+      "file": "components/Global/Global_css/Global_Modals.css",
+      "sha256": "5a8ba195e5388c2975ed87aaa5def6c52c708964af93521036a62decb9f536eb",
+      "lines": 1553,
+      "mediaQueries": 4,
+      "important": 82,
+      "mediaConditions": [
+        "(max-width: 980px)",
+        "(max-width: 720px)",
+        "(max-width: 520px)",
+        "(max-width: 480px)"
+      ],
+      "maxWidthBreakpoints": [
+        980,
+        720,
+        520,
+        220,
+        720,
+        480,
+        150
+      ],
+      "sectionPrefixHits": {
+        ".mi-cr-": 78
+      }
+    },
+    {
+      "file": "components/Global/Global_css/GlobalViewport.css",
+      "sha256": "a25c2441a33b609889cf6395e348401690ad13164fb9885e98b5b5c324762418",
+      "lines": 204,
+      "mediaQueries": 1,
+      "important": 76,
+      "mediaConditions": [
+        "(max-width: 980px)"
+      ],
+      "maxWidthBreakpoints": [
+        980
+      ],
+      "sectionPrefixHits": {}
+    },
+    {
+      "file": "components/Analisis_Financiero/analisis_financiero.css",
+      "sha256": "ea4790e69577942b1ae63e94b189cd18815269cda0c8c6d0427b09454e6ed0d7",
+      "lines": 1415,
+      "mediaQueries": 10,
+      "important": 69,
+      "mediaConditions": [
+        "(max-width: 1200px)",
+        "(max-width: 760px)",
+        "(max-width: 760px)",
+        "(max-width: 760px)",
+        "(max-width: 1200px)",
+        "(max-width: 760px)",
+        "(max-width: 900px)",
+        "(max-width: 640px)",
+        "(max-width: 420px)",
+        "(max-width: 900px)"
+      ],
+      "maxWidthBreakpoints": [
+        1200,
+        760,
+        760,
+        760,
+        1200,
+        760,
+        900,
+        640,
+        420,
+        900
+      ],
+      "sectionPrefixHits": {
+        ".cc-": 2,
+        ".af-": 282
+      }
+    },
+    {
+      "file": "components/Flujo_de_Caja/flujo_caja.css",
+      "sha256": "6bf2d3f37ec660f339567f7af4dc4045e1a5ba4138744adc9a997d2660d43c92",
+      "lines": 931,
+      "mediaQueries": 14,
+      "important": 51,
+      "mediaConditions": [
+        "(max-width: 1100px)",
+        "(max-width: 900px)",
+        "(max-width: 720px)",
+        "(max-width: 560px)",
+        "(max-width: 720px)",
+        "(max-width: 560px)",
+        "(max-width: 380px)",
+        "(max-width: 560px)",
+        "(max-width: 560px)",
+        "(prefers-reduced-motion: reduce)",
+        "(min-width: 1200px)",
+        "(min-width: 901px) and (max-width: 1199px)",
+        "(min-width: 561px) and (max-width: 900px)",
+        "(min-width: 561px)"
+      ],
+      "maxWidthBreakpoints": [
+        1100,
+        900,
+        720,
+        560,
+        720,
+        560,
+        380,
+        560,
+        560,
+        1199,
+        900
+      ],
+      "sectionPrefixHits": {
+        ".cc-": 2
+      }
+    },
+    {
+      "file": "components/Global/Global_css/ModalDetalleMovimiento.css",
+      "sha256": "aa09748b6456e09564f088607a362586b30ca5cdce50f00a5bef82ca69017317",
+      "lines": 1695,
+      "mediaQueries": 6,
+      "important": 51,
+      "mediaConditions": [
+        "(max-width: 980px)",
+        "(max-width: 640px)",
+        "(max-width: 760px)",
+        "(max-width: 640px)",
+        "(max-width: 980px)",
+        "(max-width: 720px)"
+      ],
+      "maxWidthBreakpoints": [
+        780,
+        760,
+        980,
+        640,
+        220,
+        760,
+        640,
+        980,
+        720
+      ],
+      "sectionPrefixHits": {
+        ".mi-cr-": 9
+      }
+    },
+    {
+      "file": "components/Flujo_de_Caja/flujo_caja.responsive.css",
+      "sha256": "d303717511035acaa168183d452001108aa1fee334e5533e4f542187336d3eb9",
+      "lines": 130,
+      "mediaQueries": 2,
+      "important": 50,
+      "mediaConditions": [
+        "(max-width: 980px)",
+        "(max-width: 560px)"
+      ],
+      "maxWidthBreakpoints": [
+        980,
+        560
+      ],
+      "sectionPrefixHits": {}
+    },
+    {
+      "file": "components/Servicios/Servicios.css",
+      "sha256": "bc1980f9ada6661e45d4e0b1dfa4dc4c85f076eb0a1b44e281bb80796af71dd3",
+      "lines": 3859,
+      "mediaQueries": 26,
+      "important": 44,
+      "mediaConditions": [
+        "(max-width: 860px)",
+        "(max-width: 640px)",
+        "(min-width: 721px)",
+        "(max-width: 1499px) and (min-width: 721px)",
+        "(max-width: 720px)",
+        "(max-width: 430px)",
+        "(max-width: 860px)",
+        "(max-width: 640px)",
+        "(max-width: 900px)",
+        "(max-width: 560px)",
+        "(max-width: 920px)",
+        "(max-width: 640px)",
+        "(max-width: 920px)",
+        "(max-width: 560px)",
+        "(max-width: 760px)",
+        "(max-width: 520px)",
+        "(max-width: 920px)",
+        "(max-width: 560px)",
+        "(max-width: 920px)",
+        "(max-width: 640px)",
+        "(max-width: 760px)",
+        "(max-width: 760px)",
+        "(max-width: 760px)",
+        "(max-width: 640px)",
+        "(max-width: 720px)",
+        "(max-width: 420px)"
+      ],
+      "maxWidthBreakpoints": [
+        70,
+        860,
+        640,
+        330,
+        150,
+        330,
+        150,
+        1080,
+        130,
+        1499,
+        720,
+        430,
+        860,
+        640,
+        900,
+        560,
+        920,
+        640,
+        920,
+        560,
+        760,
+        520,
+        920,
+        560,
+        920,
+        640,
+        760,
+        760,
+        760,
+        640,
+        720,
+        420
+      ],
+      "sectionPrefixHits": {
+        ".cc-": 9
+      }
+    },
+    {
+      "file": "components/Global/Global_css/GlobalsModalsV2.css",
+      "sha256": "bb645da44c0e8b39f0bb5b57d119b144af5ddb73d53c4b5508285b78330cf80e",
+      "lines": 3159,
+      "mediaQueries": 20,
+      "important": 38,
+      "mediaConditions": [
+        "(max-width: 980px)",
+        "(max-width: 720px)",
+        "(max-width: 520px)",
+        "(max-width: 980px)",
+        "(max-width: 640px)",
+        "(max-width: 980px)",
+        "(max-width: 720px)",
+        "(max-width: 520px)",
+        "(max-width: 640px)",
+        "(max-width: 640px)",
+        "(max-width: 768px)",
+        "(max-width: 1100px)",
+        "(max-width: 768px)",
+        "(max-width: 520px)",
+        "(max-width: 1100px)",
+        "(max-width: 768px)",
+        "(max-width: 520px)",
+        "(max-width: 980px)",
+        "(max-width: 720px)",
+        "(max-width: 420px)"
+      ],
+      "maxWidthBreakpoints": [
+        980,
+        720,
+        520,
+        980,
+        640,
+        980,
+        720,
+        520,
+        120,
+        640,
+        640,
+        768,
+        1100,
+        768,
+        520,
+        1100,
+        768,
+        520,
+        980,
+        720,
+        420
+      ],
+      "sectionPrefixHits": {}
+    }
+  ]
+}

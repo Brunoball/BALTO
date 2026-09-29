@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import "./flujo_caja.css";
+import "./flujo_caja.responsive.css";
 import "../Global/Global_css/Global_oscuro.css";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";

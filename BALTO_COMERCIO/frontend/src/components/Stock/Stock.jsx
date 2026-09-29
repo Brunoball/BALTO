@@ -26,6 +26,7 @@ import {
   faChartColumn,
 } from "@fortawesome/free-solid-svg-icons";
 import "./Stock.css";
+import "./StockResponsive.css";
 import "../Global/Global_css/Global_Section.css";
 import { canBaltoUseBarcode } from "../../utils/demoMode";
 import { DOWNLOAD_TOKEN_UPDATED_EVENT } from "../../session/sessionClient";
@@ -2766,7 +2767,7 @@ const Stock = () => {
 
   return (
     <>
-      <div className="mov-page stock-page">
+      <div className="mov-page stock-page balto-rsp-table-page">
         {permiteCodigoBarras ? (
           <input
             ref={lectorCapturaRef}
@@ -2785,7 +2786,7 @@ const Stock = () => {
           </div>
         )}
 
-        <section className="mov-card mov-card--table">
+        <section className="mov-card mov-card--table balto-rsp-table-shell">
           <div className="mov-card__head">
             <div className="mov-card__headLeft">
               <div className="title-mov">
@@ -2924,6 +2925,7 @@ const Stock = () => {
             className={[
               "mov-tableWrap",
               "stock-tableWrap",
+              "balto-rsp-table-scroll",
               totalPaginas > 1
                 ? "stock-tableWrap--with-pagination"
                 : "stock-tableWrap--without-pagination",
@@ -2934,6 +2936,7 @@ const Stock = () => {
               className={[
                 "mov-gridBody",
                 "mov-gridBody--relative",
+                "balto-rsp-table-body-reset",
                 loading ? "mov-softLoading" : "",
               ].join(" ")}
             >

@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import "../../Global/Global_css/Global_Section.css";
 import "../../Global/Global_css/Global_responsive.css";
+import "../cheques.responsive.css";
 import Toast from "../../Global/Toast.jsx";
 import ModalVerComprobante from "../../Global/Ver_Comprobantes/ModalVerComprobante.jsx";
 import ModalDepositarCheque from "../modales/ModalDepositarCheque.jsx";
@@ -325,7 +326,7 @@ const Echeqs_Cartera = () => {
   const isAnyLoading = loading || loadingMore;
 
   return (
-    <div className="mov-page">
+    <div className="mov-page balto-rsp-table-page">
       {toast && (
         <Toast
           tipo={toast.tipo}
@@ -363,7 +364,7 @@ const Echeqs_Cartera = () => {
         </div>
       )}
 
-      <section className="mov-card mov-card--table">
+      <section className="mov-card mov-card--table balto-rsp-table-shell">
         <div className="mov-card__head">
           <div className="mov-card__headLeft">
             <div className="title-mov">
@@ -444,11 +445,12 @@ const Echeqs_Cartera = () => {
           ))}
         </div>
 
-        <div className="mov-tableWrap" role="rowgroup" id="cheques-st">
+        <div className="mov-tableWrap balto-rsp-table-scroll" role="rowgroup" id="cheques-st">
           <div
             className={[
               "mov-gridBody",
               "mov-gridBody--relative",
+              "balto-rsp-table-body-reset",
               loading ? "mov-softLoading" : "",
             ].join(" ")}
           >

@@ -863,6 +863,7 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
   const [clienteSel, setClienteSel] = useState(null);
   const [observaciones, setObservaciones] = useState("");
   const [condiciones, setCondiciones] = useState(buildDefaultCondicionesPresupuesto);
+  const [activeAccordion, setActiveAccordion] = useState(null);
   const [rows, setRows] = useState([buildEmptyRow()]);
   const [presupuestoPersonalizado, setPresupuestoPersonalizado] = useState(false);
   const [modeloOrigen, setModeloOrigen] = useState(null);
@@ -907,6 +908,7 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
     setClienteSel(null);
     setObservaciones("");
     setCondiciones(buildDefaultCondicionesPresupuesto());
+    setActiveAccordion(null);
     setRows([buildEmptyRow()]);
     setPresupuestoPersonalizado(false);
     setModeloOrigen(null);
@@ -1648,7 +1650,8 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
           </div>
 
           <div className="gm-movement-layout">
-            <section className="gm-table gm-table--movement gm-movement-main dc-presupuesto-table">
+            <div className="gm-movement-main dc-presupuesto-main">
+              <section className="gm-table gm-table--movement dc-presupuesto-table">
               <div className="gm-table-head">
                 <div className="gm-table-th" style={{ paddingLeft: 10 }}>Detalle</div>
                 <div className="gm-table-th">{presupuestoPersonalizado ? "Cant./medida" : "Cant."}</div>
@@ -1788,8 +1791,26 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
                 })}
               </div>
 
-              <div className="presupuesto-terms" aria-label="Condiciones comerciales del presupuesto">
-                <div className="presupuesto-terms__title">Condiciones comerciales</div>
+              </section>
+
+              <div
+                className={`presupuesto-terms ${activeAccordion === "terms" ? "is-open" : ""}`}
+                aria-label="Condiciones comerciales del presupuesto"
+              >
+                <button
+                  type="button"
+                  className="presupuesto-terms__toggle"
+                  onClick={() => setActiveAccordion((current) => (current === "terms" ? null : "terms"))}
+                  disabled={saving}
+                  aria-expanded={activeAccordion === "terms"}
+                  aria-controls="presupuesto-condiciones-body"
+                >
+                  <span>{activeAccordion === "terms" ? "▾" : "▸"} Condiciones comerciales</span>
+                  <small>{activeAccordion === "terms" ? "Ocultar" : "Configurar"}</small>
+                </button>
+
+                {activeAccordion === "terms" ? (
+                  <div className="presupuesto-terms__body" id="presupuesto-condiciones-body">
                 <div className="presupuesto-terms__row">
                   <div className="gm-field presupuesto-terms__field presupuesto-terms__field--small">
                     <input
@@ -1883,9 +1904,11 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
                   />
                   <label className="gm-label">Notas adicionales</label>
                 </div>
+                  </div>
+                ) : null}
               </div>
 
-              <div className="gm-table-foot">
+              <div className="gm-table-foot dc-presupuesto-foot">
                 <div className="gm-foot-actions">
                   <button type="button" className="gm-foot-btn" onClick={addRow} disabled={saving}>
                     <span className="gm-foot-btn__icon">
@@ -1913,8 +1936,7 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
                   </div>
                 </div>
               </div>
-
-            </section>
+            </div>
 
             <div className="gm-movement-side">
               <aside className="gm-aside">

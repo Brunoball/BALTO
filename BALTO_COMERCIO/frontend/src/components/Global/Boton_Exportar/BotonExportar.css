@@ -91,7 +91,7 @@
 
 .boton-exportar-modal {
   width: min(690px, calc(100vw - 36px));
-  max-height: min(720px, calc(100vh - 36px));
+  max-height: min(720px, calc(var(--balto-visual-viewport-height, 100dvh) - 36px));
   overflow: hidden;
   border-radius: 18px;
   background: var(--color-surface, #fff);
@@ -485,14 +485,25 @@ body.dark .boton-exportar-modal__cancel,
 
 @media (max-width: 720px) {
   .boton-exportar-modalOverlay {
-    padding: 8px;
-    align-items: flex-end;
+    /*
+      En responsive el selector de exportación debe seguir siendo un modal,
+      no un bottom-sheet. Mantenerlo centrado evita que cada sección lo
+      perciba a una altura distinta según su propio scroll.
+    */
+    align-items: center;
+    justify-content: center;
+    padding:
+      max(8px, var(--balto-safe-top, 0px))
+      max(8px, var(--balto-safe-right, 0px))
+      max(8px, var(--balto-safe-bottom, 0px))
+      max(8px, var(--balto-safe-left, 0px));
+    box-sizing: border-box;
   }
 
   .boton-exportar-modal {
     width: 100%;
-    max-height: 92vh;
-    border-radius: 18px 18px 10px 10px;
+    max-height: calc(var(--balto-visual-viewport-height, 100dvh) - 16px);
+    border-radius: 18px;
   }
 
   .boton-exportar-modal__header {
@@ -532,3 +543,33 @@ body.dark .boton-exportar-modal__cancel,
     flex: 1;
   }
 }
+
+/* =========================================================
+   BOTÓN EXPORTAR · MOBILE ICON-ONLY
+   Migrado desde Global_responsive.css en Fase 2.
+   ========================================================= */
+@media (max-width: 720px){
+  .boton-exportar-trigger{
+    width: 42px !important;
+    min-width: 42px !important;
+    height: 42px !important;
+    padding: 0 !important;
+    justify-content: center !important;
+    gap: 0 !important;
+  }
+
+  .boton-exportar-trigger__left{
+    gap: 0 !important;
+  }
+
+  .boton-exportar-trigger__iconWrap{
+    width: 32px !important;
+    height: 32px !important;
+  }
+
+  .boton-exportar-trigger__text,
+  .boton-exportar-trigger__right{
+    display: none !important;
+  }
+}
+

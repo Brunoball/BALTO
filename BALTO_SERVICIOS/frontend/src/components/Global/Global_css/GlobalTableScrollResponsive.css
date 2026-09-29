@@ -1,4 +1,11 @@
 /* =========================================================
+   BALTO · CONTRATO RESPONSIVE · FASE 1
+   DUEÑO: patrón común "sección fija + tabla con scroll interno".
+   OBJETIVO: depender sólo de clases estructurales comunes en JSX.
+   NO AGREGAR: nuevas excepciones .cc-/.cfg-/.doccom- o IDs de sección.
+   Ver: RESPONSIVE_ARCHITECTURE.md
+   ========================================================= */
+/* =========================================================
    BALTO · VIEWPORT TABULAR RESPONSIVE GLOBAL
    ---------------------------------------------------------
    Objetivo (<= 980px):

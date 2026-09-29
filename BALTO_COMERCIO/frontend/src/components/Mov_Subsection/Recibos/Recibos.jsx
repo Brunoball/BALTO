@@ -984,7 +984,7 @@ export default function Recibos() {
   };
 
   return (
-    <div className="mov-page" data-section="recibos">
+    <div className="mov-page balto-rsp-table-page" data-section="recibos">
       {toast && (
         <Toast
           key={toast.id}
@@ -1006,7 +1006,7 @@ export default function Recibos() {
         </div>
       )}
 
-      <section className="mov-card mov-card--table">
+      <section className="mov-card mov-card--table balto-rsp-table-shell">
         <div className="mov-card__head">
           <div className="mov-card__headLeft">
             <div className="title-mov">
@@ -1143,8 +1143,8 @@ export default function Recibos() {
           ))}
         </div>
 
-        <div className="mov-tableWrap mov-table---Wrap" role="rowgroup" ref={tableWrapRef}>
-          <div className={["mov-gridBody", "mov-gridBody--relative", loadingRows ? "mov-softLoading" : ""].join(" ")}>
+        <div className="mov-tableWrap mov-table---Wrap balto-rsp-table-scroll" role="rowgroup" ref={tableWrapRef}>
+          <div className={["mov-gridBody", "mov-gridBody--relative", "balto-rsp-table-body-reset", loadingRows ? "mov-softLoading" : ""].join(" ")}>
             {loadingRows ? (
               <div className="mov-skeletonWrap" aria-busy="true">
                 {Array.from({ length: SKELETON_ROWS }).map((_, i) => renderSkeletonRow(i))}

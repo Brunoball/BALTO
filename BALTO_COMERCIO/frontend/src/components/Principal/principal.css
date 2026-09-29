@@ -207,7 +207,7 @@ button{ font-family: inherit; }
    LAYOUT
 ========================= */
 .pp-shell{
-  min-height:100vh;
+  min-height:var(--balto-visual-viewport-height, 100dvh);
   display:flex;
   padding-top: var(--mov-topbar-h);
   background:
@@ -442,7 +442,7 @@ button{ font-family: inherit; }
 .pp-sidebar{
   position: sticky;
   top: var(--mov-topbar-h);
-  height: calc(100vh - var(--mov-topbar-h));
+  height: calc(var(--balto-visual-viewport-height, 100dvh) - var(--mov-topbar-h));
   width: var(--pp-side-collapsed);
   background: rgba(255,255,255,.84);
   border-right: 1px solid rgba(10, 37, 64, 0.12);
@@ -939,7 +939,7 @@ button{ font-family: inherit; }
     position: fixed;
     top: var(--mov-topbar-h);
     left: 0;
-    height: calc(100vh - var(--mov-topbar-h));
+    height: calc(var(--balto-visual-viewport-height, 100dvh) - var(--mov-topbar-h));
     width: var(--drawer-w);
     z-index: 1300;
     transform: translateX(-110%);
@@ -1138,7 +1138,7 @@ button{ font-family: inherit; }
 }.pp-sidebar{
   position: sticky;
   top: var(--mov-topbar-h);
-  height: calc(100vh - var(--mov-topbar-h));
+  height: calc(var(--balto-visual-viewport-height, 100dvh) - var(--mov-topbar-h));
   width: var(--pp-side-collapsed);
   background: rgba(255,255,255,.84);
   border-right: 1px solid rgba(10, 37, 64, 0.12);
@@ -1227,7 +1227,7 @@ button{ font-family: inherit; }
     display: block !important;
     width: 100%;
     min-width: 0;
-    min-height: 100vh;
+    min-height: var(--balto-visual-viewport-height, 100dvh);
     padding-top: var(--mov-topbar-h) !important;
     overflow-x: hidden;
   }
@@ -1273,7 +1273,7 @@ button{ font-family: inherit; }
     bottom: auto !important;
     width: min(var(--drawer-w), calc(100vw - 24px)) !important;
     max-width: calc(100vw - 24px) !important;
-    height: calc(100vh - var(--mov-topbar-h)) !important;
+    height: calc(var(--balto-visual-viewport-height, 100dvh) - var(--mov-topbar-h)) !important;
     z-index: 1300 !important;
     transform: translateX(-110%) !important;
     transition: transform 220ms cubic-bezier(.4,0,.2,1) !important;

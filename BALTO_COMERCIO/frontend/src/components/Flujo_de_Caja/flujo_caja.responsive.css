@@ -1,0 +1,129 @@
+/* =========================================================
+   BALTO · FLUJO DE CAJA · RESPONSIVE
+   ---------------------------------------------------------
+   Comportamiento propio de esta sección (<= 980px):
+   - El viewport de la sección NO scrollea.
+   - Cabecera, filtro, resumen y tarjetas conservan su alto natural.
+   - La tabla toma exactamente el espacio vertical restante.
+   - El único scroll vertical pertenece a #Flujo_Cj-tableWrap.
+
+   Se mantiene separado del patrón tabular global porque Flujo de Caja
+   tiene un resumen/tarjetas intermedias con comportamiento propio.
+========================================================= */
+
+@media (max-width: 980px) {
+  /* 1) La ruta completa queda contenida en el viewport visible real. */
+  html.balto-visual-viewport-ready
+    .pp-content.pp-content--flujo-caja {
+    width: 100% !important;
+    height: var(
+      --balto-content-viewport-height,
+      var(--balto-panel-viewport-height)
+    ) !important;
+    min-height: 0 !important;
+    max-height: var(
+      --balto-content-viewport-height,
+      var(--balto-panel-viewport-height)
+    ) !important;
+    overflow-x: hidden !important;
+    overflow-y: hidden !important;
+    overscroll-behavior: none !important;
+  }
+
+  html.balto-visual-viewport-ready
+    .pp-content.pp-content--flujo-caja
+    > .pp-content__inner {
+    display: flex !important;
+    flex: 1 1 0 !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    max-height: 100% !important;
+    overflow: hidden !important;
+    overscroll-behavior: none !important;
+  }
+
+  /* 2) Página y tarjeta ocupan el espacio disponible, nunca más que él. */
+  html.balto-visual-viewport-ready
+    .pp-content.pp-content--flujo-caja
+    .mov-page--flujoCaja {
+    display: flex !important;
+    flex: 1 1 0 !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    max-height: 100% !important;
+    overflow: hidden !important;
+    overscroll-behavior: none !important;
+  }
+
+  html.balto-visual-viewport-ready
+    .pp-content.pp-content--flujo-caja
+    .mov-page--flujoCaja
+    > .mov-alert {
+    flex: 0 0 auto !important;
+  }
+
+  html.balto-visual-viewport-ready
+    .pp-content.pp-content--flujo-caja
+    .mov-page--flujoCaja
+    > .mov-card--table {
+    display: flex !important;
+    flex: 1 1 0 !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: 100% !important;
+    overflow: visible !important;
+  }
+
+  /* 3) Todo lo anterior a la tabla conserva su altura natural. */
+  html.balto-visual-viewport-ready
+    .pp-content.pp-content--flujo-caja
+    .mov-page--flujoCaja
+    > .mov-card--table
+    > :not(#Flujo_Cj-tableWrap) {
+    flex: 0 0 auto !important;
+  }
+
+  /* 4) ÚNICO scroll vertical de la sección. */
+  html.balto-visual-viewport-ready
+    .pp-content.pp-content--flujo-caja
+    #Flujo_Cj-tableWrap {
+    flex: 1 1 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    scrollbar-gutter: stable;
+    overscroll-behavior-y: contain !important;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y !important;
+  }
+
+  html.balto-visual-viewport-ready
+    .pp-content.pp-content--flujo-caja
+    #Flujo_Cj-tableWrap
+    > .mov-gridBody--relative {
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+  }
+}
+
+/* En mobile la tabla se transforma en tarjetas, pero mantiene exactamente
+   el mismo dueño del scroll: #Flujo_Cj-tableWrap. */
+@media (max-width: 560px) {
+  html.balto-visual-viewport-ready
+    .pp-content.pp-content--flujo-caja
+    #Flujo_Cj-tableWrap {
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow-y: auto !important;
+  }
+}

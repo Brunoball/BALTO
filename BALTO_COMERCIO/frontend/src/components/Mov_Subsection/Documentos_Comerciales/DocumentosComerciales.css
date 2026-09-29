@@ -339,7 +339,7 @@ body.dark .doccom-placeholder {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  height:calc(100vh - 300px) ;
+  height:calc(var(--balto-visual-viewport-height, 100dvh) - 300px) ;
   overflow: auto;
   padding-right: 3px;
 }
@@ -905,7 +905,7 @@ body.dark {
   background: var(--doccom-card);
   overflow: auto;
   overflow-x: auto;
-  max-height: calc(100vh - 310px);
+  max-height: calc(var(--balto-visual-viewport-height, 100dvh) - 310px);
   min-height: 360px;
 }
 
@@ -1168,8 +1168,8 @@ body.dark .doccom-subpage .doccom-filter .cc-input:focus {
   border-bottom: 0;
   border-radius: 0 0 18px 18px;
   overflow: auto;
-  min-height: calc(100vh - 420px);
-  max-height: calc(100vh - 420px);
+  min-height: calc(var(--balto-visual-viewport-height, 100dvh) - 420px);
+  max-height: calc(var(--balto-visual-viewport-height, 100dvh) - 420px);
 }
 
 

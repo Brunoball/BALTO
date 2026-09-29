@@ -22,6 +22,7 @@ import "../../../Global/Global_css/Global_responsive.css";
 import "../../../Global/Global_css/roots.css";
 // Estilos específicos compartidos por Nuevo Egreso y Editar Egreso
 import "./ModalEgreso.css";
+import "../../../Global/Global_css/GlobalMovementEntryResponsive.css";
 import { otrosEgresosFetch } from "../api/otrosEgresosApi.js";
 
 /* ─────────────────────────────────────────
@@ -1301,7 +1302,7 @@ export default function ModalNuevoEgreso({
     <>
       <div className="gm-modal-overlay">
         <div
-          className="gm-modal-container gm-modal-container--movement gm-modal-v2 oe-modal"
+          className="gm-modal-container gm-modal-container--movement gm-modal-container--movement-entry-responsive gm-modal-v2 oe-modal"
           role="dialog"
           aria-modal="true"
           onMouseDown={(e) => e.stopPropagation()}

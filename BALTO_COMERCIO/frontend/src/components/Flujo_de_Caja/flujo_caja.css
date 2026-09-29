@@ -26,14 +26,14 @@
 
   min-height: 0;
   height: 100%;
-  max-height: calc(100vh - 96px);
+  max-height: calc(var(--balto-visual-viewport-height, 100dvh) - 96px);
   overflow: hidden;
 }
 
 .mov-page--flujoCaja .mov-card--table {
   min-height: 0;
   height: 100%;
-  max-height: calc(100vh - 96px);
+  max-height: calc(var(--balto-visual-viewport-height, 100dvh) - 96px);
   overflow: hidden;
 }
 
@@ -329,8 +329,8 @@
 
 #Flujo_Cj-tableWrap {
   flex: 1 1 auto;
-  min-height: calc(100vh - 410px) !important;
-  max-height: calc(100vh - 410px) !important;
+  min-height: calc(var(--balto-visual-viewport-height, 100dvh) - 410px) !important;
+  max-height: calc(var(--balto-visual-viewport-height, 100dvh) - 410px) !important;
   height: auto !important;
   overflow: auto;
   overflow-x: hidden;

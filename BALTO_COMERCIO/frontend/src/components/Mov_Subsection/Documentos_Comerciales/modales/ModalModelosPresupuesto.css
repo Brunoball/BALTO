@@ -631,8 +631,8 @@ body.dark .presupuesto-modelos-field--textarea textarea.gm-input:not(:placeholde
 
   .presupuesto-modelos-modal {
     width: 100vw;
-    max-height: 100vh;
-    height: 100vh;
+    max-height: var(--balto-visual-viewport-height, 100dvh);
+    height: var(--balto-visual-viewport-height, 100dvh);
     border-radius: 0;
   }
 

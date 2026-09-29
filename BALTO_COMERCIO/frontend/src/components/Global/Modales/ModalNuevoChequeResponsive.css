@@ -1,0 +1,54 @@
+/* =========================================================
+   BALTO · MODAL NUEVO CHEQUE · RESPONSIVE PROPIO
+   Migrado desde Global_responsive.css en Fase 2.
+   ========================================================= */
+
+@media (max-width: 720px) {
+  .mp-modal {
+    width: min(96vw, 96vw);
+    max-height: 94vh;
+  }
+
+  .mp-card__top {
+    grid-template-columns: minmax(0, 1fr) 132px auto;
+    gap: 10px;
+  }
+}
+
+@media (max-width: 560px) {
+  .mp-modal__body {
+    padding: 12px;
+    gap: 12px;
+  }
+
+  .mp-card__top {
+    grid-template-columns: 1fr 1fr .5fr !important;
+  }
+
+  .mp-card__actions {
+    flex-direction: row;
+    justify-content: flex-end;
+    min-width: 0;
+  }
+
+  .mp-btn-completar,
+  .mp-btn-del {
+    width: auto;
+    min-width: 42px;
+  }
+
+  .mp-modal__footer,
+  .mp-modal__totals {
+    flex-wrap: wrap;
+  }
+
+  .mp-footer-left,
+  .mp-btn-confirmar {
+    width: 100%;
+  }
+
+  .mp-btn-agregar,
+  .mp-btn-confirmar {
+    justify-content: center;
+  }
+}

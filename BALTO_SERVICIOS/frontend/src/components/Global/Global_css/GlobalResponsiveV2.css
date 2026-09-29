@@ -1,4 +1,10 @@
 /* =========================================================
+   BALTO · RESPONSIVE V2 LEGACY · FASE 1
+   Aunque el nombre sea global, hoy este archivo pertenece a Ventas.
+   NO extenderlo a otras secciones; se migrará en una fase posterior.
+   Ver: RESPONSIVE_ARCHITECTURE.md
+   ========================================================= */
+/* =========================================================
    GLOBAL RESPONSIVE V2 · VENTAS
    Solo complementa la cabecera en celulares.
    La tabla y los modales conservan su responsive existente.

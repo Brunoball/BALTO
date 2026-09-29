@@ -1,0 +1,71 @@
+/* =========================================================
+   BALTO COMERCIO · STOCK · RESPONSIVE
+   ---------------------------------------------------------
+   Stock participa del contrato global balto-rsp-table-* pero
+   conserva alturas históricas (46vh / calc(100vh - Xpx)) en
+   Stock.css. Este archivo, cargado después de Stock.css, evita
+   que esas medidas vuelvan a pisar el alto flexible en <=980px.
+   La vista de escritorio no se modifica.
+========================================================= */
+
+@media (max-width: 980px) {
+  .stock-page.balto-rsp-table-page {
+    height: 100% !important;
+    min-height: 0 !important;
+    max-height: 100% !important;
+    overflow: hidden !important;
+  }
+
+  .stock-page > .balto-rsp-table-shell {
+    flex: 1 1 0 !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: 100% !important;
+    overflow: hidden !important;
+  }
+
+  .stock-page .stock-tableWrap.balto-rsp-table-scroll {
+    flex: 1 1 0 !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior-y: contain !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .stock-page .mov-gridBody.balto-rsp-table-body-reset {
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+  }
+}
+
+/* =========================================================
+   STOCK · ACCIONES INFERIORES EN UNA FILA (MOBILE)
+   ---------------------------------------------------------
+   En pantallas chicas los tres accesos secundarios del footer
+   (bajas / reportes / ajuste de precios) se muestran solo con
+   icono. Por eso no necesitan apilarse: reparten el ancho de la
+   fila y permanecen alineados horizontalmente.
+========================================================= */
+@media (max-width: 620px) {
+  .stock-page .stock-tableActionsMobile {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    justify-content: stretch !important;
+    gap: 8px !important;
+    width: 100% !important;
+  }
+
+  .stock-page .stock-tableActionsMobile .mov-btn,
+  .stock-page .stock-tableActionsMobile .stock-actionBtn {
+    flex: 1 1 0 !important;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+  }
+}

@@ -1568,7 +1568,7 @@ export default function OtrosIngresos() {
   };
 
   return (
-    <div className="mov-page">
+    <div className="mov-page balto-rsp-table-page">
       {toast && (
         <Toast
           tipo={toast.tipo}
@@ -1578,7 +1578,7 @@ export default function OtrosIngresos() {
         />
       )}
 
-      <section className="mov-card mov-card--table">
+      <section className="mov-card mov-card--table balto-rsp-table-shell">
         <div className="mov-card__head">
           <div className="mov-card__headLeft">
             <div className="title-mov">
@@ -1745,11 +1745,12 @@ export default function OtrosIngresos() {
           ))}
         </div>
 
-        <div className="mov-tableWrap" role="rowgroup" ref={tableWrapRef}>
+        <div className="mov-tableWrap balto-rsp-table-scroll" role="rowgroup" ref={tableWrapRef}>
           <div
             className={[
               "mov-gridBody",
               "mov-gridBody--relative",
+              "balto-rsp-table-body-reset",
               showSkeleton ? "mov-softLoading" : "",
             ].join(" ")}
           >

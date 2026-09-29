@@ -1,3 +1,10 @@
+/* =========================================================
+   BALTO · CONTRATO RESPONSIVE · FASE 1
+   DUEÑO: primitivas visuales compartidas de secciones y tablas.
+   NO AGREGAR: alturas responsive por sección ni lógica de viewport.
+   DEUDA LEGACY existente se migrará por fases, sin alterar diseño.
+   Ver: RESPONSIVE_ARCHITECTURE.md
+   ========================================================= */
 body{overflow: hidden;}
 /* =========================
    BASE

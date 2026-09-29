@@ -4,6 +4,7 @@ import { filtrarMediosPagoPorPlan } from "../../_shared/planMediosPago";
 import { createPortal } from "react-dom";
 import "../../../Global/Global_css/GlobalsModalsV2.css";
 import "./ModalNuevaVenta.css";
+import "../../../Global/Global_css/GlobalMovementEntryResponsive.css";
 import "../../../Global/Global_css/roots.css";
 import BASE_URL from "../../../../config/config";
 import ModalFacturaBaltoResumen from "../../Facturacion/ModalFacturaBaltoResumen.jsx";
@@ -3683,9 +3684,9 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
 
   return createPortal(
     <>
-      <div className="gm-modal-overlay">
+      <div className="gm-modal-overlay gm-modal-overlay--movement-entry-responsive">
         <div
-          className="gm-modal-container gm-modal-container--movement gm-modal-v2 nv-modal"
+          className="gm-modal-container gm-modal-container--movement gm-modal-container--movement-entry-responsive gm-modal-v2 nv-modal"
           role="dialog"
           aria-modal="true"
           onMouseDown={(e) => e.stopPropagation()}

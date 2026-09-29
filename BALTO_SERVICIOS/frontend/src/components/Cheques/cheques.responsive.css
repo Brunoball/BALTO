@@ -1,0 +1,14 @@
+/* =========================================================
+   BALTO · CHEQUES · RESPONSIVE PROPIO
+   Migrado desde Global_responsive.css en Fase 2.
+   ========================================================= */
+
+@media (max-width: 720px) {
+  .cheques-cards-pn{
+    grid-template-columns: 1fr !important;
+  }
+
+  #cheques-st{
+    min-height: 70vh !important;
+  }
+}

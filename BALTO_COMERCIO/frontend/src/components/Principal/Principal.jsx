@@ -29,6 +29,8 @@ import {
 
 import "./principal.css";
 import ModalPerfil from "../Perfil/ModalPerfil";
+import useVisualViewport from "../Global/useVisualViewport";
+import "../Global/Global_css/GlobalTableScrollResponsive.css";
 import {
   actualizarTemaBackend,
   cerrarSesionBackend,
@@ -146,6 +148,8 @@ const StableOutlet = memo(function StableOutlet() {
 const Principal = () => {
   const navigate = useNavigate();
   const location = useLocation();
+
+  useVisualViewport();
 
   const [usuario, setUsuario] = useState(null);
   const [tema, setTema] = useState("claro");
@@ -1096,7 +1100,27 @@ const Principal = () => {
         </nav>
       </aside>
 
-      <main className="pp-content">
+      <main
+        className={`pp-content${
+          location.pathname === "/panel" ||
+          location.pathname === "/panel/" ||
+          location.pathname.startsWith("/panel/dashboard")
+            ? " pp-content--dashboard"
+            : ""
+        }${
+          location.pathname.startsWith("/panel/analisis-financiero")
+            ? " pp-content--analisis-financiero"
+            : ""
+        }${
+          location.pathname.startsWith("/panel/flujo-de-caja")
+            ? " pp-content--flujo-caja"
+            : ""
+        }${
+          location.pathname.startsWith("/panel/stock")
+            ? " pp-content--stock"
+            : ""
+        }`}
+      >
         <div className="pp-content__inner">
           <StableOutlet />
         </div>

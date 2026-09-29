@@ -248,8 +248,8 @@
   flex: 1;
   min-height: 0;
   overflow: auto;
-  max-height: calc(100vh - 320px);
-    min-height: calc(100vh - 320px);
+  max-height: calc(var(--balto-visual-viewport-height, 100dvh) - 320px);
+    min-height: calc(var(--balto-visual-viewport-height, 100dvh) - 320px);
 }
 
 .cmp-gridTable{
@@ -2295,7 +2295,7 @@ html[data-theme="oscuro"] .cmi-warnBox div{color:rgba(226,232,240,.60) !importan
 html[data-theme="oscuro"] .mov-page,
 body.dark .mov-page{
   /* Deja ver el fondo real del layout y elimina el halo/cuadrado oscuro
-     que se alcanzaba a ver detrás de las esquinas redondeadas del card. */
+     detrás de las esquinas redondeadas del card. */
   background: transparent !important;
   color: rgba(226,232,240,.92) !important;
 }
@@ -2320,9 +2320,6 @@ html[data-theme="oscuro"] .mov-page .mov-card__head{
     radial-gradient(900px 180px at 0% 0%, rgba(78,161,255,.12), transparent 55%),
     linear-gradient(180deg, rgba(15,23,42,.85), rgba(15,23,42,.62)) !important;
   border-bottom-color: rgba(148,163,184,.12) !important;
-
-  /* Mantiene redondeado el fondo del header incluso en secciones que
-     cargan directamente Global_oscuro.css sin Global_Section.css. */
   border-top-left-radius: var(--radius-lg, 18px);
   border-top-right-radius: var(--radius-lg, 18px);
   background-clip: padding-box;

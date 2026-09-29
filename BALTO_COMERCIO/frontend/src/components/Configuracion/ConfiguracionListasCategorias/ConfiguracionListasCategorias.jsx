@@ -24,6 +24,8 @@ import ModalDetalleLista from "./ModalDetalleLista";
 import ModalCategoriaStock from "./ModalCategoriaStock";
 import ModalUnidadStock from "./ModalUnidadStock";
 import ModalMedioPago from "./ModalMedioPago";
+import "../ConfiguracionResponsiveScroll.css";
+import "../ConfiguracionTableCards.css";
 
 const TABS = [
   { value: "detalles", label: "Detalles", singular: "detalle" },
@@ -334,7 +336,7 @@ export default function ConfiguracionListasCategorias() {
       ];
 
   return (
-    <section className="cfg-listas-page">
+    <section className="cfg-listas-page balto-rsp-table-page">
       {toast && <Toast key={toast.key} tipo={toast.tipo} mensaje={toast.mensaje} duracion={toast.duracion} onClose={() => setToast(null)} />}
 
       <header className="cfg-listas-hero">
@@ -349,7 +351,7 @@ export default function ConfiguracionListasCategorias() {
         </button>
       </header>
 
-      <section className="cfg-listas-card">
+      <section className="cfg-listas-card balto-rsp-table-shell balto-rsp-table-clip">
         <div className="cfg-listas-toolbar">
           <div className="cfg-listas-tabs" role="tablist">
             {TABS.map((item) => (
@@ -375,7 +377,7 @@ export default function ConfiguracionListasCategorias() {
           </button>
         </div>
 
-        <div className="cfg-listas-tableWrap">
+        <div className="cfg-listas-tableWrap balto-rsp-table-scroll">
           <div
             className={`cfg-listas-grid ${isCategory ? "is-category" : isUnit ? "is-unit" : "is-detail"}`}
             role="table"
@@ -397,7 +399,7 @@ export default function ConfiguracionListasCategorias() {
               </div>
             </div>
 
-            <div className="cfg-listas-gridBodyScroll" ref={rowsScrollRef}>
+            <div className="cfg-listas-gridBodyScroll balto-rsp-table-inner-visible" ref={rowsScrollRef}>
               <div className="cfg-listas-gridBody" role="rowgroup">
                 {loading ? Array.from({ length: 6 }).map((_, index) => (
                   <div key={index} className="cfg-listas-gridRow is-skeleton" role="row">
@@ -405,21 +407,21 @@ export default function ConfiguracionListasCategorias() {
                   </div>
                 )) : rows.map((row) => (
                   <div key={rowId(tab, row)} className={`cfg-listas-gridRow ${Number(row.activo) === 1 ? "" : "is-inactive"}`} role="row">
-                    <div className="cfg-listas-gridCell cfg-listas-gridCell--name" role="cell">
+                    <div className="cfg-listas-gridCell cfg-listas-gridCell--name" role="cell" data-label="Nombre">
                       <strong>{row.nombre}</strong>
                       <small>{isCategory ? (row.categoria_padre_nombre ? `Subcategoría de ${row.categoria_padre_nombre}` : "Categoría principal") : isUnit ? (Number(row.es_default || 0) === 1 ? "Unidad predeterminada" : "Unidad de medida") : isPayment ? (Number(row.es_sistema || 0) === 1 ? "Medio integrado del sistema" : "Medio de cobro / pago") : "Detalle de ingresos / egresos"}</small>
                     </div>
-                    {isCategory && <div className="cfg-listas-gridCell cfg-listas-gridCell--description" role="cell">{row.descripcion || "—"}</div>}
-                    {isCategory && <div className="cfg-listas-gridCell is-center" role="cell">{Number(row.cantidad_productos || 0).toLocaleString("es-AR")}</div>}
-                    {isCategory && <div className="cfg-listas-gridCell is-center" role="cell">{Number(row.cantidad_hijas || 0).toLocaleString("es-AR")}</div>}
-                    {isUnit && <div className="cfg-listas-gridCell is-center" role="cell"><strong>{row.abreviatura || "—"}</strong></div>}
-                    {isUnit && <div className="cfg-listas-gridCell is-center" role="cell">{Number(row.permite_decimales ?? 1) === 1 ? "Sí" : "No"}</div>}
-                    {isUnit && <div className="cfg-listas-gridCell is-center" role="cell">{(Number(row.cantidad_productos || 0) + Number(row.cantidad_variantes || 0)).toLocaleString("es-AR")}</div>}
-                    {!isCategory && !isUnit && <div className="cfg-listas-gridCell is-center" role="cell">{Number(row.cantidad_usos || 0).toLocaleString("es-AR")}</div>}
-                    <div className="cfg-listas-gridCell is-center" role="cell">
+                    {isCategory && <div className="cfg-listas-gridCell cfg-listas-gridCell--description" role="cell" data-label="Descripción">{row.descripcion || "—"}</div>}
+                    {isCategory && <div className="cfg-listas-gridCell is-center" role="cell" data-label="Productos">{Number(row.cantidad_productos || 0).toLocaleString("es-AR")}</div>}
+                    {isCategory && <div className="cfg-listas-gridCell is-center" role="cell" data-label="Subcategorías">{Number(row.cantidad_hijas || 0).toLocaleString("es-AR")}</div>}
+                    {isUnit && <div className="cfg-listas-gridCell is-center" role="cell" data-label="Abrev."><strong>{row.abreviatura || "—"}</strong></div>}
+                    {isUnit && <div className="cfg-listas-gridCell is-center" role="cell" data-label="Decimales">{Number(row.permite_decimales ?? 1) === 1 ? "Sí" : "No"}</div>}
+                    {isUnit && <div className="cfg-listas-gridCell is-center" role="cell" data-label="Usos">{(Number(row.cantidad_productos || 0) + Number(row.cantidad_variantes || 0)).toLocaleString("es-AR")}</div>}
+                    {!isCategory && !isUnit && <div className="cfg-listas-gridCell is-center" role="cell" data-label="Usos históricos">{Number(row.cantidad_usos || 0).toLocaleString("es-AR")}</div>}
+                    <div className="cfg-listas-gridCell is-center" role="cell" data-label="Estado">
                       <span className={`cfg-listas-chip ${Number(row.activo) === 1 ? "is-active" : ""}`}>{Number(row.activo) === 1 ? "ACTIVO" : "BAJA"}</span>
                     </div>
-                    <div className="cfg-listas-gridCell is-center" role="cell">
+                    <div className="cfg-listas-gridCell is-center cfg-listas-gridCell--actions" role="cell" data-label="Acciones">
                       <div className="cfg-listas-actions">
                         <button type="button" disabled={(isUnit && Number(row.es_default || 0) === 1) || (isPayment && Number(row.es_sistema || 0) === 1)} title={isPayment && Number(row.es_sistema || 0) === 1 ? "CHEQUE/ECHEQ son medios integrados y no pueden renombrarse" : isUnit && Number(row.es_default || 0) === 1 ? "La unidad predeterminada no se puede modificar" : "Editar"} onClick={() => setModal({ kind: tab, item: row })}><FontAwesomeIcon icon={faPenToSquare} /></button>
                         <button type="button" disabled={(isUnit && Number(row.es_default || 0) === 1) || (isPayment && Number(row.es_sistema || 0) === 1)} title={Number(row.activo) === 1 ? "Dar de baja" : "Reactivar"} onClick={() => setStatusModal({ kind: tab, item: row })}><FontAwesomeIcon icon={Number(row.activo) === 1 ? faBan : faRotateLeft} /></button>

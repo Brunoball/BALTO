@@ -5,6 +5,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import logoTiendaNube from "../../imagenes/logo_tienda_nube.png";
 import "./configuracion.css";
 import "../Global/Global_css/Global_oscuro.css";
+import "./ConfiguracionResponsiveScroll.css";
 import Toast from "../Global/Toast";
 import { apiFetch, safeJsonParse } from "./api/configuracionApi";
 import useConfiguracionToast from "./hooks/useConfiguracionToast";

@@ -422,7 +422,7 @@
 .cfg-users-modal,
 .cfg-users-confirm {
   width: min(520px, 100%);
-  max-height: calc(100vh - 38px);
+  max-height: calc(var(--balto-visual-viewport-height, 100dvh) - 38px);
   overflow: auto;
   background: #fff;
   color: var(--balto-ink, #0a2540);
@@ -943,7 +943,4 @@ body.dark .cfg-users-btn--save {
     margin-right: 0;
     text-align: center;
   }
-}
-.cfg-users-page {
-  height: calc(100vh - 118px);
 }

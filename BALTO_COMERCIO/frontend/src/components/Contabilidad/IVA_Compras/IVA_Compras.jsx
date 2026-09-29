@@ -221,6 +221,7 @@ function IvaTableSkeleton() {
                 "mov-gridCell",
                 colIndex >= 2 ? "is-right" : "",
               ].join(" ")}
+              data-label={columnas[colIndex]?.label || ""}
               role="cell"
             >
               <span className="mov-skeletonBar" style={{ width }} />
@@ -365,7 +366,7 @@ export default function IVACompras() {
     : error || (q.trim() ? `No se encontraron compras para "${q.trim()}".` : "No hay registros de IVA compras para mostrar en el rango seleccionado.");
 
   return (
-    <div className="mov-page contabilidad-page">
+    <div className="mov-page contabilidad-page balto-rsp-table-page">
       {toast && (
         <Toast
           tipo={toast.tipo}
@@ -377,7 +378,7 @@ export default function IVACompras() {
 
       <section
         className={[
-          "mov-card mov-card--table contabilidad-cardTable",
+          "mov-card mov-card--table contabilidad-cardTable balto-rsp-table-shell",
           hasTableScroll ? "has-table-scroll" : "",
         ].join(" ")}
       >
@@ -453,10 +454,23 @@ export default function IVACompras() {
                   </div>
                 </div>
               </div>
+              <div className="mov-card__actions contabilidad-headerActions contabilidad-headerActions--mobile" style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                <BotonExportar
+                  disabled={loading || filteredRegistros.length === 0}
+                  loading={false}
+                  label="Exportar"
+                  title={filteredRegistros.length ? "Exportar archivo" : "No hay datos para exportar"}
+                  opciones={exportOptions}
+                  align="right"
+                  entityLabel="registros de IVA compras"
+                  currentCount={filteredRegistros.length}
+                  scopeEnabled={false}
+                />
+              </div>
             </div>
           </div>
 
-          <div className="mov-card__actions" style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          <div className="mov-card__actions contabilidad-headerActions contabilidad-headerActions--desktop" style={{ display: "flex", gap: 10, alignItems: "center" }}>
             <BotonExportar
               disabled={loading || filteredRegistros.length === 0}
               loading={false}
@@ -494,8 +508,8 @@ export default function IVACompras() {
           ))}
         </div>
 
-        <div ref={tableWrapRef} className="mov-tableWrap contabilidad-tableWrap" role="rowgroup">
-          <div className="mov-gridBody mov-gridBody--relative">
+        <div ref={tableWrapRef} className="mov-tableWrap contabilidad-tableWrap balto-rsp-table-scroll" role="rowgroup">
+          <div className="mov-gridBody mov-gridBody--relative balto-rsp-table-body-reset">
             {loading ? (
               <IvaTableSkeleton />
             ) : filteredRegistros.length === 0 ? (
@@ -507,15 +521,15 @@ export default function IVACompras() {
               filteredRegistros.map((item) => (
                 <div
                   key={item.id || `${item.id_movimiento}-${item.id_item}-${item.fecha}`}
-                  className="mov-gridTable mov-gridTable--row"
+                  className="mov-gridTable mov-gridTable--row contabilidad-dataRow"
                   style={{ gridTemplateColumns: gridCols }}
                   role="row"
                 >
-                  <div className="mov-gridCell" role="cell">{formatFechaDMY(item.fecha)}</div>
-                  <div className="mov-gridCell" role="cell">{getCliente(item)}</div>
-                  <div className="mov-gridCell is-right" role="cell">{formatCurrency(item.subtotal)}</div>
-                  <div className="mov-gridCell is-right" role="cell">{formatCurrency(getIva(item))}</div>
-                  <div className="mov-gridCell is-right is-strong" role="cell">{formatCurrency(item.total)}</div>
+                  <div className="mov-gridCell" data-label="Fecha" role="cell">{formatFechaDMY(item.fecha)}</div>
+                  <div className="mov-gridCell" data-label="Cliente" role="cell">{getCliente(item)}</div>
+                  <div className="mov-gridCell is-right" data-label="Subtotal" role="cell">{formatCurrency(item.subtotal)}</div>
+                  <div className="mov-gridCell is-right" data-label="IVA" role="cell">{formatCurrency(getIva(item))}</div>
+                  <div className="mov-gridCell is-right is-strong" data-label="Total" role="cell">{formatCurrency(item.total)}</div>
                 </div>
               ))
             )}

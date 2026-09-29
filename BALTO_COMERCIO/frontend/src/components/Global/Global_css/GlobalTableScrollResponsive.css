@@ -1,0 +1,129 @@
+/* =========================================================
+   BALTO · TABLAS RESPONSIVE · CONTRATO ESTRUCTURAL (FASE 3)
+   ---------------------------------------------------------
+   DUEÑO: patrón común "sección fija + tabla con scroll interno".
+
+   ACTIVACIÓN JSX:
+   - .balto-rsp-table-page
+   - .balto-rsp-table-shell
+   - .balto-rsp-table-fill
+   - .balto-rsp-table-scroll
+   - .balto-rsp-table-body-reset
+   - .balto-rsp-table-inner-visible
+   - .balto-rsp-table-clip
+
+   Este archivo NO conoce rutas, IDs ni prefijos de secciones.
+   Dashboard, Flujo de Caja y Análisis Financiero quedan fuera porque
+   no declaran este contrato y mantienen su responsive propio.
+========================================================= */
+
+@media (max-width: 980px) {
+  html.balto-visual-viewport-ready .pp-content:has(.balto-rsp-table-page) {
+    width: 100% !important;
+    height: var(--balto-content-viewport-height, var(--balto-panel-viewport-height)) !important;
+    min-height: 0 !important;
+    max-height: var(--balto-content-viewport-height, var(--balto-panel-viewport-height)) !important;
+    overflow-x: hidden !important;
+    overflow-y: hidden !important;
+    overscroll-behavior: none !important;
+  }
+
+  html.balto-visual-viewport-ready
+    .pp-content:has(.balto-rsp-table-page)
+    > .pp-content__inner {
+    display: flex !important;
+    flex: 1 1 0 !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    max-height: 100% !important;
+    overflow: hidden !important;
+    overscroll-behavior: none !important;
+  }
+
+  .balto-rsp-table-page {
+    display: flex !important;
+    flex: 1 1 0 !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    max-height: 100% !important;
+    overflow: hidden !important;
+    overscroll-behavior: none !important;
+  }
+
+  .balto-rsp-table-page
+    > :not(.balto-rsp-table-shell):not(.balto-rsp-table-fill):not(.balto-rsp-table-scroll) {
+    flex: 0 0 auto !important;
+  }
+
+  .balto-rsp-table-shell {
+    display: flex !important;
+    flex: 1 1 0 !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: 100% !important;
+    overflow: visible !important;
+  }
+
+  .balto-rsp-table-clip {
+    overflow: hidden !important;
+  }
+
+  .balto-rsp-table-fill {
+    display: flex !important;
+    flex: 1 1 0 !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: hidden !important;
+  }
+
+  .balto-rsp-table-shell
+    > :not(.balto-rsp-table-fill):not(.balto-rsp-table-scroll),
+  .balto-rsp-table-fill
+    > :not(.balto-rsp-table-shell):not(.balto-rsp-table-fill):not(.balto-rsp-table-scroll) {
+    flex: 0 0 auto !important;
+  }
+
+  .balto-rsp-table-scroll {
+    flex: 1 1 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    scrollbar-gutter: stable;
+    overscroll-behavior-y: contain !important;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+  }
+
+  .balto-rsp-table-body-reset {
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+  }
+
+  .balto-rsp-table-inner-visible {
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+}
+
+@media (max-width: 720px) {
+  .balto-rsp-table-scroll {
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+  }
+}

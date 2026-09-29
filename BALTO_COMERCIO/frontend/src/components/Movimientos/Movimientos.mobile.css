@@ -36,9 +36,15 @@
     width: 100%;
   }
 
-  .mov-card__actions--mobile {
+  .mov-mobileSearchExportLine > .mov-card__actions--mobile {
     display: flex !important;
-    align-items: stretch;
+    width: auto !important;
+    min-width: 0;
+    margin: 0 !important;
+    padding: 0;
+    gap: 0 !important;
+    grid-template-columns: none !important;
+    align-items: stretch !important;
     justify-content: flex-end;
     flex: 0 0 auto;
   }
