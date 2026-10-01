@@ -3,6 +3,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import ModalVerComprobante from "../../Global/Ver_Comprobantes/ModalVerComprobante";
 import StockBarcodePanel from "./StockBarcodePanel";
 import StockUnitField from "./StockUnitField";
+import PricingCoefficientPanel from "./PricingCoefficientPanel";
 import "./ModalCargaIndividualProducto.css";
 import { isTopStockModal } from "./modalStackUtils";
 import { canBaltoUseBarcode } from "../../../utils/demoMode";
@@ -34,7 +35,6 @@ import {
 import {
   emptyExtraPriceRow,
   formatMoneyBlur,
-  formatMoneyFocus,
   getUsuarioAuditData,
   moneyToApi,
   normalizeMoneyInput,
@@ -224,14 +224,8 @@ function hydratePricingGroupValues({ cost, price, marginPct, marginValue }) {
   const hasPct = hasMoneyValue(marginPct);
   const hasVal = hasMoneyValue(marginValue);
 
-  if (hasPrice && hasPct && hasVal) {
-    return {
-      price: formatMoneyBlur(price),
-      marginPct: formatMoneyBlur(marginPct),
-      marginValue: formatMoneyBlur(marginValue),
-    };
-  }
-
+  // El precio guardado es la fuente de verdad. Así también corregimos al abrir
+  // productos legacy cuyos márgenes fueron calculados como mark-up sobre costo.
   const source = hasPrice ? "price" : hasPct ? "marginPct" : hasVal ? "marginValue" : null;
 
   if (!source) {
@@ -419,36 +413,60 @@ function PriceInput({
   disabled,
   className,
 }) {
-  const [focused, setFocused] = useState(false);
+  // Este input es deliberadamente "uncontrolled" mientras se edita.
+  // Si React cambia el value al recibir focus (por ejemplo "50 %" -> "50"),
+  // Playwright/browser puede perder la selección que usa fill() y terminar
+  // concatenando: 50 + 20 = 5020. Mantener el DOM como fuente temporal de
+  // verdad durante el focus evita esa carrera y conserva el formato al salir.
+  const inputRef = useRef(null);
+  const focusedRef = useRef(false);
   const kind = inferPriceInputKind(name);
-  const displayValue = decoratePriceInputValue(value, kind, focused);
+  const formattedValue = decoratePriceInputValue(value, kind, false);
+
+  useEffect(() => {
+    if (!focusedRef.current && inputRef.current) {
+      inputRef.current.value = formattedValue;
+    }
+  }, [formattedValue]);
 
   const handleChange = (e) => {
-    const cleanValue = cleanDecoratedNumber(e.target.value);
+    const cleanValue = cleanDecoratedNumber(e.currentTarget.value);
+
+    // Normalizamos en el propio DOM sin provocar un rerender del input.
+    // El estado padre sí se actualiza y recalcula el resto de los precios.
+    if (e.currentTarget.value !== cleanValue) {
+      e.currentTarget.value = cleanValue;
+    }
+
     onChange?.(withCleanPriceEvent(e, cleanValue));
   };
 
   const handleFocus = (e) => {
-    setFocused(true);
-    const cleanValue = cleanDecoratedNumber(e.target.value);
+    focusedRef.current = true;
+    const cleanValue = cleanDecoratedNumber(e.currentTarget.value);
+
+    // IMPORTANTE: no mutar e.currentTarget.value durante focus. Playwright fill()
+    // enfoca y selecciona el contenido antes de escribir; cambiar el value aquí
+    // invalida esa selección y puede concatenar 50 + 20 => 5020. El valor se
+    // limpia en onChange, cuando el usuario realmente empieza a editar.
     onFocus?.(withCleanPriceEvent(e, cleanValue));
   };
 
   const handleBlur = (e) => {
-    setFocused(false);
-    const cleanValue = cleanDecoratedNumber(e.target.value);
+    const cleanValue = cleanDecoratedNumber(e.currentTarget.value);
+
+    // Primero entregamos al formulario exactamente el valor escrito.
     onBlur?.(withCleanPriceEvent(e, cleanValue));
+
+    focusedRef.current = false;
+    e.currentTarget.value = decoratePriceInputValue(cleanValue, kind, false);
   };
 
   const handleKeyDown = (e) => {
     if (e.key === "Enter") {
       e.preventDefault();
       const cleanValue = cleanDecoratedNumber(e.currentTarget.value);
-      const originalValue = e.currentTarget.value;
-      e.currentTarget.value = cleanValue;
-      e.target.value = cleanValue;
-      onEnter?.(e);
-      e.currentTarget.value = originalValue;
+      onEnter?.(withCleanPriceEvent(e, cleanValue));
       return;
     }
 
@@ -457,8 +475,9 @@ function PriceInput({
 
   return (
     <input
+      ref={inputRef}
       name={name}
-      value={displayValue}
+      defaultValue={formattedValue}
       onChange={handleChange}
       onBlur={handleBlur}
       onFocus={handleFocus}
@@ -1078,16 +1097,7 @@ export default function ModalCargaIndividualProducto({
     setErrores((p) => ({ ...p, precio_costo: "" }));
   };
 
-  const applyPricingResult = (prefix, result) => {
-    setForm((p) => ({
-      ...p,
-      [prefix.price]: result.price,
-      [prefix.marginPct]: result.marginPct,
-      [prefix.marginVal]: result.marginValue,
-    }));
-  };
-
-  const handlePricingBlur = (source, groupName, withCents = true) => {
+  const handlePricingBlur = (source, groupName, withCents = true, rawValue = undefined) => {
     const prefix =
       groupName === "venta"
         ? {
@@ -1101,17 +1111,53 @@ export default function ModalCargaIndividualProducto({
             marginVal: "margen_promo_valor",
           };
 
-    const resultRaw = recalculatePricingGroup({
-      cost: form.precio_costo,
-      price: form[prefix.price],
-      marginPct: form[prefix.marginPct],
-      marginValue: form[prefix.marginVal],
-      source,
+    // Recalcular desde el estado más reciente. Un blur puede ejecutarse
+    // inmediatamente después del onChange; usar `form` capturado por el render
+    // anterior podía restaurar el precio/margen viejo (por ejemplo 50% -> 20%).
+    setForm((prev) => {
+      const resultRaw = recalculatePricingGroup({
+        cost: prev.precio_costo,
+        price: source === "price" && rawValue !== undefined ? rawValue : prev[prefix.price],
+        marginPct:
+          source === "marginPct" && rawValue !== undefined
+            ? rawValue
+            : prev[prefix.marginPct],
+        marginValue:
+          source === "marginValue" && rawValue !== undefined
+            ? rawValue
+            : prev[prefix.marginVal],
+        source,
+      });
+
+      const result = withCents ? formatPricingResultEnter(resultRaw) : resultRaw;
+
+      return {
+        ...prev,
+        [prefix.price]: result.price,
+        [prefix.marginPct]: result.marginPct,
+        [prefix.marginVal]: result.marginValue,
+      };
     });
+  };
 
-    const result = withCents ? formatPricingResultEnter(resultRaw) : resultRaw;
-
-    applyPricingResult(prefix, result);
+  const aplicarPrecioSugerido = (precioSugerido) => {
+    setForm((prev) => {
+      const resultRaw = recalculatePricingGroup({
+        cost: prev.precio_costo,
+        price: precioSugerido,
+        marginPct: prev.margen_venta_porcentaje,
+        marginValue: prev.margen_venta_valor,
+        source: "price",
+      });
+      const result = formatPricingResultEnter(resultRaw);
+      return {
+        ...prev,
+        precio: result.price,
+        margen_venta_porcentaje: result.marginPct,
+        margen_venta_valor: result.marginValue,
+      };
+    });
+    setErrores((prev) => ({ ...prev, precio: "" }));
   };
 
   const recalcularTodoConCosto = (nuevoCosto, withCents = true) => {
@@ -2020,7 +2066,7 @@ export default function ModalCargaIndividualProducto({
             <p className="cmi-priceBlock__subtitle">
               {productoConVariantes
                 ? "Este producto usa variantes: el precio general queda bloqueado para no pisar los precios de Tienda Nube. Cargá precio, stock y SKU en cada variante."
-                : "Con el costo cargado podés escribir el precio final o el margen (% / $) y se calcula automáticamente."}
+                : "Con el costo cargado podés aplicar el precio sugerido o escribir el precio final / margen real sobre precio y se calcula automáticamente."}
             </p>
 
             <FloatingField label="Precio de costo" error={errores.precio_costo}>
@@ -2029,12 +2075,6 @@ export default function ModalCargaIndividualProducto({
                 value={form.precio_costo}
                 onChange={(e) => handleCostoChangeLive(e.target.value)}
                 onBlur={(e) => recalcularTodoConCosto(e.target.value, true)}
-                onFocus={(e) =>
-                  setForm((p) => ({
-                    ...p,
-                    precio_costo: formatMoneyFocus(e.target.value),
-                  }))
-                }
                 onEnter={(e) =>
                   handlePriceEnter(e, () => recalcularTodoConCosto(e.currentTarget.value, true))
                 }
@@ -2042,6 +2082,12 @@ export default function ModalCargaIndividualProducto({
                 disabled={preciosProductoBloqueados}
               />
             </FloatingField>
+
+            <PricingCoefficientPanel
+              cost={form.precio_costo}
+              disabled={preciosProductoBloqueados}
+              onApplySuggestedPrice={aplicarPrecioSugerido}
+            />
 
             <div
               style={{
@@ -2058,34 +2104,22 @@ export default function ModalCargaIndividualProducto({
                     name="precio"
                     value={form.precio}
                     onChange={handleChange}
-                    onBlur={() => handlePricingBlur("price", "venta", true)}
-                    onFocus={(e) =>
-                      setForm((p) => ({
-                        ...p,
-                        precio: formatMoneyFocus(e.target.value),
-                      }))
-                    }
+                    onBlur={(e) => handlePricingBlur("price", "venta", true, e.target.value)}
                     onEnter={(e) =>
-                      handlePriceEnter(e, () => handlePricingBlur("price", "venta", true))
+                      handlePriceEnter(e, () => handlePricingBlur("price", "venta", true, e.currentTarget.value))
                     }
                     disabled={preciosProductoBloqueados}
                   />
                 </FloatingField>
 
-                <FloatingField label="Margen %">
+                <FloatingField label="Margen s/precio %">
                   <PriceInput
                     name="margen_venta_porcentaje"
                     value={form.margen_venta_porcentaje}
                     onChange={handleChange}
-                    onBlur={() => handlePricingBlur("marginPct", "venta", true)}
-                    onFocus={(e) =>
-                      setForm((p) => ({
-                        ...p,
-                        margen_venta_porcentaje: formatMoneyFocus(e.target.value),
-                      }))
-                    }
+                    onBlur={(e) => handlePricingBlur("marginPct", "venta", true, e.target.value)}
                     onEnter={(e) =>
-                      handlePriceEnter(e, () => handlePricingBlur("marginPct", "venta", true))
+                      handlePriceEnter(e, () => handlePricingBlur("marginPct", "venta", true, e.currentTarget.value))
                     }
                     disabled={preciosProductoBloqueados || !hasCosto}
                   />
@@ -2096,15 +2130,9 @@ export default function ModalCargaIndividualProducto({
                     name="margen_venta_valor"
                     value={form.margen_venta_valor}
                     onChange={handleChange}
-                    onBlur={() => handlePricingBlur("marginValue", "venta", true)}
-                    onFocus={(e) =>
-                      setForm((p) => ({
-                        ...p,
-                        margen_venta_valor: formatMoneyFocus(e.target.value),
-                      }))
-                    }
+                    onBlur={(e) => handlePricingBlur("marginValue", "venta", true, e.target.value)}
                     onEnter={(e) =>
-                      handlePriceEnter(e, () => handlePricingBlur("marginValue", "venta", true))
+                      handlePriceEnter(e, () => handlePricingBlur("marginValue", "venta", true, e.currentTarget.value))
                     }
                     disabled={preciosProductoBloqueados || !hasCosto}
                   />
@@ -2119,34 +2147,22 @@ export default function ModalCargaIndividualProducto({
                     name="precio_promo"
                     value={form.precio_promo}
                     onChange={handleChange}
-                    onBlur={() => handlePricingBlur("price", "promo", true)}
-                    onFocus={(e) =>
-                      setForm((p) => ({
-                        ...p,
-                        precio_promo: formatMoneyFocus(e.target.value),
-                      }))
-                    }
+                    onBlur={(e) => handlePricingBlur("price", "promo", true, e.target.value)}
                     onEnter={(e) =>
-                      handlePriceEnter(e, () => handlePricingBlur("price", "promo", true))
+                      handlePriceEnter(e, () => handlePricingBlur("price", "promo", true, e.currentTarget.value))
                     }
                     disabled={preciosProductoBloqueados}
                   />
                 </FloatingField>
 
-                <FloatingField label="Margen %">
+                <FloatingField label="Margen s/precio %">
                   <PriceInput
                     name="margen_promo_porcentaje"
                     value={form.margen_promo_porcentaje}
                     onChange={handleChange}
-                    onBlur={() => handlePricingBlur("marginPct", "promo", true)}
-                    onFocus={(e) =>
-                      setForm((p) => ({
-                        ...p,
-                        margen_promo_porcentaje: formatMoneyFocus(e.target.value),
-                      }))
-                    }
+                    onBlur={(e) => handlePricingBlur("marginPct", "promo", true, e.target.value)}
                     onEnter={(e) =>
-                      handlePriceEnter(e, () => handlePricingBlur("marginPct", "promo", true))
+                      handlePriceEnter(e, () => handlePricingBlur("marginPct", "promo", true, e.currentTarget.value))
                     }
                     disabled={preciosProductoBloqueados || !hasCosto}
                   />
@@ -2157,15 +2173,9 @@ export default function ModalCargaIndividualProducto({
                     name="margen_promo_valor"
                     value={form.margen_promo_valor}
                     onChange={handleChange}
-                    onBlur={() => handlePricingBlur("marginValue", "promo", true)}
-                    onFocus={(e) =>
-                      setForm((p) => ({
-                        ...p,
-                        margen_promo_valor: formatMoneyFocus(e.target.value),
-                      }))
-                    }
+                    onBlur={(e) => handlePricingBlur("marginValue", "promo", true, e.target.value)}
                     onEnter={(e) =>
-                      handlePriceEnter(e, () => handlePricingBlur("marginValue", "promo", true))
+                      handlePriceEnter(e, () => handlePricingBlur("marginValue", "promo", true, e.currentTarget.value))
                     }
                     disabled={preciosProductoBloqueados || !hasCosto}
                   />
@@ -2251,7 +2261,7 @@ export default function ModalCargaIndividualProducto({
                     />
                   </FloatingField>
 
-                  <FloatingField label="Margen %">
+                  <FloatingField label="Margen s/precio %">
                     <PriceInput
                       name={`extra_margen_pct_${idx}`}
                       value={item.margen_porcentaje}

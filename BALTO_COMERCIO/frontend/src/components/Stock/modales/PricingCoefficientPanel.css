@@ -1,0 +1,121 @@
+.stock-coef {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--nv-border, rgba(15, 23, 42, 0.1));
+  border-radius: 12px;
+  background: var(--nv-surface-soft, rgba(15, 23, 42, 0.025));
+}
+
+.stock-coef__head,
+.stock-coef__suggested {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.stock-coef__head > div:first-child,
+.stock-coef__suggested > div {
+  display: grid;
+  gap: 3px;
+}
+
+.stock-coef__head strong,
+.stock-coef__suggested strong {
+  font-size: 14px;
+}
+
+.stock-coef__head span,
+.stock-coef__suggested span,
+.stock-coef small,
+.stock-coef__metrics span,
+.stock-coef__controls span {
+  font-size: 12px;
+  opacity: 0.72;
+}
+
+.stock-coef__value {
+  font-size: 20px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.stock-coef__controls {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.stock-coef__controls label {
+  display: grid;
+  gap: 5px;
+}
+
+.stock-coef__controls input {
+  width: 100%;
+  min-height: 38px;
+  border: 1px solid var(--nv-border, rgba(15, 23, 42, 0.14));
+  border-radius: 9px;
+  background: var(--nv-surface, #fff);
+  color: inherit;
+  padding: 7px 10px;
+  box-sizing: border-box;
+}
+
+.stock-coef__metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.stock-coef__metrics > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  padding: 9px 10px;
+  border-radius: 9px;
+  background: var(--nv-surface, rgba(255, 255, 255, 0.65));
+}
+
+.stock-coef__metrics strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+}
+
+.stock-coef__suggested {
+  padding-top: 2px;
+}
+
+.stock-coef__suggested strong {
+  font-size: 18px;
+}
+
+.stock-coef__warning {
+  padding: 9px 10px;
+  border-radius: 9px;
+  border: 1px solid var(--nv-border, rgba(15, 23, 42, 0.12));
+  font-size: 12px;
+}
+
+@media (max-width: 760px) {
+  .stock-coef__controls,
+  .stock-coef__metrics {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .stock-coef__head,
+  .stock-coef__suggested {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 480px) {
+  .stock-coef__controls,
+  .stock-coef__metrics {
+    grid-template-columns: 1fr;
+  }
+}

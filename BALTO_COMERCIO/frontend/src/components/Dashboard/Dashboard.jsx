@@ -298,14 +298,14 @@ export default function Dashboard() {
   const topCards = useMemo(
     () => [
       {
-        key: "caja",
-        label: "Caja actual",
-        value: kpis.saldo_caja_actual,
+        key: "ventas",
+        label: "Ventas actuales",
+        value: kpis.ventas_periodo,
         formatter: formatMoney,
-        detail: "Saldo real acumulado",
+        detail: "Ventas netas del período",
         icon: faWallet,
         tone: "green",
-        valueClass: moneyClass(kpis.saldo_caja_actual),
+        valueClass: moneyClass(kpis.ventas_periodo),
       },
       {
         key: "ingresos",
@@ -329,8 +329,8 @@ export default function Dashboard() {
         formatter: formatMoney,
         detail: (
           <>
-            <AnimatedValue value={kpis.productos_activos} formatter={formatNumber} />
-            {" productos activos"}
+            <AnimatedValue value={kpis.productos_con_stock} formatter={formatNumber} />
+            {" productos con stock"}
           </>
         ),
         icon: faBoxesStacked,

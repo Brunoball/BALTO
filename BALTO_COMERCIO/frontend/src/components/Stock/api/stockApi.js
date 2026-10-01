@@ -312,6 +312,8 @@ export const procesarJobsTiendaNubeStock = (body = {}, options = {}) =>
   stockPost("stock_tiendanube_jobs_procesar", body, options);
 
 // Precios
+export const obtenerCoeficientePonderadoStock = (params = {}, options = {}) =>
+  stockGet("stock_coeficiente_ponderado", params, options);
 export const obtenerOpcionesAjustePreciosStock = (params = {}, options = {}) =>
   stockGet("stock_precios_ajuste_opciones", params, options);
 export const crearAjustePreciosStock = (body = {}, options = {}) =>

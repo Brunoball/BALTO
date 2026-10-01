@@ -376,6 +376,53 @@ const ModalReportesStock = ({ open, onClose, onToast, categorias = [] }) => {
     const lastRow = sheetRows.length - 1;
     const lastColumn = Math.max(0, columns.length - 1);
 
+    // En los reportes de inventario, la valuación tiene que conservar exactamente
+    // la misma relación que revisó el contador en Excel:
+    //   valuación costo = stock real × precio costo unitario
+    //   potencial venta = stock real × precio venta unitario
+    //
+    // Además de enviar esos valores calculados desde el backend, dejamos fórmulas
+    // reales en el XLSX. Así un stock fraccionario como 1,575 kg nunca se interpreta
+    // como 1 unidad ni como 1.575 unidades enteras: Excel muestra E*G / E*H y, si
+    // se edita una cantidad/precio en el archivo, la valuación se actualiza sola.
+    const columnIndexByKey = new Map(columns.map((column, index) => [column.key, index]));
+    const stockColumnIndex = columnIndexByKey.get("stock");
+    const valuationDefinitions = [
+      { targetKey: "valor_costo", priceKey: "precio_costo" },
+      { targetKey: "valor_venta", priceKey: "precio_venta" },
+    ];
+
+    if (Number.isInteger(stockColumnIndex)) {
+      rows.forEach((row, rowIndex) => {
+        const excelRowIndex = tableHeaderRow + 1 + rowIndex;
+        const stockAddress = XLSX.utils.encode_cell({ r: excelRowIndex, c: stockColumnIndex });
+
+        valuationDefinitions.forEach(({ targetKey, priceKey }) => {
+          const targetColumnIndex = columnIndexByKey.get(targetKey);
+          const priceColumnIndex = columnIndexByKey.get(priceKey);
+          if (!Number.isInteger(targetColumnIndex) || !Number.isInteger(priceColumnIndex)) return;
+
+          const targetAddress = XLSX.utils.encode_cell({ r: excelRowIndex, c: targetColumnIndex });
+          const priceAddress = XLSX.utils.encode_cell({ r: excelRowIndex, c: priceColumnIndex });
+          const stockValue = Number(row?.stock || 0);
+          const priceValue = Number(row?.[priceKey] || 0);
+          const backendValue = Number(row?.[targetKey]);
+          const cachedValue = Number.isFinite(backendValue)
+            ? backendValue
+            : stockValue * priceValue;
+
+          worksheet[targetAddress] = {
+            t: "n",
+            v: Number.isFinite(cachedValue) ? cachedValue : 0,
+            f: `${stockAddress}*${priceAddress}`,
+            // Stock admite 3 decimales y el precio 2: mostramos hasta 5 decimales
+            // sólo cuando existen, evitando redondear prematuramente la valuación.
+            z: '$ #,##0.00###',
+          };
+        });
+      });
+    }
+
     if (rows.length && columns.length) {
       worksheet["!autofilter"] = {
         ref: XLSX.utils.encode_range({
@@ -393,7 +440,11 @@ const ModalReportesStock = ({ open, onClose, onToast, categorias = [] }) => {
         });
         const cell = worksheet[address];
         if (!cell) return;
-        if (column.type === "money") cell.z = '$ #,##0.00';
+        if (column.type === "money") {
+          cell.z = ["valor_costo", "valor_venta"].includes(column.key)
+            ? '$ #,##0.00###'
+            : '$ #,##0.00';
+        }
         if (column.type === "number") cell.z = '#,##0.###';
       });
     });
@@ -422,6 +473,13 @@ const ModalReportesStock = ({ open, onClose, onToast, categorias = [] }) => {
 
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Reporte Stock");
+    workbook.Workbook = workbook.Workbook || {};
+    workbook.Workbook.CalcPr = {
+      ...(workbook.Workbook.CalcPr || {}),
+      calcMode: "auto",
+      fullCalcOnLoad: true,
+      forceFullCalc: true,
+    };
 
     const suffix = reporte?.meta?.hasta || dates.today;
     XLSX.writeFile(workbook, `${safeFilename(title)}-${suffix}.xlsx`, { compression: true });

@@ -5,6 +5,7 @@ import "./ModalEditarStock.css";
 import ModalVerComprobante from "../../Global/Ver_Comprobantes/ModalVerComprobante";
 import StockBarcodePanel from "./StockBarcodePanel";
 import StockUnitField from "./StockUnitField";
+import PricingCoefficientPanel from "./PricingCoefficientPanel";
 import { isTopStockModal } from "./modalStackUtils";
 import { canBaltoUseBarcode } from "../../../utils/demoMode";
 import {
@@ -195,7 +196,7 @@ function recalculatePricingGroup({
 
     if (c !== null) {
       val = p - c;
-      pct = c !== 0 ? (val / c) * 100 : 0;
+      pct = p !== 0 ? (val / p) * 100 : null;
     }
 
     return {
@@ -208,16 +209,16 @@ function recalculatePricingGroup({
   }
 
   if (source === "marginPct") {
-    if (c === null || pct === null) {
+    if (c === null || pct === null || pct >= 100) {
       return {
-        price: formatNumberForDisplay(price),
+        price: pct !== null && pct >= 100 ? "" : formatNumberForDisplay(price),
         marginPct: formatNumberForDisplay(marginPct),
-        marginValue: formatNumberForDisplay(marginValue),
+        marginValue: pct !== null && pct >= 100 ? "" : formatNumberForDisplay(marginValue),
       };
     }
 
-    val = (c * pct) / 100;
-    p = c + val;
+    p = c / (1 - pct / 100);
+    val = p - c;
 
     return {
       price: formatNumberForDisplay(p),
@@ -236,7 +237,7 @@ function recalculatePricingGroup({
     }
 
     p = c + val;
-    pct = c !== 0 ? (val / c) * 100 : 0;
+    pct = p !== 0 ? (val / p) * 100 : null;
 
     return {
       price: formatNumberForDisplay(p),
@@ -261,14 +262,8 @@ function hydratePricingGroupValues({ cost, price, marginPct, marginValue }) {
   const hasPct = hasValue(marginPct);
   const hasVal = hasValue(marginValue);
 
-  if (hasPrice && hasPct && hasVal) {
-    return {
-      price: formatNumberForDisplay(price),
-      marginPct: formatNumberForDisplay(marginPct),
-      marginValue: formatNumberForDisplay(marginValue),
-    };
-  }
-
+  // Recalculamos siempre desde el precio cuando existe para corregir márgenes
+  // legacy que estaban guardados como recargo sobre costo.
   const source = hasPrice
     ? "price"
     : hasPct
@@ -1494,22 +1489,46 @@ export default function ModalEditarProducto({
             marginVal: "margen_promo_valor",
           };
 
-    const resultRaw = recalculatePricingGroup({
-      cost: form.precio_costo,
-      price: form[prefix.price],
-      marginPct: form[prefix.marginPct],
-      marginValue: form[prefix.marginVal],
-      source,
+    // El blur puede llegar justo después del onChange. Recalcular dentro del
+    // updater evita usar un `form` viejo y sobrescribir el valor recién escrito.
+    setForm((prev) => {
+      const resultRaw = recalculatePricingGroup({
+        cost: prev.precio_costo,
+        price: prev[prefix.price],
+        marginPct: prev[prefix.marginPct],
+        marginValue: prev[prefix.marginVal],
+        source,
+      });
+
+      const result = formatPricingResult(resultRaw, withCents);
+
+      return {
+        ...prev,
+        [prefix.price]: result.price,
+        [prefix.marginPct]: result.marginPct,
+        [prefix.marginVal]: result.marginValue,
+      };
     });
+  };
 
-    const result = formatPricingResult(resultRaw, withCents);
-
-    setForm((prev) => ({
-      ...prev,
-      [prefix.price]: result.price,
-      [prefix.marginPct]: result.marginPct,
-      [prefix.marginVal]: result.marginValue,
-    }));
+  const aplicarPrecioSugerido = (precioSugerido) => {
+    setForm((prev) => {
+      const resultRaw = recalculatePricingGroup({
+        cost: prev.precio_costo,
+        price: precioSugerido,
+        marginPct: prev.margen_venta_porcentaje,
+        marginValue: prev.margen_venta_valor,
+        source: "price",
+      });
+      const result = formatPricingResult(resultRaw, true);
+      return {
+        ...prev,
+        precio: result.price,
+        margen_venta_porcentaje: result.marginPct,
+        margen_venta_valor: result.marginValue,
+      };
+    });
+    setErrores((prev) => ({ ...prev, precio: "" }));
   };
 
   const recalcularTodoConCosto = (nuevoCosto, withCents = false) => {
@@ -2767,7 +2786,7 @@ export default function ModalEditarProducto({
                   <div className="cmi-priceBlock__subtitle">
                     {productoConVariantes
                       ? "Este producto usa variantes: el precio general queda bloqueado para no pisar los precios de Tienda Nube. Cargá precio, stock y SKU en cada variante."
-                      : "Con el costo cargado podés escribir el precio final o el margen en % / $ y se calcula solo."}
+                      : "Con el costo cargado podés aplicar el precio sugerido o escribir el precio final / margen real sobre precio y se calcula solo."}
                   </div>
 
                   <FloatingField label="Precio de costo" error={errores.precio_costo}>
@@ -2786,6 +2805,12 @@ export default function ModalEditarProducto({
                     />
                   </FloatingField>
 
+                  <PricingCoefficientPanel
+                    cost={form.precio_costo}
+                    disabled={preciosProductoBloqueados}
+                    onApplySuggestedPrice={aplicarPrecioSugerido}
+                  />
+
                   <div className="fl-row" style={{ gridTemplateColumns: "1.4fr 1fr 1fr" }}>
                     <FloatingField label="Precio de venta *" error={errores.precio}>
                       <PriceInput
@@ -2802,7 +2827,7 @@ export default function ModalEditarProducto({
                       />
                     </FloatingField>
 
-                    <FloatingField label="Margen %" icon={faPercent}>
+                    <FloatingField label="Margen s/precio %" icon={faPercent}>
                       <PriceInput
                         name="margen_venta_porcentaje"
                         value={form.margen_venta_porcentaje}
@@ -2849,7 +2874,7 @@ export default function ModalEditarProducto({
                       />
                     </FloatingField>
 
-                    <FloatingField label="Margen promo %" icon={faPercent}>
+                    <FloatingField label="Margen promo s/precio %" icon={faPercent}>
                       <PriceInput
                         name="margen_promo_porcentaje"
                         value={form.margen_promo_porcentaje}
@@ -2958,7 +2983,7 @@ export default function ModalEditarProducto({
                           />
                         </FloatingField>
 
-                        <FloatingField label="Margen %">
+                        <FloatingField label="Margen s/precio %">
                           <PriceInput
                             name={`tipo_pct_${idx}`}
                             value={tipoItem.margen_porcentaje}

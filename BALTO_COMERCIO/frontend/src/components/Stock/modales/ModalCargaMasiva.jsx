@@ -43,7 +43,6 @@ import {
 
 import {
   emptyExtraPriceRow,
-  formatMoneyFocus,
   getUsuarioAuditData,
   moneyToApi,
   moneyToInput,
@@ -377,31 +376,46 @@ function FloatingField({ label, icon, error, children, style }) {
 }
 
 function PriceInput({ name, value, onChange, onBlur, onFocus, placeholder, disabled, className }) {
-  const [focused, setFocused] = useState(false);
+  const inputRef = useRef(null);
+  const focusedRef = useRef(false);
   const kind = inferPriceInputKind(name);
-  const displayValue = decoratePriceInputValue(value, kind, focused);
+  const formattedValue = decoratePriceInputValue(value, kind, false);
+
+  useEffect(() => {
+    if (!focusedRef.current && inputRef.current) {
+      inputRef.current.value = formattedValue;
+    }
+  }, [formattedValue]);
 
   const handleChange = (e) => {
-    const cleanValue = cleanDecoratedNumber(e.target.value);
+    const cleanValue = cleanDecoratedNumber(e.currentTarget.value);
+    if (e.currentTarget.value !== cleanValue) {
+      e.currentTarget.value = cleanValue;
+    }
     onChange?.(withCleanPriceEvent(e, cleanValue));
   };
 
   const handleFocus = (e) => {
-    setFocused(true);
-    const cleanValue = cleanDecoratedNumber(e.target.value);
+    focusedRef.current = true;
+    const cleanValue = cleanDecoratedNumber(e.currentTarget.value);
+
+    // No mutamos el value al enfocar: hacerlo rompe la selección que usa
+    // fill()/Ctrl+A y puede concatenar el valor anterior con el nuevo.
     onFocus?.(withCleanPriceEvent(e, cleanValue));
   };
 
   const handleBlur = (e) => {
-    setFocused(false);
-    const cleanValue = cleanDecoratedNumber(e.target.value);
+    const cleanValue = cleanDecoratedNumber(e.currentTarget.value);
     onBlur?.(withCleanPriceEvent(e, cleanValue));
+    focusedRef.current = false;
+    e.currentTarget.value = decoratePriceInputValue(cleanValue, kind, false);
   };
 
   return (
     <input
+      ref={inputRef}
       name={name}
-      value={displayValue}
+      defaultValue={formattedValue}
       onChange={handleChange}
       onBlur={handleBlur}
       onFocus={handleFocus}
@@ -906,7 +920,6 @@ function ModalConfirmarProductosIA({
                             value={item.precio_costo}
                             onChange={(e) => onRecalcByCost(idx, e.target.value)}
                             onBlur={(e) => onRecalcByCost(idx, e.target.value)}
-                            onFocus={(e) => onChangeProducto(idx, "precio_costo", formatMoneyFocus(e.target.value))}
                             disabled={tieneVariantes}
                           />
                         </FloatingField>
@@ -918,17 +931,15 @@ function ModalConfirmarProductosIA({
                               value={item.precio}
                               onChange={(e) => onPricingChange(idx, e.target.value, "price", "venta")}
                               onBlur={() => onPricingBlur(idx, "price", "venta")}
-                              onFocus={(e) => onChangeProducto(idx, "precio", formatMoneyFocus(e.target.value))}
                               disabled={tieneVariantes}
                             />
                           </FloatingField>
-                          <FloatingField label="Margen %">
+                          <FloatingField label="Margen s/precio %">
                             <PriceInput
                               name={`margen_venta_porcentaje_${idx}`}
                               value={item.margen_venta_porcentaje}
                               onChange={(e) => onPricingChange(idx, e.target.value, "marginPct", "venta")}
                               onBlur={() => onPricingBlur(idx, "marginPct", "venta")}
-                              onFocus={(e) => onChangeProducto(idx, "margen_venta_porcentaje", formatMoneyFocus(e.target.value))}
                               disabled={tieneVariantes || !item.precio_costo}
                             />
                           </FloatingField>
@@ -938,7 +949,6 @@ function ModalConfirmarProductosIA({
                               value={item.margen_venta_valor}
                               onChange={(e) => onPricingChange(idx, e.target.value, "marginValue", "venta")}
                               onBlur={() => onPricingBlur(idx, "marginValue", "venta")}
-                              onFocus={(e) => onChangeProducto(idx, "margen_venta_valor", formatMoneyFocus(e.target.value))}
                               disabled={tieneVariantes || !item.precio_costo}
                             />
                           </FloatingField>
@@ -951,17 +961,15 @@ function ModalConfirmarProductosIA({
                               value={item.precio_promo}
                               onChange={(e) => onPricingChange(idx, e.target.value, "price", "promo")}
                               onBlur={() => onPricingBlur(idx, "price", "promo")}
-                              onFocus={(e) => onChangeProducto(idx, "precio_promo", formatMoneyFocus(e.target.value))}
                               disabled={tieneVariantes}
                             />
                           </FloatingField>
-                          <FloatingField label="Margen %">
+                          <FloatingField label="Margen s/precio %">
                             <PriceInput
                               name={`margen_promo_porcentaje_${idx}`}
                               value={item.margen_promo_porcentaje}
                               onChange={(e) => onPricingChange(idx, e.target.value, "marginPct", "promo")}
                               onBlur={() => onPricingBlur(idx, "marginPct", "promo")}
-                              onFocus={(e) => onChangeProducto(idx, "margen_promo_porcentaje", formatMoneyFocus(e.target.value))}
                               disabled={tieneVariantes || !item.precio_costo}
                             />
                           </FloatingField>
@@ -971,7 +979,6 @@ function ModalConfirmarProductosIA({
                               value={item.margen_promo_valor}
                               onChange={(e) => onPricingChange(idx, e.target.value, "marginValue", "promo")}
                               onBlur={() => onPricingBlur(idx, "marginValue", "promo")}
-                              onFocus={(e) => onChangeProducto(idx, "margen_promo_valor", formatMoneyFocus(e.target.value))}
                               disabled={tieneVariantes || !item.precio_costo}
                             />
                           </FloatingField>
@@ -1040,7 +1047,7 @@ function ModalConfirmarProductosIA({
                                   }}
                                 />
                               </FloatingField>
-                              <FloatingField label="Margen %">
+                              <FloatingField label="Margen s/precio %">
                                 <PriceInput
                                   name={`tipo_pct_${idx}_${tIdx}`}
                                   value={tipoItem.margen_porcentaje}

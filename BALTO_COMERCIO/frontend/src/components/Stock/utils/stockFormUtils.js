@@ -116,27 +116,42 @@ export function recalculatePricingGroup({
 
   if (c === null) {
     return {
-      price: source === "price" ? formatMoneyBlur(price) : formatMoneyBlur(price),
+      price: formatMoneyBlur(price),
       marginPct: "",
       marginValue: "",
     };
   }
 
+  // Margen real sobre precio de venta, igual que en el modelo del contador:
+  // margen % = (precio - costo) / precio.
   if (source === "price") {
     if (p === null) return { price: "", marginPct: "", marginValue: "" };
     const diff = p - c;
     return {
       price: formatFlexibleDecimal(p),
-      marginPct: c > 0 ? formatFlexibleDecimal((diff / c) * 100) : "",
+      marginPct: p !== 0 ? formatFlexibleDecimal((diff / p) * 100) : "",
       marginValue: formatFlexibleDecimal(diff),
     };
   }
 
+  // Si el usuario escribe un margen sobre precio, despejamos el precio:
+  // precio = costo / (1 - margen%). Un margen >= 100% no tiene solución válida.
   if (source === "marginPct") {
-    if (pct === null) return { price: "", marginPct: "", marginValue: "" };
-    const diff = c * (pct / 100);
+    if (pct === null || pct >= 100) {
+      return {
+        price: "",
+        marginPct: pct === null ? "" : formatFlexibleDecimal(pct),
+        marginValue: "",
+      };
+    }
+    const denominator = 1 - pct / 100;
+    const calculatedPrice = denominator !== 0 ? c / denominator : null;
+    if (calculatedPrice === null || !Number.isFinite(calculatedPrice)) {
+      return { price: "", marginPct: formatFlexibleDecimal(pct), marginValue: "" };
+    }
+    const diff = calculatedPrice - c;
     return {
-      price: formatFlexibleDecimal(c + diff),
+      price: formatFlexibleDecimal(calculatedPrice),
       marginPct: formatFlexibleDecimal(pct),
       marginValue: formatFlexibleDecimal(diff),
     };
@@ -144,9 +159,12 @@ export function recalculatePricingGroup({
 
   if (source === "marginValue") {
     if (val === null) return { price: "", marginPct: "", marginValue: "" };
+    const calculatedPrice = c + val;
     return {
-      price: formatFlexibleDecimal(c + val),
-      marginPct: c > 0 ? formatFlexibleDecimal((val / c) * 100) : "",
+      price: formatFlexibleDecimal(calculatedPrice),
+      marginPct: calculatedPrice !== 0
+        ? formatFlexibleDecimal((val / calculatedPrice) * 100)
+        : "",
       marginValue: formatFlexibleDecimal(val),
     };
   }

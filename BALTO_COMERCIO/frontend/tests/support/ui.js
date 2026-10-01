@@ -1,6 +1,30 @@
 import { expect } from '@playwright/test';
 import { ENV, assertExpectedTenant, assertSafeMutationConfiguration } from './env.js';
 import { RUN_PREFIX } from './data.js';
+import { authenticatedApi } from './api.js';
+
+
+let tiendaNubeE2EIsolationVerified = false;
+
+async function assertTiendaNubeE2EIsolation(page) {
+  if (tiendaNubeE2EIsolationVerified) return;
+
+  const result = await authenticatedApi(page, 'config_testing_e2e_guard', {
+    query: { e2e_run: RUN_PREFIX },
+  });
+
+  expect(
+    result.status,
+    `El backend debe exponer el guard E2E de Tienda Nube antes de permitir mutaciones. HTTP ${result.status}: ${result.text || ''}`,
+  ).toBeLessThan(400);
+  expect(
+    result.body?.tiendanube_isolation_active,
+    'Playwright abortó antes de modificar datos: el backend no confirmó el aislamiento E2E de Tienda Nube. Verificá BALTO_E2E_TOOLS_ENABLED=1 y que el backend actualizado esté desplegado en balto.3devsnet.com.',
+  ).toBe(true);
+  expect(String(result.body?.run || '').toUpperCase()).toBe(RUN_PREFIX);
+
+  tiendaNubeE2EIsolationVerified = true;
+}
 
 export async function gotoAndWait(page, path, expected) {
   await page.goto(path, { waitUntil: 'domcontentloaded' });
@@ -563,6 +587,7 @@ export async function requireMutations(test, page) {
   test.skip(!ENV.allowMutations, 'PW_ALLOW_MUTATIONS no está habilitado.');
   assertSafeMutationConfiguration();
   await assertExpectedTenant(page);
+  await assertTiendaNubeE2EIsolation(page);
 
   // Todas las mutaciones de Playwright llevan e2e_run=PW-... para que la
   // auditoría y el limpiador puedan reconocerlas sin confundirlas con datos
