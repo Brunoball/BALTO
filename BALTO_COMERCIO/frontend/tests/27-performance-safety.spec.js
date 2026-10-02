@@ -121,7 +121,7 @@ test('@smoke @performance Dashboard: textos actuales y carga sin requests duplic
   });
 
   try {
-    await expect(page.getByText('Caja actual', { exact: true })).toBeVisible();
+    await expect(page.getByText('Ventas actuales', { exact: true })).toBeVisible();
     await expect(page.getByText('Ingresos mes actual', { exact: true })).toBeVisible();
     await expect(
       page.getByRole('heading', { name: 'Ingresos y egresos del mes actual', exact: true }),

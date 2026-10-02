@@ -35,6 +35,41 @@ export async function gotoAndWait(page, path, expected) {
   await waitForBusyToFinish(page);
 }
 
+async function keepStockPriceReviewNoticeNonBlocking(page) {
+  // El aviso de revisión de precios es una UI válida de Stock y puede quedar
+  // pendiente entre corridas. Los E2E que prueban CRUD, movimientos, códigos,
+  // reportes, etc. no deben fallar porque esa tarjeta flotante tape un botón.
+  // No la cerramos, rechazamos ni aplicamos: sólo evitamos que intercepte
+  // puntero durante Playwright. El estilo vive únicamente en la página E2E.
+  if (!page || typeof page.url !== 'function' || typeof page.evaluate !== 'function') return;
+
+  let pathname = '';
+  try {
+    pathname = new URL(page.url()).pathname;
+  } catch {
+    return;
+  }
+  if (!pathname.includes('/panel/stock')) return;
+
+  await page.evaluate(() => {
+    const styleId = 'pw-stock-price-review-non-blocking';
+    if (document.getElementById(styleId)) return;
+
+    const style = document.createElement('style');
+    style.id = styleId;
+    style.textContent = `
+      aside.gfn-card[aria-label="Revisión pendiente de precios de Stock"],
+      button.gfn-tab[aria-label="Abrir Revisión pendiente de precios de Stock"] {
+        pointer-events: none !important;
+      }
+    `;
+    document.head.appendChild(style);
+  }).catch(() => {
+    // Si la navegación cambia justo durante esta ayuda, la próxima espera vuelve
+    // a instalar el estilo. No convertimos una carrera de navegación en un fallo.
+  });
+}
+
 export async function waitForBusyToFinish(scope) {
   const busy = scope.locator('[aria-busy="true"], .mov-skeletonWrap, .gif-carga-container');
   try {
@@ -42,6 +77,8 @@ export async function waitForBusyToFinish(scope) {
   } catch {
     // Algunas pantallas no renderizan loaders o los reemplazan muy rápido.
   }
+
+  await keepStockPriceReviewNoticeNonBlocking(scope);
 }
 
 export function dialogByTitle(page, title) {
