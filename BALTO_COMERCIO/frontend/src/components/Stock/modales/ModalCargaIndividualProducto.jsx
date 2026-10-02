@@ -490,21 +490,12 @@ function PriceInput({
   );
 }
 
-function PriceGroupSection({ title, children }) {
+function PriceGroupSection({ title, tone = "venta", children }) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      <div className="cmi-priceBlock__title">
-        <span
-          style={{
-            display: "inline-block",
-            width: 6,
-            height: 6,
-            borderRadius: "50%",
-            background: "var(--nv-action, #0055BB)",
-            flexShrink: 0,
-          }}
-        />
-        {title}
+    <div className={`cmi-mainPricingGroup cmi-mainPricingGroup--${tone}`}>
+      <div className="cmi-mainPricingGroup__head">
+        <span className="cmi-mainPricingGroup__dot" aria-hidden="true" />
+        <span>{title}</span>
       </div>
 
       {children}
@@ -2057,48 +2048,50 @@ export default function ModalCargaIndividualProducto({
             </div>
           </section>
 
-          <div className={`cmi-priceBlock ${productoConVariantes ? "cmi-priceBlock--disabledByVariants" : ""}`}>
-            <div className="cmi-priceBlock__title">
-              <FontAwesomeIcon icon={faMoneyBillTrendUp} />
-              Precios principales
+          <div className={`cmi-priceBlock cmi-priceBlock--mainPricing ${productoConVariantes ? "cmi-priceBlock--disabledByVariants" : ""}`}>
+            <div className="cmi-mainPricing__head">
+              <div className="cmi-mainPricing__heading">
+                <span className="cmi-mainPricing__icon" aria-hidden="true">
+                  <FontAwesomeIcon icon={faMoneyBillTrendUp} />
+                </span>
+                <div>
+                  <div className="cmi-priceBlock__title">Precios principales</div>
+                  <p className="cmi-priceBlock__subtitle">
+                    {productoConVariantes
+                      ? "Este producto usa variantes: el precio general queda bloqueado para no pisar los precios de Tienda Nube. Cargá precio, stock y SKU en cada variante."
+                      : "Definí el costo y BALTO calcula el precio sugerido. También podés escribir el precio final o el margen y el resto se actualiza automáticamente."}
+                  </p>
+                </div>
+              </div>
+              {!productoConVariantes ? <span className="cmi-mainPricing__badge">Cálculo automático</span> : null}
+            </div>
+            <div className="cmi-mainPricing__basePanel">
+              <PricingCoefficientPanel
+                cost={form.precio_costo}
+                disabled={preciosProductoBloqueados}
+                onApplySuggestedPrice={aplicarPrecioSugerido}
+                costField={(
+                  <FloatingField label="Precio de costo" error={errores.precio_costo}>
+                    <PriceInput
+                      name="precio_costo"
+                      value={form.precio_costo}
+                      onChange={(e) => handleCostoChangeLive(e.target.value)}
+                      onBlur={(e) => recalcularTodoConCosto(e.target.value, true)}
+                      onEnter={(e) =>
+                        handlePriceEnter(e, () => recalcularTodoConCosto(e.currentTarget.value, true))
+                      }
+                      placeholder="0,00"
+                      disabled={preciosProductoBloqueados}
+                    />
+                  </FloatingField>
+                )}
+                costHint="Es la base para calcular márgenes y sugerencias de venta."
+              />
             </div>
 
-            <p className="cmi-priceBlock__subtitle">
-              {productoConVariantes
-                ? "Este producto usa variantes: el precio general queda bloqueado para no pisar los precios de Tienda Nube. Cargá precio, stock y SKU en cada variante."
-                : "Con el costo cargado podés aplicar el precio sugerido o escribir el precio final / margen real sobre precio y se calcula automáticamente."}
-            </p>
-
-            <FloatingField label="Precio de costo" error={errores.precio_costo}>
-              <PriceInput
-                name="precio_costo"
-                value={form.precio_costo}
-                onChange={(e) => handleCostoChangeLive(e.target.value)}
-                onBlur={(e) => recalcularTodoConCosto(e.target.value, true)}
-                onEnter={(e) =>
-                  handlePriceEnter(e, () => recalcularTodoConCosto(e.currentTarget.value, true))
-                }
-                placeholder="0,00"
-                disabled={preciosProductoBloqueados}
-              />
-            </FloatingField>
-
-            <PricingCoefficientPanel
-              cost={form.precio_costo}
-              disabled={preciosProductoBloqueados}
-              onApplySuggestedPrice={aplicarPrecioSugerido}
-            />
-
-            <div
-              style={{
-                height: 1,
-                background: "var(--nv-border, rgba(15,23,42,0.08))",
-                margin: "0 -16px",
-              }}
-            />
-
-            <PriceGroupSection title="Precio de venta">
-              <div className="fl-row">
+            <div className="cmi-mainPricing__groups">
+              <PriceGroupSection title="Precio de venta" tone="venta">
+                <div className="fl-row">
                 <FloatingField label="Precio de venta *" error={errores.precio}>
                   <PriceInput
                     name="precio"
@@ -2137,11 +2130,11 @@ export default function ModalCargaIndividualProducto({
                     disabled={preciosProductoBloqueados || !hasCosto}
                   />
                 </FloatingField>
-              </div>
-            </PriceGroupSection>
+                </div>
+              </PriceGroupSection>
 
-            <PriceGroupSection title="Precio promocional">
-              <div className="fl-row">
+              <PriceGroupSection title="Precio promocional" tone="promo">
+                <div className="fl-row">
                 <FloatingField label="Precio promocional" error={errores.precio_promo}>
                   <PriceInput
                     name="precio_promo"
@@ -2180,8 +2173,9 @@ export default function ModalCargaIndividualProducto({
                     disabled={preciosProductoBloqueados || !hasCosto}
                   />
                 </FloatingField>
-              </div>
-            </PriceGroupSection>
+                </div>
+              </PriceGroupSection>
+            </div>
           </div>
 
           <div className={`cmi-priceBlock ${productoConVariantes ? "cmi-priceBlock--typesForVariants" : ""}`}>

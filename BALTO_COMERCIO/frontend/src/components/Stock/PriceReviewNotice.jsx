@@ -198,6 +198,7 @@ export default function PriceReviewNotice({ hidden = false, onApplied, onRejecte
 
   return (
     <GlobalFloatingNotice
+      key={revisionId}
       open
       ariaLabel="Revisión pendiente de precios de Stock"
       brand="BALTO · Stock"
@@ -205,6 +206,8 @@ export default function PriceReviewNotice({ hidden = false, onApplied, onRejecte
       title="Hay cambios pendientes en tus precios"
       message="Compras y/o egresos modificaron el coeficiente ponderado. Los precios de venta no cambian hasta que decidas."
       details={details}
+      detailsCollapsible
+      detailsCollapsedDefault
       status={canApply ? "Pendiente de revisión" : "Revisión pendiente sin coeficiente aplicable"}
       statusTone={canApply ? "warning" : "danger"}
       amount={`Coef. ${coefficient(revision.coeficiente_actual)}`}

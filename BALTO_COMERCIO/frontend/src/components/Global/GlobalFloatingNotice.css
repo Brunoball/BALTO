@@ -133,10 +133,82 @@
   line-height: 1.5;
 }
 
+
+.gfn-card__detailsToggle {
+  width: fit-content;
+  min-height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  margin: 10px 0 -4px auto;
+  padding: 4px 7px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-primary);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
+  transition: background-color var(--transition-fast), color var(--transition-fast), transform 160ms ease;
+}
+
+.gfn-card__detailsToggle:hover {
+  background: var(--color-primary-soft);
+}
+
+.gfn-card__detailsToggle:active {
+  transform: translateY(1px);
+}
+
+.gfn-card__detailsToggle:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.gfn-card__detailsToggle svg {
+  font-size: 10px;
+  transition: transform var(--transition-fast);
+}
+
+.gfn-card__detailsToggle.is-collapsed {
+  margin-bottom: 0;
+}
+
+
+.gfn-card__detailsMotion {
+  display: grid;
+  grid-template-rows: 1fr;
+  margin-top: 16px;
+  opacity: 1;
+  transform: translateY(0);
+  transition:
+    grid-template-rows 240ms cubic-bezier(.2, .8, .2, 1),
+    margin-top 240ms cubic-bezier(.2, .8, .2, 1),
+    opacity 170ms ease,
+    transform 240ms cubic-bezier(.2, .8, .2, 1);
+  will-change: grid-template-rows, opacity, transform;
+}
+
+.gfn-card__detailsMotion.is-collapsed {
+  grid-template-rows: 0fr;
+  margin-top: 0;
+  opacity: 0;
+  transform: translateY(-6px);
+  pointer-events: none;
+}
+
+.gfn-card__detailsMotionInner {
+  min-height: 0;
+  overflow: hidden;
+}
+
 .gfn-card__details {
   display: grid;
   gap: 9px;
-  margin-top: 16px;
+  margin-top: 0;
   padding: 13px 14px;
   border: 1px solid var(--color-border);
   border-radius: 14px;
@@ -500,8 +572,15 @@ body.dark .gfn-card__details {
     font-size: 13px;
   }
 
-  .gfn-card__details {
+  .gfn-card__detailsMotion {
     margin-top: 14px;
+  }
+
+  .gfn-card__detailsMotion.is-collapsed {
+    margin-top: 0;
+  }
+
+  .gfn-card__details {
     padding: 12px 13px;
   }
 
@@ -561,6 +640,9 @@ body.dark .gfn-card__details {
   .gfn-card__action,
   .gfn-card__action svg,
   .gfn-card__dismiss,
+  .gfn-card__detailsMotion,
+  .gfn-card__detailsToggle,
+  .gfn-card__detailsToggle svg,
   .gfn-card__close,
   .gfn-tab {
     transition: none;

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faTimes, faChevronRight, faChevronLeft } from "@fortawesome/free-solid-svg-icons";
+import { faTimes, faChevronRight, faChevronLeft, faChevronUp, faChevronDown } from "@fortawesome/free-solid-svg-icons";
 import "./GlobalFloatingNotice.css";
 
 /**
@@ -23,6 +23,10 @@ export default function GlobalFloatingNotice({
   title,
   message,
   details = [],
+  detailsCollapsible = false,
+  detailsCollapsedDefault = false,
+  detailsShowLabel = "Ver detalles",
+  detailsHideLabel = "Ocultar detalles",
   status,
   statusTone = "neutral",
   amount,
@@ -42,10 +46,15 @@ export default function GlobalFloatingNotice({
   onDismiss,
 }) {
   const [confirmDismiss, setConfirmDismiss] = useState(false);
+  const [detailsCollapsed, setDetailsCollapsed] = useState(Boolean(detailsCollapsedDefault));
 
   useEffect(() => {
     if (!open || collapsed) setConfirmDismiss(false);
   }, [open, collapsed]);
+
+  useEffect(() => {
+    if (!open) setDetailsCollapsed(Boolean(detailsCollapsedDefault));
+  }, [open, detailsCollapsedDefault]);
 
   useEffect(() => {
     if (!confirmDismiss) return undefined;
@@ -104,16 +113,35 @@ export default function GlobalFloatingNotice({
         {title ? <h3 className="gfn-card__title">{title}</h3> : null}
         {message ? <p className="gfn-card__message">{message}</p> : null}
 
-        {rows.length > 0 && (
-          <div className="gfn-card__details">
-            {rows.map((item, index) => (
-              <div className="gfn-card__detailRow" key={`${item.label || "detail"}-${index}`}>
-                <span className="gfn-card__detailLabel">{item.label}</span>
-                <strong className="gfn-card__detailValue" title={String(item.value ?? "")}>{item.value}</strong>
+        {rows.length > 0 && detailsCollapsible ? (
+          <button
+            type="button"
+            className={`gfn-card__detailsToggle${detailsCollapsed ? " is-collapsed" : ""}`}
+            aria-expanded={!detailsCollapsed}
+            onClick={() => setDetailsCollapsed((current) => !current)}
+          >
+            <span>{detailsCollapsed ? detailsShowLabel : detailsHideLabel}</span>
+            <FontAwesomeIcon icon={detailsCollapsed ? faChevronDown : faChevronUp} aria-hidden="true" />
+          </button>
+        ) : null}
+
+        {rows.length > 0 ? (
+          <div
+            className={`gfn-card__detailsMotion${detailsCollapsed ? " is-collapsed" : ""}`}
+            aria-hidden={detailsCollapsed}
+          >
+            <div className="gfn-card__detailsMotionInner">
+              <div className="gfn-card__details">
+                {rows.map((item, index) => (
+                  <div className="gfn-card__detailRow" key={`${item.label || "detail"}-${index}`}>
+                    <span className="gfn-card__detailLabel">{item.label}</span>
+                    <strong className="gfn-card__detailValue" title={String(item.value ?? "")}>{item.value}</strong>
+                  </div>
+                ))}
               </div>
-            ))}
+            </div>
           </div>
-        )}
+        ) : null}
 
         {(status || amount) && (
           <div className="gfn-card__meta">

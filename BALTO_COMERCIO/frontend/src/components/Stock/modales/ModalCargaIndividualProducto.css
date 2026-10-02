@@ -237,3 +237,480 @@ html[data-theme="oscuro"] .cmi-unitDecimalOption small {
     min-width: 0;
   }
 }
+
+/* =========================================================
+   PRECIOS PRINCIPALES · ALTA INDIVIDUAL
+   Jerarquía más clara, compacta y responsive.
+   ========================================================= */
+.cmi-priceBlock--mainPricing {
+  gap: 16px;
+  padding: 18px;
+  border-color: color-mix(in srgb, var(--nv-action, #0055bb) 18%, var(--nv-border-md, rgba(10, 37, 64, 0.14)));
+  background: var(--nv-bg, #ffffff);
+  box-shadow: 0 10px 28px rgba(10, 37, 64, 0.055);
+}
+
+.cmi-priceBlock--mainPricing::before {
+  height: 2px;
+  background: var(--nv-action, #0055bb);
+}
+
+.cmi-mainPricing__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.cmi-mainPricing__heading {
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+}
+
+.cmi-mainPricing__icon {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid color-mix(in srgb, var(--nv-action, #0055bb) 20%, transparent);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--nv-action, #0055bb) 7%, var(--nv-bg, #ffffff));
+  color: var(--nv-action, #0055bb);
+}
+
+.cmi-mainPricing__icon svg {
+  font-size: 13px;
+}
+
+.cmi-priceBlock--mainPricing .cmi-priceBlock__title {
+  padding-top: 0;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.cmi-priceBlock--mainPricing .cmi-priceBlock__subtitle {
+  max-width: 760px;
+  margin: 4px 0 0;
+  font-size: 11.5px;
+  line-height: 1.45;
+}
+
+.cmi-mainPricing__badge {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 5px 10px;
+  border: 1px solid color-mix(in srgb, var(--nv-action, #0055bb) 18%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--nv-action, #0055bb) 5%, var(--nv-bg, #ffffff));
+  color: var(--nv-action, #0055bb);
+  font-size: 10.5px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.cmi-mainPricing__basePanel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+  padding: 14px;
+  border: 1px solid var(--nv-border, rgba(15, 23, 42, 0.10));
+  border-radius: 14px;
+  background: var(--nv-surface-soft, rgba(15, 23, 42, 0.025));
+}
+
+.cmi-mainPricing__costCard {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(150px, .5fr) minmax(240px, 340px) minmax(220px, 1fr);
+  align-items: center;
+  gap: 14px;
+  padding: 0 0 14px;
+  border-bottom: 1px solid var(--nv-border, rgba(15, 23, 42, 0.08));
+}
+
+.cmi-mainPricing__costCard > .cmi-floatingField {
+  min-width: 0;
+  width: 100%;
+}
+
+.cmi-mainPricing__eyebrow {
+  color: var(--nv-muted, #5a6a7e);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .045em;
+  text-transform: uppercase;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.cmi-mainPricing__costHint {
+  min-width: 0;
+  color: var(--nv-muted, #5a6a7e);
+  font-size: 10.5px;
+  font-weight: 400;
+  line-height: 1.35;
+  margin: 0;
+}
+
+.cmi-mainPricing__groups {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  align-items: stretch;
+}
+
+.cmi-mainPricingGroup {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px 13px;
+  border: 1px solid var(--nv-border, rgba(15, 23, 42, 0.10));
+  border-radius: 12px;
+  background: var(--nv-surface-soft, rgba(15, 23, 42, 0.018));
+}
+
+.cmi-mainPricingGroup .fl-row {
+  grid-template-columns: 1.12fr .94fr .94fr;
+  gap: 10px;
+  align-items: stretch;
+}
+
+.cmi-mainPricingGroup .cmi-floatingField {
+  min-width: 0;
+  width: 100%;
+}
+
+.cmi-priceBlock--mainPricing .cmi-input {
+  min-height: 48px;
+}
+
+.cmi-mainPricingGroup__head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--nv-text, #0a2540);
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.cmi-mainPricingGroup__dot {
+  width: 6px;
+  height: 6px;
+  flex: 0 0 6px;
+  border-radius: 50%;
+  background: var(--nv-action, #0055bb);
+}
+
+.cmi-mainPricingGroup--promo .cmi-mainPricingGroup__dot {
+  background: #f59e0b;
+}
+
+.cmi-priceBlock--mainPricing .stock-coef {
+  gap: 10px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.cmi-priceBlock--mainPricing .stock-coef__value {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.cmi-priceBlock--mainPricing .stock-coef__head strong,
+.cmi-priceBlock--mainPricing .stock-coef__suggested strong {
+  font-weight: 600;
+}
+
+.cmi-priceBlock--mainPricing .stock-coef__metrics > div {
+  padding: 8px 9px;
+  border: 1px solid color-mix(in srgb, var(--nv-border, rgba(15, 23, 42, 0.10)) 70%, transparent);
+}
+
+.cmi-priceBlock--mainPricing .stock-coef__suggested {
+  padding-top: 8px;
+  border-top: 1px solid var(--nv-border, rgba(15, 23, 42, 0.08));
+}
+
+/* Tema oscuro propio del bloque: evita depender de variables claras heredadas. */
+html[data-theme="oscuro"] .cmi-priceBlock--mainPricing {
+  color: #e7eef7;
+  background: linear-gradient(145deg, #071826 0%, #06131e 100%);
+  border-color: rgba(96, 165, 250, 0.26);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.22);
+}
+
+html[data-theme="oscuro"] .cmi-priceBlock--mainPricing::before {
+  background: linear-gradient(90deg, #3b82f6 0%, #60a5fa 100%);
+}
+
+html[data-theme="oscuro"] .cmi-priceBlock--mainPricing .cmi-priceBlock__title {
+  color: #f3f7fb;
+}
+
+html[data-theme="oscuro"] .cmi-priceBlock--mainPricing .cmi-priceBlock__subtitle {
+  color: rgba(203, 213, 225, 0.76);
+}
+
+html[data-theme="oscuro"] .cmi-mainPricing__icon,
+html[data-theme="oscuro"] .cmi-mainPricing__badge {
+  background: rgba(59, 130, 246, 0.10);
+  border-color: rgba(96, 165, 250, 0.24);
+  color: #8fc3ff;
+}
+
+html[data-theme="oscuro"] .cmi-mainPricing__basePanel {
+  background: #0a1d2b;
+  border-color: rgba(148, 163, 184, 0.15);
+}
+
+html[data-theme="oscuro"] .cmi-mainPricing__costCard {
+  border-bottom-color: rgba(148, 163, 184, 0.12);
+}
+
+html[data-theme="oscuro"] .cmi-mainPricingGroup {
+  background: rgba(12, 31, 46, 0.84);
+  border-color: rgba(148, 163, 184, 0.14);
+}
+
+html[data-theme="oscuro"] .cmi-mainPricingGroup__head {
+  color: #edf4fb;
+}
+
+html[data-theme="oscuro"] .cmi-mainPricing__eyebrow {
+  color: #9fb0c2;
+}
+
+html[data-theme="oscuro"] .cmi-mainPricing__costHint {
+  color: rgba(203, 213, 225, 0.72);
+}
+
+/* Floating labels del bloque: el fondo coincide con su tarjeta y no deja un parche claro. */
+html[data-theme="oscuro"] .cmi-mainPricing__costCard .cmi-floatingLabel {
+  background: #0a1d2b;
+  color: #91c4ff;
+}
+
+html[data-theme="oscuro"] .cmi-mainPricingGroup .cmi-floatingLabel {
+  background: #0b1d2b;
+  color: #91c4ff;
+}
+
+html[data-theme="oscuro"] .cmi-priceBlock--mainPricing .cmi-input {
+  background: #0b2030;
+  border-color: rgba(148, 163, 184, 0.20);
+  color: #edf4fb;
+}
+
+html[data-theme="oscuro"] .cmi-priceBlock--mainPricing .cmi-input:hover {
+  border-color: rgba(147, 197, 253, 0.34);
+}
+
+html[data-theme="oscuro"] .cmi-priceBlock--mainPricing .cmi-input:focus {
+  background: #0c2335;
+  border-color: rgba(96, 165, 250, 0.72);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.16);
+}
+
+html[data-theme="oscuro"] .cmi-priceBlock--mainPricing .cmi-input::placeholder {
+  color: rgba(203, 213, 225, 0.42);
+}
+
+html[data-theme="oscuro"] .cmi-priceBlock--mainPricing .cmi-input:disabled {
+  background: rgba(255, 255, 255, 0.035);
+  color: rgba(226, 232, 240, 0.50);
+  border-color: rgba(148, 163, 184, 0.10);
+}
+
+/* Coeficiente ponderado: todo el contenido necesita contraste explícito en oscuro. */
+html[data-theme="oscuro"] .cmi-priceBlock--mainPricing .stock-coef {
+  color: #e7eef7;
+  background: transparent;
+  border-color: transparent;
+}
+
+html[data-theme="oscuro"] .cmi-priceBlock--mainPricing .stock-coef__head strong,
+html[data-theme="oscuro"] .cmi-priceBlock--mainPricing .stock-coef__suggested strong,
+html[data-theme="oscuro"] .cmi-priceBlock--mainPricing .stock-coef__metrics strong {
+  color: #edf4fb;
+}
+
+html[data-theme="oscuro"] .cmi-priceBlock--mainPricing .stock-coef__head span,
+html[data-theme="oscuro"] .cmi-priceBlock--mainPricing .stock-coef__suggested span,
+html[data-theme="oscuro"] .cmi-priceBlock--mainPricing .stock-coef__controls span,
+html[data-theme="oscuro"] .cmi-priceBlock--mainPricing .stock-coef__metrics span,
+html[data-theme="oscuro"] .cmi-priceBlock--mainPricing .stock-coef > small {
+  color: rgba(203, 213, 225, 0.72);
+  opacity: 1;
+}
+
+html[data-theme="oscuro"] .cmi-priceBlock--mainPricing .stock-coef__value {
+  color: #75b4ff;
+}
+
+html[data-theme="oscuro"] .cmi-priceBlock--mainPricing .stock-coef__controls input {
+  background: #0b2030;
+  border-color: rgba(148, 163, 184, 0.20);
+  color: #edf4fb;
+  color-scheme: dark;
+}
+
+html[data-theme="oscuro"] .cmi-priceBlock--mainPricing .stock-coef__controls input:hover {
+  border-color: rgba(147, 197, 253, 0.34);
+}
+
+html[data-theme="oscuro"] .cmi-priceBlock--mainPricing .stock-coef__controls input:focus {
+  outline: none;
+  border-color: rgba(96, 165, 250, 0.72);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+html[data-theme="oscuro"] .cmi-priceBlock--mainPricing .stock-coef__controls input:disabled {
+  background: rgba(255, 255, 255, 0.035);
+  color: rgba(226, 232, 240, 0.50);
+  border-color: rgba(148, 163, 184, 0.10);
+}
+
+html[data-theme="oscuro"] .cmi-priceBlock--mainPricing .stock-coef__fieldLabel {
+  background: #0a1d2b;
+  color: #91c4ff;
+  opacity: 1;
+}
+
+/* Precio de costo ahora vive dentro de la fila del coeficiente. Mantener el
+   mismo fondo del panel evita el parche oscuro del floating label global. */
+html[data-theme="oscuro"] .cmi-priceBlock--mainPricing .stock-coef__costField .cmi-floatingLabel {
+  background: #0a1d2b;
+  color: #91c4ff;
+}
+
+html[data-theme="oscuro"] .cmi-priceBlock--mainPricing .stock-coef__costField .cmi-input {
+  background: #0b2030;
+  border-color: rgba(148, 163, 184, 0.20);
+  color: #edf4fb;
+}
+
+html[data-theme="oscuro"] .cmi-priceBlock--mainPricing .stock-coef__costField .cmi-input:hover {
+  border-color: rgba(147, 197, 253, 0.34);
+}
+
+html[data-theme="oscuro"] .cmi-priceBlock--mainPricing .stock-coef__costField .cmi-input:focus {
+  background: #0c2335;
+  border-color: rgba(96, 165, 250, 0.72);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.16);
+}
+
+html[data-theme="oscuro"] .cmi-priceBlock--mainPricing .stock-coef__costHint {
+  color: rgba(203, 213, 225, 0.72);
+}
+
+html[data-theme="oscuro"] .cmi-priceBlock--mainPricing .stock-coef__metrics > div {
+  background: rgba(255, 255, 255, 0.035);
+  border-color: rgba(148, 163, 184, 0.12);
+}
+
+html[data-theme="oscuro"] .cmi-priceBlock--mainPricing .stock-coef__suggested {
+  border-top-color: rgba(148, 163, 184, 0.12);
+}
+
+html[data-theme="oscuro"] .cmi-priceBlock--mainPricing .stock-coef__warning {
+  color: #d9e6f3;
+  background: rgba(245, 158, 11, 0.08);
+  border-color: rgba(245, 158, 11, 0.20);
+}
+
+html[data-theme="oscuro"] .cmi-priceBlock--mainPricing .stock-coef .mit-btn--ghost {
+  background: #10283a;
+  border-color: rgba(96, 165, 250, 0.22);
+  color: #a8cfff;
+}
+
+html[data-theme="oscuro"] .cmi-priceBlock--mainPricing .stock-coef .mit-btn--ghost:hover:not(:disabled) {
+  background: #153249;
+  border-color: rgba(96, 165, 250, 0.38);
+  color: #d7e9ff;
+}
+
+html[data-theme="oscuro"] .cmi-priceBlock--mainPricing .stock-coef .mit-btn--ghost:disabled {
+  background: rgba(255, 255, 255, 0.035);
+  border-color: rgba(148, 163, 184, 0.10);
+  color: rgba(203, 213, 225, 0.48);
+  opacity: 1;
+}
+
+@media (max-width: 1040px) {
+  .cmi-mainPricing__costCard {
+    grid-template-columns: minmax(120px, .45fr) minmax(220px, 320px) minmax(180px, 1fr);
+    gap: 12px;
+  }
+}
+
+@media (max-width: 820px) {
+  .cmi-mainPricing__groups {
+    grid-template-columns: 1fr;
+  }
+
+  .cmi-mainPricing__costCard {
+    grid-template-columns: minmax(120px, .42fr) minmax(220px, 1fr);
+  }
+
+  .cmi-mainPricing__costHint {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 640px) {
+  .cmi-priceBlock--mainPricing {
+    gap: 13px;
+    padding: 14px;
+  }
+
+  .cmi-mainPricing__head {
+    gap: 10px;
+  }
+
+  .cmi-mainPricing__badge {
+    display: none;
+  }
+
+  .cmi-mainPricing__icon {
+    width: 32px;
+    height: 32px;
+    flex-basis: 32px;
+  }
+
+  .cmi-mainPricingGroup {
+    padding: 12px;
+  }
+
+  .cmi-mainPricing__basePanel {
+    padding: 12px;
+  }
+
+  .cmi-mainPricing__costCard {
+    grid-template-columns: 1fr;
+    gap: 9px;
+    align-items: stretch;
+    padding: 0 0 12px;
+  }
+
+  .cmi-mainPricing__costHint {
+    grid-column: auto;
+  }
+
+  .cmi-mainPricingGroup .fl-row {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+}

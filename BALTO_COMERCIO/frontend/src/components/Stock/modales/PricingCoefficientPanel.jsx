@@ -1,4 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faCartShopping, faBuilding, faChartLine, faPercent } from "@fortawesome/free-solid-svg-icons";
 import {
   guardarConfiguracionPreciosStock,
   obtenerCoeficientePonderadoStock,
@@ -57,6 +59,8 @@ export default function PricingCoefficientPanel({
   cost,
   disabled = false,
   onApplySuggestedPrice,
+  costField = null,
+  costHint = "",
 }) {
   const [periodo, setPeriodo] = useState(currentMonth);
   const [utilidadPct, setUtilidadPct] = useState("");
@@ -67,6 +71,22 @@ export default function PricingCoefficientPanel({
   const [error, setError] = useState("");
   const requestSeq = useRef(0);
   const lastSavedUtility = useRef(null);
+  const monthInputRef = useRef(null);
+
+  const openMonthPicker = () => {
+    const input = monthInputRef.current;
+    if (!input || disabled || loading || !configReady) return;
+
+    try {
+      if (typeof input.showPicker === "function") {
+        input.showPicker();
+      } else {
+        input.focus();
+      }
+    } catch (_error) {
+      input.focus();
+    }
+  };
 
   const utilidadNumber = parseDecimal(utilidadPct);
 
@@ -167,6 +187,37 @@ export default function PricingCoefficientPanel({
     onApplySuggestedPrice(suggestedPrice.toFixed(2).replace(".", ","));
   };
 
+  const metrics = [
+    {
+      key: "compras",
+      className: "stock-coef__metricCard stock-coef__metricCard--compras",
+      icon: faCartShopping,
+      label: "Compras netas",
+      value: formatMoney(result?.compras_mercaderia),
+    },
+    {
+      key: "fijos",
+      className: "stock-coef__metricCard stock-coef__metricCard--fijos",
+      icon: faBuilding,
+      label: "Gastos fijos",
+      value: formatMoney(result?.gastos_fijos),
+    },
+    {
+      key: "variables",
+      className: "stock-coef__metricCard stock-coef__metricCard--variables",
+      icon: faChartLine,
+      label: "Gastos variables",
+      value: formatMoney(result?.gastos_variables),
+    },
+    {
+      key: "incidencia",
+      className: "stock-coef__metricCard stock-coef__metricCard--incidencia",
+      icon: faPercent,
+      label: "Incidencia estructura",
+      value: formatPercent(result?.incidencia_estructura_pct),
+    },
+  ];
+
   return (
     <div className="stock-coef" data-testid="stock-coeficiente-ponderado">
       <div className="stock-coef__head">
@@ -180,17 +231,26 @@ export default function PricingCoefficientPanel({
       </div>
 
       <div className="stock-coef__controls">
-        <label>
-          <span>Mes base</span>
+        {costField ? (
+          <div className="stock-coef__costField">
+            {costField}
+            {costHint ? <small className="stock-coef__costHint">{costHint}</small> : null}
+          </div>
+        ) : null}
+
+        <label className={`stock-coef__field stock-coef__field--month ${periodo ? "stock-coef__field--filled" : ""}`}>
           <input
+            ref={monthInputRef}
             type="month"
             value={periodo}
             onChange={(e) => setPeriodo(e.target.value)}
+            onClick={openMonthPicker}
             disabled={disabled || loading || !configReady}
           />
+          <span className="stock-coef__fieldLabel">Mes base</span>
         </label>
-        <label>
-          <span>Utilidad deseada sobre costo (%)</span>
+
+        <label className={`stock-coef__field ${utilidadPct ? "stock-coef__field--filled" : ""}`}>
           <input
             type="text"
             inputMode="decimal"
@@ -198,7 +258,9 @@ export default function PricingCoefficientPanel({
             onChange={(e) => setUtilidadPct(e.target.value.replace(/[^\d,.]/g, ""))}
             disabled={disabled || loading || !configReady}
             aria-label="Utilidad deseada sobre costo"
+            placeholder=" "
           />
+          <span className="stock-coef__fieldLabel">Utilidad deseada sobre costo (%)</span>
         </label>
       </div>
 
@@ -209,10 +271,17 @@ export default function PricingCoefficientPanel({
       ) : null}
 
       <div className="stock-coef__metrics">
-        <div><span>Compras netas</span><strong>{formatMoney(result?.compras_mercaderia)}</strong></div>
-        <div><span>Gastos fijos</span><strong>{formatMoney(result?.gastos_fijos)}</strong></div>
-        <div><span>Gastos variables</span><strong>{formatMoney(result?.gastos_variables)}</strong></div>
-        <div><span>Incidencia estructura</span><strong>{formatPercent(result?.incidencia_estructura_pct)}</strong></div>
+        {metrics.map((metric) => (
+          <div key={metric.key} className={metric.className}>
+            <div className="stock-coef__metricTop">
+              <span className="stock-coef__metricIcon" aria-hidden="true">
+                <FontAwesomeIcon icon={metric.icon} />
+              </span>
+              <span>{metric.label}</span>
+            </div>
+            <strong>{metric.value}</strong>
+          </div>
+        ))}
       </div>
 
       <div className="stock-coef__suggested">
