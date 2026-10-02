@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import GlobalFloatingNotice from "../Global/GlobalFloatingNotice";
+import ModalEliminarStock from "./modales/ModalEliminarStock";
 import {
   aplicarRevisionPreciosStock,
   obtenerRevisionPreciosPendienteStock,
@@ -50,6 +51,7 @@ export default function PriceReviewNotice({ hidden = false, onApplied, onRejecte
   const [payload, setPayload] = useState({ revision: null, pendientes_total: 0 });
   const [collapsed, setCollapsed] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [rejectConfirmOpen, setRejectConfirmOpen] = useState(false);
   const mountedRef = useRef(true);
   const requestRef = useRef(0);
 
@@ -104,6 +106,7 @@ export default function PriceReviewNotice({ hidden = false, onApplied, onRejecte
   useEffect(() => {
     if (!revisionId) {
       setCollapsed(false);
+      setRejectConfirmOpen(false);
       return;
     }
     try {
@@ -177,6 +180,7 @@ export default function PriceReviewNotice({ hidden = false, onApplied, onRejecte
       } catch (_error) {}
       setPayload((prev) => ({ ...prev, revision: null }));
       setCollapsed(false);
+      setRejectConfirmOpen(false);
       if (typeof onRejected === "function") await onRejected(response?.data || response);
       await loadPending();
     } catch (error) {
@@ -197,34 +201,50 @@ export default function PriceReviewNotice({ hidden = false, onApplied, onRejecte
     : "Al aplicar, BALTO actualiza sólo los PRECIOS DE VENTA existentes con costo × coeficiente. Promocional, mayorista, distribuidor, lista y la herencia de variantes se conservan.";
 
   return (
-    <GlobalFloatingNotice
-      key={revisionId}
-      open
-      ariaLabel="Revisión pendiente de precios de Stock"
-      brand="BALTO · Stock"
-      brandShort="$"
-      title="Hay cambios pendientes en tus precios"
-      message="Compras y/o egresos modificaron el coeficiente ponderado. Los precios de venta no cambian hasta que decidas."
-      details={details}
-      detailsCollapsible
-      detailsCollapsedDefault
-      status={canApply ? "Pendiente de revisión" : "Revisión pendiente sin coeficiente aplicable"}
-      statusTone={canApply ? "warning" : "danger"}
-      amount={`Coef. ${coefficient(revision.coeficiente_actual)}`}
-      extraText={warning}
-      actionLabel={busy ? "Aplicando…" : "Aplicar cambios"}
-      actionDisabled={busy || !canApply}
-      onAction={handleApply}
-      onClose={() => setCollapsedPersisted(true)}
-      collapsed={collapsed}
-      collapsedLabel={`${changes || 1} cambio${changes === 1 ? "" : "s"} de precios pendiente${changes === 1 ? "" : "s"}`}
-      onRestore={() => setCollapsedPersisted(false)}
-      dismissLabel={busy ? "Procesando…" : "No aplicar"}
-      dismissDisabled={busy}
-      dismissConfirmTitle="¿No aplicar este reajuste?"
-      dismissConfirmMessage="Esta revisión quedará rechazada y no volverá a mostrarse. Si luego se cargan nuevas compras o egresos que afecten el coeficiente, BALTO generará una revisión nueva."
-      dismissConfirmAcceptLabel="Sí, no aplicar"
-      onDismiss={handleReject}
-    />
+    <>
+      <GlobalFloatingNotice
+        key={revisionId}
+        open
+        ariaLabel="Revisión pendiente de precios de Stock"
+        brand="BALTO · Stock"
+        brandShort="$"
+        title="Hay cambios pendientes en tus precios"
+        message="Compras y/o egresos modificaron el coeficiente ponderado. Los precios de venta no cambian hasta que decidas."
+        details={details}
+        detailsCollapsible
+        detailsCollapsedDefault
+        status={canApply ? "Pendiente de revisión" : "Revisión pendiente sin coeficiente aplicable"}
+        statusTone={canApply ? "warning" : "danger"}
+        amount={`Coef. ${coefficient(revision.coeficiente_actual)}`}
+        extraText={warning}
+        actionLabel={busy ? "Aplicando…" : "Aplicar cambios"}
+        actionDisabled={busy || !canApply}
+        onAction={handleApply}
+        onClose={() => setCollapsedPersisted(true)}
+        collapsed={collapsed}
+        collapsedLabel={`${changes || 1} cambio${changes === 1 ? "" : "s"} de precios pendiente${changes === 1 ? "" : "s"}`}
+        onRestore={() => setCollapsedPersisted(false)}
+        dismissLabel={busy ? "Procesando…" : "No aplicar"}
+        dismissDisabled={busy}
+        dismissRequiresConfirmation={false}
+        onDismiss={() => setRejectConfirmOpen(true)}
+      />
+
+      <ModalEliminarStock
+        open={rejectConfirmOpen}
+        loading={busy}
+        confirmDisabled={busy}
+        title="¿No aplicar este reajuste?"
+        message="Esta revisión quedará rechazada y no volverá a mostrarse. Si luego se cargan nuevas compras o egresos que afecten el coeficiente, BALTO generará una revisión nueva."
+        warning=""
+        confirmLabel="Sí, no aplicar"
+        cancelLabel="Cancelar"
+        entidadLabel="revisión de precios"
+        onClose={() => {
+          if (!busy) setRejectConfirmOpen(false);
+        }}
+        onConfirm={handleReject}
+      />
+    </>
   );
 }

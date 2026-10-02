@@ -43,6 +43,7 @@ export default function GlobalFloatingNotice({
   dismissConfirmMessage = "El aviso dejará de mostrarse en esta sesión. La operación seguirá disponible en el sistema.",
   dismissConfirmAcceptLabel = "Cerrar aviso",
   dismissDisabled = false,
+  dismissRequiresConfirmation = true,
   onDismiss,
 }) {
   const [confirmDismiss, setConfirmDismiss] = useState(false);
@@ -160,7 +161,14 @@ export default function GlobalFloatingNotice({
               <button
                 type="button"
                 className="gfn-card__dismiss"
-                onClick={() => setConfirmDismiss(true)}
+                onClick={() => {
+                  if (dismissDisabled) return;
+                  if (dismissRequiresConfirmation) {
+                    setConfirmDismiss(true);
+                    return;
+                  }
+                  onDismiss();
+                }}
                 disabled={dismissDisabled}
               >
                 {dismissLabel}
