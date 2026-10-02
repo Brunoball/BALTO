@@ -30,12 +30,15 @@ export default function GlobalFloatingNotice({
   actionLabel = "Continuar",
   onClose,
   onAction,
+  actionDisabled = false,
   collapsed = false,
   collapsedLabel = "Aviso pendiente",
   onRestore,
   dismissLabel = "Cerrar aviso",
   dismissConfirmTitle = "¿Cerrar este aviso?",
   dismissConfirmMessage = "El aviso dejará de mostrarse en esta sesión. La operación seguirá disponible en el sistema.",
+  dismissConfirmAcceptLabel = "Cerrar aviso",
+  dismissDisabled = false,
   onDismiss,
 }) {
   const [confirmDismiss, setConfirmDismiss] = useState(false);
@@ -130,12 +133,18 @@ export default function GlobalFloatingNotice({
                 type="button"
                 className="gfn-card__dismiss"
                 onClick={() => setConfirmDismiss(true)}
+                disabled={dismissDisabled}
               >
                 {dismissLabel}
               </button>
             ) : null}
             {typeof onAction === "function" && actionLabel ? (
-              <button type="button" className="gfn-card__action" onClick={onAction}>
+              <button
+                type="button"
+                className="gfn-card__action"
+                onClick={onAction}
+                disabled={actionDisabled}
+              >
                 <span>{actionLabel}</span>
                 <FontAwesomeIcon icon={faChevronRight} aria-hidden="true" />
               </button>
@@ -162,18 +171,25 @@ export default function GlobalFloatingNotice({
             <h4 id="gfn-confirm-title" className="gfn-confirm__title">{dismissConfirmTitle}</h4>
             <p id="gfn-confirm-message" className="gfn-confirm__message">{dismissConfirmMessage}</p>
             <div className="gfn-confirm__actions">
-              <button type="button" className="gfn-confirm__cancel" onClick={() => setConfirmDismiss(false)}>
+              <button
+                type="button"
+                className="gfn-confirm__cancel"
+                onClick={() => setConfirmDismiss(false)}
+                disabled={dismissDisabled}
+              >
                 Cancelar
               </button>
               <button
                 type="button"
                 className="gfn-confirm__accept"
+                disabled={dismissDisabled}
                 onClick={() => {
+                  if (dismissDisabled) return;
                   setConfirmDismiss(false);
                   onDismiss();
                 }}
               >
-                Cerrar aviso
+                {dismissConfirmAcceptLabel}
               </button>
             </div>
           </div>

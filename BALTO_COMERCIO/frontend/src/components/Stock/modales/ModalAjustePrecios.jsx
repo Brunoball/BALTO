@@ -42,6 +42,21 @@ function formatSignedMoney(value) {
   return `${prefix}${formatMoney(n)}`;
 }
 
+function formatAdjustmentType(tipo, value) {
+  const normalized = String(tipo || "").trim().toLowerCase();
+  if (normalized === "coeficiente") {
+    const coefficient = Number(value);
+    return Number.isFinite(coefficient)
+      ? `Coeficiente ponderado ${coefficient.toLocaleString("es-AR", { minimumFractionDigits: 4, maximumFractionDigits: 4 })}`
+      : "Coeficiente ponderado";
+  }
+  if (normalized === "compra_costo") return "Costo actualizado por compra";
+  if (normalized === "porcentaje") return `Porcentaje ${value ?? ""}%`.trim();
+  if (normalized === "valor") return `Importe ${formatSignedMoney(value)}`;
+  if (normalized === "fijo") return `Precio fijo ${formatMoney(value)}`;
+  return `${tipo || "Ajuste"} ${value ?? ""}`.trim();
+}
+
 function parseNumber(value) {
   if (value === null || value === undefined || value === "") return null;
   const normalized = String(value)
@@ -729,7 +744,7 @@ const ModalAjustePrecios = ({ open, onClose, onToast, onGuardado, onProcesoMasiv
                       <button type="button" className="ap-historyItem__head" onClick={() => verDetalle(id)}>
                         <span>
                           <strong>#{id} · {ajuste.tipo_precio_nombre}</strong>
-                          <small>{ajuste.created_at} · {ajuste.total_items} ítems · {ajuste.tipo_ajuste} {ajuste.valor_ajuste}</small>
+                          <small>{ajuste.created_at} · {ajuste.total_items} ítems · {formatAdjustmentType(ajuste.tipo_ajuste, ajuste.valor_ajuste)}</small>
                         </span>
                         <span className="ap-historyDiff">{formatSignedMoney(ajuste.diferencia_total)}</span>
                         <FontAwesomeIcon icon={abierto ? faChevronUp : faChevronDown} />

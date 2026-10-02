@@ -314,6 +314,16 @@ export const procesarJobsTiendaNubeStock = (body = {}, options = {}) =>
 // Precios
 export const obtenerCoeficientePonderadoStock = (params = {}, options = {}) =>
   stockGet("stock_coeficiente_ponderado", params, options);
+export const obtenerConfiguracionPreciosStock = (params = {}, options = {}) =>
+  stockGet("stock_precios_configuracion_obtener", params, options);
+export const guardarConfiguracionPreciosStock = (body = {}, options = {}) =>
+  stockPost("stock_precios_configuracion_guardar", body, options);
+export const obtenerRevisionPreciosPendienteStock = (params = {}, options = {}) =>
+  stockGet("stock_precios_revision_pendiente", params, options);
+export const aplicarRevisionPreciosStock = (body = {}, options = {}) =>
+  stockPost("stock_precios_revision_aplicar", body, options);
+export const rechazarRevisionPreciosStock = (body = {}, options = {}) =>
+  stockPost("stock_precios_revision_rechazar", body, options);
 export const obtenerOpcionesAjustePreciosStock = (params = {}, options = {}) =>
   stockGet("stock_precios_ajuste_opciones", params, options);
 export const crearAjustePreciosStock = (body = {}, options = {}) =>

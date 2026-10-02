@@ -8,6 +8,7 @@ import ModalReportesStock from "./modales/ModalReportesStock";
 import ModalDarBajaStock from "./modales/ModalDarBajaStock";
 import ModalEliminarStock from "./modales/ModalEliminarStock";
 import Toast from "../Global/Toast";
+import PriceReviewNotice from "./PriceReviewNotice";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faPlus,
@@ -3559,6 +3560,41 @@ const Stock = () => {
           </div>,
           document.body
         )}
+
+      <PriceReviewNotice
+        hidden={lectorBloqueadoPorModal}
+        onApplied={async (result, error) => {
+          if (error) {
+            mostrarToast("error", error?.message || "No se pudieron aplicar los cambios de precios.");
+            return;
+          }
+
+          try {
+            await fetchProductos({ silencioso: true, preservarImagenes: true, preservarScroll: true });
+          } catch (_refreshError) {
+            // El reajuste ya fue confirmado por backend. Un fallo de refresco no
+            // debe presentarlo como si la transacción hubiera fallado.
+          }
+          notifyStockListsUpdated();
+
+          const items = Number(result?.total_items || 0);
+          const omitidos = Number(result?.omitidos_sin_costo || 0);
+          const mensajeBase = items > 0
+            ? `Se actualizaron ${items} precio${items === 1 ? "" : "s"} de venta con el nuevo coeficiente.`
+            : "La revisión quedó aplicada. No había precios de venta que necesitaran cambios.";
+          const mensaje = omitidos > 0
+            ? `${mensajeBase} ${omitidos} precio${omitidos === 1 ? "" : "s"} quedó${omitidos === 1 ? "" : "aron"} sin modificar por no tener costo válido.`
+            : mensajeBase;
+          mostrarToast("exito", mensaje);
+        }}
+        onRejected={async (_result, error) => {
+          if (error) {
+            mostrarToast("error", error?.message || "No se pudo rechazar la revisión de precios.");
+            return;
+          }
+          mostrarToast("exito", "Revisión de precios descartada. Este lote no volverá a mostrarse.");
+        }}
+      />
 
       {toast ? (
         <Toast

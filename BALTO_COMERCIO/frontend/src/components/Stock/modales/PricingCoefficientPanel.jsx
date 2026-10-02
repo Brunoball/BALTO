@@ -1,5 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { obtenerCoeficientePonderadoStock } from "../api/stockApi";
+import {
+  guardarConfiguracionPreciosStock,
+  obtenerCoeficientePonderadoStock,
+  obtenerConfiguracionPreciosStock,
+} from "../api/stockApi";
 import "./PricingCoefficientPanel.css";
 
 function currentMonth() {
@@ -49,42 +53,72 @@ function formatCoefficient(value) {
   });
 }
 
-function utilityStorageKey() {
-  try {
-    const user = JSON.parse(localStorage.getItem("usuario") || "null");
-    const tenant = user?.idTenant ?? user?.id_tenant ?? user?.tenant_id ?? "default";
-    return `balto:stock:utilidad-deseada:${tenant}`;
-  } catch {
-    return "balto:stock:utilidad-deseada:default";
-  }
-}
-
-function initialUtility() {
-  try {
-    const saved = localStorage.getItem(utilityStorageKey());
-    const parsed = parseDecimal(saved);
-    return parsed !== null && parsed >= 0 ? String(parsed).replace(".", ",") : "10";
-  } catch {
-    return "10";
-  }
-}
-
 export default function PricingCoefficientPanel({
   cost,
   disabled = false,
   onApplySuggestedPrice,
 }) {
   const [periodo, setPeriodo] = useState(currentMonth);
-  const [utilidadPct, setUtilidadPct] = useState(initialUtility);
+  const [utilidadPct, setUtilidadPct] = useState("");
+  const [configReady, setConfigReady] = useState(false);
+  const [configError, setConfigError] = useState("");
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const requestSeq = useRef(0);
+  const lastSavedUtility = useRef(null);
 
   const utilidadNumber = parseDecimal(utilidadPct);
 
   useEffect(() => {
-    if (!periodo || utilidadNumber === null || utilidadNumber < 0) {
+    let active = true;
+    (async () => {
+      try {
+        setConfigError("");
+        const response = await obtenerConfiguracionPreciosStock({ _: Date.now() });
+        if (!active) return;
+        const config = response?.configuracion || response?.data?.configuracion || null;
+        const utilidad = parseDecimal(config?.utilidad_deseada_pct);
+        const resolved = utilidad !== null && utilidad >= 0 ? utilidad : 10;
+        lastSavedUtility.current = resolved;
+        setUtilidadPct(String(resolved).replace(".", ","));
+      } catch (err) {
+        if (!active) return;
+        // El cálculo puede seguir mostrándose con 10%, pero avisamos si la
+        // configuración persistente todavía no está disponible.
+        lastSavedUtility.current = 10;
+        setUtilidadPct("10");
+        setConfigError(err?.message || "No se pudo cargar la utilidad deseada guardada.");
+      } finally {
+        if (active) setConfigReady(true);
+      }
+    })();
+    return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
+    if (!configReady || utilidadNumber === null || utilidadNumber < 0) return undefined;
+    if (lastSavedUtility.current !== null && Math.abs(lastSavedUtility.current - utilidadNumber) < 0.0001) {
+      return undefined;
+    }
+
+    const timer = window.setTimeout(async () => {
+      try {
+        const response = await guardarConfiguracionPreciosStock({ utilidad_deseada_pct: utilidadNumber });
+        const config = response?.configuracion || response?.data?.configuracion || null;
+        const saved = parseDecimal(config?.utilidad_deseada_pct);
+        lastSavedUtility.current = saved !== null ? saved : utilidadNumber;
+        setConfigError("");
+      } catch (err) {
+        setConfigError(err?.message || "No se pudo guardar la utilidad deseada.");
+      }
+    }, 700);
+
+    return () => window.clearTimeout(timer);
+  }, [configReady, utilidadNumber]);
+
+  useEffect(() => {
+    if (!configReady || !periodo || utilidadNumber === null || utilidadNumber < 0) {
       setResult(null);
       return undefined;
     }
@@ -101,9 +135,6 @@ export default function PricingCoefficientPanel({
         });
         if (seq !== requestSeq.current) return;
         setResult(response?.data || response || null);
-        try {
-          localStorage.setItem(utilityStorageKey(), String(utilidadNumber));
-        } catch {}
       } catch (err) {
         if (seq !== requestSeq.current) return;
         setResult(null);
@@ -114,7 +145,7 @@ export default function PricingCoefficientPanel({
     }, 250);
 
     return () => window.clearTimeout(timer);
-  }, [periodo, utilidadNumber]);
+  }, [configReady, periodo, utilidadNumber]);
 
   const suggestedPrice = useMemo(() => {
     const costNumber = parseDecimal(cost);
@@ -155,7 +186,7 @@ export default function PricingCoefficientPanel({
             type="month"
             value={periodo}
             onChange={(e) => setPeriodo(e.target.value)}
-            disabled={disabled || loading}
+            disabled={disabled || loading || !configReady}
           />
         </label>
         <label>
@@ -165,12 +196,13 @@ export default function PricingCoefficientPanel({
             inputMode="decimal"
             value={utilidadPct}
             onChange={(e) => setUtilidadPct(e.target.value.replace(/[^\d,.]/g, ""))}
-            disabled={disabled || loading}
+            disabled={disabled || loading || !configReady}
             aria-label="Utilidad deseada sobre costo"
           />
         </label>
       </div>
 
+      {configError ? <div className="stock-coef__warning">{configError}</div> : null}
       {error ? <div className="stock-coef__warning">{error}</div> : null}
       {!error && result?.advertencia ? (
         <div className="stock-coef__warning">{result.advertencia}</div>

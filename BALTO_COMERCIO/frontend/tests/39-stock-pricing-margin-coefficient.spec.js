@@ -13,8 +13,18 @@ function numberFromInput(value) {
 }
 
 test('@stock @pricing @critical margen real y coeficiente ponderado usan la fórmula del contador', async ({ page }) => {
+  const configResult = await authenticatedApi(page, 'stock_precios_configuracion_obtener', {
+    query: { _: Date.now() },
+  });
+  const configBody = expectApiSuccess(
+    configResult,
+    'No se pudo obtener la configuración persistente de precios',
+  );
+  const config = configBody?.configuracion || configBody?.data?.configuracion || {};
+  expect(Number(config.utilidad_deseada_pct)).toBeGreaterThanOrEqual(0);
+
   const coefficientResult = await authenticatedApi(page, 'stock_coeficiente_ponderado', {
-    query: { utilidad_pct: 10, _: Date.now() },
+    query: { _: Date.now() },
   });
   const coefficientBody = expectApiSuccess(
     coefficientResult,
@@ -23,10 +33,39 @@ test('@stock @pricing @critical margen real y coeficiente ponderado usan la fór
   const coefficient = coefficientBody?.data || coefficientBody || {};
 
   expect(coefficient.periodo).toMatch(/^\d{4}-\d{2}$/);
-  expect(Number(coefficient.utilidad_deseada_pct)).toBeCloseTo(10, 4);
+  expect(Number(coefficient.utilidad_deseada_pct)).toBeCloseTo(Number(config.utilidad_deseada_pct), 4);
   expect(Number(coefficient.compras_mercaderia)).toBeGreaterThanOrEqual(0);
   expect(Number(coefficient.gastos_fijos)).toBeGreaterThanOrEqual(0);
   expect(Number(coefficient.gastos_variables)).toBeGreaterThanOrEqual(0);
+
+  const priceHistoryResult = await authenticatedApi(page, 'stock_precios_ajustes_historial', {
+    query: { limit: 100, _: Date.now() },
+  });
+  const priceHistoryBody = expectApiSuccess(
+    priceHistoryResult,
+    'No se pudo consultar el historial unificado de precios',
+  );
+  const adjustments = priceHistoryBody?.ajustes || priceHistoryBody?.data?.ajustes || [];
+  expect(Array.isArray(adjustments)).toBe(true);
+  for (const adjustment of adjustments.filter((row) => String(row?.tipo_ajuste || '').toLowerCase() === 'compra_costo')) {
+    expect(String(adjustment.tipo_precio_nombre || '')).toMatch(/COSTO/i);
+    expect(Number(adjustment.total_items || 0)).toBeGreaterThan(0);
+  }
+
+  const pendingResult = await authenticatedApi(page, 'stock_precios_revision_pendiente', {
+    query: { _: Date.now() },
+  });
+  const pendingBody = expectApiSuccess(
+    pendingResult,
+    'No se pudo consultar la revisión acumulada de precios',
+  );
+  expect(Number(pendingBody?.pendientes_total ?? pendingBody?.data?.pendientes_total ?? 0)).toBeGreaterThanOrEqual(0);
+  const pendingRevision = pendingBody?.revision || pendingBody?.data?.revision || null;
+  if (pendingRevision) {
+    expect(pendingRevision.estado).toBe('PENDIENTE');
+    expect(Number(pendingRevision.cantidad_cambios)).toBeGreaterThanOrEqual(1);
+    expect(String(pendingRevision.periodo)).toMatch(/^\d{4}-\d{2}$/);
+  }
 
   if (coefficient.disponible) {
     const compras = Number(coefficient.compras_mercaderia);
