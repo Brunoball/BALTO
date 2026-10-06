@@ -1,17 +1,28 @@
 import { defineConfig, devices } from '@playwright/test';
 import { AUTH_FILE, ENV } from './tests/support/env.js';
 
+const targetOrigin = new URL(ENV.apiURL).origin;
+
 const webServer = ENV.skipWebServer
   ? undefined
   : {
       command: ENV.startCommand,
       url: ENV.baseURL,
-      reuseExistingServer: true,
+      // No reutilizamos un dev-server viejo: al cambiar BALTO_ORIGIN podría
+      // haber quedado compilado contra el entorno anterior.
+      reuseExistingServer: false,
       timeout: 180_000,
       env: {
         ...process.env,
         BROWSER: 'none',
+        // Fuerza al dev-server local a usar EXACTAMENTE el mismo entorno que
+        // Playwright ya resolvió antes de arrancarlo. Estas variables del
+        // proceso tienen prioridad sobre cualquier .env viejo de CRA.
+        REACT_APP_BALTO_ORIGIN: targetOrigin,
         REACT_APP_API_URL: ENV.apiURL,
+        REACT_APP_BALTO_LOGIN_URL: `${targetOrigin}/`,
+        REACT_APP_BALTO_ACCESS_URL: `${targetOrigin}/`,
+        REACT_APP_ROUTER_BASENAME: '/',
       },
     };
 

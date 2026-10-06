@@ -141,7 +141,7 @@ async function nodeApi(action, { method = 'GET', body = null, query = {}, auth =
     method,
     headers,
     payload,
-    timeoutMs: 120_000,
+    timeoutMs: ENV.cleanupTimeoutMs,
   });
 
   return normalizeResult(result.status, result.text);
@@ -181,9 +181,22 @@ async function nodeApiWithRetry(action, options = {}) {
 
 function assertCleanupResult(result, phase) {
   if (!result.ok || result.body?.exito === false) {
+    const message = String(result.body?.mensaje || result.text || 'Falló la limpieza E2E.');
+    if (result.status === 404) {
+      throw new Error(
+        `[Playwright cleanup] ${phase}: herramientas E2E no disponibles en el backend. ` +
+        'Verificá BALTO_E2E_TOOLS_ENABLED=1 en el .env privado del backend seleccionado.',
+      );
+    }
+    if (result.status === 403 && ENV.environment === 'production') {
+      throw new Error(
+        `[Playwright cleanup] ${phase}: producción no habilitó mutaciones E2E. ` +
+        'Además de BALTO_E2E_TOOLS_ENABLED=1, producción requiere BALTO_E2E_ALLOW_PRODUCTION=1. ' +
+        `Backend: ${message}`,
+      );
+    }
     throw new Error(
-      `[Playwright cleanup] ${phase}: HTTP ${result.status}. ` +
-      `${result.body?.mensaje || result.text || 'Falló la limpieza E2E.'}`,
+      `[Playwright cleanup] ${phase}: HTTP ${result.status}. ${message}`,
     );
   }
 

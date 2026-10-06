@@ -19,7 +19,7 @@ async function assertTiendaNubeE2EIsolation(page) {
   ).toBeLessThan(400);
   expect(
     result.body?.tiendanube_isolation_active,
-    'Playwright abortó antes de modificar datos: el backend no confirmó el aislamiento E2E de Tienda Nube. Verificá BALTO_E2E_TOOLS_ENABLED=1 y que el backend actualizado esté desplegado en balto.3devsnet.com.',
+    'Playwright abortó antes de modificar datos: el backend no confirmó el aislamiento E2E de Tienda Nube. En staging verificá BALTO_E2E_TOOLS_ENABLED=1; en producción también BALTO_E2E_ALLOW_PRODUCTION=1.',
   ).toBe(true);
   expect(String(result.body?.run || '').toUpperCase()).toBe(RUN_PREFIX);
 
@@ -628,8 +628,9 @@ export async function requireMutations(test, page) {
 
   // Todas las mutaciones de Playwright llevan e2e_run=PW-... para que la
   // auditoría y el limpiador puedan reconocerlas sin confundirlas con datos
-  // reales. En staging, y sólo con BALTO_E2E_TOOLS_ENABLED=1, esa misma marca
-  // permite al backend aislar las fixtures de integraciones externas. No usamos
+  // reales. Con BALTO_E2E_TOOLS_ENABLED=1 (y en producción además con
+  // BALTO_E2E_ALLOW_PRODUCTION=1), esa marca permite al backend aislar las
+  // fixtures de integraciones externas. No usamos
   // skip_tiendanube_sync: los flags genéricos del cliente siguen ignorándose.
   if (page) {
     await page.context().route('**/api.php**', async (route) => {

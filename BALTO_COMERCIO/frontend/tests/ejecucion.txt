@@ -8,16 +8,21 @@
 # ============================================================
 # PREPARAR ENTORNO
 # Ejecutar estas dos líneas antes de comenzar.
-# Evita acciones reales en ARCA. Tienda Nube NO se prueba en esta suite.
-# IMPORTANTE: el backend seguro ya no acepta skip_tiendanube_sync desde el cliente.
-# Si querés cero sincronización externa durante tests mutables, usá un tenant de staging
-# sin Tienda Nube conectada. Los tests no llaman endpoints de conexión/importación de TN.
+# Evita acciones reales en ARCA. Tienda Nube real NO se prueba en esta suite.
+# El frontend de Playwright sigue levantando en 127.0.0.1:3000; PW_API_URL selecciona
+# si las APIs remotas son staging (balto.3devsnet.com) o producción (app.balto.com.ar).
+#
+# Las mutaciones E2E llevan e2e_run=PW-... y el backend bloquea server-side toda
+# escritura Balto -> Tienda Nube (jobs, outbox y cliente HTTP). No se usa el viejo
+# skip_tiendanube_sync como permiso confiable.
 # ============================================================
 
 Remove-Item Env:PW_ALLOW_ARCA -ErrorAction SilentlyContinue
-# La limpieza E2E queda forzada cuando PW_ALLOW_MUTATIONS=1: limpia PW al inicio y al terminar.
-# Producción queda bloqueada para mutaciones salvo PW_ALLOW_PRODUCTION=1 explícito en .env.playwright.
-# Las credenciales de producción también deben venir explícitamente de .env.playwright.
+# La limpieza E2E corre al inicio (scope=all) y al final de cada worker (RUN_PREFIX exacto).
+# BACKEND STAGING:    BALTO_E2E_TOOLS_ENABLED=1
+# BACKEND PRODUCCIÓN: BALTO_E2E_TOOLS_ENABLED=1 + BALTO_E2E_ALLOW_PRODUCTION=1
+# FRONTEND PRODUCCIÓN: PW_ALLOW_PRODUCTION=1 debe seguir explícito en .env.playwright.
+# Al terminar una ventana de pruebas productiva podés volver ambos flags backend a 0.
 
 
 # ============================================================

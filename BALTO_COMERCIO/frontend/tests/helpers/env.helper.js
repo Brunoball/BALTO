@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const { spawnSync } = require('child_process');
 
 function stripOptionalQuotes(value) {
   const text = String(value ?? '').trim();
@@ -60,10 +61,64 @@ function resolveFrontendRoot(rootDir) {
   return path.resolve(__dirname, '../..');
 }
 
+function syncCentralConfigBeforePlaywright(frontendRoot) {
+  if (process.env.BALTO_PW_CONFIG_SYNCED === '1') return;
+
+  const candidates = [
+    path.resolve(frontendRoot, '../../BALTO_CONFIG/sync-env.cjs'),
+    path.resolve(frontendRoot, '../BALTO_CONFIG/sync-env.cjs'),
+  ];
+  const syncScript = candidates.find((file) => fs.existsSync(file));
+  if (!syncScript) return;
+
+  const result = spawnSync(process.execPath, [syncScript, '--quiet'], {
+    cwd: path.dirname(syncScript),
+    env: process.env,
+    encoding: 'utf8',
+    windowsHide: true,
+  });
+
+  if (result.error) {
+    throw new Error(`[Playwright] No se pudo ejecutar BALTO_CONFIG/sync-env.cjs: ${result.error.message}`);
+  }
+  if (result.status !== 0) {
+    const detail = String(result.stderr || result.stdout || '').trim();
+    throw new Error(
+      `[Playwright] BALTO_CONFIG/sync-env.cjs terminó con código ${result.status}.` +
+      (detail ? ` ${detail}` : ''),
+    );
+  }
+
+  process.env.BALTO_PW_CONFIG_SYNCED = '1';
+}
+
+function applyFrontendRuntimeEnv(values) {
+  const origin = new URL(values.PW_API_URL).origin;
+  process.env.REACT_APP_BALTO_ORIGIN = origin;
+  process.env.REACT_APP_API_URL = values.PW_API_URL;
+  process.env.REACT_APP_BALTO_LOGIN_URL = values.PW_LOGIN_URL;
+  process.env.REACT_APP_BALTO_ACCESS_URL = values.PW_LOGIN_URL;
+  process.env.REACT_APP_ROUTER_BASENAME = '/';
+}
+
 function normalizePrefix(value) {
   const raw = String(value || '').trim();
   if (!raw || raw === '/') return '';
   return `/${raw.replace(/^\/+|\/+$/g, '')}`;
+}
+
+function resolveTargetCredentials(values, isProduction) {
+  const user = String(
+    (isProduction ? values.PW_PRODUCTION_USER : values.PW_STAGING_USER) ||
+    values.PW_USER ||
+    (isProduction ? '' : 'admin'),
+  ).trim();
+  const password = String(
+    (isProduction ? values.PW_PRODUCTION_PASSWORD : values.PW_STAGING_PASSWORD) ||
+    values.PW_PASSWORD ||
+    (isProduction ? '' : '1234'),
+  );
+  return { user, password };
 }
 
 function deriveTarget(values) {
@@ -96,6 +151,7 @@ function deriveTarget(values) {
   }
 
   const remoteOrigin = `${apiURL.protocol}//${apiURL.host}`;
+  const credentials = resolveTargetCredentials(values, isProduction);
 
   return {
     ...values,
@@ -107,15 +163,16 @@ function deriveTarget(values) {
     PW_LOGIN_URL: `${remoteOrigin}/`,
     PW_START_FRONTEND: '1',
     PW_SKIP_WEBSERVER: '0',
-    PW_ALLOW_PRODUCTION: isProduction ? '1' : '0',
+    PW_ALLOW_PRODUCTION: String(values.PW_ALLOW_PRODUCTION || '0'),
     PW_ENVIRONMENT: isProduction ? 'production' : 'staging',
-    PW_USER: isProduction ? 'admin_balto' : 'admin',
-    PW_PASSWORD: isProduction ? '@Cr3devs2026' : '1234',
+    PW_USER: credentials.user,
+    PW_PASSWORD: credentials.password,
   };
 }
 
 function loadTestEnv(rootDir = process.cwd()) {
   const frontendRoot = resolveFrontendRoot(rootDir);
+  syncCentralConfigBeforePlaywright(frontendRoot);
   const baseFile = path.join(frontendRoot, '.env.playwright');
 
   if (!fs.existsSync(baseFile)) {
@@ -128,8 +185,7 @@ function loadTestEnv(rootDir = process.cwd()) {
     process.env[key] = String(value);
   }
 
-  process.env.REACT_APP_API_URL = values.PW_API_URL;
-  process.env.REACT_APP_BALTO_LOGIN_URL = values.PW_LOGIN_URL;
+  applyFrontendRuntimeEnv(values);
 
   const required = ['PW_API_URL', 'PW_TEST_URL', 'PW_USER', 'PW_PASSWORD'];
   const missing = required.filter((key) => !String(process.env[key] || '').trim());

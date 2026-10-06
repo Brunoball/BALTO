@@ -65,7 +65,11 @@ export const test = base.extend({
         }
       }
     },
-    { scope: 'worker', auto: true },
+    {
+      scope: 'worker',
+      auto: true,
+      timeout: Math.max(5 * 60_000, ENV.cleanupTimeoutMs + 120_000),
+    },
   ],
 });
 

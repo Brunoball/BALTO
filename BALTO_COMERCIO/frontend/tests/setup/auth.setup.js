@@ -1,6 +1,7 @@
 import { test as setup, expect } from '@playwright/test';
 import { AUTH_FILE, ENV, patchPageNavigation } from '../support/env.js';
 import { cleanupE2EWithPage } from '../support/cleanup.js';
+import { RUN_PREFIX } from '../support/data.js';
 
 const EXPECTED_SYSTEM = ENV.expectedSystem;
 
@@ -19,6 +20,14 @@ function loginEndpoint() {
 function commerceSessionEndpoint() {
   const base = normalizeBase(ENV.apiURL, '');
   return `${base}/api.php?action=auth_session_check`;
+}
+
+function e2eGuardEndpoint() {
+  const base = normalizeBase(ENV.apiURL, '');
+  const url = new URL(`${base}/api.php`);
+  url.searchParams.set('action', 'config_testing_e2e_guard');
+  url.searchParams.set('e2e_run', RUN_PREFIX);
+  return url.toString();
 }
 
 function responseSystem(data) {
@@ -111,6 +120,42 @@ async function loginWithRetry(request, user, password) {
   throw lastError || new Error('No se pudo iniciar sesión en BALTO_LOGIN.');
 }
 
+async function validateE2EGuardWithRetry(request, sessionKey) {
+  const attempts = 4;
+  const retryableStatuses = new Set([408, 429, 500, 502, 503, 504]);
+  let lastError = null;
+
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      const response = await request.get(e2eGuardEndpoint(), {
+        headers: {
+          'X-Session': sessionKey,
+          Authorization: `Bearer ${sessionKey}`,
+          Accept: 'application/json',
+          Connection: 'close',
+        },
+        timeout: 25_000,
+        failOnStatusCode: false,
+      });
+
+      if (!retryableStatuses.has(response.status()) || attempt === attempts) {
+        return response;
+      }
+      lastError = new Error(
+        `Guard E2E respondió HTTP ${response.status()} (intento ${attempt}/${attempts}).`,
+      );
+      await response.dispose().catch(() => null);
+    } catch (error) {
+      lastError = error;
+      if (!isRetryableTransportError(error) || attempt === attempts) throw error;
+    }
+
+    await sleep(500 * (2 ** (attempt - 1)));
+  }
+
+  throw lastError || new Error('No se pudo validar el guard E2E de BALTO_COMERCIO.');
+}
+
 async function validateCommerceSessionWithRetry(request, sessionKey) {
   const attempts = 4;
   const retryableStatuses = new Set([408, 429, 500, 502, 503, 504]);
@@ -156,7 +201,9 @@ async function validateCommerceSessionWithRetry(request, sessionKey) {
 }
 
 setup('autenticar administrador de Balto', async ({ page, request }) => {
-  setup.setTimeout(2 * 60_000);
+  // En producción la limpieza inicial puede tardar bastante más que un request
+  // normal. No compartimos el timeout corto de los tests funcionales.
+  setup.setTimeout(Math.max(6 * 60_000, ENV.cleanupTimeoutMs + 180_000));
   patchPageNavigation(page);
 
   const user = String(ENV.user || process.env.PW_USER || '').trim();
@@ -226,6 +273,37 @@ setup('autenticar administrador de Balto', async ({ page, request }) => {
     commerceData?.exito !== false && commerceData?.success !== false,
     commerceData?.mensaje || commerceData?.message || 'BALTO_COMERCIO rechazó la sesión global.',
   ).toBe(true);
+
+  // Antes de cualquier cleanup o test mutable comprobamos el mismo cerrojo
+  // server-side que bloquea TODA escritura saliente de Balto hacia Tienda Nube.
+  // En producción, además, el backend debe tener BALTO_E2E_ALLOW_PRODUCTION=1.
+  if (ENV.allowMutations) {
+    const guardResponse = await validateE2EGuardWithRetry(request, sessionKey);
+    const guardText = await guardResponse.text();
+    let guardData = {};
+    try {
+      guardData = guardText ? JSON.parse(guardText) : {};
+    } catch {
+      guardData = { raw: guardText };
+    }
+
+    expect(
+      guardResponse.status(),
+      `Guard E2E no disponible: HTTP ${guardResponse.status()} ${guardData?.mensaje || guardText}. ` +
+      (ENV.environment === 'production'
+        ? 'Producción requiere BALTO_E2E_TOOLS_ENABLED=1 y BALTO_E2E_ALLOW_PRODUCTION=1.'
+        : 'Staging requiere BALTO_E2E_TOOLS_ENABLED=1.'),
+    ).toBeLessThan(400);
+    expect(
+      guardData?.e2e_tools_enabled,
+      'El backend seleccionado no tiene habilitadas las herramientas E2E seguras.',
+    ).toBe(true);
+    expect(
+      guardData?.tiendanube_isolation_active,
+      'Playwright abortó antes de tocar datos: el backend no confirmó el aislamiento E2E de Tienda Nube.',
+    ).toBe(true);
+    expect(String(guardData?.run || '').toUpperCase()).toBe(RUN_PREFIX);
+  }
 
   await page.goto('/panel/dashboard', { waitUntil: 'domcontentloaded' });
   await expect(page).toHaveURL(/\/panel(?:\/|$)/, { timeout: 20_000 });

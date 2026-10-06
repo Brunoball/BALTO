@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { spawnSync } from 'node:child_process';
 
 function parseEnvFile(filePath) {
   if (!fs.existsSync(filePath)) return {};
@@ -60,6 +61,53 @@ function resolveFrontendRoot() {
   return cwd;
 }
 
+function centralSyncCandidates(frontendRoot) {
+  return [
+    path.resolve(frontendRoot, '../../BALTO_CONFIG/sync-env.cjs'),
+    path.resolve(frontendRoot, '../BALTO_CONFIG/sync-env.cjs'),
+  ];
+}
+
+function syncCentralConfigBeforePlaywright(frontendRoot) {
+  // Playwright carga playwright.config.js ANTES de iniciar webServer. Si el
+  // prestart de React sincroniza BALTO_CONFIG recién después, el runner puede
+  // quedar apuntando a una URL y el bundle local a otra. Sincronizamos acá,
+  // antes de leer .env.playwright, para que runner + frontend usen el mismo host.
+  if (process.env.BALTO_PW_CONFIG_SYNCED === '1') return;
+
+  const syncScript = centralSyncCandidates(frontendRoot).find((file) => fs.existsSync(file));
+  if (!syncScript) return;
+
+  const result = spawnSync(process.execPath, [syncScript, '--quiet'], {
+    cwd: path.dirname(syncScript),
+    env: process.env,
+    encoding: 'utf8',
+    windowsHide: true,
+  });
+
+  if (result.error) {
+    throw new Error(`[Playwright] No se pudo ejecutar BALTO_CONFIG/sync-env.cjs: ${result.error.message}`);
+  }
+  if (result.status !== 0) {
+    const detail = String(result.stderr || result.stdout || '').trim();
+    throw new Error(
+      `[Playwright] BALTO_CONFIG/sync-env.cjs terminó con código ${result.status}.` +
+      (detail ? ` ${detail}` : ''),
+    );
+  }
+
+  process.env.BALTO_PW_CONFIG_SYNCED = '1';
+}
+
+function applyFrontendRuntimeEnv(values) {
+  const origin = new URL(values.PW_API_URL).origin;
+  process.env.REACT_APP_BALTO_ORIGIN = origin;
+  process.env.REACT_APP_API_URL = values.PW_API_URL;
+  process.env.REACT_APP_BALTO_LOGIN_URL = values.PW_LOGIN_URL;
+  process.env.REACT_APP_BALTO_ACCESS_URL = values.PW_LOGIN_URL;
+  process.env.REACT_APP_ROUTER_BASENAME = '/';
+}
+
 function normalizePrefix(value) {
   const raw = String(value || '').trim();
   if (!raw || raw === '/') return '';
@@ -77,6 +125,21 @@ function isProductionApi(apiURL) {
   } catch {
     return false;
   }
+}
+
+function resolveTargetCredentials(values, isProduction) {
+  const user = String(
+    (isProduction ? values.PW_PRODUCTION_USER : values.PW_STAGING_USER) ||
+    values.PW_USER ||
+    (isProduction ? '' : 'admin'),
+  ).trim();
+  const password = String(
+    (isProduction ? values.PW_PRODUCTION_PASSWORD : values.PW_STAGING_PASSWORD) ||
+    values.PW_PASSWORD ||
+    (isProduction ? '' : '1234'),
+  );
+
+  return { user, password };
 }
 
 function deriveTarget(values) {
@@ -111,6 +174,7 @@ function deriveTarget(values) {
   }
 
   const remoteOrigin = `${apiURL.protocol}//${apiURL.host}`;
+  const credentials = resolveTargetCredentials(values, isProduction);
 
   return {
     ...values,
@@ -127,14 +191,15 @@ function deriveTarget(values) {
     // La habilitación debe existir de forma explícita en .env.playwright.
     PW_ALLOW_PRODUCTION: String(values.PW_ALLOW_PRODUCTION || '0'),
     PW_ENVIRONMENT: isProduction ? 'production' : 'staging',
-    // Nunca incrustar credenciales productivas en el código del testing.
-    // Staging conserva sus defaults locales; producción exige valores explícitos.
-    PW_USER: String(values.PW_USER || (isProduction ? '' : 'admin')),
-    PW_PASSWORD: String(values.PW_PASSWORD || (isProduction ? '' : '1234')),
+    // Las credenciales se eligen por perfil. BALTO_CONFIG puede cambiar sólo
+    // PW_API_URL y estas variables extra quedan preservadas en .env.playwright.
+    PW_USER: credentials.user,
+    PW_PASSWORD: credentials.password,
   };
 }
 
 const root = resolveFrontendRoot();
+syncCentralConfigBeforePlaywright(root);
 const envFile = path.join(root, '.env.playwright');
 
 if (!fs.existsSync(envFile)) {
@@ -149,12 +214,7 @@ for (const [key, value] of Object.entries(values)) {
   process.env[key] = value;
 }
 
-if (process.env.PW_API_URL) {
-  process.env.REACT_APP_API_URL = process.env.PW_API_URL;
-}
-if (process.env.PW_LOGIN_URL) {
-  process.env.REACT_APP_BALTO_LOGIN_URL = process.env.PW_LOGIN_URL;
-}
+applyFrontendRuntimeEnv(values);
 
 const startFrontend = bool(process.env.PW_START_FRONTEND, true);
 const appPathPrefix = normalizePrefix(process.env.PW_APP_PATH_PREFIX);
@@ -194,6 +254,8 @@ export const ENV = Object.freeze({
   startCommand: String(process.env.PW_START_COMMAND || 'npm start').trim(),
 
   cleanup: bool(process.env.PW_CLEANUP, true),
+  cleanupTimeoutMs: integer(process.env.PW_CLEANUP_TIMEOUT_MS, 180_000),
+  environment: String(process.env.PW_ENVIRONMENT || 'staging').trim().toLowerCase(),
   timeoutMs: integer(process.env.PW_TIMEOUT_MS, 60_000),
   expectTimeoutMs: integer(process.env.PW_EXPECT_TIMEOUT_MS, 15_000),
   slowMoMs: integer(process.env.PW_SLOW_MO_MS, 0),
@@ -269,8 +331,8 @@ export function patchContextNavigation(context) {
 export function assertCredentialsConfigured() {
   const missing = [];
   if (!ENV.testURL) missing.push('PW_TEST_URL');
-  if (!ENV.user) missing.push('PW_USER');
-  if (!ENV.password) missing.push('PW_PASSWORD');
+  if (!ENV.user) missing.push(ENV.environment === 'production' ? 'PW_PRODUCTION_USER' : 'PW_STAGING_USER');
+  if (!ENV.password) missing.push(ENV.environment === 'production' ? 'PW_PRODUCTION_PASSWORD' : 'PW_STAGING_PASSWORD');
   if (!ENV.apiURL) missing.push('PW_API_URL (derivada)');
   if (!ENV.loginApiURL) missing.push('PW_LOGIN_API_URL (derivada)');
   if (!ENV.loginURL) missing.push('PW_LOGIN_URL (derivada)');
