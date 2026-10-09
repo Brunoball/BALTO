@@ -105,6 +105,9 @@ function safeText(v) {
   const s = String(v ?? "").trim();
   return s ? s : "-";
 }
+function upperInput(v) {
+  return String(v ?? "").toLocaleUpperCase("es-AR");
+}
 
 function isAllowedComprobanteFile(file) {
   if (!file) return false;
@@ -1020,6 +1023,7 @@ function buildFormFromRowCompra(row, fixedLocal) {
   return {
     id_movimiento: safeNumber(r.id_movimiento ?? r.id ?? r.id_compra) || null,
     id_item: Number(item?.id_item || 0) > 0 ? Number(item.id_item) : null,
+    tipo_item: String(item?.tipo_item_db || (Number(item?.id_articulo || item?.id_stock_producto || 0) > 0 ? "ARTICULO" : Number(item?.id_detalle || 0) > 0 ? "DETALLE" : "MANUAL")).toUpperCase(),
     fecha: String(r.fecha || "").slice(0, 10) || "",
     id_tipo_venta: nOrNull(r.id_tipo_venta) || fallbackTipoVenta,
     id_tipo_movimiento: fixedLocal?.idEntrada ?? NULL_OPTION,
@@ -1131,11 +1135,17 @@ function compraPayloadCoincideConRow(payload, row) {
       const bArticulo = id(b.id_articulo ?? b.id_stock_producto);
       const aDetalle = id(a.id_detalle);
       const bDetalle = id(b.id_detalle);
+      const tipoA = String(a.tipo_item_db || (aArticulo ? "ARTICULO" : aDetalle ? "DETALLE" : "MANUAL")).toUpperCase();
+      const tipoB = String(b.tipo_item || (bArticulo ? "ARTICULO" : bDetalle ? "DETALLE" : "MANUAL")).toUpperCase();
+      const descA = String(a.descripcion || a.detalle_nombre || "").trim();
+      const descB = String(b.descripcion || "").trim();
 
       if (
         id(a.id_item) !== id(b.id_item) ||
         aArticulo !== bArticulo ||
         aDetalle !== bDetalle ||
+        tipoA !== tipoB ||
+        (tipoA === "MANUAL" && descA !== descB) ||
         !qtyEq(a.cantidad, b.cantidad) ||
         !moneyEq(a.precio, b.precio) ||
         !moneyEq(a.iva_pct, b.iva_pct)
@@ -1684,9 +1694,11 @@ export default function ModalEditarCompra({
     );
     setProveedorFocus(false);
     setDetalleInput(
-      built.id_stock_variante && built.id_stock_variante !== NULL_OPTION
-        ? getProductoNombreFromCompra(rowRef.current)
-        : (nameById(merged.detalles, built.id_detalle) || getProductoNombreFromCompra(rowRef.current))
+      built.tipo_item === "MANUAL"
+        ? String(getPrimerItemCompra(rowRef.current)?.descripcion || "").trim()
+        : built.id_stock_variante && built.id_stock_variante !== NULL_OPTION
+          ? getProductoNombreFromCompra(rowRef.current)
+          : (nameById(merged.detalles, built.id_detalle) || getProductoNombreFromCompra(rowRef.current))
     );
     setDetalleFocus(false);
 
@@ -1811,11 +1823,23 @@ export default function ModalEditarCompra({
       tipo_item: "ARTICULO",
       id_articulo: String(idArticulo),
       id_detalle: NULL_OPTION,
-      descripcion: String(articulo?.nombre ?? articulo?.label ?? "").trim(),
+      descripcion: upperInput(String(articulo?.nombre ?? articulo?.label ?? "").trim()),
       ...(precioSugerido > 0 ? { precio: precioSugerido } : {}),
       iva_pct: ivaSugerido,
     });
   }, [safeLists.detalles, updateExtraItem]);
+
+  const changeTipoExtraItem = useCallback((clientId, type) => {
+    updateExtraItem(clientId, {
+      tipo_item: type === "MANUAL" ? "MANUAL" : "ARTICULO",
+      id_articulo: NULL_OPTION,
+      id_detalle: NULL_OPTION,
+      descripcion: "",
+      cantidad: 1,
+      precio: 0,
+      iva_pct: 0,
+    });
+  }, [updateExtraItem]);
 
   const addExtraItem = useCallback(() => {
     setExtraItems((prev) => [
@@ -1823,7 +1847,7 @@ export default function ModalEditarCompra({
       {
         client_id: `nuevo-${uid()}`,
         id_item: null,
-        tipo_item: "ARTICULO",
+        tipo_item: "MANUAL",
         id_articulo: NULL_OPTION,
         id_detalle: NULL_OPTION,
         descripcion: "",
@@ -1909,16 +1933,17 @@ export default function ModalEditarCompra({
     setProveedorFocus(false);
   }, []);
   const handleDetalleInputChange = useCallback((e) => {
-    const value = e.target.value;
-    const exact = findExactCatalogItem(safeLists.detalles, value);
+    const value = upperInput(e.target.value);
+    const esManual = form.tipo_item === "MANUAL";
+    const exact = esManual ? null : findExactCatalogItem(safeLists.detalles, value);
 
     setDetalleInput(value);
     setForm((prev) => ({
       ...prev,
-      id_detalle: exact ? String(getGenericId(exact)) : NULL_OPTION,
+      id_detalle: exact ? String(getStockProductoIdFromSelection(exact) || getGenericId(exact)) : NULL_OPTION,
       id_stock_variante: NULL_OPTION,
     }));
-  }, [findExactCatalogItem, safeLists.detalles]);
+  }, [form.tipo_item, findExactCatalogItem, safeLists.detalles]);
   const handleSelectDetalle = useCallback((det) => {
     const idProducto = getStockProductoIdFromSelection(det) || getGenericId(det);
     const idVariante = getStockVarianteIdFromSelection(det);
@@ -1926,15 +1951,22 @@ export default function ModalEditarCompra({
     const varianteNombre = String(det?.nombre_variante ?? det?.variante_nombre ?? det?.stock_variante_nombre ?? "").trim();
     const nombre = String(det?.label ?? [productoNombre, varianteNombre].filter(Boolean).join(" - ") ?? "").trim();
 
-    setDetalleInput(nombre || productoNombre);
+    setDetalleInput(upperInput(nombre || productoNombre));
     setForm((prev) => ({
       ...prev,
+      tipo_item: "ARTICULO",
       id_detalle: idProducto != null ? String(idProducto) : NULL_OPTION,
       id_stock_variante: idVariante != null ? String(idVariante) : NULL_OPTION,
     }));
     setDetalleFocus(false);
   }, []);
 
+
+  const changeTipoFirstItem = useCallback((type) => {
+    setForm((prev) => ({ ...prev, tipo_item: type === "MANUAL" ? "MANUAL" : "ARTICULO", id_detalle: NULL_OPTION, id_stock_variante: NULL_OPTION }));
+    setDetalleInput("");
+    setDetalleFocus(false);
+  }, []);
 
   const payload = useMemo(() => {
     const toNullableId = (v) => {
@@ -1972,8 +2004,8 @@ export default function ModalEditarCompra({
 
     const firstItem = compraItemPayloadDesdeEstado({
       id_item: form.id_item,
-      tipo_item: "ARTICULO",
-      id_articulo: toNullableId(form.id_detalle),
+      tipo_item: form.tipo_item === "MANUAL" ? "MANUAL" : "ARTICULO",
+      id_articulo: form.tipo_item === "MANUAL" ? null : toNullableId(form.id_detalle),
       descripcion: detalleInput,
       cantidad,
       precio,
@@ -1991,9 +2023,9 @@ export default function ModalEditarCompra({
       id_tipo_movimiento: toNullableId(form.id_tipo_movimiento),
       id_proveedor: toNullableId(form.id_proveedor),
       id_cliente: null,
-      id_detalle: toNullableId(form.id_detalle),
-      id_stock_producto: toNullableId(form.id_detalle),
-      id_stock_variante: toNullableId(form.id_stock_variante),
+      id_detalle: form.tipo_item === "MANUAL" ? null : toNullableId(form.id_detalle),
+      id_stock_producto: form.tipo_item === "MANUAL" ? null : toNullableId(form.id_detalle),
+      id_stock_variante: form.tipo_item === "MANUAL" ? null : toNullableId(form.id_stock_variante),
       cantidad: Math.round(cantidad * 1000000) / 1000000,
       precio: Math.round(precio * 100) / 100,
       iva_pct: Math.round(iva_pct * 100) / 100,
@@ -2251,8 +2283,10 @@ export default function ModalEditarCompra({
       if (!proveedorId || proveedorId === NULL_OPTION || proveedorId === ADD_OPTION) {
         throw new Error("Seleccioná un proveedor o crealo con Agregar nuevo proveedor.");
       }
-      if (!detalleId || detalleId === NULL_OPTION || detalleId === ADD_OPTION) {
-        throw new Error("Seleccioná un detalle o crealo con Agregar nuevo detalle.");
+      if (form.tipo_item === "MANUAL") {
+        if (!detalleInput.trim()) throw new Error("Escribí la descripción del detalle manual.");
+      } else if (!detalleId || detalleId === NULL_OPTION || detalleId === ADD_OPTION) {
+        throw new Error("Seleccioná un material o insumo del catálogo.");
       }
 
       const cantidad = Math.max(0, safeNumber(form.cantidad));
@@ -2264,7 +2298,9 @@ export default function ModalEditarCompra({
         const item = extraItems[i];
         const itemArticulo = Number(item?.id_articulo || 0);
         const itemDetalle = Number(item?.id_detalle || 0);
-        if (!(itemArticulo > 0 || itemDetalle > 0)) {
+        if (item?.tipo_item === "MANUAL") {
+          if (!String(item?.descripcion || "").trim()) throw new Error(`Fila ${i + 2}: escribí el detalle manual.`);
+        } else if (!(itemArticulo > 0 || itemDetalle > 0)) {
           throw new Error(`Fila ${i + 2}: seleccioná un artículo válido.`);
         }
         if (!(safeNumber(item?.cantidad) > 0)) {
@@ -2303,15 +2339,15 @@ export default function ModalEditarCompra({
       const payloadFinal = {
         ...payload,
         id_proveedor: Number(proveedorId),
-        id_detalle: Number(detalleId),
-        id_stock_producto: Number(detalleId),
+        id_detalle: form.tipo_item === "MANUAL" ? null : Number(detalleId),
+        id_stock_producto: form.tipo_item === "MANUAL" ? null : Number(detalleId),
         items: (Array.isArray(payload.items) ? payload.items : []).map((item, index) => (
           index === 0
             ? {
                 ...item,
-                tipo_item: "ARTICULO",
-                id_articulo: Number(detalleId),
-                id_stock_producto: Number(detalleId),
+                tipo_item: form.tipo_item === "MANUAL" ? "MANUAL" : "ARTICULO",
+                id_articulo: form.tipo_item === "MANUAL" ? null : Number(detalleId),
+                id_stock_producto: form.tipo_item === "MANUAL" ? null : Number(detalleId),
                 id_detalle: null,
                 descripcion: detalleInput || item.descripcion || "",
               }
@@ -2393,7 +2429,7 @@ export default function ModalEditarCompra({
             <div className="gm-movement-layout">
               <section className="gm-movement-main gm-table gm-table--movement cmp-table">
                 <div className={`gm-table-head ${hasScroll ? "gm-table-head--body-scroll" : ""}`}>
-                  <div className="gm-table-th" style={{ paddingLeft: 10 }}>Detalle</div>
+                  <div className="gm-table-th" style={{ paddingLeft: 10 }}>Tipo / detalle</div>
                   <div className="gm-table-th">Cant.</div>
                   <div className="gm-table-th right">Precio</div>
                   <div className="gm-table-th">IVA %</div>
@@ -2405,19 +2441,46 @@ export default function ModalEditarCompra({
                 <div ref={rowsContainerRef} className={`gm-table-body ${hasScroll ? "has-scroll" : ""}`}>
                   <div className="gm-table-row">
                     <div className="gm-table-cell gm-table-cell--detail">
+                      <select
+                        className="gm-cell-input gm-cell-input--select"
+                        aria-label="Tipo de ítem principal de compra"
+                        value={form.tipo_item === "MANUAL" ? "MANUAL" : "ARTICULO"}
+                        onChange={(e) => changeTipoFirstItem(e.target.value)}
+                        disabled={saving || addUI.open || openVerComp}
+                        style={{ marginBottom: 6 }}
+                      >
+                        <option value="ARTICULO">Material / insumo del catálogo</option>
+                        <option value="MANUAL">Detalle manual</option>
+                      </select>
+                      {form.tipo_item !== "MANUAL" && (
+                        <div style={{ width: "100%", minHeight: 24 }}>
+                          {detalleInput.trim() && !Number(form.id_detalle || 0) && (
+                            <button
+                              type="button" className="gm-detail-manual-convert"
+                              onClick={() => {
+                                setForm((prev) => ({ ...prev, tipo_item: "MANUAL", id_detalle: NULL_OPTION, id_stock_variante: NULL_OPTION }));
+                                setDetalleFocus(false);
+                              }}
+                              disabled={saving || addUI.open || openVerComp}
+                              style={{ border: 0, padding: "4px 0", background: "transparent", color: "#68b6ff", cursor: "pointer", textAlign: "left", fontSize: 11 }}
+                            >Usar este texto como detalle manual (sin stock)</button>
+                          )}
+                        </div>
+                      )}
                       <div className="cmp-autocomplete" style={{ width: "100%" }}>
                         <input
                           ref={detalleInputRef}
                           className="gm-cell-input"
-                          placeholder=" "
+                          placeholder={form.tipo_item === "MANUAL" ? "Escribí un detalle manual…" : "Buscá un material o insumo…"}
+                          maxLength={255}
                           value={detalleInput}
                           onChange={handleDetalleInputChange}
-                          onFocus={() => setDetalleFocus(true)}
+                          onFocus={() => { if (form.tipo_item !== "MANUAL") setDetalleFocus(true); }}
                           onBlur={() => setTimeout(() => setDetalleFocus(false), 120)}
                           disabled={saving || addUI.open || openVerComp}
                           autoComplete="off"
                         />
-                        {mostrarSugerenciasDetalle && (
+                        {form.tipo_item !== "MANUAL" && mostrarSugerenciasDetalle && (
                           <ul className="cmp-suggest">
                             {puedeAgregarDetalle && (
                               <li
@@ -2499,11 +2562,49 @@ export default function ModalEditarCompra({
                     return (
                       <div className="gm-table-row" key={item.client_id}>
                         <div className="gm-table-cell gm-table-cell--detail">
+                          <select
+                            className="gm-cell-input gm-cell-input--select"
+                            aria-label={`Tipo de ítem de compra fila ${index + 2}`}
+                            value={item.tipo_item === "MANUAL" ? "MANUAL" : "ARTICULO"}
+                            onChange={(e) => changeTipoExtraItem(item.client_id, e.target.value)}
+                            disabled={saving || addUI.open || openVerComp}
+                            style={{ marginBottom: 6 }}
+                          >
+                            <option value="ARTICULO">Material / insumo del catálogo</option>
+                            <option value="MANUAL">Detalle manual</option>
+                          </select>
+                          {item.tipo_item !== "MANUAL" && (
+                            <div style={{ width: "100%", minHeight: 24 }}>
+                              {String(item.descripcion || "").trim() &&
+                                !Number(item.id_articulo || item.id_detalle || 0) && (
+                                  <button
+                                    type="button" className="gm-detail-manual-convert"
+                                    onClick={() => updateExtraItem(item.client_id, {
+                                      tipo_item: "MANUAL", id_articulo: NULL_OPTION, id_detalle: NULL_OPTION,
+                                    })}
+                                    disabled={saving || addUI.open || openVerComp}
+                                    style={{ border: 0, padding: "4px 0", background: "transparent", color: "#68b6ff", cursor: "pointer", textAlign: "left", fontSize: 11 }}
+                                  >Usar este texto como detalle manual (sin stock)</button>
+                                )}
+                            </div>
+                          )}
+                          {item.tipo_item === "MANUAL" ? (
+                            <input
+                              className="gm-cell-input"
+                              type="text"
+                              maxLength={255}
+                              aria-label={`Descripción del detalle manual fila ${index + 2}`}
+                              value={item.descripcion || ""}
+                              onChange={(e) => updateExtraItem(item.client_id, { descripcion: upperInput(e.target.value) })}
+                              placeholder="Escribí un detalle manual…"
+                              disabled={saving || addUI.open || openVerComp}
+                            />
+                          ) : (
                           <ProductStockAutocomplete
                             value={item.descripcion || ""}
                             onChange={(value) => {
                               updateExtraItem(item.client_id, {
-                                descripcion: value,
+                                descripcion: upperInput(value),
                                 id_articulo: NULL_OPTION,
                                 id_detalle: NULL_OPTION,
                               });
@@ -2526,6 +2627,7 @@ export default function ModalEditarCompra({
                             emptyMessage="Sin artículos activos"
                             inputClassName="gm-cell-input"
                           />
+                          )}
                         </div>
 
                         <div className="gm-table-cell gm-table-cell--center stock_cant">
@@ -2593,7 +2695,7 @@ export default function ModalEditarCompra({
                       className="gm-foot-btn"
                       onClick={addExtraItem}
                       disabled={saving || addUI.open || openVerComp}
-                      title="Agregar otro artículo a la compra"
+                      title="Agregar otro ítem a la compra"
                     >
                       <span className="gm-foot-btn__icon">
                         <svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg">

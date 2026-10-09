@@ -409,9 +409,9 @@ function buildInitialState(data, clasificaciones = []) {
   const cheque = normalizeChequeData(src);
   const esMovimientoCheque = cheque.id_cheque > 0;
   const rawItems = Array.isArray(src.items) && src.items.length ? src.items : [src];
-  const items = rawItems
-    .map((it) => makeItem(it))
-    .filter((it) => Number(it.cantidad) > 0 && (Number(it.precio) > 0 || Number(it.total) > 0));
+  // Preservar todos los renglones originales. Nunca descartar ítems incompletos
+  // al abrir el editor: podrían perderse al confirmar otra modificación.
+  const items = rawItems.map((it) => makeItem(it));
   const { idCostoFijo } = resolveCostoFijoConfig(clasificaciones);
   const idClasifActual = String(Number(src?.id_clasificacion ?? src?.clasificacion_id ?? 0) || "");
   const esCostoFijoInicial =
@@ -1556,18 +1556,21 @@ export default function ModalEditarEgreso({
           monto_total: importe,
         };
       } else {
-        const items = (form.items || [])
-          .map((it) => {
-            const id_detalle = Number(it.id_detalle || 0);
-            const detalle = upperSafeText(it.detalle);
-            const cantidad = roundQuantity(safeNumber(it.cantidad));
-            const precio = round2(safeNumber(it.precio));
-            const iva_pct = round2(safeNumber(it.iva_pct));
-            const calc = calcItemTotals(cantidad, precio, iva_pct);
-            return { id_detalle, detalle, cantidad, precio, iva_pct, ...calc };
-          })
-          .filter((it) => it.id_detalle > 0 && it.cantidad > 0 && it.precio > 0 && it.total > 0);
+        const items = (form.items || []).map((it) => {
+          const id_detalle = Number(it.id_detalle || 0);
+          const detalle = upperSafeText(it.detalle);
+          const cantidad = roundQuantity(safeNumber(it.cantidad));
+          const precio = round2(safeNumber(it.precio));
+          const iva_pct = round2(safeNumber(it.iva_pct));
+          const calc = calcItemTotals(cantidad, precio, iva_pct);
+          return { id_detalle, detalle, cantidad, precio, iva_pct, ...calc };
+        });
         if (!items.length) throw new Error("Debés cargar al menos un ítem válido.");
+        items.forEach((it, index) => {
+          if (!(it.id_detalle > 0) || !it.detalle) throw new Error(`Fila ${index + 1}: seleccioná una descripción válida.`);
+          if (!(it.cantidad > 0)) throw new Error(`Fila ${index + 1}: la cantidad debe ser mayor a 0.`);
+          if (!(it.precio > 0) || !(it.total > 0)) throw new Error(`Fila ${index + 1}: el importe debe ser mayor a 0.`);
+        });
 
         const mediosEditables = (form.medios || []).filter(isMedioPagoRowTouched);
         const mediosPagoPayload = mediosEditables.flatMap((mp, idx) => {

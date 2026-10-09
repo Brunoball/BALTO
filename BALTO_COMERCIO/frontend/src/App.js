@@ -169,8 +169,7 @@ function RutaPlanPro({ children }) {
 function RutaNoDemoConfig({ children }) {
   if (!hasSession()) return <CentralAccessRedirect />;
 
-  // En DEMO la configuración queda visible como vista previa,
-  // pero solo Calendario global debe ser navegable/editable.
+  // En DEMO solo se bloquean las configuraciones sensibles que usan este guard.
   return getPlanIdUsuario() === 10 ? (
     <Navigate to="/panel/configuracion" replace />
   ) : (
@@ -530,9 +529,7 @@ export default function App() {
             element={
               <RutaModulo modulo="configuracion">
                 <RutaAdmin>
-                  <RutaNoDemoConfig>
-                    <ConfiguracionSaldosIniciales />
-                  </RutaNoDemoConfig>
+                  <ConfiguracionSaldosIniciales />
                 </RutaAdmin>
               </RutaModulo>
             }

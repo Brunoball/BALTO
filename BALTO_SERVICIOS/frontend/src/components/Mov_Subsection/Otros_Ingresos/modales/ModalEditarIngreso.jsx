@@ -1158,14 +1158,15 @@ export default function ModalEditarIngreso({
         cantidad: safeNumber(it.cantidad),
         precio: round2(safeNumber(it.precio)),
         iva_pct: round2(safeNumber(it.iva_pct)),
-      }))
-      .filter(
-        (it) =>
-          safeText(it.detalle) !== "" &&
-          it.cantidad > 0 &&
-          it.precio > 0 &&
-          safeNumber(it.total) > 0
-      );
+      }));
+
+    // No ocultar filas inválidas: bloquear la edición completa, sin pérdida parcial.
+    for (let i = 0; i < items.length; i += 1) {
+      const it = items[i];
+      if (!safeText(it.detalle)) return { ok: false, msg: `Fila ${i + 1}: falta la descripción.` };
+      if (!(it.cantidad > 0)) return { ok: false, msg: `Fila ${i + 1}: la cantidad debe ser mayor a cero.` };
+      if (!(it.precio > 0) || !(safeNumber(it.total) > 0)) return { ok: false, msg: `Fila ${i + 1}: el importe debe ser mayor a cero.` };
+    }
 
     if (!items.length) {
       return {

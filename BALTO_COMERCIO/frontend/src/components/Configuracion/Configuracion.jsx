@@ -215,11 +215,7 @@ function ConfiguracionInicio() {
         title: "Saldos iniciales",
         description: "Cargá la apertura de caja, bancos, billeteras, cheques y cuentas corrientes.",
         route: "/panel/configuracion/saldos-iniciales",
-        demoBlocked: esPlanDemo,
-        demoMessage: DEMO_ADVANCED_MESSAGE,
-        status: esPlanDemo
-          ? { text: "Bloqueado demo", type: "warning" }
-          : { text: "Configurable", type: "success" },
+        status: { text: "Configurable", type: "success" },
         metaTop: "Puesta en marcha",
         metaBottom: "Caja · Cheques · Cuentas corrientes",
         icon: (
@@ -233,9 +229,7 @@ function ConfiguracionInicio() {
         title: "Listas y categorías",
         description: "Administrá detalles, medios de pago, categorías y unidades de stock desde un solo lugar.",
         route: "/panel/configuracion?seccion=listas-categorias",
-        demoBlocked: esPlanDemo,
-        demoMessage: DEMO_ADVANCED_MESSAGE,
-        status: esPlanDemo ? { text: "Bloqueado demo", type: "warning" } : { text: "Administrable", type: "success" },
+        status: { text: "Administrable", type: "success" },
         metaTop: "Datos configurables",
         metaBottom: "Detalles · Categorías de stock",
         icon: (

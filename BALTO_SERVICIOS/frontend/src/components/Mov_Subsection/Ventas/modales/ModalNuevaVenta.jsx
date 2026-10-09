@@ -2058,7 +2058,7 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
 
   const handleTipoItemChange = useCallback(
     (rowId, nextType) => {
-      const tipo = ["SERVICIO", "ARTICULO", "DETALLE"].includes(String(nextType || "").toUpperCase())
+      const tipo = ["SERVICIO", "ARTICULO", "MANUAL"].includes(String(nextType || "").toUpperCase())
         ? String(nextType).toUpperCase()
         : "SERVICIO";
 
@@ -2595,7 +2595,18 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
       return { ok: false, msg: "Cargá al menos 1 fila válida (Detalle + Cantidad + Precio)." };
     }
 
-    return { ok: true, warn: problems.length > 0 };
+    // Guardado atómico: si una fila está incompleta, no se registra NINGUNA.
+    // Antes se devolvía warn:true y el POST omitía silenciosamente esa fila.
+    if (problems.length) {
+      const msg = problems.slice(0, 2).join(" ");
+      const extra = problems.length > 2 ? ` (y ${problems.length - 2} más)` : "";
+      return {
+        ok: false,
+        msg: `Completá o eliminá las filas incompletas antes de guardar. No se guardó la venta. ${msg}${extra}`,
+      };
+    }
+
+    return { ok: true };
   }, [cliInput, selectedClienteId, filters, isContado, fecha, usuarioBasicoVentas, rowsCalc, mediosFilas, mediosPagoList, resumen, sumaMediosPago, componentesStockList]);
 
   const buildResumenFacturaPayload = useCallback(
@@ -2847,9 +2858,19 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
       const idClienteParaGuardar = Number(clienteFinal?.id_cliente || selectedClienteId || 0) || null;
       const nombreClienteParaGuardar = clienteFinal?.nombre || selectedClienteNombre || safeStr(clienteFiscalResuelto?.razon_social) || null;
 
-      const payloads = rowsCalc
-        .filter(isUsableSaleRow)
-        .map((r) => {
+      // Segunda defensa común al guardado simple y al facturado (ARCA):
+      // jamás enviar una venta parcial, aun si se invoca este método directamente.
+      const problemas = rowsCalc
+        .map((r, index) => describeLineProblem(r, index + 1))
+        .filter(Boolean);
+      if (problemas.length || !rowsCalc.length) {
+        throw new Error(
+          problemas.length
+            ? `Venta no guardada: completá o eliminá todas las filas incompletas. ${problemas.slice(0, 2).join(" ")}`
+            : "Venta no guardada: cargá al menos una fila válida."
+        );
+      }
+      const payloads = rowsCalc.map((r) => {
           const idServicio = Number(r.id_servicio || 0);
           const idArticulo = Number(r.id_articulo || r.id_stock_producto || 0);
           const idDetalle = Number(r.id_detalle || 0);
@@ -3359,7 +3380,6 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
         showToast("advertencia", v.msg || "Faltan datos.", 4200);
         return;
       }
-      if (v.warn) showToast("advertencia", "Hay filas incompletas: se mostrarán solo las válidas.", 3200);
 
       setSaving(true);
       try {
@@ -3526,7 +3546,6 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
 
     setSaving(true);
     showToast("exito", "Guardando venta y generando PDF...", 5200);
-    if (v.warn) showToast("advertencia", "Hay filas incompletas: se guardarán solo las válidas.", 3600);
 
     try {
       const info = await guardarVentaBatch({
@@ -3732,9 +3751,9 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
                     const tipoDeclarado = safeStr(r.tipo_item).toUpperCase();
                     const esArticuloSeleccionado = Number(r.id_articulo || r.id_stock_producto || 0) > 0;
                     const tipoSeleccionado = ["SERVICIO", "ARTICULO", "DETALLE", "MANUAL"].includes(tipoDeclarado)
-                      ? (tipoDeclarado === "MANUAL" ? "DETALLE" : tipoDeclarado)
+                      ? (tipoDeclarado === "DETALLE" ? "MANUAL" : tipoDeclarado)
                       : (esArticuloSeleccionado ? "ARTICULO" : "SERVICIO");
-                    const esDetalleManual = tipoSeleccionado === "DETALLE";
+                    const esDetalleManual = tipoSeleccionado === "MANUAL";
                     const rowSinStock = tipoSeleccionado === "ARTICULO" && (r.sinStock || isSinStock(stockNum));
 
                     return (
@@ -3750,7 +3769,7 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
                           >
                             <option value="SERVICIO">Servicio del catálogo</option>
                             <option value="ARTICULO">Stock / material / insumo</option>
-                            <option value="DETALLE">Detalle manual</option>
+                            <option value="MANUAL">Detalle manual</option>
                           </select>
 
                           {tipoSeleccionado === "SERVICIO" ? (
@@ -3790,9 +3809,10 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
                               value={r.detalleText}
                               onChange={(e) => {
                                 handleDetalleInputChange(r.id, e.target.value);
-                                updateRow(r.id, { tipo_item: "DETALLE" });
+                                updateRow(r.id, { tipo_item: "MANUAL" });
                               }}
                               placeholder="Escribí un detalle manual…"
+                              maxLength={255}
                               disabled={saving || addUI.open}
                             />
                           )}

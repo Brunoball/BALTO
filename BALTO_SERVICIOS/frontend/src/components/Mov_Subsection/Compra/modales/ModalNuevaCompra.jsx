@@ -95,6 +95,9 @@ function safeText(v) {
 function safeStr(v) {
   return String(v ?? "").trim();
 }
+function upperInput(v) {
+  return String(v ?? "").toLocaleUpperCase("es-AR");
+}
 function onlyDigits(v) {
   return String(v ?? "").replace(/\D/g, "");
 }
@@ -718,10 +721,10 @@ function getStockDisponible(detalle) {
   const n = Number(c);
   return Number.isFinite(n) ? n : null;
 }
-function buildEmptyRow() {
+function buildEmptyRow(tipo = "ARTICULO") {
   return {
     id: uid(),
-    tipo_item: "ARTICULO",
+    tipo_item: tipo,
     id_articulo: NULL_OPTION,
     id_detalle: NULL_OPTION,
     id_stock_producto: NULL_OPTION,
@@ -735,6 +738,13 @@ function buildEmptyRow() {
     stock_disponible: null,
     sinStock: false,
   };
+}
+function isManualPurchaseRow(r) {
+  return String(r?.tipo_item || "").toUpperCase() === "MANUAL";
+}
+function hasUsablePurchaseItem(r) {
+  return (isManualPurchaseRow(r) && String(r?.detalleText || "").trim() !== "") ||
+    Number(r?.id_articulo || r?.id_stock_producto || r?.id_detalle || 0) > 0;
 }
 function describeLineProblem(r, idx1based) {
   const detId = Number(r.id_stock_producto || r.id_detalle);
@@ -757,7 +767,13 @@ function describeLineProblem(r, idx1based) {
   if (!touched) return null;
 
   const issues = [];
-  if (!(Number.isFinite(detId) && detId > 0)) issues.push(detTxt ? `el detalle "${detTxt}" no está seleccionado` : "falta el detalle");
+  if (isManualPurchaseRow(r)) {
+    if (!detTxt) issues.push("falta la descripción del detalle manual");
+  } else if (!(Number.isFinite(detId) && detId > 0)) {
+    issues.push(detTxt
+      ? `"${detTxt}" no está seleccionado del catálogo. Seleccioná un artículo o pasalo a Detalle manual (sin stock)`
+      : "falta seleccionar un material o insumo");
+  }
   if (qtyBlank) issues.push("falta la cantidad");
   else if (!(Number.isFinite(qty) && qty > 0)) issues.push("la cantidad debe ser > 0");
   if (priceBlank) issues.push("falta el precio");
@@ -1139,7 +1155,9 @@ export default function ModalNuevaCompra({ open, lists, onClose, onToast, onSave
     }
   }, [isCorriente]);
 
-  const addRow = useCallback(() => setRows((p) => [...p, buildEmptyRow()]), []);
+  // La primera fila permite seleccionar material; las filas nuevas son libres por defecto.
+  // Nunca interpretar silenciosamente un texto de búsqueda como un artículo de stock.
+  const addRow = useCallback(() => setRows((p) => [...p, buildEmptyRow("MANUAL")]), []);
   const removeRow = useCallback((id) => {
     setRows((p) => {
       const n = p.filter((r) => r.id !== id);
@@ -1326,7 +1344,7 @@ export default function ModalNuevaCompra({ open, lists, onClose, onToast, onSave
         id_detalle: NULL_OPTION,
         id_stock_producto: idStockProducto ? String(idStockProducto) : NULL_OPTION,
         id_stock_variante: idStockVariante ? String(idStockVariante) : NULL_OPTION,
-        detalleText: getDetalleNombre(detalle),
+        detalleText: upperInput(getDetalleNombre(detalle)),
         stock_disponible: stockDisponible,
         sinStock: false,
         cantidad: 1,
@@ -1338,6 +1356,24 @@ export default function ModalNuevaCompra({ open, lists, onClose, onToast, onSave
     [updateRow]
   );
 
+
+  const handleTipoItemChange = useCallback((rowId, nextType) => {
+    const tipo = nextType === "MANUAL" ? "MANUAL" : "ARTICULO";
+    updateRow(rowId, {
+      tipo_item: tipo,
+      id_articulo: NULL_OPTION,
+      id_detalle: NULL_OPTION,
+      id_stock_producto: NULL_OPTION,
+      id_stock_variante: NULL_OPTION,
+      detalleText: "",
+      cantidad: 1,
+      precio: 0,
+      precioDraft: "",
+      precioFocused: false,
+      stock_disponible: null,
+      sinStock: false,
+    });
+  }, [updateRow]);
 
   const handleCantidadChange = useCallback(
     (rowId, newCantidad) => {
@@ -1589,10 +1625,7 @@ export default function ModalNuevaCompra({ open, lists, onClose, onToast, onSave
       if (p) problems.push(p);
     });
 
-    const usable = rowsCalc.filter((r) => {
-      const articuloId = Number(r.id_articulo || r.id_stock_producto || r.id_detalle || 0);
-      return Number.isFinite(articuloId) && articuloId > 0 && Number(r.total || 0) > 0;
-    });
+    const usable = rowsCalc.filter((r) => hasUsablePurchaseItem(r) && Number(r.total || 0) > 0);
 
     if (!usable.length) {
       if (problems.length) {
@@ -1744,14 +1777,11 @@ export default function ModalNuevaCompra({ open, lists, onClose, onToast, onSave
           })
         : [];
 
-      const payloads = rowsCalc
-        .filter((r) => {
-          const stockId = Number(r.id_stock_producto || r.id_detalle);
-          return Number.isFinite(stockId) && stockId > 0 && Number(r.total || 0) > 0;
-        })
-        .map((r) => {
-          const stockId = Number(r.id_stock_producto || r.id_detalle);
-          const varianteId = Number(r.id_stock_variante || 0);
+      // No filtrar filas: un guardado parcial estaría ocultando un error al usuario.
+      const payloads = rowsCalc.map((r) => {
+          const esManual = isManualPurchaseRow(r);
+          const stockId = esManual ? 0 : Number(r.id_articulo || r.id_stock_producto || r.id_detalle || 0);
+          const varianteId = esManual ? 0 : Number(r.id_stock_variante || 0);
           return {
           idUsuario,
           idUsuarioMaster,
@@ -1759,9 +1789,12 @@ export default function ModalNuevaCompra({ open, lists, onClose, onToast, onSave
           id_tipo_venta: idTipoVenta,
           id_proveedor: proveedorIdFinal,
           proveedor_nombre: String(provInput || "").trim() || null,
-          id_detalle: stockId,
-          id_stock_producto: stockId,
+          tipo_item: esManual ? "MANUAL" : "ARTICULO",
+          id_articulo: !esManual && stockId > 0 ? stockId : null,
+          id_detalle: null,
+          id_stock_producto: !esManual && stockId > 0 ? stockId : null,
           id_stock_variante: Number.isFinite(varianteId) && varianteId > 0 ? varianteId : null,
+          descripcion: String(r.detalleText || "").trim(),
           cantidad: Math.round(Number(r.cantidad) * 1000000) / 1000000,
           precio: Math.round(Number(r.precio) * 100) / 100,
           iva_pct: Math.round(Number(r.ivaPct) * 100) / 100,
@@ -1874,7 +1907,7 @@ export default function ModalNuevaCompra({ open, lists, onClose, onToast, onSave
             <div className="gm-movement-layout">
               <section className="gm-movement-main gm-table gm-table--movement cmp-table">
                 <div className={`gm-table-head ${hasScroll ? "gm-table-head--body-scroll" : ""}`}>
-                  <div className="gm-table-th" style={{ paddingLeft: 10 }}>Detalle</div>
+                  <div className="gm-table-th" style={{ paddingLeft: 10 }}>Tipo / detalle</div>
                   <div className="gm-table-th">Cant.</div>
                   <div className="gm-table-th right">Precio</div>
                   <div className="gm-table-th">IVA %</div>
@@ -1888,32 +1921,76 @@ export default function ModalNuevaCompra({ open, lists, onClose, onToast, onSave
                     return (
                       <div key={r.id} className="gm-table-row">
                         <div className="gm-table-cell gm-table-cell--detail">
-                          <ProductStockAutocomplete
-                            value={r.detalleText}
-                            onChange={(val) =>
-                              updateRow(r.id, {
-                                detalleText: val,
-                                id_articulo: NULL_OPTION,
-                                id_detalle: NULL_OPTION,
-                                id_stock_producto: NULL_OPTION,
-                                id_stock_variante: NULL_OPTION,
-                                stock_disponible: null,
-                                sinStock: false,
-                              })
-                            }
-                            onSelect={(d) => handleSelectDetalle(d, r.id)}
-                            options={detallesList}
-                            placeholder="Buscá un material o insumo…"
+                          <select
+                            className="gm-cell-input gm-cell-input--select"
+                            aria-label="Tipo de ítem de compra"
+                            value={isManualPurchaseRow(r) ? "MANUAL" : "ARTICULO"}
+                            onChange={(e) => handleTipoItemChange(r.id, e.target.value)}
                             disabled={saving || addUI.open}
-                            showAllOnFocus={false}
-                            maxItems={18}
-                            allowOutOfStock
-                            allowUntrackedStock
-                            catalogKind="stock"
-                            showKindToggle={false}
-                            emptyMessage="Sin artículos activos"
-                            inputClassName="gm-cell-input"
-                          />
+                            style={{ marginBottom: 6 }}
+                          >
+                            <option value="ARTICULO">Material / insumo del catálogo</option>
+                            <option value="MANUAL">Detalle manual</option>
+                          </select>
+                          {!isManualPurchaseRow(r) && (
+                            <div style={{ width: "100%", minHeight: 24 }}>
+                              {String(r.detalleText || "").trim() &&
+                                !Number(r.id_articulo || r.id_stock_producto || r.id_detalle || 0) && (
+                                  <button
+                                    type="button"
+                                    className="gm-detail-manual-convert"
+                                    onClick={() => updateRow(r.id, {
+                                      tipo_item: "MANUAL", id_articulo: NULL_OPTION,
+                                      id_detalle: NULL_OPTION, id_stock_producto: NULL_OPTION,
+                                      id_stock_variante: NULL_OPTION, stock_disponible: null, sinStock: false,
+                                    })}
+                                    disabled={saving || addUI.open}
+                                    style={{ border: 0, padding: "4px 0", background: "transparent", color: "#68b6ff", cursor: "pointer", textAlign: "left", fontSize: 11 }}
+                                  >
+                                    Usar este texto como detalle manual (sin stock)
+                                  </button>
+                                )}
+                            </div>
+                          )}
+                          {isManualPurchaseRow(r) ? (
+                            <input
+                              className="gm-cell-input"
+                              type="text"
+                              aria-label="Descripción del detalle manual de compra"
+                              maxLength={255}
+                              value={r.detalleText}
+                              onChange={(e) => updateRow(r.id, { detalleText: upperInput(e.target.value) })}
+                              placeholder="Escribí un detalle manual…"
+                              disabled={saving || addUI.open}
+                            />
+                          ) : (
+                            <ProductStockAutocomplete
+                              value={r.detalleText}
+                              onChange={(val) =>
+                                updateRow(r.id, {
+                                  detalleText: upperInput(val),
+                                  id_articulo: NULL_OPTION,
+                                  id_detalle: NULL_OPTION,
+                                  id_stock_producto: NULL_OPTION,
+                                  id_stock_variante: NULL_OPTION,
+                                  stock_disponible: null,
+                                  sinStock: false,
+                                })
+                              }
+                              onSelect={(d) => handleSelectDetalle(d, r.id)}
+                              options={detallesList}
+                              placeholder="Buscá un material o insumo…"
+                              disabled={saving || addUI.open}
+                              showAllOnFocus={false}
+                              maxItems={18}
+                              allowOutOfStock
+                              allowUntrackedStock
+                              catalogKind="stock"
+                              showKindToggle={false}
+                              emptyMessage="Sin artículos activos"
+                              inputClassName="gm-cell-input"
+                            />
+                          )}
                         </div>
 
                         <div className="gm-table-cell gm-table-cell--center stock_cant">
