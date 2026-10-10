@@ -1155,9 +1155,9 @@ export default function ModalNuevaCompra({ open, lists, onClose, onToast, onSave
     }
   }, [isCorriente]);
 
-  // La primera fila permite seleccionar material; las filas nuevas son libres por defecto.
-  // Nunca interpretar silenciosamente un texto de búsqueda como un artículo de stock.
-  const addRow = useCallback(() => setRows((p) => [...p, buildEmptyRow("MANUAL")]), []);
+  // Las filas nuevas comienzan con la primera opción del selector: material / insumo.
+  // Un detalle libre solo se habilita cuando el usuario elige MANUAL explícitamente.
+  const addRow = useCallback(() => setRows((p) => [...p, buildEmptyRow()]), []);
   const removeRow = useCallback((id) => {
     setRows((p) => {
       const n = p.filter((r) => r.id !== id);
@@ -1932,26 +1932,6 @@ export default function ModalNuevaCompra({ open, lists, onClose, onToast, onSave
                             <option value="ARTICULO">Material / insumo del catálogo</option>
                             <option value="MANUAL">Detalle manual</option>
                           </select>
-                          {!isManualPurchaseRow(r) && (
-                            <div style={{ width: "100%", minHeight: 24 }}>
-                              {String(r.detalleText || "").trim() &&
-                                !Number(r.id_articulo || r.id_stock_producto || r.id_detalle || 0) && (
-                                  <button
-                                    type="button"
-                                    className="gm-detail-manual-convert"
-                                    onClick={() => updateRow(r.id, {
-                                      tipo_item: "MANUAL", id_articulo: NULL_OPTION,
-                                      id_detalle: NULL_OPTION, id_stock_producto: NULL_OPTION,
-                                      id_stock_variante: NULL_OPTION, stock_disponible: null, sinStock: false,
-                                    })}
-                                    disabled={saving || addUI.open}
-                                    style={{ border: 0, padding: "4px 0", background: "transparent", color: "#68b6ff", cursor: "pointer", textAlign: "left", fontSize: 11 }}
-                                  >
-                                    Usar este texto como detalle manual (sin stock)
-                                  </button>
-                                )}
-                            </div>
-                          )}
                           {isManualPurchaseRow(r) ? (
                             <input
                               className="gm-cell-input"

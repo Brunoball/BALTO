@@ -4,9 +4,9 @@ import { requireMutations, waitDialog, waitForBusyToFinish, fillMovementRow, sel
 import { createServiceArticleFixture, deleteServiceArticleFixture, getServiceStock } from './support/services.js';
 import { createParty, deletePurchase, directAuthenticatedApi, findAccountCurrentType, getLists, extractMovementId, getPurchaseDetail } from './internal/support/internal-api.js';
 
-// Reproduce la captura: el texto escrito en catálogo sin seleccionar NO es un material;
-// las filas nuevas son manuales y, si el usuario empezó en catálogo, puede convertirlo.
-test('@smoke compras: la fila nueva es manual y catálogo ofrece conversión explícita sin stock', async ({ page }) => {
+// Cada fila nueva comienza en la primera opción del selector (ARTICULO).
+// El tipo elegido determina el comportamiento: catálogo no se convierte silenciosamente en manual.
+test('@smoke compras: fila nueva inicia en catálogo y detalle manual requiere elección explícita', async ({ page }) => {
   await page.goto('/panel/compras');
   await waitForBusyToFinish(page);
   await page.getByRole('button', { name: /Nueva Compra/i }).click();
@@ -16,18 +16,19 @@ test('@smoke compras: la fila nueva es manual y catálogo ofrece conversión exp
   await expect(rows).toHaveCount(2);
   const segunda = rows.nth(1);
   const tipo = segunda.getByRole('combobox', { name: 'Tipo de ítem de compra' });
-  await expect(tipo).toHaveValue('MANUAL');
-  await segunda.getByPlaceholder('Escribí un detalle manual…').fill('flete personalizado');
-  await expect(segunda.getByPlaceholder('Escribí un detalle manual…')).toHaveValue('FLETE PERSONALIZADO');
+  await expect(tipo).toHaveValue('ARTICULO');
 
-  // Si se quiere buscar en catálogo, no alcanza con escribir un texto arbitrario.
-  await tipo.selectOption('ARTICULO');
+  // El catálogo es el estado inicial y no debe ofrecer acciones de conversión automática.
   const buscador = segunda.locator('input.psa-input');
   await buscador.fill('aaaaaaa');
-  await expect(segunda.getByRole('button', { name: /Usar este texto como detalle manual/i })).toBeVisible();
-  await segunda.getByRole('button', { name: /Usar este texto como detalle manual/i }).click();
+  await expect(tipo).toHaveValue('ARTICULO');
+  await expect(dialog.getByRole('button', { name: /Usar este texto como detalle manual/i })).toHaveCount(0);
+
+  // Solo al elegir Manual se puede escribir libremente.
+  await tipo.selectOption('MANUAL');
+  await segunda.getByPlaceholder('Escribí un detalle manual…').fill('flete personalizado');
   await expect(tipo).toHaveValue('MANUAL');
-  await expect(segunda.getByPlaceholder('Escribí un detalle manual…')).toHaveValue('AAAAAAA');
+  await expect(segunda.getByPlaceholder('Escribí un detalle manual…')).toHaveValue('FLETE PERSONALIZADO');
   await dialog.getByRole('button', { name: 'Cerrar' }).first().click();
 });
 
@@ -63,7 +64,9 @@ test('@critical @internal compras: artículo válido y manual sin precio bloquea
     await dialog.getByRole('button', { name: /Agregar fila/i }).click();
     const rows = dialog.locator('.gm-table-body .gm-table-row');
     const manual = rows.nth(1);
-    await expect(manual.getByRole('combobox', { name: 'Tipo de ítem de compra' })).toHaveValue('MANUAL');
+    const tipoManual = manual.getByRole('combobox', { name: 'Tipo de ítem de compra' });
+    await expect(tipoManual).toHaveValue('ARTICULO');
+    await tipoManual.selectOption('MANUAL');
     await manual.getByPlaceholder('Escribí un detalle manual…').fill(manualNombre);
 
     let blocked = 0;

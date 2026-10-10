@@ -1847,7 +1847,7 @@ export default function ModalEditarCompra({
       {
         client_id: `nuevo-${uid()}`,
         id_item: null,
-        tipo_item: "MANUAL",
+        tipo_item: "ARTICULO",
         id_articulo: NULL_OPTION,
         id_detalle: NULL_OPTION,
         descripcion: "",
@@ -2452,21 +2452,6 @@ export default function ModalEditarCompra({
                         <option value="ARTICULO">Material / insumo del catálogo</option>
                         <option value="MANUAL">Detalle manual</option>
                       </select>
-                      {form.tipo_item !== "MANUAL" && (
-                        <div style={{ width: "100%", minHeight: 24 }}>
-                          {detalleInput.trim() && !Number(form.id_detalle || 0) && (
-                            <button
-                              type="button" className="gm-detail-manual-convert"
-                              onClick={() => {
-                                setForm((prev) => ({ ...prev, tipo_item: "MANUAL", id_detalle: NULL_OPTION, id_stock_variante: NULL_OPTION }));
-                                setDetalleFocus(false);
-                              }}
-                              disabled={saving || addUI.open || openVerComp}
-                              style={{ border: 0, padding: "4px 0", background: "transparent", color: "#68b6ff", cursor: "pointer", textAlign: "left", fontSize: 11 }}
-                            >Usar este texto como detalle manual (sin stock)</button>
-                          )}
-                        </div>
-                      )}
                       <div className="cmp-autocomplete" style={{ width: "100%" }}>
                         <input
                           ref={detalleInputRef}
@@ -2573,21 +2558,6 @@ export default function ModalEditarCompra({
                             <option value="ARTICULO">Material / insumo del catálogo</option>
                             <option value="MANUAL">Detalle manual</option>
                           </select>
-                          {item.tipo_item !== "MANUAL" && (
-                            <div style={{ width: "100%", minHeight: 24 }}>
-                              {String(item.descripcion || "").trim() &&
-                                !Number(item.id_articulo || item.id_detalle || 0) && (
-                                  <button
-                                    type="button" className="gm-detail-manual-convert"
-                                    onClick={() => updateExtraItem(item.client_id, {
-                                      tipo_item: "MANUAL", id_articulo: NULL_OPTION, id_detalle: NULL_OPTION,
-                                    })}
-                                    disabled={saving || addUI.open || openVerComp}
-                                    style={{ border: 0, padding: "4px 0", background: "transparent", color: "#68b6ff", cursor: "pointer", textAlign: "left", fontSize: 11 }}
-                                  >Usar este texto como detalle manual (sin stock)</button>
-                                )}
-                            </div>
-                          )}
                           {item.tipo_item === "MANUAL" ? (
                             <input
                               className="gm-cell-input"

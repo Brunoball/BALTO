@@ -266,16 +266,19 @@ test.describe('Blindajes finales BALTO Servicios', () => {
       rows = dialog.locator('.gm-table-body .gm-table-row');
       await expect(rows).toHaveCount(2);
 
-      await dialog.getByTitle('Agregar otro artículo a la compra').click();
+      // El botón visible de la UI se llama «Agregar fila»; su título antiguo
+      // («Agregar otro artículo a la compra») ya no existe.
+      await dialog.getByRole('button', { name: /^Agregar fila$/i }).click();
       await expect(rows).toHaveCount(3);
       const newRow = rows.nth(2);
-      // La UI actual usa el autocompletado de Stock para elegir el artículo.
-      // El único <select> de la fila es IVA, así que seleccionar por id_articulo
-      // sobre un select termina esperando una opción que nunca puede existir.
+      // Una fila nueva comienza en la primera opción (ARTICULO).
+      await expect(newRow.getByRole('combobox', { name: /Tipo de ítem de compra fila 3/i })).toHaveValue('ARTICULO');
       await selectProduct(newRow, productC);
       await newRow.locator('input[type="number"]').nth(0).fill('2');
       await newRow.locator('input[type="number"]').nth(1).fill('70');
-      await newRow.locator('select').first().selectOption('21');
+      // Al incorporar el selector ARTICULO/MANUAL, el primer <select> ya NO es IVA.
+      // Seleccionar por columna evita cambiar accidentalmente el tipo de ítem.
+      await newRow.locator('.gm-table-cell').nth(3).getByRole('combobox').selectOption('21');
 
       await dialog.getByRole('button', { name: /Eliminar fila 2/i }).click();
       await expect(rows).toHaveCount(2);
