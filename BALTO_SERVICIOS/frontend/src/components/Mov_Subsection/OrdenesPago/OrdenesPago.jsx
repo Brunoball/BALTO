@@ -1,3 +1,4 @@
+import DetalleMovimientoTabla, { FilaMovimientoExpandible } from "../_shared/DetalleMovimientoTabla.jsx";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import BASE_URL from "../../../config/config.jsx";
 import "../../Global/Global_css/Global_Section.css";
@@ -143,6 +144,7 @@ function rowMatchesQuery(row, query) {
     }
   }
 
+  parts.push(getDetalleMovimiento(row));
   parts.push(formatFechaDMY(row?.fecha));
   parts.push(String(montoNum), String(Math.trunc(montoNum)), moneyARS(montoNum));
 
@@ -1171,7 +1173,8 @@ export default function OrdenesPago() {
             ) : (
               <>
                 {filteredRows.map((r) => (
-                  <div
+                  <FilaMovimientoExpandible key={r.id_movimiento} movimiento={r}>
+                    <div
                     key={r.id_movimiento}
                     className="mov-gridTable mov-gridTable--row"
                     style={{ gridTemplateColumns: gridCols }}
@@ -1179,7 +1182,8 @@ export default function OrdenesPago() {
                     data-movement-id={Number(r?.id_movimiento || 0) || undefined}
                   >
                     {columns.map((c) => {
-                      if (c.key === "acciones") {
+
+                        if (c.key === "acciones") {
                         return (
                           <div
                             key={c.key}
@@ -1232,7 +1236,7 @@ export default function OrdenesPago() {
                           key={c.key}
                           data-label={c.label}
                           className={[
-                            "mov-gridCell",
+                            "mov-gridCell", c.key === "detalle" ? "mov-gridCell--detalleVisible" : "",
                             c.align === "right" ? "is-right" : "",
                             c.align === "center" ? "is-center" : "",
                             c.strong ? "is-strong" : "",
@@ -1240,13 +1244,14 @@ export default function OrdenesPago() {
                             .filter(Boolean)
                             .join(" ")}
                           role="cell"
-                          title={typeof val === "string" ? val : undefined}
+                          title={c.key === "detalle" || c.key === "descripcion" ? undefined : (typeof val === "string" ? val : undefined)}
                         >
-                          <span className="mov-ellipsissss">{val}</span>
+                          {c.key === "detalle" ? <DetalleMovimientoTabla movimiento={r} /> : <span className="mov-ellipsissss">{val}</span>}
                         </div>
                       );
                     })}
                   </div>
+                  </FilaMovimientoExpandible>
                 ))}
 
                 {!isAnyLoading && filteredRows.length === 0 && (

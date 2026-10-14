@@ -284,7 +284,7 @@ export function getResumenProductosMovimiento(row) {
 }
 
 export function getDetalleMovimiento(row) {
-  const itemsText = buildDetalleItemsText(getItemsArray(row));
+  const itemsText = buildDetalleItemsText(getItemsArray(row).filter((item) => getItemKind(item) !== "consumo"));
   if (itemsText) return itemsText;
 
   const original = safeStr(
@@ -302,4 +302,13 @@ export function getDetalleMovimiento(row) {
   if (detalle && !isResumenProductosText(detalle) && detalle !== "Producto / Servicio") return detalle;
 
   return getResumenProductosMovimiento(row);
+}
+
+
+/** Ítems que corresponden a los conceptos comerciales (no al consumo interno de recetas). */
+export function getItemsVisiblesMovimiento(row) {
+  return getItemsArray(row)
+    .filter((item) => item && typeof item === "object" && getItemKind(item) !== "consumo")
+    .map((item) => ({ ...item, nombre_visible: getItemDetalleText(item) }))
+    .filter((item) => item.nombre_visible);
 }
