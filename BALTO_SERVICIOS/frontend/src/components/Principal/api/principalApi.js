@@ -114,14 +114,23 @@ export async function obtenerTenantLogo(tipo = "principal") {
   });
 
   if (res.status === 401) {
-    try {
-      window.dispatchEvent(
-        new CustomEvent("auth:unauthorized", {
-          detail: { status: res.status },
-        })
-      );
-    } catch {}
+    const responseText = await res.clone().text().catch(() => "");
+    if (isSessionExpiredResponse(res.status, responseText, res.headers.get("content-type") || "")) {
+      try {
+        window.dispatchEvent(
+          new CustomEvent("auth:unauthorized", { detail: { status: 401 } })
+        );
+      } catch {}
+    }
   }
 
   return res;
+}
+
+// Única petición que extiende el vencimiento MASTER; se invoca sólo por actividad.
+export function renovarSesionPorActividad() {
+  return principalApiFetch(
+    { action: "auth_session_touch" },
+    { method: "POST", headers: { Accept: "application/json" } }
+  );
 }

@@ -504,3 +504,105 @@ test('@crud presupuesto permite material sin control de stock', async ({ page },
   await assertNoCriticalErrors(diagnostics, testInfo);
 });
 
+
+// Regresión: un servicio presupuestado por m² admite 2,5 y debe conservarlo
+// en DB, en los cálculos y en la venta originada por ese presupuesto.
+test('@crud @critical presupuesto con servicio de cantidad decimal (2,5 m²)', async ({ page }) => {
+  test.setTimeout(5 * 60_000);
+  await requireMutations(test, page);
+  const unit = await ensureActiveServiceUnit(page);
+  const serviceName = uniqueName('PRESU-DECIMAL-M2', 120);
+  const materialName = uniqueName('MAT-PRESU-DECIMAL', 120);
+  let materialId = 0;
+  let serviceId = 0;
+  let budgetId = 0;
+  let saleId = 0;
+
+  try {
+    const material = await createServiceArticleFixture(page, {
+      type: 'MATERIAL',
+      name: materialName,
+      idUnit: Number(unit.id_unidad),
+      stock: 10,
+      cost: 15,
+      price: 30,
+      controlStock: true,
+    });
+    materialId = Number(material.id_articulo);
+    const service = await createServiceFixture(page, {
+      name: serviceName,
+      idUnit: Number(unit.id_unidad),
+      price: 200,
+      ivaPct: 0,
+      articles: [{ id_articulo: materialId, cantidad: 1 }],
+    });
+    serviceId = Number(service.id_servicio);
+
+    const { dialog, itemRow } = await prepareBudget(page, {
+      serviceName,
+      quantity: 1,
+      price: 200,
+      ivaPct: 0,
+    });
+    const cantidad = itemRow.locator('input[data-field="cantidad"]');
+    await expect(cantidad).toBeVisible();
+    await cantidad.fill('2,5');
+    await expect(cantidad).toHaveValue('2.5');
+    await cantidad.blur();
+
+    const createdResponsePromise = page.waitForResponse((response) =>
+      response.url().includes('action=presupuestos_crear') && response.request().method() === 'POST',
+    );
+    const saveRequest = page.waitForRequest((request) =>
+      request.url().includes('action=presupuestos_crear') && request.method() === 'POST',
+    );
+    await dialog.getByRole('button', { name: /^Guardar$/i }).last().click();
+    const request = await saveRequest;
+    const payload = request.postDataJSON();
+    expect(Number(payload?.items?.[0]?.cantidad)).toBeCloseTo(2.5, 6);
+    const response = await createdResponsePromise;
+    const responseBody = await response.json().catch(() => ({}));
+    expect(response.status(), JSON.stringify(responseBody)).toBeLessThan(400);
+    budgetId = Number(responseBody.id_movimiento || responseBody.id_presupuesto || responseBody.data?.id_movimiento || 0);
+    expect(budgetId).toBeGreaterThan(0);
+    expect(Number(responseBody.total ?? responseBody.data?.total)).toBeCloseTo(500, 2);
+    await expect(dialog).toBeHidden({ timeout: 60_000 });
+
+    const saved = await authenticatedApiGet(page, `action=presupuestos_obtener&id_movimiento=${budgetId}`);
+    expect(saved.status).toBeLessThan(400);
+    const items = saved.body?.items || saved.body?.presupuesto?.items_detalle || saved.body?.data?.items || [];
+    const item = items.find((it) => Number(it.id_servicio) === serviceId);
+    expect(item).toBeTruthy();
+    expect(Number(item.cantidad)).toBeCloseTo(2.5, 6);
+    expect(Number(item.total)).toBeCloseTo(500, 2);
+    await expectServiceStock(page, materialName, 10); // presupuestar no descuenta
+
+    const convertedPromise = page.waitForResponse((response) =>
+      response.url().includes('action=presupuestos_convertir_venta') && response.request().method() === 'POST',
+    );
+    await convertBudgetToSale(page, serviceName);
+    const convertedResponse = await convertedPromise;
+    const convertedBody = await convertedResponse.json().catch(() => ({}));
+    expect(convertedResponse.status(), JSON.stringify(convertedBody)).toBeLessThan(400);
+    saleId = Number(convertedBody.id_venta || convertedBody.data?.id_venta || 0);
+    expect(saleId).toBeGreaterThan(0);
+    const sale = await authenticatedApiGet(page, `action=ventas_obtener&id_movimiento=${saleId}`);
+    expect(sale.status).toBeLessThan(400);
+    const saleItems = sale.body?.items_detalle || sale.body?.items || sale.body?.venta?.items_detalle || sale.body?.data?.items_detalle || [];
+    const saleItem = saleItems.find((it) => Number(it.id_servicio) === serviceId);
+    expect(saleItem).toBeTruthy();
+    expect(Number(saleItem.cantidad)).toBeCloseTo(2.5, 6);
+    await expectServiceStock(page, materialName, 7.5); // 10 - (2,5 * 1)
+  } finally {
+    if (saleId) {
+      await page.goto('/panel/ventas');
+      await deleteSale(page, serviceName).catch(() => null);
+    }
+    if (budgetId) {
+      await page.goto('/panel/presupuesto');
+      await deleteBudget(page, serviceName).catch(() => null);
+    }
+    if (serviceId) await deleteServiceFixture(page, serviceId).catch(() => null);
+    if (materialId) await deleteServiceArticleFixture(page, materialName, { tolerateHistoricalUse: true }).catch(() => null);
+  }
+});

@@ -36,6 +36,13 @@ function safeNumber(v) {
   return Number.isFinite(n) ? n : 0;
 }
 
+// Mismo criterio que la carga de presupuestos: hasta 6 decimales,
+// separador coma o punto y escritura progresiva sin truncamientos.
+function normalizarCantidadDigitada(value) {
+  const raw = String(value ?? "").replace(/,/g, ".");
+  return /^\d*(?:\.\d{0,6})?$/.test(raw) ? raw : null;
+}
+
 function moneyARS(v) {
   try {
     return Number(v || 0).toLocaleString("es-AR", {
@@ -661,11 +668,15 @@ export default function ModalModelosPresupuesto({ open, lists, onClose, onToast,
                         <div className="gm-table-cell gm-table-cell--center">
                           <input
                             className="gm-cell-input gm-cell-input--center"
-                            type="number"
-                            min={row.tipo_item === "SERVICIO" ? "1" : "0.01"}
-                            step={row.tipo_item === "SERVICIO" ? "1" : "0.000001"}
+                            type="text"
+                            inputMode="decimal"
+                            data-field="cantidad"
+                            aria-label="Cantidad del modelo"
                             value={row.cantidad}
-                            onChange={(e) => updateRow(row.localId, { cantidad: e.target.value })}
+                            onChange={(e) => {
+                              const cantidad = normalizarCantidadDigitada(e.target.value);
+                              if (cantidad !== null) updateRow(row.localId, { cantidad });
+                            }}
                             disabled={saving}
                           />
                         </div>

@@ -117,6 +117,13 @@ function upperStr(v) {
   return upperInput(v).trim();
 }
 
+// Cantidades de presupuestos: texto decimal para admitir tanto 2.5 como 2,5.
+// Se conserva el borrador para poder tipear "2." sin que React lo convierta a 2.
+function normalizarCantidadDigitada(value) {
+  const raw = String(value ?? "").replace(/,/g, ".");
+  return /^\d*(?:\.\d{0,6})?$/.test(raw) ? raw : null;
+}
+
 function roundMoney(value) {
   return Math.round((safeNumber(value) + Number.EPSILON) * 100) / 100;
 }
@@ -1379,21 +1386,14 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
     });
   }, [updateRow]);
 
-  const handleCantidadChange = useCallback((rowId, newCantidad) => {
-    const row = rows.find((r) => r.id === rowId);
-    if (!row) return;
+  const handleCantidadChange = useCallback((rowId, value) => {
+    const cantidadDigitada = normalizarCantidadDigitada(value);
+    if (cantidadDigitada === null) return;
 
-    const esServicio = String(row.tipo_item || "").toUpperCase() === "SERVICIO";
-    let cantidadFinal = newCantidad === "" ? "" : Number(newCantidad);
-    if (typeof cantidadFinal === "number" && cantidadFinal < 0) cantidadFinal = 0;
-    if (esServicio && typeof cantidadFinal === "number" && Number.isFinite(cantidadFinal)) {
-      cantidadFinal = Math.trunc(cantidadFinal);
-    }
-
-    // Presupuestar no reserva ni descuenta stock: nunca limitamos la cantidad
-    // por la existencia actual del artículo.
-    updateRow(rowId, { cantidad: cantidadFinal });
-  }, [rows, updateRow]);
+    // El presupuesto acepta cantidades fraccionarias (p. ej. 2,5 m²).
+    // Presupuestar no reserva ni descuenta stock.
+    updateRow(rowId, { cantidad: cantidadDigitada });
+  }, [updateRow]);
 
   const handlePrecioTipoChange = useCallback((rowId, value) => {
     const row = rows.find((r) => r.id === rowId);
@@ -1461,7 +1461,7 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
       const subtotal = cantidad * precio;
       const iva_monto = subtotal * ivaPct / 100;
       const total = subtotal + iva_monto;
-      return { ...r, cantidad, precio, ivaPct, subtotal, iva_monto, total };
+      return { ...r, cantidadDigitada: r.cantidad, cantidad, precio, ivaPct, subtotal, iva_monto, total };
     });
   }, [rows]);
 
@@ -1857,13 +1857,12 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
                       <div className="gm-table-cell gm-table-cell--center stock_cant">
                         <input
                           className="gm-cell-input gm-cell-input--center"
-                          type="number"
-                          min={r.tipo_item === "SERVICIO" ? "1" : "0.01"}
-                          step={r.tipo_item === "SERVICIO" ? "1" : "0.000001"}
-                          value={rowSinStock ? "" : r.cantidad}
-                          onChange={(e) =>
-                            handleCantidadChange(r.id, e.target.value === "" ? "" : Number(e.target.value))
-                          }
+                          type="text"
+                          inputMode="decimal"
+                          data-field="cantidad"
+                          aria-label={`Cantidad fila ${r.id}`}
+                          value={rowSinStock ? "" : r.cantidadDigitada}
+                          onChange={(e) => handleCantidadChange(r.id, e.target.value)}
                           disabled={saving || rowSinStock}
                           placeholder={rowSinStock ? "0" : ""}
                           title={rowSinStock ? "No podés ingresar cantidad porque el stock es 0" : ""}

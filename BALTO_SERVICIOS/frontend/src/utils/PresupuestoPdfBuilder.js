@@ -51,6 +51,16 @@ function moneyEs(v) {
   return numEs(v, 2);
 }
 
+function cantidadEs(v) {
+  // La cantidad en DB tiene seis decimales: no ocultar m² fraccionarios
+  // de más de dos decimales en la impresión del presupuesto.
+  const n = safeNumber(v, 0);
+  return n.toLocaleString("es-AR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 6,
+  });
+}
+
 function ymdToHuman(value) {
   const str = String(value || "").trim();
   if (!str) return "";
@@ -633,7 +643,7 @@ function drawTableRow(doc, item, idx, cols, y, maxBodyY) {
 
   codeLines.forEach((ln, li) => text(doc, ln, cols.x0 + cols.padL, y + li * lh));
   descLines.forEach((ln, li) => text(doc, ln, cols.x1 + cols.padL, y + li * lh));
-  text(doc, numEs(item.cantidad, 2), cols.x3 - cols.padR, y, { align: "right" });
+  text(doc, cantidadEs(item.cantidad), cols.x3 - cols.padR, y, { align: "right" });
   text(doc, s(item.unidad || "u"), cols.x4 - cols.padR, y, { align: "right" });
   text(doc, moneyEs(item.precio), cols.x5 - cols.padR, y, { align: "right" });
   text(doc, numEs(item.ivaPct, 2), cols.x6 - cols.padR, y, { align: "right" });

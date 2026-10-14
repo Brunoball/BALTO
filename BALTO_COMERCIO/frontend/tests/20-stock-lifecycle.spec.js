@@ -3,6 +3,12 @@ import { uniqueName, uniqueSku } from './support/data.js';
 import { createStockProduct, deleteUnusedStockProduct } from './support/flows.js';
 import { requireMutations, searchRow, waitDialog, waitForBusyToFinish } from './support/ui.js';
 
+// Un worker de Node/Playwright puede finalizar nativamente en Windows (0xC0000409)
+// antes de ejecutar el test. Un solo retry recupera ese cierre accidental y
+// lo deja marcado como 'flaky' en el reporte, sin alterar el flujo de Stock.
+// Si una aserción funcional falla dos veces, el test continúa fallando.
+test.describe.configure({ retries: process.platform === 'win32' ? 1 : 0 });
+
 async function waitStockAction(page, action, click) {
   const responsePromise = page.waitForResponse(
     (response) => {

@@ -309,7 +309,9 @@ test('@stock @barcode @variants variantes: un BL-V por ID real, guardado sin cer
 
     // La validación vuelve a Variantes. Completamos la fila y repetimos el flujo válido.
     await expect(dialog.getByRole('tab', { name: /^Variantes$/i })).toHaveAttribute('aria-selected', 'true');
-    await thirdCard.getByPlaceholder('SKU', { exact: true }).fill(third.sku);
+    // Regresión 14/10: el SKU dejó de ser obligatorio para una variante nueva.
+    // Los códigos BL-V-ID se generan por identidad real, no por SKU.
+    await expect(thirdCard.getByPlaceholder('SKU', { exact: true })).toHaveValue('');
     await thirdCard.locator('.cmi-floatingField, .fl-field').filter({ hasText: /^Stock/i }).locator('input').first().fill(String(third.stock));
     const priceField = thirdCard.locator('.cmi-floatingField, .fl-field').filter({ hasText: /Precio de venta/i }).first();
     await priceField.locator('input').fill(String(third.price));
@@ -332,6 +334,9 @@ test('@stock @barcode @variants variantes: un BL-V por ID real, guardado sin cer
       intervals: [300, 700, 1_500],
     }).toBe(3);
     snapshot = await getBarcodeProduct(page, productId);
+    const storedWithoutSku = snapshot.variantes.find((item) => String(item.nombre_variante || '').trim().toUpperCase() === third.name.toUpperCase());
+    expect(storedWithoutSku, 'La tercera variante debe persistirse aunque no tenga SKU').toBeTruthy();
+    expect(String(storedWithoutSku.sku || '')).toBe('');
     await expect(dialog.locator('.stock-barcode__card')).toHaveCount(3, { timeout: 30_000 });
     await expect(dialog.locator('.stock-barcode__section--internal .stock-barcode__svg')).toHaveCount(3);
     await expect(dialog.getByRole('button', { name: /Imprimir todos/i })).toBeEnabled();

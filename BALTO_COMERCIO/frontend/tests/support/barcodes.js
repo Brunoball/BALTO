@@ -220,6 +220,8 @@ export async function createVariantStockProduct(page, product) {
 
   await dialog.locator('input[name="nombre"]').fill(product.name);
   await dialog.locator('input[name="sku"]').fill(product.sku);
+  await expect(dialog.locator('.cmi-v2-variantPanelOnly')).toBeHidden();
+  await dialog.getByRole('tab', { name: /^Variantes$/i }).click();
   await dialog.getByLabel('Tiene variantes').check();
 
   for (let index = 0; index < variants.length; index += 1) {
@@ -228,7 +230,10 @@ export async function createVariantStockProduct(page, product) {
     const variant = variants[index];
     await expect(card).toBeVisible();
     await card.getByPlaceholder(/TALLE M \/ NEGRO/i).fill(variant.name);
-    await card.getByPlaceholder('SKU', { exact: true }).fill(variant.sku);
+    // SKU opcional desde las nuevas validaciones de Stock.
+    if (variant.sku !== undefined && variant.sku !== null) {
+      await card.getByPlaceholder('SKU', { exact: true }).fill(String(variant.sku));
+    }
     await card.locator('.fl-field').filter({ hasText: /^Stock/i }).locator('input').first().fill(String(variant.stock ?? 5));
     const priceField = card.locator('.cmi-floatingField, .fl-field').filter({ hasText: /Precio de venta/i }).first();
     await priceField.locator('input').fill(String(variant.price ?? 250));

@@ -56,6 +56,10 @@ test('@stock @crud variantes: alta, atributos, baja, reactivación y eliminació
 
   await dialog.locator('input[name="nombre"]').fill(productName);
   await dialog.locator('input[name="sku"]').fill(parentSku);
+  // Desde octubre, la configuración de variantes vive sólo en su pestaña.
+  await expect(dialog.locator('.cmi-v2-variantPanelOnly')).toBeHidden();
+  await dialog.getByRole('tab', { name: /^Variantes$/i }).click();
+  await expect(dialog.locator('.cmi-v2-variantPanelOnly')).toBeVisible();
   await dialog.getByLabel('Tiene variantes').check();
 
   const variantCard = dialog.locator('.cmi-v2-variantCard').first();
@@ -86,8 +90,8 @@ test('@stock @crud variantes: alta, atributos, baja, reactivación y eliminació
   let parentRow = await searchRow(page, parentSku, /Buscar por nombre, SKU o variante/i);
   await parentRow.getByTitle('Editar').click();
   const editDialog = await waitDialog(page, 'Editar producto');
-  const variantsTab = editDialog.getByRole('button', { name: /^Variantes$/i });
-  if (await variantsTab.isVisible().catch(() => false)) await variantsTab.click();
+  await expect(editDialog.locator('.cmi-v2-variantPanelOnly')).toBeHidden();
+  await editDialog.getByRole('tab', { name: /^Variantes$/i }).click();
   const editVariantCard = editDialog
     .locator('.cmi-v2-variantCard')
     .filter({ has: page.locator(`input[value="${variantSku}"]`) })

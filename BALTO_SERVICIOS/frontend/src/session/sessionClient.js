@@ -69,6 +69,7 @@ export function clearClientSession() {
     localStorage.removeItem(SESSION_KEY);
     localStorage.removeItem(USER_KEY);
     localStorage.removeItem("balto_sistema");
+    localStorage.removeItem("balto_last_activity_ts");
 
     // Limpieza de claves legacy que Servicios ya no debe utilizar.
     localStorage.removeItem("token");

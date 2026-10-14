@@ -509,7 +509,7 @@ export async function fillMovementRow(dialog, data) {
     await input.fill(data.description);
   }
 
-  const qty = row.locator('input[type="number"]').first();
+  const qty = row.locator('input[data-field="cantidad"], input[type="number"]').first();
   if (await qty.isVisible().catch(() => false)) {
     await qty.fill(String(data.quantity ?? 1));
     await qty.blur();
@@ -520,7 +520,7 @@ export async function fillMovementRow(dialog, data) {
   }
 
   if (data.price !== undefined) {
-    const price = row.locator('input[inputmode="decimal"]').first();
+    const price = row.locator('input[inputmode="decimal"]:not([data-field="cantidad"])').first();
     if (await price.isVisible().catch(() => false)) {
       await fillControlledDecimal(price, data.price);
     }

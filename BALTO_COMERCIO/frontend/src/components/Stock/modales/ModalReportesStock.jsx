@@ -256,6 +256,15 @@ async function fetchReport(params) {
 const ModalReportesStock = ({ open, onClose, onToast, categorias = [] }) => {
   const overlayRef = useRef(null);
   const requestRef = useRef(0);
+  // Stock puede renderizar de nuevo mientras un reporte se esta generando
+  // (actualizaciones del catalogo, precios, etc.). onClose se pasa como
+  // callback inline desde el padre y cambia de referencia en cada render.
+  // Mantener la ultima version evita reiniciar el efecto de cierre/invalidador
+  // de peticiones por un simple render del padre.
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
   const dates = useMemo(localDateParts, []);
   const categoryOptions = useMemo(() => flattenCategories(categorias), [categorias]);
 
@@ -318,15 +327,16 @@ const ModalReportesStock = ({ open, onClose, onToast, categorias = [] }) => {
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     const onKeyDown = (event) => {
-      if (event.key === "Escape" && isTopStockModal(overlayRef.current)) onClose?.();
+      if (event.key === "Escape" && isTopStockModal(overlayRef.current)) onCloseRef.current?.();
     };
     document.addEventListener("keydown", onKeyDown);
     return () => {
       document.body.style.overflow = previousOverflow;
       document.removeEventListener("keydown", onKeyDown);
+      // Invalidar solamente al cerrar/desmontar; jamas por un rerender de Stock.
       requestRef.current += 1;
     };
-  }, [onClose, open]);
+  }, [open]);
 
   const downloadExcel = () => {
     const columns = getVisibleReportColumns(reporte?.columnas);

@@ -54,13 +54,75 @@ test('@stock @reportes @critical inventario fraccionario valoriza stock real × 
 
     await page.goto('/panel/stock');
     await waitForBusyToFinish(page);
-    await page.getByRole('button', { name: /Reportes de Stock/i }).first().click();
-    const dialog = await waitDialog(page, 'Reportes de Stock');
+
+    // Regresion: Stock se actualiza mientras la peticion del modal esta
+    // pendiente. Eso provoca un rerender del padre y antes cancelaba el
+    // resultado aunque la API respondiera HTTP 200, dejando "Generando...".
+    let releaseReportRequest;
+    const reportGate = new Promise((resolve) => { releaseReportRequest = resolve; });
+    const reportEndpoint = '**/*action=stock_reportes_generar*';
+    // Sincronizacion explicita: NO retirar la ruta hasta que su handler haya
+    // terminado. Si se ejecuta unroute inmediatamente despues de liberar el
+    // gate, Playwright puede resolver la ruta por su cuenta y continue() falla
+    // con "Route is already handled!", cancelando la descarga posterior.
+    let notifyIntercepted;
+    const reportIntercepted = new Promise((resolve) => { notifyIntercepted = resolve; });
+    let notifyRouteFinished;
+    const reportRouteFinished = new Promise((resolve) => { notifyRouteFinished = resolve; });
+    let routeWasIntercepted = false;
+    const holdReportRequest = async (route) => {
+      routeWasIntercepted = true;
+      notifyIntercepted();
+      try {
+        await reportGate;
+        await route.continue();
+      } finally {
+        notifyRouteFinished();
+      }
+    };
+    await page.route(reportEndpoint, holdReportRequest);
+    let dialog;
+    try {
+      const modalReportRequest = page.waitForRequest(
+        (request) => request.url().includes('action=stock_reportes_generar'),
+        { timeout: 15_000 },
+      );
+      await page.getByRole('button', { name: /Reportes de Stock/i }).first().click();
+      dialog = await waitDialog(page, 'Reportes de Stock');
+      await modalReportRequest;
+      // waitForRequest se activa antes de que el callback de page.route pueda
+      // empezar a ejecutarse; esperar la entrada real evita otra carrera.
+      await reportIntercepted;
+      await expect(dialog.getByRole('button', { name: /Generando/i })).toBeDisabled();
+
+      // Fuerza el refresco desde el mismo evento que escucha Stock en produccion.
+      // Se espera su GET antes de liberar el reporte para que React ya haya
+      // podido renderizar al padre con un onClose nuevo.
+      const refresh = page.waitForResponse(
+        (response) => response.url().includes('action=stock_productos_listar') && response.request().method() === 'GET',
+        { timeout: 30_000 },
+      );
+      await page.evaluate(() => window.dispatchEvent(new CustomEvent('balto:stock-updated')));
+      await refresh;
+      await page.waitForTimeout(200);
+    } finally {
+      releaseReportRequest();
+      if (routeWasIntercepted) {
+        // Esperar continue() ANTES de desmontar el handler: elimina la carrera
+        // que aparecia en el test sin alterar los tiempos de la aplicacion.
+        await reportRouteFinished;
+      }
+      await page.unroute(reportEndpoint, holdReportRequest);
+    }
+
     const reportType = dialog.getByRole('combobox', { name: 'Tipo de reporte' });
     await expect(reportType).toHaveValue('inventario_general');
+    // Esperar el estado final en vez de asumir que el reporte ya aparecio
+    // al abrir el modal. Si queda generando, falla por una razon real.
+    await expect(dialog.getByRole('button', { name: /Generar reporte/i })).toBeEnabled({ timeout: 30_000 });
     await expect(
       dialog.getByRole('heading', { name: 'Inventario general', exact: true })
-    ).toBeVisible();
+    ).toBeVisible({ timeout: 15_000 });
     await expect(dialog.getByText(productName, { exact: true })).toBeVisible({ timeout: 30_000 });
 
     const downloadPromise = page.waitForEvent('download');
