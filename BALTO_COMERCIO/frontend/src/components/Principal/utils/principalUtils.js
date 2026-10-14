@@ -1,5 +1,15 @@
+// Registro compartido entre pestañas de BALTO COMERCIO, ligado a la sesión actual.
 export const LAST_ACTIVITY_KEY = "balto_last_activity_ts";
-export const IDLE_MS = 2 * 60 * 60 * 1000;
+export const IDLE_MS = 60 * 60 * 1000;
+
+function currentSessionKey() {
+  try {
+    return String(localStorage.getItem("session_key") || "").trim();
+  } catch {
+    return "";
+  }
+}
+
 
 export function safeJsonParse(s) {
   try {
@@ -9,42 +19,39 @@ export function safeJsonParse(s) {
   }
 }
 
+const AUTH_FAILURE_CODES = new Set([
+  "SESSION_REQUIRED", "SESSION_INVALID", "SESSION_REVOKED", "SESSION_EXPIRED",
+  "SESION_REQUERIDA", "SESION_INVALIDA", "SESION_REVOCADA", "SESION_EXPIRADA",
+  "USUARIO_INACTIVO", "USUARIO_DESHABILITADO",
+  "TENANT_INACTIVO", "TENANT_DESHABILITADO", "SISTEMA_NO_AUTORIZADO",
+]);
+
 export function looksLikeUnauthorizedPayload(text, contentType = "") {
   const raw = String(text || "").trim();
   if (!raw) return false;
 
   let msg = raw;
-
   if (String(contentType || "").toLowerCase().includes("application/json")) {
     const data = safeJsonParse(raw);
     if (data && typeof data === "object") {
-      msg = [data.mensaje, data.error, data.detalle, raw]
-        .filter(Boolean)
-        .join(" | ");
+      const code = String(data.codigo || data.code || "").trim().toUpperCase();
+      if (code) return AUTH_FAILURE_CODES.has(code);
+      if (data.exito === true || data.ok === true) return false;
+      msg = String(data.mensaje || data.error || "");
     }
   }
 
-  const s = String(msg).toLowerCase();
-
-  return (
-    s.includes("sesión expirada") ||
-    s.includes("sesion expirada") ||
-    s.includes("sesión no autorizada") ||
-    s.includes("sesion no autorizada") ||
-    s.includes("session_key inválida") ||
-    s.includes("session_key invalida") ||
-    s.includes("falta x-session") ||
-    s.includes("error en api: sesión expirada") ||
-    s.includes("error en api: sesion expirada") ||
-    s.includes("sesión inválida") ||
-    s.includes("sesion invalida")
-  );
+  const s = String(msg).trim().toLowerCase();
+  return /^(?:error en api: )?(?:sesión|sesion) (?:expirada|inválida|invalida|no autorizada)\.?$/.test(s)
+    || /^falta x-session\.?$/.test(s)
+    || /^session_key inv[aá]lida\.?$/.test(s);
 }
 
 export function isSessionExpiredResponse(status, text = "", contentType = "") {
-  if (Number(status) === 401) return true;
-  if (Number(status) !== 403) return false;
-  return looksLikeUnauthorizedPayload(text, contentType);
+  // Un 401 genérico (ej. token de descarga caducado) o un 403 de permisos
+  // NO deben revocar una sesión MASTER válida.
+  return (Number(status) === 401 || Number(status) === 403)
+    && looksLikeUnauthorizedPayload(text, contentType);
 }
 
 export function normalizeRol(value, idRol = null) {
@@ -141,16 +148,20 @@ export function applyTheme(tema) {
 }
 
 export function setLastActivityNow() {
+  const session = currentSessionKey();
+  if (!session) return;
   try {
-    sessionStorage.setItem(LAST_ACTIVITY_KEY, String(Date.now()));
+    localStorage.setItem(LAST_ACTIVITY_KEY, JSON.stringify({ session, at: Date.now() }));
   } catch {}
 }
 
 export function getLastActivityTs() {
+  const session = currentSessionKey();
+  if (!session) return 0;
   try {
-    const v = sessionStorage.getItem(LAST_ACTIVITY_KEY);
-    const n = Number(v);
-    return Number.isFinite(n) ? n : 0;
+    const record = JSON.parse(localStorage.getItem(LAST_ACTIVITY_KEY) || "null");
+    const at = Number(record?.at);
+    return record?.session === session && Number.isFinite(at) && at > 0 ? at : 0;
   } catch {
     return 0;
   }

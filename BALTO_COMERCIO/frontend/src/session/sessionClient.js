@@ -162,6 +162,7 @@ export function clearClientSession() {
     localStorage.removeItem(DOWNLOAD_TOKEN_KEY);
     localStorage.removeItem(DOWNLOAD_TOKEN_EXP_KEY);
     localStorage.removeItem("balto_sistema");
+    localStorage.removeItem("balto_last_activity_ts");
 
     // Limpieza de claves legacy que Comercio ya no debe utilizar.
     localStorage.removeItem("token");

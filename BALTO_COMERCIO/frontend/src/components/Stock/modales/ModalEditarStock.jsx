@@ -2145,9 +2145,6 @@ export default function ModalEditarProducto({
         if (!String(variant.nombre_variante || "").trim()) {
           errs[`variante_${idx}_nombre`] = `La variante #${numero} necesita nombre.`;
         }
-        if (!String(variant.sku || "").trim()) {
-          errs[`variante_${idx}_sku`] = `La variante #${numero} necesita SKU.`;
-        }
         if (variant.stock === "" || Number.isNaN(Number(variant.stock)) || Number(variant.stock) < 0) {
           errs[`variante_${idx}_stock`] = `La variante #${numero} necesita stock válido.`;
         }
@@ -2677,9 +2674,6 @@ export default function ModalEditarProducto({
                   <button type="button" className="cmi-v2-tabBtn" onClick={() => irAPanel(categoriasPanelRef)} disabled={guardando}>
                     Categorías
                   </button>
-                  <button type="button" className="cmi-v2-tabBtn" onClick={() => setCargaActiva("variantes")} disabled={guardando}>
-                    Variantes
-                  </button>
                 </div>
 
                 <div ref={categoriasPanelRef} className="cmi-priceBlock cmi-v2-softBlock">
@@ -2788,7 +2782,7 @@ export default function ModalEditarProducto({
                         <div className="cmi-priceBlock__title">Precios principales</div>
                         <p className="cmi-priceBlock__subtitle">
                           {productoConVariantes
-                            ? "Este producto usa variantes: el precio general queda bloqueado para no pisar los precios de Tienda Nube. Cargá precio, stock y SKU en cada variante."
+                            ? "Este producto usa variantes: el precio general queda bloqueado para no pisar los precios de Tienda Nube. Cargá precio y stock en cada variante; el SKU es opcional."
                             : "Con el costo cargado podés aplicar el precio sugerido o escribir el precio final / margen real sobre precio y se calcula solo."}
                         </p>
                       </div>
@@ -3126,7 +3120,7 @@ export default function ModalEditarProducto({
 
                   {form.tiene_variantes ? (
                     <div className="cmi-v2-variantModeNotice">
-                      Producto con variantes: el precio general y el stock general quedan bloqueados. Cargá nombre, SKU, stock y precio de venta en cada variante.
+                      Producto con variantes: el precio general y el stock general quedan bloqueados. Cargá nombre, stock y precio de venta en cada variante. El SKU es opcional.
                     </div>
                   ) : null}
 
@@ -3151,7 +3145,7 @@ export default function ModalEditarProducto({
                             <FloatingField label="Nombre variante *">
                               <input className="cmi-input" value={variant.nombre_variante} onChange={(e) => updateVariant(variantIdx, { nombre_variante: toUpperCaseValue(e.target.value) })} disabled={isLoading} placeholder="Ej: TALLE M / NEGRO" />
                             </FloatingField>
-                            <FloatingField label="SKU variante *">
+                            <FloatingField label="SKU variante (opcional)">
                               <input className="cmi-input" value={variant.sku} onChange={(e) => updateVariant(variantIdx, { sku: toUpperCaseValue(e.target.value) })} disabled={isLoading} placeholder="SKU" style={{ textTransform: "uppercase" }} />
                             </FloatingField>
                             <FloatingField label="Stock *">

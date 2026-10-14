@@ -1459,9 +1459,6 @@ export default function ModalCargaIndividualProducto({
         if (!String(variant.nombre_variante || "").trim()) {
           errs[`variante_${idx}_nombre`] = `La variante #${numero} necesita nombre.`;
         }
-        if (!String(variant.sku || "").trim()) {
-          errs[`variante_${idx}_sku`] = `La variante #${numero} necesita SKU.`;
-        }
         if (variant.stock === "" || Number.isNaN(Number(variant.stock)) || Number(variant.stock) < 0) {
           errs[`variante_${idx}_stock`] = `La variante #${numero} necesita stock válido.`;
         }
@@ -1948,9 +1945,6 @@ export default function ModalCargaIndividualProducto({
               <button type="button" className="cmi-v2-tabBtn" onClick={() => irAPanel(categoriasPanelRef)}>
                 Categorías
               </button>
-              <button type="button" className="cmi-v2-tabBtn" onClick={() => setCargaActiva("variantes")}>
-                Variantes
-              </button>
             </div>
 
             <div ref={categoriasPanelRef} className="cmi-priceBlock cmi-v2-softBlock">
@@ -2058,7 +2052,7 @@ export default function ModalCargaIndividualProducto({
                   <div className="cmi-priceBlock__title">Precios principales</div>
                   <p className="cmi-priceBlock__subtitle">
                     {productoConVariantes
-                      ? "Este producto usa variantes: el precio general queda bloqueado para no pisar los precios de Tienda Nube. Cargá precio, stock y SKU en cada variante."
+                      ? "Este producto usa variantes: el precio general queda bloqueado para no pisar los precios de Tienda Nube. Cargá precio y stock en cada variante; el SKU es opcional."
                       : "Definí el costo y BALTO calcula el precio sugerido. También podés escribir el precio final o el margen y el resto se actualiza automáticamente."}
                   </p>
                 </div>
@@ -2330,7 +2324,7 @@ export default function ModalCargaIndividualProducto({
 
             {form.tiene_variantes ? (
               <div className="cmi-v2-variantModeNotice">
-                Producto con variantes: el precio general y el stock general quedan bloqueados. Cargá nombre, SKU, stock y precio de venta en cada variante.
+                Producto con variantes: el precio general y el stock general quedan bloqueados. Cargá nombre, stock y precio de venta en cada variante. El SKU es opcional.
               </div>
             ) : null}
 
@@ -2359,7 +2353,7 @@ export default function ModalCargaIndividualProducto({
                           placeholder="Ej: TALLE M / NEGRO"
                         />
                       </FloatingField>
-                      <FloatingField label="SKU variante *">
+                      <FloatingField label="SKU variante (opcional)">
                         <input
                           className="cmi-input"
                           value={variant.sku}

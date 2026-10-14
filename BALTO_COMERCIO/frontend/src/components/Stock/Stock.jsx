@@ -794,6 +794,11 @@ const Stock = () => {
   }, []);
 
   const recargarTodo = useCallback(async (opciones = {}) => {
+    // Una recarga completa y una búsqueda comparten la misma versión de lista.
+    // Si la persona teclea otro filtro antes de que termine esta petición,
+    // la respuesta antigua NO puede reemplazar los resultados actuales.
+    const requestId = productosRequestRef.current + 1;
+    productosRequestRef.current = requestId;
     const mostrarLoader = opciones?.mostrarLoader !== false;
     const seed = opciones?.seed || Date.now();
     const preservarScroll = opciones?.preservarScroll !== false;
@@ -847,6 +852,8 @@ const Stock = () => {
         })(),
       ]);
 
+      if (productosRequestRef.current !== requestId) return;
+
       if (productosRes.status === "fulfilled") {
         setProductosRaw(productosRes.value.productos);
         rearmarMiniaturasProductos(productosRes.value.productos, seed);
@@ -868,10 +875,11 @@ const Stock = () => {
         setCategorias([]);
       }
     } catch (err) {
+      if (productosRequestRef.current !== requestId) return;
       if (mostrarLoader) setError(err?.message || "Error inesperado");
       throw err;
     } finally {
-      if (mostrarLoader) setLoading(false);
+      if (mostrarLoader && productosRequestRef.current === requestId) setLoading(false);
     }
   }, [busquedaConsulta, capturarPosicionScrollTabla, categoriaFiltro, mostrarDadosDeBaja, orden, paginaActual, productosPorPagina, prepararProductosParaMostrar, rearmarMiniaturasProductos]);
 
@@ -1670,6 +1678,14 @@ const Stock = () => {
         return;
       }
 
+      // La búsqueda es un input normal: el lector no debe reinterpretar lo que
+      // escribe una persona, aplicar búsquedas parciales ni robarle el foco.
+      // Si se escanea dentro del buscador, su propio onChange ya realiza la búsqueda.
+      if (esBuscador) {
+        limpiarBufferLector();
+        return;
+      }
+
       const lector = lectorCodigoRef.current;
       const esFinLectura = event.key === "Enter" || event.key === "Tab";
 
@@ -1716,7 +1732,13 @@ const Stock = () => {
             target.tagName === "SELECT" ||
             target.isContentEditable)
       );
-      if (!esBuscador && !esCapturaLector && esCampoEditable) return;
+      // Pegar un nombre, SKU o texto en el buscador nunca debe convertirse en
+      // una lectura que reemplace el texto y mueva el foco al campo oculto.
+      if (esBuscador) {
+        limpiarBufferLector();
+        return;
+      }
+      if (!esCapturaLector && esCampoEditable) return;
 
       const codigo = String(event.clipboardData?.getData("text") || "")
         .replace(/[\r\n\t]/g, "")
@@ -1777,6 +1799,9 @@ const Stock = () => {
     const handlePointerUp = (event) => {
       if (event.target === buscadorRef.current || event.target?.closest?.(".cc-searchInput")) return;
       if (event.target?.closest?.('[role="dialog"], [aria-modal="true"]')) return;
+      // No tomar el foco de botones, selectores o controles de Stock: el campo
+      // técnico del lector solamente se enfoca tras acciones no editables.
+      if (event.target?.closest?.('button, a, input, textarea, select, [role="button"], [role="combobox"], [contenteditable="true"]')) return;
       enfocarCapturaLector(0);
     };
     const handleWindowFocus = () => enfocarCapturaLector(40);

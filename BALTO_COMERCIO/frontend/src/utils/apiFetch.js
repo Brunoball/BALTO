@@ -1,11 +1,12 @@
 // src/utils/apiFetch.js
 import BASE_URL from "../config/config";
 import { singleFlightFetch } from "./singleFlightFetch";
+import { isSessionExpiredResponse } from "../components/Principal/utils/principalUtils";
 
 /**
  * Fetch centralizado:
  * - Agrega X-Session automáticamente
- * - Si el backend responde 401/403 => dispara evento global "auth:unauthorized"
+ * - Sólo errores definitivos de sesión (no errores de permisos) notifican logout.
  *
  * Uso:
  *  apiFetch("/api/routes/api.php", { params: { action:"movimientos_listar", periodo:"2026-02" } })
@@ -43,19 +44,20 @@ export async function apiFetch(path, options = {}) {
   });
 
   if (res.status === 401 || res.status === 403) {
-    // Intento leer texto para debug sin romper el flujo
     let bodyText = "";
     try {
       bodyText = await res.clone().text();
     } catch {}
 
-    try {
-      window.dispatchEvent(
-        new CustomEvent("auth:unauthorized", {
-          detail: { status: res.status, body: bodyText.slice(0, 500) },
-        })
-      );
-    } catch {}
+    if (isSessionExpiredResponse(res.status, bodyText, res.headers.get("content-type") || "")) {
+      try {
+        window.dispatchEvent(
+          new CustomEvent("auth:unauthorized", {
+            detail: { status: 401, reason: "session-invalid" },
+          })
+        );
+      } catch {}
+    }
   }
 
   return res;

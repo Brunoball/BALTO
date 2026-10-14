@@ -34,7 +34,7 @@ export default function usePrincipalSessionGuard(doLogout) {
           try {
             window.dispatchEvent(
               new CustomEvent("auth:unauthorized", {
-                detail: { status: response.status, reason: "http-status" },
+                detail: { status: 401, reason: "session-invalid" },
               })
             );
           } catch {}
@@ -42,7 +42,8 @@ export default function usePrincipalSessionGuard(doLogout) {
           return response;
         }
 
-        if (ct.includes("application/json") || ct.includes("text/plain")) {
+        if ((response.status === 401 || response.status === 403)
+          && (ct.includes("application/json") || ct.includes("text/plain"))) {
           if (looksLikeUnauthorizedPayload(txt, ct)) {
             try {
               window.dispatchEvent(

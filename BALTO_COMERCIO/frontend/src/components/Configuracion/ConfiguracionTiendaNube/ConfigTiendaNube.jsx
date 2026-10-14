@@ -22,7 +22,56 @@ import { apiFetchTiendaNube as apiFetch, safeJsonParse } from "../api/configurac
 import useConfiguracionToast from "../hooks/useConfiguracionToast";
 import "./configTiendanube.css";
 
-const IMPORT_BATCH_SIZE = 5;
+// Lotes chicos: en Hostinger cada producto ejecuta su propio job + imágenes.
+const IMPORT_BATCH_SIZE = 2;
+const IMPORT_MAX_ATTEMPTS = 4;
+const IMPORT_CHECKPOINT_TTL_MS = 24 * 60 * 60 * 1000;
+
+function importCheckpointKey(tenantId, storeId) {
+  return `balto_tn_catalogo_checkpoint_v2_${String(tenantId)}_${String(storeId)}`;
+}
+
+function leerCheckpoint(key) {
+  try {
+    const value = JSON.parse(localStorage.getItem(key) || "null");
+    if (!value || value.version !== 2 || value.perPage !== IMPORT_BATCH_SIZE) return null;
+    if (Date.now() - Number(value.savedAt || 0) > IMPORT_CHECKPOINT_TTL_MS) {
+      localStorage.removeItem(key);
+      return null;
+    }
+    const page = Number(value.page || 0);
+    if (!Number.isSafeInteger(page) || page < 1 || page > 10000) return null;
+    return value;
+  } catch {
+    return null;
+  }
+}
+
+function guardarCheckpoint(key, data) {
+  try {
+    localStorage.setItem(key, JSON.stringify({
+      version: 2,
+      perPage: IMPORT_BATCH_SIZE,
+      ...data,
+      savedAt: Date.now(),
+    }));
+  } catch {
+    // Si el navegador no permite almacenamiento, la importación sigue en memoria.
+  }
+}
+
+function esperar(ms) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+function errorTransitorioImportacion(error, status) {
+  if ([408, 429, 500, 502, 503, 504].includes(Number(status))) return true;
+  if (status >= 400 && status < 500) return false;
+  if (error?.name === "AbortError" || error?.name === "TypeError") return true;
+  const m = String(error?.message || "").toLowerCase();
+  return /fetch|network|conexi[oó]n|timeout|tard[oó]|html|json v[aá]lido|temporarily|servidor/.test(m);
+}
+
 const IMPORT_TIMEOUT_MS = 90000;
 
 
@@ -120,6 +169,10 @@ function armarMensajeImportacion(resultado) {
   if (totalErrores > 0) {
     partes.push(`${totalErrores} errores`);
   }
+  const totalPendientes = Number(categorias.pendientes || 0) + Number(productos.pendientes || 0);
+  if (totalPendientes > 0) {
+    partes.push(`${totalPendientes} trabajos pendientes (no confirmados)`);
+  }
 
   return `Importación terminada. ${partes.join(" · ")}.`;
 }
@@ -133,6 +186,7 @@ function crearAcumuladorImportacion() {
       creadas: 0,
       actualizadas: 0,
       errores: 0,
+      pendientes: 0,
     },
     productos: {
       total_remotos: 0,
@@ -141,6 +195,7 @@ function crearAcumuladorImportacion() {
       actualizadas: 0,
       omitidas: 0,
       errores: 0,
+      pendientes: 0,
       variantes: 0,
       variantes_baja: 0,
       imagenes: 0,
@@ -164,11 +219,12 @@ function acumularImportacion(actual, lote) {
   const cat = lote?.categorias || {};
   const prod = lote?.productos || {};
 
-  next.categorias.total_remotas = Math.max(
-    Number(next.categorias.total_remotas || 0),
-    Number(cat.total_remotas || 0)
+  // Las categorías ahora se paginan (no son todas en la primera llamada).
+  next.categorias.total_remotas = sumarNumero(
+    next.categorias.total_remotas,
+    cat.total_remotas
   );
-  ["procesadas", "creadas", "actualizadas", "errores"].forEach((k) => {
+  ["procesadas", "creadas", "actualizadas", "errores", "pendientes"].forEach((k) => {
     next.categorias[k] = sumarNumero(next.categorias[k], cat[k]);
   });
 
@@ -182,6 +238,7 @@ function acumularImportacion(actual, lote) {
     "actualizadas",
     "omitidas",
     "errores",
+    "pendientes",
     "variantes",
     "variantes_baja",
     "imagenes",
@@ -545,93 +602,142 @@ export default function ConfigTiendaNube() {
 
   const handleImportarCatalogo = async () => {
     limpiarMensajes();
+    if (!tenantId || !conexion.connected || !conexion.store_id) {
+      mostrarToast("error", "No se encontró una conexión válida a Tienda Nube.", 4200);
+      return;
+    }
+    const key = importCheckpointKey(tenantId, conexion.store_id);
+    const saved = leerCheckpoint(key);
+    let page = saved ? saved.page : 1;
+    let categoriasTerminadas = Boolean(saved?.categoriasTerminadas);
+    let acumulado = saved?.acumulado?.productos && saved?.acumulado?.categorias
+      ? saved.acumulado
+      : crearAcumuladorImportacion();
+
     setLoadingImport(true);
     setImportProgress({
-      page: 1,
-      procesados: 0,
-      totalEstimado: 0,
-      mensaje: "Preparando importación segura por lotes...",
+      page,
+      procesados: Number(acumulado.productos.procesados || 0),
+      totalEstimado: Number(acumulado.productos.total_remotos || 0),
+      mensaje: saved
+        ? `Retomando la importación desde el lote ${page} sin repetir los anteriores...`
+        : "Preparando la importación por lotes de productos y categorías...",
     });
 
     try {
-      if (!tenantId) {
-        mostrarToast("error", "No se encontró el tenant. Volvé a iniciar sesión.", 4200);
-        return;
-      }
+      // Cada checkpoint se confirma ÚNICAMENTE tras recibir el JSON del lote.
+      // Si se aborta el HTTP mientras el PHP seguía trabajando, el próximo intento
+      // repite ese mismo lote y el backend reutiliza sus mappings locales.
+      for (let maxPages = 0; maxPages < 10000; maxPages += 1) {
+        if (page < 1 || page > 10000) throw new Error("Número de lote fuera del rango admitido.");
+        let resultadoLote = null;
+        let lastError = null;
 
-      let page = 1;
-      let acumulado = crearAcumuladorImportacion();
-
-      while (true) {
-        setImportProgress((prev) => ({
-          ...prev,
-          page,
-          mensaje: `Importando lote ${page}. Balto lo hace por partes para evitar cortes de conexión.`,
-        }));
-
-        const body = {
-          idTenant: tenantId,
-          modo_lote: 1,
-          page,
-          per_page: IMPORT_BATCH_SIZE,
-          importar_imagenes: 1,
-          max_imagenes_por_producto: 1,
-        };
-
-        const res = await apiFetch(
-          {
-            action: "tiendanube_importar_catalogo",
-            idTenant: tenantId,
-            modo_lote: 1,
+        for (let intento = 1; intento <= IMPORT_MAX_ATTEMPTS; intento += 1) {
+          setImportProgress((prev) => ({
+            ...prev,
             page,
-            per_page: IMPORT_BATCH_SIZE,
-            importar_imagenes: 1,
-            max_imagenes_por_producto: 1,
-          },
-          {
-            method: "POST",
-            body: JSON.stringify(body),
-            timeoutMs: IMPORT_TIMEOUT_MS,
-            dispatchUnauthorized: false,
+            mensaje: intento === 1
+              ? `Importando lote ${page} (2 productos y categorías por separado)...`
+              : `Reintentando lote ${page} (${intento}/${IMPORT_MAX_ATTEMPTS}) por un corte temporal...`,
+          }));
+          try {
+            const body = {
+              idTenant: tenantId,
+              modo_lote: 1,
+              page,
+              per_page: IMPORT_BATCH_SIZE,
+              categorias_terminadas: categoriasTerminadas ? 1 : 0,
+              importar_imagenes: 1,
+              max_imagenes_por_producto: 1,
+            };
+            const res = await apiFetch(
+              { action: "tiendanube_importar_catalogo", ...body },
+              {
+                method: "POST",
+                body: JSON.stringify(body),
+                timeoutMs: IMPORT_TIMEOUT_MS,
+                dispatchUnauthorized: false,
+              }
+            );
+            const txt = await res.text();
+            const data = safeJsonParse(txt);
+            if (!res.ok || !data?.exito) {
+              const error = new Error(
+                data?.mensaje || data?.error ||
+                (res.ok ? "La API no devolvió JSON válido." : `El servidor devolvió HTTP ${res.status}.`)
+              );
+              error.httpStatus = res.status;
+              throw error;
+            }
+            resultadoLote = data.resultado || null;
+            if (!resultadoLote || Number(resultadoLote.page) !== page ||
+                !resultadoLote.productos || !resultadoLote.categorias ||
+                typeof resultadoLote.hay_mas !== "boolean") {
+              throw new Error("La API devolvió un lote incompleto: no se avanzará a la página siguiente.");
+            }
+            break;
+          } catch (error) {
+            lastError = error;
+            if (intento === IMPORT_MAX_ATTEMPTS ||
+                !errorTransitorioImportacion(error, error?.httpStatus || 0)) {
+              break;
+            }
+            await esperar(Math.min(12000, 1500 * (2 ** (intento - 1))));
           }
-        );
+        }
 
-        const txt = await res.text();
-        const data = safeJsonParse(txt);
-
-        if (!res.ok || !data?.exito) {
+        if (!resultadoLote) {
           throw new Error(
-            data?.mensaje ||
-              data?.error ||
-              (txt ? `La API no devolvió JSON válido. Respuesta: ${txt.slice(0, 220)}` : "No se pudo importar el catálogo desde Tienda Nube.")
+            `Se detuvo en el lote ${page} después de los reintentos. ` +
+            `${lastError?.message || "Error de conexión."} ` +
+            "El progreso quedó guardado: volvé a pulsar Obtener catálogo para continuar."
           );
         }
 
-        const resultadoLote = data?.resultado || {};
         acumulado = acumularImportacion(acumulado, resultadoLote);
-
+        // El backend devuelve estos dos flags por separado: no se siguen
+        // descargando categorías una vez terminadas.
+        categoriasTerminadas = !resultadoLote.categorias_hay_mas;
+        const nextPage = Number(resultadoLote.siguiente_pagina || page + 1);
         setImportProgress({
           page,
           procesados: Number(acumulado.productos.procesados || 0),
           totalEstimado: Number(acumulado.productos.total_remotos || 0),
-          mensaje: `Productos importados: ${Number(acumulado.productos.procesados || 0)}. Último lote: ${Number(resultadoLote?.productos?.procesados || 0)} productos.`,
+          mensaje: `Importados ${Number(acumulado.productos.procesados || 0)} productos. ` +
+            `Errores: ${Number(acumulado.productos.errores || 0)}. ` +
+            `Pendientes: ${Number(acumulado.productos.pendientes || 0)}.`,
         });
 
-        if (!resultadoLote?.hay_mas) {
-          break;
+        if (!resultadoLote.hay_mas) {
+          try { localStorage.removeItem(key); } catch {}
+          const errores = Number(acumulado.productos.errores || 0) +
+            Number(acumulado.categorias.errores || 0);
+          const pendientes = Number(acumulado.productos.pendientes || 0) +
+            Number(acumulado.categorias.pendientes || 0);
+          if (errores || pendientes) {
+            mostrarToast("error",
+              armarMensajeImportacion(acumulado) +
+              " Hay errores o trabajos pendientes; no se confirmó que esté todo sincronizado.",
+              12000);
+          } else {
+            mostrarToast("exito", armarMensajeImportacion(acumulado), 10000);
+          }
+          await cargarEstado();
+          return;
         }
-
-        page = Number(resultadoLote?.siguiente_pagina || page + 1);
-        await new Promise((resolve) => window.setTimeout(resolve, 180));
+        if (!Number.isSafeInteger(nextPage) || nextPage <= page || nextPage > 10000) {
+          throw new Error("El servidor devolvió una paginación inválida.");
+        }
+        page = nextPage;
+        guardarCheckpoint(key, { page, categoriasTerminadas, acumulado });
+        await esperar(350);
       }
-
-      mostrarToast("exito", armarMensajeImportacion(acumulado), 6500);
-      await cargarEstado();
+      throw new Error("La importación superó el límite defensivo de 10.000 páginas.");
     } catch (e) {
-      const mensaje = e?.name === "AbortError"
-        ? "La importación tardó demasiado en este lote. Probá de nuevo: lo ya importado queda guardado y Balto no te va a cerrar la sesión por este corte."
-        : e?.message || "Error al importar productos y categorías.";
-      mostrarToast("error", mensaje, 6500);
+      // Guardamos también el lote actual aunque haya fallado antes de completar.
+      guardarCheckpoint(key, { page, categoriasTerminadas, acumulado });
+      mostrarToast("error", e?.message || "Error al importar el catálogo.", 12000);
     } finally {
       setLoadingImport(false);
       setImportProgress(null);

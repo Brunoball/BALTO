@@ -35,15 +35,9 @@
   border-color: rgba(59, 130, 246, 0.22);
 }
 
-/* ModalCargaMasiva.css define ".cmi-v2-formShell--producto > .cmi-v2-variantPanelOnly"
-   con "display: none !important" para su propio flujo de carga masiva (tabs Producto/Variantes).
-   Como esta hoja importa ModalCargaMasiva.css y este modal reutiliza esas mismas clases
-   para sus tabs "Producto original"/"Variantes", esa regla terminaba ocultando el panel
-   "Tiene variantes" también acá, impidiendo activar variantes desde el alta individual.
-   Se restaura la visibilidad del panel específicamente dentro de este modal. */
-.cmi-content--individual .cmi-v2-formShell--producto > .cmi-v2-variantPanelOnly {
-  display: flex !important;
-}
+/* El panel gigante de variantes pertenece exclusivamente a la pestaña Variantes.
+   Respetamos la regla de ModalCargaMasiva.css que lo oculta en Producto original.
+   No se desmonta el estado del formulario ni se alteran payloads/Tienda Nube. */
 
 .cmi-v2-variantModeNotice {
   border: 1px solid rgba(59, 130, 246, 0.22);

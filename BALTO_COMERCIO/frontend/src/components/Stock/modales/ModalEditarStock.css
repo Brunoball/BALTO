@@ -12,15 +12,9 @@
   min-height: auto;
 }
 
-/* Mismo problema que en ModalCargaIndividualProducto.css: ModalCargaMasiva.css
-   define ".cmi-v2-formShell--producto > .cmi-v2-variantPanelOnly { display: none !important; }"
-   para su propio wizard de carga masiva, y ese CSS global termina ocultando el panel
-   "Variantes del producto" acá también, ya que este modal reutiliza las mismas clases
-   para sus tabs "Producto original"/"Variantes" (que además vuelven a "producto" cada
-   vez que se recarga el producto). Se restaura la visibilidad del panel en este modal. */
-.cmi-container--editar .cmi-v2-formShell--producto > .cmi-v2-variantPanelOnly {
-  display: flex !important;
-}
+/* El panel gigante de variantes pertenece exclusivamente a la pestaña Variantes.
+   Respetamos la regla de ModalCargaMasiva.css que lo oculta en Producto original.
+   No se desmonta el estado del formulario ni se alteran payloads/Tienda Nube. */
 
 /* Pestañas de Editar producto: mantener tipografía liviana. */
 .cmi-container--editar .cmi-v2-mainTab,

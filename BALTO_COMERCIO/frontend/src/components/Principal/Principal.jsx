@@ -50,7 +50,6 @@ import {
   normalizeTema,
   planAllowsNavKey,
   safeJsonParse,
-  setLastActivityNow,
   slugify,
 } from "./utils/principalUtils";
 
@@ -384,8 +383,6 @@ const Principal = () => {
       setTema("claro");
       applyTheme("claro");
     }
-
-    setLastActivityNow();
 
   }, [doLogout]);
 
