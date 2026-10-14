@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import useAutoScrollRows from "../../_shared/useAutoScrollRows.js";
 import { filtrarMediosPagoPorPlan } from "../../_shared/planMediosPago";
 import { createPortal } from "react-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -1009,6 +1010,7 @@ export default function ModalNuevoIngreso({
   const [configsFacturacion, setConfigsFacturacion] = useState([]);
 
   const rowsContainerRef = useRef(null);
+  const scrollToNewRow = useAutoScrollRows(rowsContainerRef, rows.length);
   const [hasScroll, setHasScroll] = useState(false);
   const closeBtnRef = useRef(null);
   const prevOpenRef = useRef(false);
@@ -1336,10 +1338,10 @@ export default function ModalNuevoIngreso({
     (id, patch) => setRows((p) => p.map((r) => (r.id === id ? { ...r, ...patch } : r))),
     []
   );
-  const addRow = useCallback(
-    () => setRows((p) => [...p, buildEmptyRow("detalle")]),
-    []
-  );
+  const addRow = useCallback(() => {
+    scrollToNewRow();
+    setRows((p) => [...p, buildEmptyRow("detalle")]);
+  }, [scrollToNewRow]);
   const removeRow = useCallback(
     (id) =>
       setRows((p) => {

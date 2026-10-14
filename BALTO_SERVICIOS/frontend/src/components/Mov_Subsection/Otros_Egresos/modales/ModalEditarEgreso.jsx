@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import useAutoScrollRows from "../../_shared/useAutoScrollRows.js";
 import { filtrarMediosPagoPorPlan } from "../../_shared/planMediosPago";
 import { createPortal } from "react-dom";
 import BASE_URL from "../../../../config/config.jsx";
@@ -1158,6 +1159,8 @@ export default function ModalEditarEgreso({
   );
 
   const [form, setForm] = useState(() => buildInitialState(initialData, clasificaciones));
+  const rowsContainerRef = useRef(null);
+  const scrollToNewRow = useAutoScrollRows(rowsContainerRef, form.items?.length || 0);
   const [comprobanteActual, setComprobanteActual] = useState(null);
   const [archivoNuevo, setArchivoNuevo] = useState(null);
   const [marcarEliminarComprobante, setMarcarEliminarComprobante] = useState(false);
@@ -1281,11 +1284,12 @@ export default function ModalEditarEgreso({
   );
 
   const addItem = useCallback(() => {
+    scrollToNewRow();
     setForm((prev) => ({
       ...prev,
       items: [...prev.items, makeItem({ cantidad: 1, precio: 0, iva_pct: 0 })],
     }));
-  }, []);
+  }, [scrollToNewRow]);
 
   const removeItem = useCallback((uid) => {
     setForm((prev) => {
@@ -1707,7 +1711,7 @@ export default function ModalEditarEgreso({
                       <div className="gm-table-th" />
                     </div>
 
-                    <div className="gm-table-body">
+                    <div ref={rowsContainerRef} className="gm-table-body">
                       {(form.items || []).map((it) => (
                         <div key={it.uid} className="gm-table-row">
                           <div className="gm-table-cell gm-table-cell--detail">

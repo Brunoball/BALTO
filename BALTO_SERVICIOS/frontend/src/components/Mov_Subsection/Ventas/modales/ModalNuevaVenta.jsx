@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import useAutoScrollRows from "../../_shared/useAutoScrollRows.js";
 import { ventasFetch } from "../api/ventasApi.js";
 import { filtrarMediosPagoPorPlan } from "../../_shared/planMediosPago";
 import { createPortal } from "react-dom";
@@ -1609,6 +1610,7 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
   const closeBtnRef = useRef(null);
   const prevOpenRef = useRef(false);
   const rowsContainerRef = useRef(null);
+  const scrollToNewRow = useAutoScrollRows(rowsContainerRef, rows.length);
   const fechaInputRef = useRef(null);
   const pdfAssetsPreloadedRef = useRef(false);
   const totalVentaAnteriorRef = useRef(null);
@@ -1676,7 +1678,10 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
   }, [open, rows]);
 
   const updateFilter = useCallback((k, v) => setFilters((p) => ({ ...p, [k]: v })), []);
-  const addRow = useCallback(() => setRows((p) => [...p, buildEmptyRow()]), []);
+  const addRow = useCallback(() => {
+    scrollToNewRow();
+    setRows((p) => [...p, buildEmptyRow()]);
+  }, [scrollToNewRow]);
   const removeRow = useCallback((id) => {
     setRows((p) => {
       const n = p.filter((r) => r.id !== id);

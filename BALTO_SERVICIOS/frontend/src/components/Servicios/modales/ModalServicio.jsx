@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { clampText, decimalNumber, decimalText, integerText, money, moneyApiValue, moneyDecimalText, moneyInputValue } from "../utils/serviciosFormUtils";
 import useServiciosGlobalModal from "./useServiciosGlobalModal";
+import useAutoScrollRows from "../../Mov_Subsection/_shared/useAutoScrollRows.js";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBriefcase, faChevronDown, faCircleInfo, faDollarSign, faLayerGroup } from "@fortawesome/free-solid-svg-icons";
 
@@ -310,6 +311,8 @@ function SelectorMultipleRecursos({
 }
 
 function ArticulosCard({ rows, setRows, catalog }) {
+  const rowsContainerRef = React.useRef(null);
+  const scrollToNewRow = useAutoScrollRows(rowsContainerRef, rows.length);
   const used = new Set(rows.map((r) => Number(r.id_articulo)));
   const available = catalog.filter((r) => Number(r.activo) === 1 && !used.has(Number(r.id_articulo)));
 
@@ -327,6 +330,7 @@ function ArticulosCard({ rows, setRows, catalog }) {
       }));
 
     if (additions.length === 0) return;
+    scrollToNewRow();
     setRows((prev) => {
       const existing = new Set(prev.map((row) => Number(row.id_articulo)));
       return [...prev, ...additions.filter((row) => !existing.has(Number(row.id_articulo)))];
@@ -357,7 +361,7 @@ function ArticulosCard({ rows, setRows, catalog }) {
           />
         </div>
 
-        <div className="servicios-component-list">
+        <div ref={rowsContainerRef} className="servicios-component-list">
           {rows.length === 0 ? (
             <p className="servicios-component-empty">SIN MATERIALES NI INSUMOS ASIGNADOS.</p>
           ) : rows.map((row) => {
@@ -405,6 +409,8 @@ function ArticulosCard({ rows, setRows, catalog }) {
 }
 
 function TrabajadoresCard({ rows, setRows, catalog }) {
+  const rowsContainerRef = React.useRef(null);
+  const scrollToNewRow = useAutoScrollRows(rowsContainerRef, rows.length);
   const used = new Set(rows.map((r) => Number(r.id_trabajador)));
   const available = catalog.filter((r) => Number(r.activo) === 1 && !used.has(Number(r.id_trabajador)));
 
@@ -419,6 +425,7 @@ function TrabajadoresCard({ rows, setRows, catalog }) {
       }));
 
     if (additions.length === 0) return;
+    scrollToNewRow();
     setRows((prev) => {
       const existing = new Set(prev.map((row) => Number(row.id_trabajador)));
       return [...prev, ...additions.filter((row) => !existing.has(Number(row.id_trabajador)))];
@@ -449,7 +456,7 @@ function TrabajadoresCard({ rows, setRows, catalog }) {
           />
         </div>
 
-        <div className="servicios-component-list">
+        <div ref={rowsContainerRef} className="servicios-component-list">
           {rows.length === 0 ? (
             <p className="servicios-component-empty">SIN MANO DE OBRA ASIGNADA.</p>
           ) : rows.map((row) => {

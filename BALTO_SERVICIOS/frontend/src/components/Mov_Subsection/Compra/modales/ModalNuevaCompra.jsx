@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import useAutoScrollRows from "../../_shared/useAutoScrollRows.js";
 import { comprasFetch } from "../api/comprasApi.js";
 import { filtrarMediosPagoPorPlan } from "../../_shared/planMediosPago";
 import { createPortal } from "react-dom";
@@ -1093,6 +1094,7 @@ export default function ModalNuevaCompra({ open, lists, onClose, onToast, onSave
   const prevOpenRef = useRef(false);
   const fechaInputRef = useRef(null);
   const rowsContainerRef = useRef(null);
+  const scrollToNewRow = useAutoScrollRows(rowsContainerRef, rows.length);
   const fileInputRef = useRef(null);
 
   const [openVerComp, setOpenVerComp] = useState(false);
@@ -1157,7 +1159,10 @@ export default function ModalNuevaCompra({ open, lists, onClose, onToast, onSave
 
   // Las filas nuevas comienzan con la primera opción del selector: material / insumo.
   // Un detalle libre solo se habilita cuando el usuario elige MANUAL explícitamente.
-  const addRow = useCallback(() => setRows((p) => [...p, buildEmptyRow()]), []);
+  const addRow = useCallback(() => {
+    scrollToNewRow();
+    setRows((p) => [...p, buildEmptyRow()]);
+  }, [scrollToNewRow]);
   const removeRow = useCallback((id) => {
     setRows((p) => {
       const n = p.filter((r) => r.id !== id);

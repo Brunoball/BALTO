@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import useAutoScrollRows from "../../_shared/useAutoScrollRows.js";
 import { comprasFetch } from "../api/comprasApi.js";
 import { filtrarMediosPagoPorPlan } from "../../_shared/planMediosPago";
 import { createPortal } from "react-dom";
@@ -1452,6 +1453,7 @@ export default function ModalEditarCompra({
   const detalleInputRef = useRef(null);
   const fileInputRef = useRef(null);
   const rowsContainerRef = useRef(null);
+  const scrollToNewRow = useAutoScrollRows(rowsContainerRef, 1 + extraItems.length);
   const [hasScroll, setHasScroll] = useState(false);
 
   const [addUI, setAddUI] = useState({ open: false, catalogo: null, text: "", saving: false });
@@ -1842,6 +1844,7 @@ export default function ModalEditarCompra({
   }, [updateExtraItem]);
 
   const addExtraItem = useCallback(() => {
+    scrollToNewRow();
     setExtraItems((prev) => [
       ...prev,
       {
@@ -1856,7 +1859,7 @@ export default function ModalEditarCompra({
         iva_pct: 0,
       },
     ]);
-  }, []);
+  }, [scrollToNewRow]);
 
   const removeExtraItem = useCallback((clientId) => {
     const target = extraItems.find((item) => item.client_id === clientId);
