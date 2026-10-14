@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import useAutoScrollRows from "../../_shared/useAutoScrollRows.js";
 import { createPortal } from "react-dom";
 import "../../../Global/Global_css/GlobalsModalsV2.css";
 import "../../../Global/Global_css/Global_responsive.css";
@@ -865,6 +866,8 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
   const [condiciones, setCondiciones] = useState(buildDefaultCondicionesPresupuesto);
   const [activeAccordion, setActiveAccordion] = useState(null);
   const [rows, setRows] = useState([buildEmptyRow()]);
+  const rowsContainerRef = useRef(null);
+  const scrollToNewRow = useAutoScrollRows(rowsContainerRef, rows.length);
   const [presupuestoPersonalizado, setPresupuestoPersonalizado] = useState(false);
   const [modeloOrigen, setModeloOrigen] = useState(null);
   const [guardarComoModelo, setGuardarComoModelo] = useState(false);
@@ -955,8 +958,9 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
   }, []);
 
   const addRow = useCallback(() => {
+    scrollToNewRow();
     setRows((prev) => [...prev, buildEmptyRow()]);
-  }, []);
+  }, [scrollToNewRow]);
 
   const updateCondicion = useCallback((key, value) => {
     const nextValue = key === "validezDias" ? value : upperInput(value);
@@ -1183,8 +1187,9 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
 
     const nextRow = buildEmptyRow();
     barcodePendingRef.current = { rowId: nextRow.id, producto };
+    scrollToNewRow();
     setRows((prev) => [...prev, nextRow]);
-  }, [rows, handleSelectDetalle, onToast]);
+  }, [rows, handleSelectDetalle, onToast, scrollToNewRow]);
 
   useEffect(() => {
     const pending = barcodePendingRef.current;
@@ -1662,7 +1667,7 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
                 <div className="gm-table-th" />
               </div>
 
-              <div className="gm-table-body">
+              <div ref={rowsContainerRef} className="gm-table-body">
                 {computedRows.map((r) => {
                   const stockNum =
                     r.stock_disponible !== null && r.stock_disponible !== undefined

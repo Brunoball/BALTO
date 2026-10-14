@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import useAutoScrollRows from "../../Mov_Subsection/_shared/useAutoScrollRows.js";
 import { createPortal } from "react-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import "./ModalCargaMasiva.css";
@@ -606,6 +607,8 @@ function ModalConfirmarProductosIA({
   onPricingChange,
   onExtraPricingChange,
 }) {
+  const productsListRef = useRef(null);
+  const scrollToNewRow = useAutoScrollRows(productsListRef, productos.length);
   const [miniCategoriaOpen, setMiniCategoriaOpen] = useState(false);
   const [miniCategoriaNombre, setMiniCategoriaNombre] = useState("");
   const [miniCategoriaFila, setMiniCategoriaFila] = useState(null);
@@ -742,7 +745,7 @@ function ModalConfirmarProductosIA({
               <button
                 type="button"
                 className="mit-btn mit-btn--ghost"
-                onClick={onAddFila}
+                onClick={() => { scrollToNewRow(); onAddFila?.(); }}
                 disabled={confirmando}
                 style={{ display: "inline-flex", alignItems: "center", gap: 8 }}
               >
@@ -750,7 +753,7 @@ function ModalConfirmarProductosIA({
               </button>
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <div ref={productsListRef} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               {productos.map((item, idx) => {
                 const err = errores[`fila_${idx}`] || {};
                 const tieneVariantes = Array.isArray(item.variantes) && item.variantes.length > 0;

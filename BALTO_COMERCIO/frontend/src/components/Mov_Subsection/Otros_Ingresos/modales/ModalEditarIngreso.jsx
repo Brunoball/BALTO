@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import useAutoScrollRows from "../../_shared/useAutoScrollRows.js";
 import { filtrarMediosPagoPorPlan } from "../../_shared/planMediosPago";
 import { createPortal } from "react-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -712,6 +713,8 @@ export default function ModalEditarIngreso({
   const [saving, setSaving] = useState(false);
   const [loadingComprobante, setLoadingComprobante] = useState(false);
   const [form, setForm] = useState(() => buildInitialState(initialData));
+  const rowsContainerRef = useRef(null);
+  const scrollToNewRow = useAutoScrollRows(rowsContainerRef, form.items?.length || 0);
   const [comprobanteActual, setComprobanteActual] = useState(null);
   const [archivoNuevo, setArchivoNuevo] = useState(null);
   const [marcarEliminarComprobante, setMarcarEliminarComprobante] = useState(false);
@@ -924,8 +927,9 @@ export default function ModalEditarIngreso({
 
     const nextItem = makeItem({ tipo_item: "producto", cantidad: 1, precio: 0, iva_pct: 0 });
     barcodePendingRef.current = { uid: nextItem.uid, producto };
+    scrollToNewRow();
     setForm((prev) => ({ ...prev, items: [...(prev.items || []), nextItem] }));
-  }, [form.items, handleSelectProducto, showToast]);
+  }, [form.items, handleSelectProducto, showToast, scrollToNewRow]);
 
   useEffect(() => {
     const pending = barcodePendingRef.current;
@@ -984,7 +988,8 @@ export default function ModalEditarIngreso({
   );
 
   const addItem = useCallback(
-    (tipoItem = "servicio") =>
+    (tipoItem = "servicio") => {
+      scrollToNewRow();
       setForm((p) => ({
         ...p,
         items: [...p.items, makeItem({
@@ -993,8 +998,9 @@ export default function ModalEditarIngreso({
           precio: 0,
           iva_pct: 0,
         })],
-      })),
-    []
+      }));
+    },
+    [scrollToNewRow]
   );
 
   const removeItem = useCallback(
@@ -1511,7 +1517,7 @@ export default function ModalEditarIngreso({
                     <div className="gm-table-th" />
                   </div>
 
-                  <div className="gm-table-body">
+                  <div ref={rowsContainerRef} className="gm-table-body">
                     {(form.items || []).map((it, itemIndex) => {
                       return (
                         <div

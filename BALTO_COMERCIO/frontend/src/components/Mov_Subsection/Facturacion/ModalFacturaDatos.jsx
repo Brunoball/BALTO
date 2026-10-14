@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import useAutoScrollRows from "../_shared/useAutoScrollRows.js";
 import { FaArrowLeft, FaCheck, FaPlus, FaTrash } from "react-icons/fa";
 import "./ModalFacturaBalto.css";
 
@@ -87,6 +88,8 @@ export default function ModalFacturaDatos({
   const [observaciones, setObservaciones] = useState("");
 
   const firstRef = useRef(null);
+  const tableBodyRef = useRef(null);
+  const scrollToNewRow = useAutoScrollRows(tableBodyRef, items.length);
 
   useEffect(() => {
     if (!open) return;
@@ -157,9 +160,10 @@ export default function ModalFacturaDatos({
   }, []);
 
   const addItem = useCallback(() => {
+    scrollToNewRow();
     setItems((prev) => [...(prev || []), buildItem()]);
     setError("");
-  }, []);
+  }, [scrollToNewRow]);
 
   const removeItem = useCallback((id) => {
     setItems((prev) => {
@@ -443,7 +447,7 @@ export default function ModalFacturaDatos({
                       <th style={thStyle}>Acción</th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody ref={tableBodyRef}>
                     {itemsConSubtotal.map((it) => (
                       <tr key={it.id}>
                         <td style={tdStyle}>

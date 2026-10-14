@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import "./ProductStockAutocomplete.css";
+import getDropdownPlacement from "../../Global/GlobalAutocomplete/getDropdownPlacement.js";
 
 function normalizeText(v) {
   return String(v ?? "")
@@ -191,12 +192,7 @@ export default function ProductStockAutocomplete({
   const getCurrentPos = useCallback(() => {
     const el = inputRef.current;
     if (!el) return null;
-    const rect = el.getBoundingClientRect();
-    return {
-      top: rect.bottom + window.scrollY + 4,
-      left: rect.left + window.scrollX,
-      width: rect.width,
-    };
+    return getDropdownPlacement(el, 280);
   }, []);
 
   const updatePos = useCallback(() => {
@@ -227,9 +223,11 @@ export default function ProductStockAutocomplete({
     };
     window.addEventListener("scroll", onScroll, true);
     window.addEventListener("resize", onScroll);
+    window.visualViewport?.addEventListener("resize", onScroll);
     return () => {
       window.removeEventListener("scroll", onScroll, true);
       window.removeEventListener("resize", onScroll);
+      window.visualViewport?.removeEventListener("resize", onScroll);
       cancelAnimationFrame(rafRef.current);
     };
   }, [open, updatePos]);
@@ -344,10 +342,12 @@ export default function ProductStockAutocomplete({
       id="psa-portal-list"
       className="psa-list"
       style={{
-        position: "absolute",
+        position: "fixed",
         top: listPos.top,
         left: listPos.left,
         width: listPos.width,
+        maxHeight: listPos.maxHeight,
+        transform: listPos.opensUp ? "translateY(-100%)" : undefined,
         zIndex: 9999999999,
         margin: 0,
       }}
