@@ -26,6 +26,13 @@ Remove-Item Env:PW_ALLOW_ARCA -ErrorAction SilentlyContinue
 
 
 # ============================================================
+# NUEVO (13/10-14/10/2026): contrato visual del detalle expandible en los 8 listados.
+# Usa GET interceptados con datos controlados: NO crea, modifica ni elimina datos
+# de la base. Cubre descripcion, variantes, consumos internos, cantidades, precios,
+# desplegar/contraer y estabilidad de las columnas originales.
+# No sustituye los tests de integracion que consultan el backend real.
+npx playwright test tests/43-movimientos-detalle-desplegable.spec.js --project=chromium --workers=1 --reporter=list
+
 # 1. MOVIMIENTOS
 # Ventas, compras, presupuestos, otros movimientos,
 # notas de crédito, eliminaciones, detalles y cheques.

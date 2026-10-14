@@ -1,3 +1,4 @@
+import DetalleMovimientoTabla, { FilaMovimientoExpandible } from "../_shared/DetalleMovimientoTabla.jsx";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { otrosEgresosFetch, getOtrosEgresosAuthInfo } from "./api/otrosEgresosApi.js";
 import useOtrosEgresosToast from "./hooks/useOtrosEgresosToast.js";
@@ -605,6 +606,7 @@ function rowMatchesQuery(row, query) {
     }
   }
 
+  parts.push(getDetalleMovimiento(row));
   parts.push(formatFechaDMY(row?.fecha));
   parts.push(productosLabel(row));
   parts.push(String(montoNum), String(Math.trunc(montoNum)), moneyARS(montoNum));
@@ -1978,6 +1980,7 @@ export default function OtrosEgresos() {
                     (idComprobante && idComprobante > 0) ||
                     String(r?.comprobante_url ?? "").trim() !== "";
                   return (
+                    <FilaMovimientoExpandible key={key} movimiento={r}>
                     <div
                       key={key}
                       className="mov-gridTable mov-gridTable--row"
@@ -1985,6 +1988,7 @@ export default function OtrosEgresos() {
                       role="row"
                     >
                       {columns.map((c) => {
+
                         if (c.key === "acciones") {
                           return (
                             <div
@@ -2062,7 +2066,7 @@ export default function OtrosEgresos() {
                           <div
                             key={c.key}
                             className={[
-                              "mov-gridCell",
+                              "mov-gridCell", c.key === "detalle" ? "mov-gridCell--detalleVisible" : "",
                               c.align === "right" ? "is-right" : "",
                               c.align === "center" ? "is-center" : "",
                               c.strong ? "is-strong" : "",
@@ -2071,13 +2075,14 @@ export default function OtrosEgresos() {
                               .join(" ")}
                             role="cell"
                             data-label={c.label}
-                            title={typeof val === "string" ? val : undefined}
+                            title={c.key === "detalle" || c.key === "descripcion" ? undefined : (typeof val === "string" ? val : undefined)}
                           >
-                            <span className="mov-ellipsissss">{val}</span>
+                            {c.key === "detalle" ? <DetalleMovimientoTabla movimiento={r} tituloEspecial={getDepositoChequeLabel(r)} /> : <span className="mov-ellipsissss">{val}</span>}
                           </div>
                         );
                       })}
                     </div>
+                  </FilaMovimientoExpandible>
                   );
                 })}
 

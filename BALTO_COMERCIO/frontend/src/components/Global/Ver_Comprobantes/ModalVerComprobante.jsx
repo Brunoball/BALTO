@@ -494,10 +494,13 @@ export default function ModalVerComprobante({
 
   useEffect(() => {
     const revokeInternalBlob = () => {
-      if (internalBlobRef.current) {
-        URL.revokeObjectURL(internalBlobRef.current);
-        internalBlobRef.current = "";
-      }
+      const url = internalBlobRef.current;
+      if (!url) return;
+      internalBlobRef.current = "";
+      // El visor PDF interno (iframe) puede seguir usando la URL después
+      // de que React quite o cambie la vista previa. La limpieza diferida
+      // evita revocarla mientras el navegador todavía la está abriendo.
+      window.setTimeout(() => URL.revokeObjectURL(url), 60000);
     };
 
     if (!open || !activeUrl) {

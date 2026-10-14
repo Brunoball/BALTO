@@ -1,3 +1,4 @@
+import DetalleMovimientoTabla, { FilaMovimientoExpandible } from "../Mov_Subsection/_shared/DetalleMovimientoTabla.jsx";
 import React, { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import "../Global/Global_css/Global_Section.css";
 import "../Global/Global_css/Global_responsive.css";
@@ -1016,14 +1017,16 @@ export default function Movimientos() {
             ) : (
               <>
                 {filteredRows.map((r) => (
-                  <div
+                  <FilaMovimientoExpandible key={r.id_movimiento} movimiento={r}>
+                    <div
                     key={r.id_movimiento}
                     className="mov-gridTable mov-gridTable--row"
                     style={{ gridTemplateColumns: gridCols }}
                     role="row"
                   >
                     {columns.map((c) => {
-                      if (c.key === "acciones") {
+
+                        if (c.key === "acciones") {
                         return (
                           <div
                             key={c.key}
@@ -1050,7 +1053,7 @@ export default function Movimientos() {
                         <div
                           key={c.key}
                           className={[
-                            "mov-gridCell",
+                            "mov-gridCell", c.key === "descripcion" ? "mov-gridCell--detalleVisible" : "",
                             c.align === "right" ? "is-right" : "",
                             c.align === "center" ? "is-center" : "",
                           ]
@@ -1058,13 +1061,14 @@ export default function Movimientos() {
                             .join(" ")}
                           role="cell"
                           data-label={c.label}
-                          title={typeof val === "string" ? val : undefined}
+                          title={c.key === "detalle" || c.key === "descripcion" ? undefined : (typeof val === "string" ? val : undefined)}
                         >
-                          <span className="mov-ellipsissss">{val}</span>
+                          {c.key === "descripcion" ? <DetalleMovimientoTabla movimiento={r} tituloEspecial={getDepositoChequeLabel(r)} /> : <span className="mov-ellipsissss">{val}</span>}
                         </div>
                       );
                     })}
                   </div>
+                  </FilaMovimientoExpandible>
                 ))}
 
                 {!isAnyLoading && filteredRows.length === 0 && (

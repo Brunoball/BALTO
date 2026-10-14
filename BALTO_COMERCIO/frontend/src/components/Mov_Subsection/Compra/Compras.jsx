@@ -1,3 +1,4 @@
+import DetalleMovimientoTabla, { FilaMovimientoExpandible } from "../_shared/DetalleMovimientoTabla.jsx";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import BASE_URL from "../../../config/config.jsx";
 import "../../Global/Global_css/Global_Section.css";
@@ -1684,6 +1685,7 @@ export default function Compras() {
                   const isDeleting =
                     deletingId !== null && String(deletingId) === String(rowId);
                   return (
+                    <FilaMovimientoExpandible key={rowId} movimiento={r}>
                     <div
                       key={rowId}
                       className="mov-gridTable mov-gridTable--row"
@@ -1692,6 +1694,7 @@ export default function Compras() {
                       data-movement-id={Number(rowId) || undefined}
                     >
                       {columns.map((c) => {
+
                         if (c.key === "acciones") {
                           return (
                             <div
@@ -1771,7 +1774,7 @@ export default function Compras() {
                           <div
                             key={c.key}
                             className={[
-                              "mov-gridCell",
+                              "mov-gridCell", c.key === "detalle" ? "mov-gridCell--detalleVisible" : "",
                               c.align === "right" ? "is-right" : "",
                               c.align === "center" ? "is-center" : "",
                               c.strong ? "is-strong" : "",
@@ -1780,13 +1783,14 @@ export default function Compras() {
                               .join(" ")}
                             role="cell"
                             data-label={c.label}
-                            title={typeof val === "string" ? val : undefined}
+                            title={c.key === "detalle" || c.key === "descripcion" ? undefined : (typeof val === "string" ? val : undefined)}
                           >
-                            <span className="mov-ellipsissss">{val}</span>
+                            {c.key === "detalle" ? <DetalleMovimientoTabla movimiento={r} /> : <span className="mov-ellipsissss">{val}</span>}
                           </div>
                         );
                       })}
                     </div>
+                  </FilaMovimientoExpandible>
                   );
                 })}
 

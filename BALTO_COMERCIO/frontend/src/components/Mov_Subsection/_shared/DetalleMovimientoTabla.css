@@ -1,0 +1,79 @@
+/* BALTO: descripción compacta con botón de conceptos en la misma celda y panel en otra fila. */
+.mov-gridCell.mov-gridCell--detalleVisible {
+  overflow: hidden;
+  white-space: normal;
+  min-width: 0;
+  align-items: center;
+}
+.mov-detalleTabla {
+  width: 100%; min-width: 0; max-width: 100%; display: flex;
+  flex-direction: column; align-items: flex-start; gap: 3px;
+  line-height: 1.3; text-align: left;
+}
+.mov-detalleTabla__titulo {
+  display: block; width: 100%; min-width: 0; overflow: hidden;
+  white-space: nowrap; text-overflow: ellipsis; font-weight: 600; color: inherit;
+}
+.mov-detalleTabla__aclaracion {
+  display: block; font-size: 11px; font-weight: 400;
+  color: var(--color-text-muted, #8896aa); overflow-wrap: anywhere;
+}
+.mov-detalleTabla__aclaracion--tabla {
+  width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+/* La segunda línea presenta resumen y desplegable juntos, como el patrón de variantes. */
+.mov-detalleTabla__resumenLinea {
+  display: flex; align-items: center; gap: 10px; min-width: 0; max-width: 100%;
+  width: 100%; line-height: 1.3;
+}
+.mov-detalleTabla__resumenLinea .mov-detalleTabla__aclaracion--tabla {
+  flex: 0 1 auto; width: auto; min-width: 0;
+}
+.mov-detalleTabla__boton {
+  display: inline-flex; align-items: center; justify-content: flex-start; gap: 5px;
+  flex: 0 0 auto; padding: 0 2px; border: 0; border-radius: 3px;
+  background: transparent; color: var(--color-primary, #1467c8);
+  font: inherit; font-size: 11px; font-weight: 650; line-height: 1.3;
+  white-space: nowrap; cursor: pointer;
+}
+.mov-detalleTabla__boton:hover, .mov-detalleTabla__boton.is-open {
+  color: var(--color-primary-strong, #173452);
+  text-decoration: underline;
+}
+.mov-detalleTabla__boton:focus-visible {
+  outline: 2px solid var(--color-primary, #1467c8); outline-offset: 2px;
+}
+.mov-detalleTabla__chevron { font-size: 11px; line-height: 1; }
+
+/* El panel es hermano de la fila original: nunca empuja fecha/cliente/importe/acciones. */
+.mov-detalleTabla__filaExpandida {
+  width: 100%; box-sizing: border-box; background: color-mix(in srgb, var(--color-primary, #1467c8) 3%, var(--color-surface, #fff));
+  border-bottom: 1px solid var(--color-border, #e2e8f0); padding: 0 16px 13px;
+}
+.mov-detalleTabla__panel {
+  margin: 0 0 0 clamp(12px, 12%, 155px); padding: 12px 18px;
+  border-left: 3px solid var(--color-primary, #1467c8);
+  border-radius: 0 0 8px 8px; box-sizing: border-box;
+  background: color-mix(in srgb, var(--color-primary, #1467c8) 5%, var(--color-surface, #fff));
+}
+.mov-detalleTabla__panelCabecera {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  color: var(--color-primary-strong, #173452); font-size: 11px; font-weight: 700;
+  letter-spacing: .035em; padding-bottom: 7px;
+}
+.mov-detalleTabla__contador { font-size: 11px; font-weight: 500; letter-spacing: normal; color: var(--color-text-muted, #8896aa); }
+.mov-detalleTabla__items { display: flex; flex-direction: column; gap: 0; min-width: 0; }
+.mov-detalleTabla__item {
+  display: flex; justify-content: space-between; align-items: center; gap: 16px;
+  min-width: 0; padding: 8px 2px; border-top: 1px solid color-mix(in srgb, var(--color-border, #cbd5e1) 70%, transparent);
+}
+.mov-detalleTabla__itemInfo { flex: 1; min-width: 0; }
+.mov-detalleTabla__itemNombre { display: block; font-size: 12px; font-weight: 600; overflow-wrap: anywhere; color: var(--color-primary-strong, #173452); }
+.mov-detalleTabla__itemTotal { flex: 0 0 auto; font-size: 12px; font-weight: 600; white-space: nowrap; color: var(--color-primary-strong, #173452); }
+@media (max-width: 720px) {
+  .mov-detalleTabla__titulo { white-space: normal; overflow-wrap: anywhere; }
+  .mov-detalleTabla__panel { margin-left: 0; padding: 12px; }
+  .mov-detalleTabla__filaExpandida { padding: 0 12px 12px; }
+  .mov-detalleTabla__item { flex-wrap: wrap; }
+  .mov-detalleTabla__itemTotal { margin-left: auto; }
+}

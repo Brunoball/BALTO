@@ -1,3 +1,4 @@
+import DetalleMovimientoTabla, { FilaMovimientoExpandible } from "../_shared/DetalleMovimientoTabla.jsx";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import "../../Global/Global_css/Global_Section.css";
@@ -1202,7 +1203,7 @@ export default function Presupuestos() {
   const filteredRows = useMemo(() => {
     const qq = normalizeSearchText(q);
     if (!qq) return rows;
-    return rows.filter((r) => normalizeSearchText(Object.values(r).join(" | ")).includes(qq));
+    return rows.filter((r) => normalizeSearchText(`${Object.values(r).join(" | ")} | ${getDetallePresupuesto(r)}`).includes(qq));
   }, [q, rows]);
 
   const dateRangeLabel = useMemo(() => {
@@ -1391,9 +1392,11 @@ export default function Presupuestos() {
                 const tieneComprobante = !!idComp;
                 const convertido = !!r.convertido_a_venta;
                 return (
-                  <div key={key} className="mov-gridTable mov-gridTable--row" style={{ gridTemplateColumns: gridCols }} role="row">
+                  <FilaMovimientoExpandible key={key} movimiento={r}>
+                    <div key={key} className="mov-gridTable mov-gridTable--row" style={{ gridTemplateColumns: gridCols }} role="row">
                     {columns.map((c) => {
-                      if (c.key === "acciones") {
+
+                        if (c.key === "acciones") {
                         return (
                           <div key={c.key} className="mov-gridCell mov-gridCell--actions is-center" role="cell" data-label={c.label}>
                             <div className="mov-actionsInline">
@@ -1414,9 +1417,10 @@ export default function Presupuestos() {
                         );
                       }
                       const val = c.render ? c.render(r) : safeText(r[c.key]);
-                      return <div key={c.key} className={["mov-gridCell", c.align === "right" ? "is-right" : "", c.align === "center" ? "is-center" : "", c.strong ? "is-strong" : ""].filter(Boolean).join(" ")} role="cell" data-label={c.label} title={typeof val === "string" ? val : undefined}><span className="mov-ellipsissss">{val}</span></div>;
+                      return <div key={c.key} className={["mov-gridCell", c.key === "detalle" ? "mov-gridCell--detalleVisible" : "", c.align === "right" ? "is-right" : "", c.align === "center" ? "is-center" : "", c.strong ? "is-strong" : ""].filter(Boolean).join(" ")} role="cell" data-label={c.label} title={c.key === "detalle" || c.key === "descripcion" ? undefined : (typeof val === "string" ? val : undefined)}>{c.key === "detalle" ? <DetalleMovimientoTabla movimiento={r} /> : <span className="mov-ellipsissss">{val}</span>}</div>;
                     })}
                   </div>
+                  </FilaMovimientoExpandible>
                 );
               })}
 
