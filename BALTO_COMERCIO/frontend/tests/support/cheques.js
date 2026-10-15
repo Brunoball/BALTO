@@ -277,7 +277,7 @@ export async function createPurchaseWithPortfolioCheque(page, data, cheque) {
 
 export async function editPurchaseToCurrentAccount(page, productName) {
   const row = await searchRow(page, productName, /Buscar por descripción, proveedor/i);
-  await row.getByTitle('Editar').click();
+  await row.locator('button[title="Editar"]').click();
   const dialog = await waitDialog(page, 'Editar compra');
   const mode = dialog.locator('.gm-field').filter({ hasText: 'Forma de compra' }).locator('select').first();
   const selected = await selectFirstNonEmpty(mode, /CUENTA\s*CORRIENTE/i);
@@ -335,7 +335,7 @@ export async function createOtherExpenseWithPortfolioCheque(page, data, cheque) 
 
 export async function replaceChequeWithNonCheque(page, kind, query) {
   const row = await searchRow(page, query, /Buscar por descripción/i);
-  await row.getByTitle('Editar').click();
+  await row.locator('button[title="Editar"]').click();
   const dialog = await waitDialog(page, kind === 'income' ? 'Editar ingreso' : 'Editar egreso');
   await selectSafePaymentMethod(dialog);
   await completeRemainingAmount(dialog);

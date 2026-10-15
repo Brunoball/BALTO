@@ -209,7 +209,8 @@ for (const modulo of MODULOS) {
     expect(celdasAntes).toBeGreaterThan(3);
     // La cabecera y la operación conservan exactamente las mismas columnas.
     await expect(encabezados).toHaveCount(celdasAntes);
-    const panel = page.locator('.mov-detalleTabla__filaExpandida').filter({ hasText: NOMBRE_MANUAL });
+    // El panel permanece montado al cerrar para animar CSS; solo .is-open es visible.
+    const panel = page.locator('.mov-detalleTabla__filaExpandida.is-open').filter({ hasText: NOMBRE_MANUAL });
     await expect(panel).toHaveCount(0);
 
     await boton.click();

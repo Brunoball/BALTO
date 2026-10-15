@@ -190,7 +190,7 @@ export async function createPurchase(page, data) {
 
 export async function editPurchaseQuantity(page, productName, quantity) {
   const row = await searchRow(page, productName, /Buscar por descripción, proveedor/i);
-  await row.getByTitle('Editar').click();
+  await row.getByRole('button', { name: 'Editar', exact: true }).click();
   const dialog = await waitDialog(page, 'Editar compra');
   const itemRow = dialog.locator('.gm-table-body .gm-table-row').first();
   const qty = itemRow.locator('input[type="number"]').first();
@@ -508,7 +508,7 @@ async function searchPurchaseRowStrict(page, productName) {
 
 export async function deletePurchase(page, productName) {
   const row = await searchPurchaseRowStrict(page, productName);
-  await row.getByTitle('Eliminar').click();
+  await row.getByRole('button', { name: 'Eliminar', exact: true }).click();
   const dialog = await waitDialog(page, /Eliminar compra(?: y notas de crédito)?/i);
   const deleteResponsePromise = page.waitForResponse(
     (response) => response.request().method() === 'POST'
@@ -530,7 +530,7 @@ export async function deletePurchase(page, productName) {
 
 export async function deleteSale(page, productName) {
   const row = await searchRow(page, productName, /Buscar por descripción, cliente/i);
-  await row.getByTitle('Eliminar').click();
+  await row.getByRole('button', { name: 'Eliminar', exact: true }).click();
   const dialog = page.getByRole('dialog').filter({ hasText: /Eliminar venta/i }).last();
   await expect(dialog).toBeVisible();
   const confirm = dialog.getByRole('button', { name: /Eliminar todo|^Eliminar$/i }).last();
@@ -605,7 +605,7 @@ export async function convertBudgetToSale(page, productName) {
 
 export async function deleteBudget(page, productName) {
   const row = await searchRow(page, productName, /Buscar por descripción/i);
-  await row.getByTitle('Eliminar').click();
+  await row.getByRole('button', { name: 'Eliminar', exact: true }).click();
   const dialog = await waitDialog(page, 'Eliminar presupuesto');
   await clickSaveAndWait(dialog, /Eliminar/i, { timeout: 45_000 });
 }
@@ -865,7 +865,7 @@ export async function emitOtherIncomeInvoice(page, summaryDialog, description) {
   await expect(summaryDialog).toBeHidden({ timeout: 180_000 });
 
   const row = await searchRow(page, description, /Buscar por descripción/i);
-  await expect(row.getByTitle('Editar')).toHaveCount(0);
+  await expect(row.getByRole('button', { name: 'Editar', exact: true })).toHaveCount(0);
   await expect(row.getByTitle(/Facturar ingreso/i)).toHaveCount(0);
   await expect(row.getByTitle('Ver comprobante')).toBeEnabled();
   return { row, arcaBody, createBody, linkBody };
@@ -901,7 +901,7 @@ export async function expectOtherIncomeCreditTrace(page, query, expected = {}) {
 
 export async function deleteFiscalOtherIncomeThroughTotalCreditNote(page, query) {
   const row = await searchRow(page, query, /Buscar por descripción/i);
-  await row.getByTitle('Eliminar').click();
+  await row.getByRole('button', { name: 'Eliminar', exact: true }).click();
 
   const blockedDialog = await waitDialog(page, /No se puede eliminar todavía/i);
   await expect(blockedDialog).toContainText(/factura emitida en ARCA/i);
@@ -1054,7 +1054,7 @@ export async function createOtherExpense(page, data) {
 export async function editOtherMovement(page, kind, query, newAmount) {
   const placeholder = /Buscar por descripción/i;
   const row = await searchRow(page, query, placeholder);
-  await row.getByTitle('Editar').click();
+  await row.getByRole('button', { name: 'Editar', exact: true }).click();
   const title = kind === 'income' ? 'Editar ingreso' : 'Editar egreso';
   const dialog = await waitDialog(page, title);
   const price = dialog.locator('.gm-table-body .gm-table-row input[inputmode="decimal"]').first();
@@ -1067,7 +1067,7 @@ export async function editOtherMovement(page, kind, query, newAmount) {
 
 export async function deleteOtherMovement(page, kind, query) {
   const row = await searchRow(page, query, /Buscar por descripción/i);
-  await row.getByTitle('Eliminar').click();
+  await row.getByRole('button', { name: 'Eliminar', exact: true }).click();
   const dialog = await waitDialog(page, kind === 'income' ? 'Eliminar ingreso' : 'Eliminar egreso');
   await clickSaveAndWait(dialog, /Eliminar/i, { timeout: 60_000 });
 }
