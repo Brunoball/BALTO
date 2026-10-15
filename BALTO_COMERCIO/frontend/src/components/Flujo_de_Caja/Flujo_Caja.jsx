@@ -481,22 +481,22 @@ export default function Flujo_Caja() {
                     >
                       {/* FECHA */}
                       <div className="mov-gridCell is-center" role="cell" data-label="FECHA">
-                        <span className="mov-ellipsissss">{fmtDateES(r.fecha)}</span>
+                        <span className="mov-ellipsissss" title={String((fmtDateES(r.fecha)) ?? "")}>{fmtDateES(r.fecha)}</span>
                       </div>
 
                       {/* INGRESOS */}
                       <div className="mov-gridCell is-center" role="cell" data-label="INGRESOS">
-                        <span className="fc-num fc-in">{moneyARSAbs(r.ingresos)}</span>
+                        <span className="fc-num fc-in" title={String((moneyARSAbs(r.ingresos)) ?? "")}>{moneyARSAbs(r.ingresos)}</span>
                       </div>
 
                       {/* EGRESOS */}
                       <div className="mov-gridCell is-center" role="cell" data-label="EGRESOS">
-                        <span className="fc-num fc-eg">{moneyARSAbs(r.egresos)}</span>
+                        <span className="fc-num fc-eg" title={String((moneyARSAbs(r.egresos)) ?? "")}>{moneyARSAbs(r.egresos)}</span>
                       </div>
 
                       {/* SALDO */}
                       <div className="mov-gridCell is-center" role="cell" data-label="SALDO">
-                        <span className={`fc-num fc-saldo ${saldoNeg ? "fc-saldo--neg" : "fc-saldo--pos"}`}>
+                        <span className={`fc-num fc-saldo ${saldoNeg ? "fc-saldo--neg" : "fc-saldo--pos"}`} title={String((moneyARSAbs(r.saldo)) ?? "")}>
                           {moneyARSAbs(r.saldo)}
                         </span>
                       </div>

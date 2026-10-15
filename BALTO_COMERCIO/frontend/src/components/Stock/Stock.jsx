@@ -81,7 +81,7 @@ const BARCODE_SCANNER_MIN_LENGTH = 3;
 
 function renderStockChip(value, unidad = "", unidadesMixtas = false) {
   if (unidadesMixtas) {
-    return <span className="mov-chip mov-chip--warn">Unidades mixtas</span>;
+    return <span className="mov-chip mov-chip--warn" title="Unidades mixtas">Unidades mixtas</span>;
   }
 
   const stockNum = Number(value || 0);
@@ -98,7 +98,7 @@ function renderStockChip(value, unidad = "", unidadesMixtas = false) {
 
   const unit = String(unidad || "").trim();
   if (stockNum > 0 && unit) stockLabel = `${stockLabel} ${unit}`;
-  return <span className={stockClass}>{stockLabel}</span>;
+  return <span className={stockClass} title={stockLabel}>{stockLabel}</span>;
 }
 
 const Stock = () => {
@@ -2552,7 +2552,7 @@ const Stock = () => {
         <div className="prod-variantsPanel">
           <div className="prod-variantsPanel__head">
             <div>
-              <strong>Variantes de {prod.nombre}</strong>
+              <strong title={`Variantes de ${prod.nombre}`}>Variantes de {prod.nombre}</strong>
               <span>{loadingVars ? "Cargando variantes..." : `${variantes.length} registradas`}</span>
             </div>
           </div>
@@ -2585,24 +2585,24 @@ const Stock = () => {
                     className={["prod-variantsMiniTable__row", varianteInactiva ? "is-inactive" : ""].join(" ")}
                     key={variant.id_stock_variante}
                   >
-                    <span>
-                      <b>{variant.nombre_variante || `Variante #${variant.id_stock_variante}`}</b>
-                      <small>{variantAttributesLabel(variant)}</small>
-                      <small>{variantCategoriasLabel(variant)}</small>
+                    <span title={String(variant.nombre_variante || `Variante #${variant.id_stock_variante}`)}>
+                      <b title={String(variant.nombre_variante || `Variante #${variant.id_stock_variante}`)}>{variant.nombre_variante || `Variante #${variant.id_stock_variante}`}</b>
+                      <small title={variantAttributesLabel(variant)}>{variantAttributesLabel(variant)}</small>
+                      <small title={variantCategoriasLabel(variant)}>{variantCategoriasLabel(variant)}</small>
                       {(variant.precios_extra || []).length > 0 ? (
-                        <small className="prod-variantExtraPrices">
+                        <small className="prod-variantExtraPrices" title={(variant.precios_extra || []).map((item) => `${item.tipo_nombre || `Precio ${item.id_tipo_precio_stock}`}: ${formatMoney(item.precio)}`).join(" · ")}>
                           {(variant.precios_extra || [])
                             .map((item) => `${item.tipo_nombre || `Precio ${item.id_tipo_precio_stock}`}: ${formatMoney(item.precio)}`)
                             .join(" · ")}
                         </small>
                       ) : null}
                     </span>
-                    <span className="prod-sku">{variant.sku || "—"}</span>
-                    <span>{renderStockChip(variant.stock, variant.unidad_abreviatura || variant.unidad)}</span>
-                    <span>{formatMoney(variant.precio_costo)}</span>
-                    <span>{formatMoney(variant.precio)}</span>
-                    <span className="prod-promo">{formatMoney(variant.precio_promo)}</span>
-                    <span>
+                    <span className="prod-sku" title={String(variant.sku || "—")}>{variant.sku || "—"}</span>
+                    <span title={`${Number(variant.stock || 0)} ${String(variant.unidad_abreviatura || variant.unidad || "").trim()}`.trim()}>{renderStockChip(variant.stock, variant.unidad_abreviatura || variant.unidad)}</span>
+                    <span title={formatMoney(variant.precio_costo)}>{formatMoney(variant.precio_costo)}</span>
+                    <span title={formatMoney(variant.precio)}>{formatMoney(variant.precio)}</span>
+                    <span className="prod-promo" title={formatMoney(variant.precio_promo)}>{formatMoney(variant.precio_promo)}</span>
+                    <span title={varianteInactiva ? "Dada de baja" : "Activa"}>
                       {varianteInactiva ? (
                         <span className="prod-statusChip prod-statusChip--inactive">Dada de baja</span>
                       ) : (
@@ -2993,6 +2993,7 @@ const Stock = () => {
                       const intentoImagen = Number(reintentosImagenes?.[productoId] || 0);
                       const imagenRota = !usandoImagenTemporal && !!erroresImagenes[productoId];
                       const productoInactivo = Number(prodConImagen?.activo ?? 1) === 0;
+                      const nombreProducto = String(prodConImagen.nombre ?? "").trim();
                       const totalVariantesProducto = Number(prodConImagen?.cantidad_variantes_total ?? prodConImagen?.cantidad_variantes ?? 0);
                       const variantesActivasProducto = Number(prodConImagen?.cantidad_variantes_activas ?? prodConImagen?.cantidad_variantes ?? 0);
                       const variantesInactivasProducto = Number(prodConImagen?.cantidad_variantes_inactivas ?? 0);
@@ -3027,7 +3028,8 @@ const Stock = () => {
                           role="row"
                           tabIndex={tieneVariantesParaMostrar ? 0 : undefined}
                           aria-expanded={tieneVariantesParaMostrar ? !!variantesAbiertas[productoId] : undefined}
-                          title={tieneVariantesParaMostrar ? (variantesAbiertas[productoId] ? "Ocultar variantes" : "Ver variantes") : undefined}
+                          aria-label={tieneVariantesParaMostrar ? `${variantesAbiertas[productoId] ? "Ocultar" : "Ver"} variantes de ${nombreProducto}` : undefined}
+                          title={nombreProducto}
                           onClick={() => {
                             if (tieneVariantesParaMostrar) toggleVariantesProducto(prodConImagen);
                           }}
@@ -3039,14 +3041,15 @@ const Stock = () => {
                             toggleVariantesProducto(prodConImagen);
                           }}
                         >
-                          <div className="mov-gridCell is-strong" role="cell" data-label="PRODUCTO">
-                            <div className="prod-productCell">
-                              <div className="prod-thumb">
+                          <div className="mov-gridCell is-strong" role="cell" data-label="PRODUCTO" title={nombreProducto}>
+                            <div className="prod-productCell" title={nombreProducto}>
+                              <div className="prod-thumb" title={nombreProducto}>
                                 {imageUrl && !imagenRota ? (
                                   <img
                                     key={`${productoId}-${archivoId}-${versionImagenPorProducto[productoId] || 0}-${downloadTokenVersion}-${intentoImagen}-${mostrarDadosDeBaja ? "baja" : "alta"}`}
                                     src={imageUrl}
                                     alt={prodConImagen.nombre}
+                                    title={nombreProducto}
                                     className="prod-thumb__img"
                                     loading="lazy"
                                     decoding="async"
@@ -3076,16 +3079,19 @@ const Stock = () => {
                                     }}
                                   />
                                 ) : (
-                                  <span className="prod-thumb__placeholder">
+                                  <span className="prod-thumb__placeholder" title={nombreProducto}>
                                     <FontAwesomeIcon icon={faBoxOpen} />
                                   </span>
                                 )}
                               </div>
 
-                              <span className="mov-ellipsissss">{prodConImagen.nombre}</span>
+                              <span className="mov-ellipsissss" title={nombreProducto}>{prodConImagen.nombre}</span>
                               {tieneVariantesParaMostrar ? (
-                                <span className="prod-variantBadge prod-variantBadge--count">
-                                  <span>{totalVariantesProducto || variantesActivasProducto || 0}</span>
+                                <span
+                                  className="prod-variantBadge prod-variantBadge--count"
+                                  title={variantesAbiertas[productoId] ? "Ocultar variantes" : "Ver variantes"}
+                                >
+                                  <span title={variantesAbiertas[productoId] ? "Ocultar variantes" : "Ver variantes"}>{totalVariantesProducto || variantesActivasProducto || 0}</span>
                                   <span className="prod-variantBadge__label">variantes</span>
                                   {!mostrarDadosDeBaja && variantesInactivasProducto > 0 ? (
                                     <span className="prod-variantBadge__detail">
@@ -3094,15 +3100,24 @@ const Stock = () => {
                                   ) : null}
                                 </span>
                               ) : null}
-                              {productoInactivo ? <span className="prod-variantBadge prod-variantBadge--inactive">Dado de baja</span> : null}
+                              {productoInactivo ? <span className="prod-variantBadge prod-variantBadge--inactive" title="Dado de baja">Dado de baja</span> : null}
                             </div>
                           </div>
 
-                          <div className="mov-gridCell is-center" role="cell" data-label="SKU">
-                            <span className="mov-ellipsissss prod-sku">{prodConImagen.sku || "—"}</span>
+                          <div className="mov-gridCell is-center" role="cell" data-label="SKU" title={String(prodConImagen.sku || "—")}>
+                            <span className="mov-ellipsissss prod-sku" title={String((prodConImagen.sku || "—") ?? "")}>{prodConImagen.sku || "—"}</span>
                           </div>
 
-                          <div className="mov-gridCell is-center" role="cell" data-label="STOCK">
+                          <div
+                            className="mov-gridCell is-center"
+                            role="cell"
+                            data-label="STOCK"
+                            title={Number(prodConImagen.unidades_variantes_distintas || 0) > 1
+                              ? "Unidades mixtas"
+                              : Number(prodConImagen.stock || 0) > 0
+                                ? `${new Intl.NumberFormat("es-AR", { maximumFractionDigits: 3 }).format(Number(prodConImagen.stock || 0))}${String(prodConImagen.unidad_abreviatura || prodConImagen.unidad || "").trim() ? ` ${String(prodConImagen.unidad_abreviatura || prodConImagen.unidad).trim()}` : ""}`
+                                : "Sin stock"}
+                          >
                             {renderStockChip(
                               prodConImagen.stock,
                               prodConImagen.unidad_abreviatura || prodConImagen.unidad,
@@ -3114,24 +3129,27 @@ const Stock = () => {
                             className="mov-gridCell is-right"
                             role="cell"
                             data-label="PRECIO COSTO"
+                            title={String(formatMoney(prodConImagen.precio_costo))}
                           >
-                            <span className="mov-ellipsissss">{formatMoney(prodConImagen.precio_costo)}</span>
+                            <span className="mov-ellipsissss" title={String((formatMoney(prodConImagen.precio_costo)) ?? "")}>{formatMoney(prodConImagen.precio_costo)}</span>
                           </div>
 
                           <div
                             className="mov-gridCell is-right"
                             role="cell"
                             data-label="PRECIO VENTA"
+                            title={String(formatMoney(prodConImagen.precio))}
                           >
-                            <span className="mov-ellipsissss">{formatMoney(prodConImagen.precio)}</span>
+                            <span className="mov-ellipsissss" title={String((formatMoney(prodConImagen.precio)) ?? "")}>{formatMoney(prodConImagen.precio)}</span>
                           </div>
 
                           <div
                             className="mov-gridCell is-right"
                             role="cell"
                             data-label="PRECIO PROMO"
+                            title={String(formatMoney(prodConImagen.precio_promo))}
                           >
-                            <span className="mov-ellipsissss prod-promo">
+                            <span className="mov-ellipsissss prod-promo" title={String((formatMoney(prodConImagen.precio_promo)) ?? "")}>
                               {formatMoney(prodConImagen.precio_promo)}
                             </span>
                           </div>
@@ -3140,6 +3158,7 @@ const Stock = () => {
                             className="mov-gridCell mov-gridCell--actions is-center"
                             role="cell"
                             data-label="ACCIONES"
+                            title=""
                           >
                             <div className="mov-actionsInline">
                               <button

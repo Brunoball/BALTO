@@ -677,11 +677,11 @@ export default function ConfiguracionUsuarios() {
               <table className="cfg-users-table">
                 <thead>
                   <tr>
-                    <th>Usuario</th>
-                    <th>Rol</th>
-                    <th>Email</th>
-                    <th>Estado</th>
-                    <th className="cfg-users-actions-th">Acciones</th>
+                    <th title="Usuario">Usuario</th>
+                    <th title="Rol">Rol</th>
+                    <th title="Email">Email</th>
+                    <th title="Estado">Estado</th>
+                    <th className="cfg-users-actions-th" title="Acciones">Acciones</th>
                   </tr>
                 </thead>
 
@@ -696,7 +696,7 @@ export default function ConfiguracionUsuarios() {
                       <tr key={idUsuario || u.usuario} className={actual ? "cfg-users-current-row" : ""}>
                         <td data-label="Usuario">
                           <div className="cfg-users-userCell">
-                            <span>{u.usuario}</span>
+                            <span title={String((u.usuario) ?? "")}>{u.usuario}</span>
                             {actual && (
                               <span className="cfg-users-current-badge" title="Usuario actual">
                                 Vos
@@ -705,12 +705,12 @@ export default function ConfiguracionUsuarios() {
                           </div>
                         </td>
 
-                        <td data-label="Rol">{rol?.nombre || rol?.tipo_rol || u.rol_nombre || u.tipo_rol || u.rol || "-"}</td>
+                        <td data-label="Rol" title={String((rol?.nombre || rol?.tipo_rol || u.rol_nombre || u.tipo_rol || u.rol || "-") ?? "")}>{rol?.nombre || rol?.tipo_rol || u.rol_nombre || u.tipo_rol || u.rol || "-"}</td>
 
-                        <td data-label="Email">{u.email_recuperacion || "-"}</td>
+                        <td data-label="Email" title={String((u.email_recuperacion || "-") ?? "")}>{u.email_recuperacion || "-"}</td>
 
                         <td data-label="Estado">
-                          <span className={`cfg-users-pill ${activo ? "is-active" : "is-inactive"}`}>
+                          <span className={`cfg-users-pill ${activo ? "is-active" : "is-inactive"}`} title={String((activo ? "Activo" : "Inactivo") ?? "")}>
                             {activo ? "Activo" : "Inactivo"}
                           </span>
                         </td>

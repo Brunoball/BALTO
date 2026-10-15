@@ -479,7 +479,7 @@ const Echeqs_Cartera = () => {
                             className="mov-gridCell mov-gridCell--actions is-center"
                             role="cell"
                             data-label={col.label}
-                          >
+                           title={String((val) ?? "")}>
                             {val}
                           </div>
                         );
@@ -500,7 +500,7 @@ const Echeqs_Cartera = () => {
                           data-label={col.label}
                           title={typeof val === "string" ? val : undefined}
                         >
-                          <span className="mov-ellipsissss">{val}</span>
+                          <span className="mov-ellipsissss" title={String((val) ?? "")}>{val}</span>
                         </div>
                       );
                     })}

@@ -1601,12 +1601,12 @@ export default function ModalPagarRecibos({
               <div className="gm-movement-layout gm-receipt-pay-layout">
                 <section className="gm-movement-main gm-table gm-receipt-table">
                   <div className={`gm-table-head gm-receipt-table-head ${tbodyHasScroll ? "gm-table-head--body-scroll" : ""}`}>
-                    <div className="gm-table-th gm-receipt-th gm-receipt-th--sel gm-table-cell--center">Sel</div>
+                    <div className="gm-table-th gm-receipt-th gm-receipt-th--sel gm-table-cell--center" title="Sel">Sel</div>
                     <div className="gm-table-th gm-receipt-th">Fecha</div>
                     <div className="gm-table-th gm-receipt-th gm-receipt-th--desc">Descripción</div>
-                    <div className="gm-table-th gm-receipt-th gm-receipt-th--center gm-table-cell--center">Estado</div>
-                    <div className="gm-table-th gm-receipt-th gm-receipt-th--right gm-table-cell--right">Monto</div>
-                    <div className="gm-table-th gm-receipt-th gm-receipt-th--info gm-table-cell--center">Info</div>
+                    <div className="gm-table-th gm-receipt-th gm-receipt-th--center gm-table-cell--center" title="Estado">Estado</div>
+                    <div className="gm-table-th gm-receipt-th gm-receipt-th--right gm-table-cell--right" title="Monto">Monto</div>
+                    <div className="gm-table-th gm-receipt-th gm-receipt-th--info gm-table-cell--center" title="Info">Info</div>
                   </div>
 
                   <div
@@ -1666,7 +1666,7 @@ export default function ModalPagarRecibos({
                               />
                             </label>
                           </div>
-                          <div className="gm-table-cell gm-receipt-td">
+                          <div className="gm-table-cell gm-receipt-td" title={String((safeText(formatFechaDMY(r?.fecha))) ?? "")}>
                             {safeText(formatFechaDMY(r?.fecha))}
                           </div>
                           <div
@@ -1678,7 +1678,7 @@ export default function ModalPagarRecibos({
                           <div className="gm-table-cell gm-receipt-td gm-receipt-td--center gm-table-cell--center">
                             <EstadoChip row={r} pagado={pagado} />
                           </div>
-                          <div className="gm-table-cell gm-receipt-td gm-receipt-td--right gm-table-cell--right gm-table-cell--mono">
+                          <div className="gm-table-cell gm-receipt-td gm-receipt-td--right gm-table-cell--right gm-table-cell--mono" title={String((moneyARS(saldoPendiente)) ?? "")}>
                             {moneyARS(saldoPendiente)}
                           </div>
                           <div className="gm-table-cell gm-receipt-td gm-receipt-td--info gm-table-cell--center" onClick={(e) => e.stopPropagation()}>

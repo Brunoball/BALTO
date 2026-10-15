@@ -672,7 +672,7 @@ export default function ModalModelosPresupuesto({ open, lists, onClose, onToast,
                             {IVA_OPTIONS.map((iva) => <option key={iva} value={iva}>{iva} %</option>)}
                           </select>
                         </div>
-                        <div className="gm-table-cell gm-table-cell--right gm-table-cell--mono gm-table-cell--total">
+                        <div className="gm-table-cell gm-table-cell--right gm-table-cell--mono gm-table-cell--total" title={String((moneyARS(totalRow)) ?? "")}>
                           {moneyARS(totalRow)}
                         </div>
                         <div className="gm-table-cell gm-table-cell--center">

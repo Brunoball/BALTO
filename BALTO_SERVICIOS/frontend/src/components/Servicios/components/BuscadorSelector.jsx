@@ -70,7 +70,7 @@ export default function BuscadorSelector({
         aria-expanded={open}
         onClick={() => !disabled && setOpen((prev) => !prev)}
       >
-        <span>{selected ? getLabel(selected) : placeholder}</span>
+        <span title={String(selected ? getLabel(selected) : placeholder)}>{selected ? getLabel(selected) : placeholder}</span>
       </button>
       <span className="gm-label gm-label--up">{label}</span>
 
@@ -106,6 +106,7 @@ export default function BuscadorSelector({
                     role="option"
                     aria-selected={active}
                     className={active ? "is-selected" : ""}
+                    title={String(getLabel(row) ?? "")}
                     onClick={() => choose(row)}
                   >
                     {getLabel(row)}

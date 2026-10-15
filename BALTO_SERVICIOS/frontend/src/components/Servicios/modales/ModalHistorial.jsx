@@ -160,7 +160,7 @@ export default function ModalHistorial({ open, kind, item, rows = [], loading, o
           <>
         <header className="gm-modal-header">
           <div className="gm-modal-head-icon"><FontAwesomeIcon icon={faClockRotateLeft} /></div>
-          <div className="gm-modal-head-left"><h2 className="gm-modal-title">{title}</h2><p className="gm-modal-subtitle">{item?.nombre || "Registro"} · consultá la evolución de sus valores.</p></div>
+          <div className="gm-modal-head-left"><h2 className="gm-modal-title">{title}</h2><p className="gm-modal-subtitle" title={`${item?.nombre || "Registro"} · consultá la evolución de sus valores.`}>{item?.nombre || "Registro"} · consultá la evolución de sus valores.</p></div>
           <button type="button" className="gm-modal-close" onClick={onClose} aria-label="Cerrar">✕</button>
         </header>
         <div className="gm-modal-content servicios-modal__content servicios-service-content servicios-history-content">
@@ -175,7 +175,7 @@ export default function ModalHistorial({ open, kind, item, rows = [], loading, o
                   <div className="servicios-history-summaryCard__icon" aria-hidden="true"><FontAwesomeIcon icon={metric.icon} /></div>
                   <div className="servicios-history-summaryCard__body">
                     <span className="servicios-history-summaryCard__label">{metric.label}</span>
-                    <strong className="servicios-history-summaryCard__value">
+                    <strong className="servicios-history-summaryCard__value" title={String(metric.value ?? "—")}>
                       {esHistorialMaterial && loading && (metric.label === "Cambios registrados" || metric.label === "Movimientos")
                         ? <span className="servicios-history-summaryValueSkeleton" aria-label="Cargando cantidad de cambios" />
                         : metric.value}
@@ -232,12 +232,12 @@ export default function ModalHistorial({ open, kind, item, rows = [], loading, o
                     const rowDate = row.fecha || row.created_at;
                     return (
                       <article className={`servicios-history-row servicios-history-row--${kind}`} key={`${kind}-${rowId}-${index}`}>
-                        <div className="servicios-history-row__date"><span className="servicios-history-index">{index + 1}</span><div><strong>{fecha(rowDate)}</strong><small>Registro #{rowId}</small></div></div>
+                        <div className="servicios-history-row__date"><span className="servicios-history-index">{index + 1}</span><div><strong title={fecha(rowDate)}>{fecha(rowDate)}</strong><small>Registro #{rowId}</small></div></div>
                         <div className="servicios-history-row__values">
                           {kind === "articulo" && <><div><span>Costo</span><strong>{money(row.costo_unitario)}</strong></div><div><span>Precio de venta</span><strong>{row.precio_venta == null ? "—" : money(row.precio_venta)}</strong></div><div><span>IVA</span><strong>{Number(row.iva_pct || 0).toLocaleString("es-AR")} %</strong></div></>}
                           {kind === "servicio" && <><div><span>Precio de venta</span><strong>{money(row.precio_venta)}</strong></div><div><span>IVA</span><strong>{Number(row.iva_pct || 0).toLocaleString("es-AR")} %</strong></div></>}
-                          {kind === "trabajador" && <><div><span>Modalidad</span><strong>{modalidadLabel[row.modalidad_pago] || row.modalidad_pago || "—"}</strong></div><div><span>Tarifa</span><strong>{money(row.monto_periodo)}</strong><small>{numero(row.horas_periodo)} h equivalentes</small></div><div><span>Costo por hora</span><strong>{money(row.costo_hora)}</strong></div></>}
-                          {kind === "stock" && <><div><span>Operación</span><strong>{row.operacion || "—"}</strong></div><div><span>Anterior</span><strong>{stock(row.cantidad_anterior)}</strong></div><div><span>Movimiento</span><strong>{stock(row.cantidad_movimiento)}</strong></div><div><span>Nuevo stock</span><strong>{stock(row.cantidad_nueva)}</strong></div><div className="servicios-history-value--reason"><span>Motivo</span><strong>{motivo(row.motivo)}</strong></div></>}
+                          {kind === "trabajador" && <><div><span>Modalidad</span><strong title={String(modalidadLabel[row.modalidad_pago] || row.modalidad_pago || "—")}>{modalidadLabel[row.modalidad_pago] || row.modalidad_pago || "—"}</strong></div><div><span>Tarifa</span><strong>{money(row.monto_periodo)}</strong><small>{numero(row.horas_periodo)} h equivalentes</small></div><div><span>Costo por hora</span><strong>{money(row.costo_hora)}</strong></div></>}
+                          {kind === "stock" && <><div><span>Operación</span><strong title={String(row.operacion || "—")}>{row.operacion || "—"}</strong></div><div><span>Anterior</span><strong>{stock(row.cantidad_anterior)}</strong></div><div><span>Movimiento</span><strong>{stock(row.cantidad_movimiento)}</strong></div><div><span>Nuevo stock</span><strong>{stock(row.cantidad_nueva)}</strong></div><div className="servicios-history-value--reason"><span>Motivo</span><strong title={motivo(row.motivo)}>{motivo(row.motivo)}</strong></div></>}
                         </div>
                       </article>
                     );

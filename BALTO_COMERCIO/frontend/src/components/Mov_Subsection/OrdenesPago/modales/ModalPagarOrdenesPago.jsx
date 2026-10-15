@@ -1280,12 +1280,12 @@ export default function ModalPagarOrdenesPago({
                 {/* Tabla de deudas */}
                 <section className="gm-movement-main gm-table gm-order-table">
                   <div className={`gm-order-table-head gm-table-head ${tbodyHasScroll ? "gm-table-head--body-scroll" : ""}`}>
-                    <div className="gm-order-th gm-table-th gm-order-th--sel gm-table-cell--center">Sel</div>
+                    <div className="gm-order-th gm-table-th gm-order-th--sel gm-table-cell--center" title="Sel">Sel</div>
                     <div className="gm-order-th gm-table-th">Fecha</div>
                     <div className="gm-order-th gm-table-th gm-order-th--desc">Descripción</div>
-                    <div className="gm-order-th gm-table-th gm-order-th--center gm-table-cell--center">Estado</div>
-                    <div className="gm-order-th gm-table-th gm-order-th--right gm-table-cell--right">Monto</div>
-                    <div className="gm-order-th gm-table-th gm-order-th--info gm-table-cell--center">Info</div>
+                    <div className="gm-order-th gm-table-th gm-order-th--center gm-table-cell--center" title="Estado">Estado</div>
+                    <div className="gm-order-th gm-table-th gm-order-th--right gm-table-cell--right" title="Monto">Monto</div>
+                    <div className="gm-order-th gm-table-th gm-order-th--info gm-table-cell--center" title="Info">Info</div>
                   </div>
 
                   <div
@@ -1330,7 +1330,7 @@ export default function ModalPagarOrdenesPago({
                             </label>
                           </div>
 
-                          <div className="gm-order-td gm-table-cell">
+                          <div className="gm-order-td gm-table-cell" title={String((safeText(formatFechaDMY(r?.fecha))) ?? "")}>
                             {safeText(formatFechaDMY(r?.fecha))}
                           </div>
 
@@ -1345,7 +1345,7 @@ export default function ModalPagarOrdenesPago({
                             <EstadoChip row={r} pagado={pagado} />
                           </div>
 
-                          <div className="gm-order-td gm-table-cell gm-order-td--right gm-table-cell--right gm-order-td--mono gm-table-cell--mono">
+                          <div className="gm-order-td gm-table-cell gm-order-td--right gm-table-cell--right gm-order-td--mono gm-table-cell--mono" title={String((moneyARS(saldoPendiente)) ?? "")}>
                             {moneyARS(saldoPendiente)}
                           </div>
 

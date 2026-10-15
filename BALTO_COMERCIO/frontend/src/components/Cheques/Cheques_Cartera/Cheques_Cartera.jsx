@@ -540,7 +540,7 @@ const Cheques_Cartera = () => {
                           data-label={c.label}
                           title={typeof val === "string" ? val : undefined}
                         >
-                          <span className="mov-ellipsissss">{val}</span>
+                          <span className="mov-ellipsissss" title={String((val) ?? "")}>{val}</span>
                         </div>
                       );
                     })}

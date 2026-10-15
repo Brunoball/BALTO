@@ -1450,8 +1450,8 @@ export default function ModalNuevoEgreso({
                           </select>
                         </div>
 
-                        <div className="gm-table-cell gm-table-cell--right gm-table-cell--mono gm-table-cell--soft">{moneyARS(r.ivaMonto)}</div>
-                        <div className="gm-table-cell gm-table-cell--right gm-table-cell--mono gm-table-cell--total">{moneyARS(r.total)}</div>
+                        <div className="gm-table-cell gm-table-cell--right gm-table-cell--mono gm-table-cell--soft" title={String((moneyARS(r.ivaMonto)) ?? "")}>{moneyARS(r.ivaMonto)}</div>
+                        <div className="gm-table-cell gm-table-cell--right gm-table-cell--mono gm-table-cell--total" title={String((moneyARS(r.total)) ?? "")}>{moneyARS(r.total)}</div>
                         <div className="gm-table-cell gm-table-cell--center" id="delete_cell">
                           <button type="button" className="gm-row-delete" onClick={() => removeRow(r.id)} disabled={saving} title="Eliminar fila">
                             ×

@@ -1544,7 +1544,7 @@ export default function ModalAsignarPresupuestoVenta({
                         <div key={it.id} className="gm-table-row dc-asignar-product-row">
                           <div className="gm-table-cell gm-table-cell--detail">
                             <div className="gm-cell-input dc-asignar-readonly-input dc-asignar-readonly-input--detalle">
-                              <span>{safeText(it.descripcion)}</span>
+                              <span title={String((safeText(it.descripcion)) ?? "")}>{safeText(it.descripcion)}</span>
                               {it.codigo ? <small>Código: {it.codigo}</small> : null}
                             </div>
                           </div>
@@ -1579,10 +1579,10 @@ export default function ModalAsignarPresupuestoVenta({
                             />
                           </div>
 
-                          <div className="gm-table-cell gm-table-cell--right gm-table-cell--mono gm-table-cell--soft">
+                          <div className="gm-table-cell gm-table-cell--right gm-table-cell--mono gm-table-cell--soft" title={String((moneyARS(itemIvaMonto)) ?? "")}>
                             {moneyARS(itemIvaMonto)}
                           </div>
-                          <div className="gm-table-cell gm-table-cell--right gm-table-cell--mono gm-table-cell--total">
+                          <div className="gm-table-cell gm-table-cell--right gm-table-cell--mono gm-table-cell--total" title={String((moneyARS(itemTotal)) ?? "")}>
                             {moneyARS(itemTotal)}
                           </div>
                           <div className="gm-table-cell gm-table-cell--center" id="delete_cell">

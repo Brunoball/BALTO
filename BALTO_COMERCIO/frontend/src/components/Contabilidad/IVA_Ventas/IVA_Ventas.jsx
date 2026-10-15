@@ -524,11 +524,11 @@ export default function IVAVentas() {
                   style={{ gridTemplateColumns: gridCols }}
                   role="row"
                 >
-                  <div className="mov-gridCell" data-label="Fecha" role="cell">{formatFechaDMY(item.fecha)}</div>
-                  <div className="mov-gridCell" data-label="Cliente" role="cell">{getCliente(item)}</div>
-                  <div className="mov-gridCell is-right" data-label="Subtotal" role="cell">{formatCurrency(item.subtotal)}</div>
-                  <div className="mov-gridCell is-right" data-label="IVA" role="cell">{formatCurrency(getIva(item))}</div>
-                  <div className="mov-gridCell is-right is-strong" data-label="Total" role="cell">{formatCurrency(item.total)}</div>
+                  <div className="mov-gridCell" data-label="Fecha" role="cell" title={String((formatFechaDMY(item.fecha)) ?? "")}>{formatFechaDMY(item.fecha)}</div>
+                  <div className="mov-gridCell" data-label="Cliente" role="cell" title={String((getCliente(item)) ?? "")}>{getCliente(item)}</div>
+                  <div className="mov-gridCell is-right" data-label="Subtotal" role="cell" title={String((formatCurrency(item.subtotal)) ?? "")}>{formatCurrency(item.subtotal)}</div>
+                  <div className="mov-gridCell is-right" data-label="IVA" role="cell" title={String((formatCurrency(getIva(item))) ?? "")}>{formatCurrency(getIva(item))}</div>
+                  <div className="mov-gridCell is-right is-strong" data-label="Total" role="cell" title={String((formatCurrency(item.total)) ?? "")}>{formatCurrency(item.total)}</div>
                 </div>
               ))
             )}
@@ -562,11 +562,11 @@ export default function IVAVentas() {
             style={{ gridTemplateColumns: gridCols }}
             role="row"
           >
-            <div className="mov-gridCell is-strong" role="cell">Totales</div>
+            <div className="mov-gridCell is-strong" role="cell" title="Totales">Totales</div>
             <div className="mov-gridCell" role="cell" />
-            <div className="mov-gridCell is-right is-strong" role="cell">{formatCurrency(totales.subtotal)}</div>
-            <div className="mov-gridCell is-right is-strong" role="cell">{formatCurrency(totales.iva)}</div>
-            <div className="mov-gridCell is-right is-strong" role="cell">{formatCurrency(totales.total)}</div>
+            <div className="mov-gridCell is-right is-strong" role="cell" title={String((formatCurrency(totales.subtotal)) ?? "")}>{formatCurrency(totales.subtotal)}</div>
+            <div className="mov-gridCell is-right is-strong" role="cell" title={String((formatCurrency(totales.iva)) ?? "")}>{formatCurrency(totales.iva)}</div>
+            <div className="mov-gridCell is-right is-strong" role="cell" title={String((formatCurrency(totales.total)) ?? "")}>{formatCurrency(totales.total)}</div>
           </div>
         )}
       </section>

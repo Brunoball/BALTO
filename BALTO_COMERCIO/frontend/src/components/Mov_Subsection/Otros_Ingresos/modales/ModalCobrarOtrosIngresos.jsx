@@ -590,12 +590,12 @@ export default function ModalCobrarOtrosIngresos({
                       <span className="gm-inline-check__box" aria-hidden="true" />
                     </label>
                   </div>
-                  <div className="gm-income-td gm-table-cell">{safeText(formatFechaDMY(row?.fecha))}</div>
+                  <div className="gm-income-td gm-table-cell" title={String((safeText(formatFechaDMY(row?.fecha))) ?? "")}>{safeText(formatFechaDMY(row?.fecha))}</div>
                   <div className="gm-table-cell gm-income-td gm-income-td--desc gm-table-cell--detail" title={safeText(concepto)}>{concepto}</div>
                   <div className="gm-table-cell gm-income-td gm-income-td--center gm-table-cell--center">
                     <EstadoChipIngreso row={row} />
                   </div>
-                  <div className="gm-table-cell gm-income-td gm-income-td--right gm-income-td--mono gm-table-cell--right gm-table-cell--mono">{moneyARS(saldo)}</div>
+                  <div className="gm-table-cell gm-income-td gm-income-td--right gm-income-td--mono gm-table-cell--right gm-table-cell--mono" title={String((moneyARS(saldo)) ?? "")}>{moneyARS(saldo)}</div>
                   <div className="gm-income-td gm-income-td--info gm-table-cell" onClick={(e) => e.stopPropagation()}>
                     <button
                       type="button"

@@ -1679,12 +1679,12 @@ export default function ModalEditarIngreso({
                           </div>
 
                           {/* IVA $ */}
-                          <div className="gm-table-cell gm-table-cell--right gm-table-cell--mono gm-table-cell--soft">
+                          <div className="gm-table-cell gm-table-cell--right gm-table-cell--mono gm-table-cell--soft" title={String((moneyARS(it.iva_monto)) ?? "")}>
                             {moneyARS(it.iva_monto)}
                           </div>
 
                           {/* Total */}
-                          <div className="gm-table-cell gm-table-cell--right gm-table-cell--mono gm-table-cell--total">
+                          <div className="gm-table-cell gm-table-cell--right gm-table-cell--mono gm-table-cell--total" title={String((moneyARS(it.total)) ?? "")}>
                             {moneyARS(it.total)}
                           </div>
 

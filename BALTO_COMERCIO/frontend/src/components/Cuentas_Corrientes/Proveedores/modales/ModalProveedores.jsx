@@ -1232,9 +1232,9 @@ export default function ModalProveedores({
               <div className="cc-cliente-table cc-entity-list-table">
                 <div className="cc-cliente-table__desktopHead">
                   <div className="cc-grid-header">
-                    <div className="cc-grid-header__cell">Proveedor</div>
-                    <div className="cc-grid-header__cell">Estado</div>
-                    <div className="cc-grid-header__cell">Acciones</div>
+                    <div className="cc-grid-header__cell" title="Proveedor">Proveedor</div>
+                    <div className="cc-grid-header__cell" title="Estado">Estado</div>
+                    <div className="cc-grid-header__cell" title="Acciones">Acciones</div>
                   </div>
                 </div>
 
@@ -1292,7 +1292,7 @@ export default function ModalProveedores({
                                     ? "cc-status-badge--active"
                                     : "cc-status-badge--inactive"
                                 }`}
-                              >
+                               title={String((activo ? "Activo" : "Inactivo") ?? "")}>
                                 {activo ? "Activo" : "Inactivo"}
                               </span>
                             </div>

@@ -682,7 +682,7 @@ const ModalReportesStock = ({ open, onClose, onToast, categorias = [] }) => {
                     <div className="rs-table__body" role="rowgroup">
                       {rows.length === 0 ? (
                         <div className="rs-table__empty" role="row">
-                          <div role="cell">No hay datos que cumplan los filtros seleccionados.</div>
+                          <div role="cell" title="No hay datos que cumplan los filtros seleccionados.">No hay datos que cumplan los filtros seleccionados.</div>
                         </div>
                       ) : rows.map((row, rowIndex) => {
                         const indicator = getRowIndicator(row, reportColumns);

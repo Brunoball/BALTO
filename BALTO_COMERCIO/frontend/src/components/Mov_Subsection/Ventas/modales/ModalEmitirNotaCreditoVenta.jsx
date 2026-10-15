@@ -787,9 +787,9 @@ export default function ModalEmitirNotaCreditoVenta({
                             return (
                               <div className="gm-table-row" role="row" key={item.id_item_origen}>
                                 <div className="gm-table-cell gm-table-cell--detail" role="cell" title={item.descripcion}>
-                                  <strong className="ncv-product-name">{item.descripcion}</strong>
+                                  <strong className="ncv-product-name" title={String((item.descripcion) ?? "")}>{item.descripcion}</strong>
                                 </div>
-                                <div className="gm-table-cell gm-table-cell--center gm-table-cell--mono" role="cell">
+                                <div className="gm-table-cell gm-table-cell--center gm-table-cell--mono" role="cell" title={String((item.disponible) ?? "")}>
                                   {item.disponible}
                                 </div>
                                 <div className="gm-table-cell gm-table-cell--center" role="cell">
@@ -830,7 +830,7 @@ export default function ModalEmitirNotaCreditoVenta({
                                     <span className="gm-inline-check__box" aria-hidden="true" />
                                   </label>
                                 </div>
-                                <div className="gm-table-cell gm-table-cell--right gm-table-cell--total" role="cell">
+                                <div className="gm-table-cell gm-table-cell--right gm-table-cell--total" role="cell" title={String((money(seleccionado?.total || 0)) ?? "")}>
                                   {money(seleccionado?.total || 0)}
                                 </div>
                               </div>

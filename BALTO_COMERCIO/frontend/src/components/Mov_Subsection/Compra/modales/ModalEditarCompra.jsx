@@ -2239,7 +2239,7 @@ export default function ModalEditarCompra({
                                     handleSelectDetalle(d);
                                   }}
                                 >
-                                  <span className="cmp-suggest-text">{d.nombre}</span>
+                                  <span className="cmp-suggest-text" title={String((d.nombre) ?? "")}>{d.nombre}</span>
                                 </li>
                               );
                             })}
@@ -2283,10 +2283,10 @@ export default function ModalEditarCompra({
                       </select>
                     </div>
 
-                    <div className="gm-table-cell gm-table-cell--right gm-table-cell--mono gm-table-cell--soft">
+                    <div className="gm-table-cell gm-table-cell--right gm-table-cell--mono gm-table-cell--soft" title={String((moneyARS(form.iva_monto)) ?? "")}>
                       {moneyARS(form.iva_monto)}
                     </div>
-                    <div className="gm-table-cell gm-table-cell--right gm-table-cell--mono gm-table-cell--total">
+                    <div className="gm-table-cell gm-table-cell--right gm-table-cell--mono gm-table-cell--total" title={String((moneyARS(form.total)) ?? "")}>
                       {moneyARS(form.total)}
                     </div>
                     <div className="gm-table-cell gm-table-cell--center" id="delete_cell" />

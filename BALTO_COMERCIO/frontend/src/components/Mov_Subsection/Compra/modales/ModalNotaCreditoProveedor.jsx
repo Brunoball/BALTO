@@ -720,26 +720,26 @@ export default function ModalNotaCreditoProveedor({
                                   role="cell"
                                   title={item.descripcion}
                                 >
-                                  <strong className="ncp-product-name">
+                                  <strong className="ncp-product-name" title={String((item.descripcion) ?? "")}>
                                     {item.descripcion}
                                   </strong>
                                 </div>
                                 <div
                                   className="gm-table-cell gm-table-cell--center gm-table-cell--mono"
                                   role="cell"
-                                >
+                                 title={String((quantity(item.cantidadOriginal)) ?? "")}>
                                   {quantity(item.cantidadOriginal)}
                                 </div>
                                 <div
                                   className="gm-table-cell gm-table-cell--center gm-table-cell--mono"
                                   role="cell"
-                                >
+                                 title={String((quantity(alreadyReturned)) ?? "")}>
                                   {quantity(alreadyReturned)}
                                 </div>
                                 <div
                                   className="gm-table-cell gm-table-cell--center gm-table-cell--mono"
                                   role="cell"
-                                >
+                                 title={String((quantity(item.disponible)) ?? "")}>
                                   {quantity(item.disponible)}
                                 </div>
                                 <div
@@ -776,7 +776,7 @@ export default function ModalNotaCreditoProveedor({
                                 <div
                                   className="gm-table-cell gm-table-cell--right gm-table-cell--total"
                                   role="cell"
-                                >
+                                 title={String((money(selectedItem?.total || 0)) ?? "")}>
                                   {money(selectedItem?.total || 0)}
                                 </div>
                               </div>

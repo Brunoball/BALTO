@@ -408,18 +408,18 @@ export default function ConfiguracionListasCategorias() {
                 )) : rows.map((row) => (
                   <div key={rowId(tab, row)} className={`cfg-listas-gridRow ${Number(row.activo) === 1 ? "" : "is-inactive"}`} role="row">
                     <div className="cfg-listas-gridCell cfg-listas-gridCell--name" role="cell" data-label="Nombre">
-                      <strong>{row.nombre}</strong>
-                      <small>{isCategory ? (row.categoria_padre_nombre ? `Subcategoría de ${row.categoria_padre_nombre}` : "Categoría principal") : isUnit ? (Number(row.es_default || 0) === 1 ? "Unidad predeterminada" : "Unidad de medida") : isPayment ? (Number(row.es_sistema || 0) === 1 ? "Medio integrado del sistema" : "Medio de cobro / pago") : "Detalle de ingresos / egresos"}</small>
+                      <strong title={String((row.nombre) ?? "")}>{row.nombre}</strong>
+                      <small title={String((isCategory ? (row.categoria_padre_nombre ? `Subcategoría de ${row.categoria_padre_nombre}` : "Categoría principal") : isUnit ? (Number(row.es_default || 0) === 1 ? "Unidad predeterminada" : "Unidad de medida") : isPayment ? (Number(row.es_sistema || 0) === 1 ? "Medio integrado del sistema" : "Medio de cobro / pago") : "Detalle de ingresos / egresos") ?? "")}>{isCategory ? (row.categoria_padre_nombre ? `Subcategoría de ${row.categoria_padre_nombre}` : "Categoría principal") : isUnit ? (Number(row.es_default || 0) === 1 ? "Unidad predeterminada" : "Unidad de medida") : isPayment ? (Number(row.es_sistema || 0) === 1 ? "Medio integrado del sistema" : "Medio de cobro / pago") : "Detalle de ingresos / egresos"}</small>
                     </div>
-                    {isCategory && <div className="cfg-listas-gridCell cfg-listas-gridCell--description" role="cell" data-label="Descripción">{row.descripcion || "—"}</div>}
-                    {isCategory && <div className="cfg-listas-gridCell is-center" role="cell" data-label="Productos">{Number(row.cantidad_productos || 0).toLocaleString("es-AR")}</div>}
-                    {isCategory && <div className="cfg-listas-gridCell is-center" role="cell" data-label="Subcategorías">{Number(row.cantidad_hijas || 0).toLocaleString("es-AR")}</div>}
-                    {isUnit && <div className="cfg-listas-gridCell is-center" role="cell" data-label="Abrev."><strong>{row.abreviatura || "—"}</strong></div>}
-                    {isUnit && <div className="cfg-listas-gridCell is-center" role="cell" data-label="Decimales">{Number(row.permite_decimales ?? 1) === 1 ? "Sí" : "No"}</div>}
-                    {isUnit && <div className="cfg-listas-gridCell is-center" role="cell" data-label="Usos">{(Number(row.cantidad_productos || 0) + Number(row.cantidad_variantes || 0)).toLocaleString("es-AR")}</div>}
-                    {!isCategory && !isUnit && <div className="cfg-listas-gridCell is-center" role="cell" data-label="Usos históricos">{Number(row.cantidad_usos || 0).toLocaleString("es-AR")}</div>}
+                    {isCategory && <div className="cfg-listas-gridCell cfg-listas-gridCell--description" role="cell" data-label="Descripción" title={String((row.descripcion || "—") ?? "")}>{row.descripcion || "—"}</div>}
+                    {isCategory && <div className="cfg-listas-gridCell is-center" role="cell" data-label="Productos" title={String((Number(row.cantidad_productos || 0).toLocaleString("es-AR")) ?? "")}>{Number(row.cantidad_productos || 0).toLocaleString("es-AR")}</div>}
+                    {isCategory && <div className="cfg-listas-gridCell is-center" role="cell" data-label="Subcategorías" title={String((Number(row.cantidad_hijas || 0).toLocaleString("es-AR")) ?? "")}>{Number(row.cantidad_hijas || 0).toLocaleString("es-AR")}</div>}
+                    {isUnit && <div className="cfg-listas-gridCell is-center" role="cell" data-label="Abrev."><strong title={String((row.abreviatura || "—") ?? "")}>{row.abreviatura || "—"}</strong></div>}
+                    {isUnit && <div className="cfg-listas-gridCell is-center" role="cell" data-label="Decimales" title={String((Number(row.permite_decimales ?? 1) === 1 ? "Sí" : "No") ?? "")}>{Number(row.permite_decimales ?? 1) === 1 ? "Sí" : "No"}</div>}
+                    {isUnit && <div className="cfg-listas-gridCell is-center" role="cell" data-label="Usos" title={String(((Number(row.cantidad_productos || 0) + Number(row.cantidad_variantes || 0)).toLocaleString("es-AR")) ?? "")}>{(Number(row.cantidad_productos || 0) + Number(row.cantidad_variantes || 0)).toLocaleString("es-AR")}</div>}
+                    {!isCategory && !isUnit && <div className="cfg-listas-gridCell is-center" role="cell" data-label="Usos históricos" title={String((Number(row.cantidad_usos || 0).toLocaleString("es-AR")) ?? "")}>{Number(row.cantidad_usos || 0).toLocaleString("es-AR")}</div>}
                     <div className="cfg-listas-gridCell is-center" role="cell" data-label="Estado">
-                      <span className={`cfg-listas-chip ${Number(row.activo) === 1 ? "is-active" : ""}`}>{Number(row.activo) === 1 ? "ACTIVO" : "BAJA"}</span>
+                      <span className={`cfg-listas-chip ${Number(row.activo) === 1 ? "is-active" : ""}`} title={String((Number(row.activo) === 1 ? "ACTIVO" : "BAJA") ?? "")}>{Number(row.activo) === 1 ? "ACTIVO" : "BAJA"}</span>
                     </div>
                     <div className="cfg-listas-gridCell is-center cfg-listas-gridCell--actions" role="cell" data-label="Acciones">
                       <div className="cfg-listas-actions">

@@ -1001,11 +1001,11 @@ export default function ClientesCC() {
                   onClick={() => loadHistorial(r)}
                 >
                   <div className="mov-gridCell is-strong mov-gridTable--row-responsive">
-                    <span className="mov-ellipsissss mov-ellipsialingf">{r.nombre || "-"}</span>
+                    <span className="mov-ellipsissss mov-ellipsialingf" title={String((r.nombre || "-") ?? "")}>{r.nombre || "-"}</span>
                   </div>
 
                   <div className="mov-gridCell is-right is-strong">
-                    <span className={`mov-ellipsissss ${saldoClienteToneClass(r.saldo)}`}>{moneyARS(r.saldo || 0)}</span>
+                    <span className={`mov-ellipsissss ${saldoClienteToneClass(r.saldo)}`} title={String((moneyARS(r.saldo || 0)) ?? "")}>{moneyARS(r.saldo || 0)}</span>
                   </div>
                 </button>
               ))
@@ -1051,29 +1051,29 @@ export default function ClientesCC() {
                     style={{ gridTemplateColumns: ".8fr 2.2fr 1fr 1fr 1fr .9fr" }}
                   >
                     <div className="mov-gridCell">
-                      <span className="mov-ellipsissss">
+                      <span className="mov-ellipsissss" title={String((formatDisplayDate(r.fecha || r.fecha_raw)) ?? "")}>
                         {formatDisplayDate(r.fecha || r.fecha_raw)}
                       </span>
                     </div>
 
                     <div className="mov-gridCell is-strong">
-                      <span className="mov-ellipsissss">{r.comprobante || "-"}</span>
+                      <span className="mov-ellipsissss" title={String((r.comprobante || "-") ?? "")}>{r.comprobante || "-"}</span>
                     </div>
 
                     <div className="mov-gridCell is-right">
-                      <span className="mov-ellipsissss cc-money cc-money--negative">
+                      <span className="mov-ellipsissss cc-money cc-money--negative" title={String((Number(r.debito || 0) > 0 ? moneyARS(r.debito) : "—") ?? "")}>
                         {Number(r.debito || 0) > 0 ? moneyARS(r.debito) : "—"}
                       </span>
                     </div>
 
                     <div className="mov-gridCell is-right">
-                      <span className="mov-ellipsissss cc-money cc-money--positive">
+                      <span className="mov-ellipsissss cc-money cc-money--positive" title={String((Number(r.credito || 0) > 0 ? moneyARS(r.credito) : "—") ?? "")}>
                         {Number(r.credito || 0) > 0 ? moneyARS(r.credito) : "—"}
                       </span>
                     </div>
 
                     <div className="mov-gridCell is-right is-strong">
-                      <span className={`mov-ellipsissss ${saldoMovimientoToneClass(r)}`}>{moneyARS(r.saldo || 0)}</span>
+                      <span className={`mov-ellipsissss ${saldoMovimientoToneClass(r)}`} title={String((moneyARS(r.saldo || 0)) ?? "")}>{moneyARS(r.saldo || 0)}</span>
                     </div>
 
                     <div className="mov-gridCell mov-gridCell--actions">
@@ -1144,15 +1144,15 @@ export default function ClientesCC() {
               className="mov-gridTable mov-gridTable_rsp"
               style={{ gridTemplateColumns: ".8fr 2.2fr 1fr 1fr 1fr .9fr" }}
             >
-              <div className="mov-gridCell mov-gridCellf is-strong">Totales</div>
+              <div className="mov-gridCell mov-gridCellf is-strong" title="Totales">Totales</div>
               <div className="mov-gridCell mov-gridCellf vacio"></div>
-              <div className="mov-gridCell mov-gridCellf is-right is-strong cc-money cc-money--negative">
+              <div className="mov-gridCell mov-gridCellf is-right is-strong cc-money cc-money--negative" title={String((moneyARS(detailTotales?.debito || 0)) ?? "")}>
                 {moneyARS(detailTotales?.debito || 0)}
               </div>
-              <div className="mov-gridCell mov-gridCellf is-right is-strong cc-money cc-money--positive">
+              <div className="mov-gridCell mov-gridCellf is-right is-strong cc-money cc-money--positive" title={String((moneyARS(detailTotales?.credito || 0)) ?? "")}>
                 {moneyARS(detailTotales?.credito || 0)}
               </div>
-              <div className={`mov-gridCell mov-gridCellf is-right is-strong ${saldoTotalClienteToneClass(detailTotales)}`}>
+              <div className={`mov-gridCell mov-gridCellf is-right is-strong ${saldoTotalClienteToneClass(detailTotales)}`} title={String((moneyARS(detailTotales?.saldo || 0)) ?? "")}>
                 {moneyARS(detailTotales?.saldo || 0)}
               </div>
               <div className="mov-gridCell mov-gridCellf vacio"></div>

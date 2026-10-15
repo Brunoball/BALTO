@@ -584,7 +584,7 @@ function PrecioDropdown({ precios, value, onChange, disabled }) {
                 overflow: "hidden",
                 textOverflow: "ellipsis",
               }}
-            >
+             title={String((abreviarTipoPrecio(selected.tipo_precio)) ?? "")}>
               {abreviarTipoPrecio(selected.tipo_precio)}
             </div>
             <div
@@ -596,7 +596,7 @@ function PrecioDropdown({ precios, value, onChange, disabled }) {
                 overflow: "hidden",
                 textOverflow: "ellipsis",
               }}
-            >
+             title={String((moneyARS(selected.monto)) ?? "")}>
               {moneyARS(selected.monto)}
             </div>
           </>
@@ -1726,7 +1726,9 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
                               fontWeight: rowSinStock ? 700 : 500,
                               color: rowSinStock ? "#b91c1c" : "#666",
                             }}
-                          >
+                           title={String((rowSinStock
+                              ? "Sin stock"
+                              : `Stock: ${r.stock_disponible}${r.unidad_abreviatura ? ` ${r.unidad_abreviatura}` : ""}`) ?? "")}>
                             {rowSinStock
                               ? "Sin stock"
                               : `Stock: ${r.stock_disponible}${r.unidad_abreviatura ? ` ${r.unidad_abreviatura}` : ""}`}
@@ -1774,10 +1776,10 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
                       </select>
                     </div>
 
-                    <div className="gm-table-cell gm-table-cell--right gm-table-cell--mono gm-table-cell--soft">
+                    <div className="gm-table-cell gm-table-cell--right gm-table-cell--mono gm-table-cell--soft" title={String((moneyARS(r.iva_monto)) ?? "")}>
                       {moneyARS(r.iva_monto)}
                     </div>
-                    <div className="gm-table-cell gm-table-cell--right gm-table-cell--mono gm-table-cell--total">
+                    <div className="gm-table-cell gm-table-cell--right gm-table-cell--mono gm-table-cell--total" title={String((moneyARS(r.total)) ?? "")}>
                       {moneyARS(r.total)}
                     </div>
                     <div className="gm-table-cell gm-table-cell--center" id="delete_cell">

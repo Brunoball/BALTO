@@ -590,12 +590,12 @@ export default function ModalPagarOtrosEgresos({
                       <span className="gm-inline-check__box" aria-hidden="true" />
                     </label>
                   </div>
-                  <div className="gm-expense-td gm-table-cell">{safeText(formatFechaDMY(row?.fecha))}</div>
+                  <div className="gm-expense-td gm-table-cell" title={String((safeText(formatFechaDMY(row?.fecha))) ?? "")}>{safeText(formatFechaDMY(row?.fecha))}</div>
                   <div className="gm-expense-td gm-expense-td--desc gm-table-cell gm-table-cell--detail" title={safeText(concepto)}>{concepto}</div>
                   <div className="gm-expense-td gm-expense-td--center gm-table-cell gm-table-cell--center">
                     <EstadoChipEgreso row={row} />
                   </div>
-                  <div className="gm-expense-td gm-expense-td--right gm-expense-td--mono gm-table-cell gm-table-cell--right gm-table-cell--mono">{moneyARS(saldo)}</div>
+                  <div className="gm-expense-td gm-expense-td--right gm-expense-td--mono gm-table-cell gm-table-cell--right gm-table-cell--mono" title={String((moneyARS(saldo)) ?? "")}>{moneyARS(saldo)}</div>
                   <div className="gm-expense-td gm-expense-td--info gm-table-cell" onClick={(e) => e.stopPropagation()}>
                     <button
                       type="button"

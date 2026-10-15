@@ -816,7 +816,7 @@ export default function ModalVerComprobante({
                                   background: "#f8fafc",
                                   whiteSpace: "nowrap",
                                 }}
-                              >
+                               title={String((h || "-") ?? "")}>
                                 {h || "-"}
                               </th>
                             ))}
@@ -835,7 +835,7 @@ export default function ModalVerComprobante({
                                       verticalAlign: "top",
                                       whiteSpace: "pre-wrap",
                                     }}
-                                  >
+                                   title={String((safeText(row[colIdx]) || "-") ?? "")}>
                                     {safeText(row[colIdx]) || "-"}
                                   </td>
                                 ))}
@@ -846,7 +846,7 @@ export default function ModalVerComprobante({
                               <td
                                 colSpan={Math.max(csvData.headers.length, 1)}
                                 style={{ padding: 16, textAlign: "center" }}
-                              >
+                               title="El CSV no tiene filas para mostrar.">
                                 El CSV no tiene filas para mostrar.
                               </td>
                             </tr>

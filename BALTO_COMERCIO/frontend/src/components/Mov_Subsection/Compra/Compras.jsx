@@ -1781,7 +1781,7 @@ export default function Compras() {
                             data-label={c.label}
                             title={c.key === "detalle" || c.key === "descripcion" ? undefined : (typeof val === "string" ? val : undefined)}
                           >
-                            {c.key === "detalle" ? <DetalleMovimientoTabla movimiento={r} /> : <span className="mov-ellipsissss">{val}</span>}
+                            {c.key === "detalle" ? <DetalleMovimientoTabla movimiento={r} /> : <span className="mov-ellipsissss" title={String((val) ?? "")}>{val}</span>}
                           </div>
                         );
                       })}

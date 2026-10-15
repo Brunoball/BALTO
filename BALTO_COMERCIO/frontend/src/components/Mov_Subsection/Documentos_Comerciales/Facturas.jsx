@@ -701,7 +701,7 @@ function DocumentosClientePanel({
                             <div className="doccom-docMain">
 
                               <span>
-                                <button type="button" onClick={() => handleVerDocumento(doc)}>
+                                <button type="button" onClick={() => handleVerDocumento(doc)} title={String((safeText(doc.numero_visual || doc.documento_label)) ?? "")}>
                                   {safeText(doc.numero_visual || doc.documento_label)}
                                 </button>
                                 <small>ID comprobante #{doc.id_comprobante}</small>
@@ -709,21 +709,21 @@ function DocumentosClientePanel({
                             </div>
                           </div>
                           <div className="mov-gridCell" role="cell" data-label="Fecha">
-                            <span className="mov-ellipsissss">{formatFecha(doc.fecha_cbte || doc.fecha || doc.created_at)}</span>
+                            <span className="mov-ellipsissss" title={String((formatFecha(doc.fecha_cbte || doc.fecha || doc.created_at)) ?? "")}>{formatFecha(doc.fecha_cbte || doc.fecha || doc.created_at)}</span>
                           </div>
                           <div className="mov-gridCell" role="cell" data-label="Detalle">
                             <span className="doccom-docDetalle">
-                              <strong>{safeText(doc.documento_label)}</strong>
-                              <small>{safeText(doc.detalle, "Sin detalle cargado")}</small>
+                              <strong title={String((safeText(doc.documento_label)) ?? "")}>{safeText(doc.documento_label)}</strong>
+                              <small title={String((safeText(doc.detalle, "Sin detalle cargado")) ?? "")}>{safeText(doc.detalle, "Sin detalle cargado")}</small>
                             </span>
                           </div>
                           <div className="mov-gridCell is-center" role="cell" data-label="Estado">
-                            <span className={`doccom-status doccom-status--${String(doc.tipo || "doc").toLowerCase()}`}>
+                            <span className={`doccom-status doccom-status--${String(doc.tipo || "doc").toLowerCase()}`} title={String((getDocumentoEstado(doc)) ?? "")}>
                               {getDocumentoEstado(doc)}
                             </span>
                           </div>
                           <div className="mov-gridCell is-right is-strong" role="cell" data-label="Total">
-                            <span>{moneyARS(doc.monto_total)}</span>
+                            <span title={String((moneyARS(doc.monto_total)) ?? "")}>{moneyARS(doc.monto_total)}</span>
                           </div>
                           <div className="mov-gridCell mov-gridCell--actions is-center" role="cell" data-label="PDF">
                             <div className="mov-actionsInline doccom-actions">

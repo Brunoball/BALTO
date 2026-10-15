@@ -1415,7 +1415,7 @@ export default function Presupuestos() {
                         );
                       }
                       const val = c.render ? c.render(r) : safeText(r[c.key]);
-                      return <div key={c.key} className={["mov-gridCell", c.key === "detalle" ? "mov-gridCell--detalleVisible" : "", c.align === "right" ? "is-right" : "", c.align === "center" ? "is-center" : "", c.strong ? "is-strong" : ""].filter(Boolean).join(" ")} role="cell" data-label={c.label} title={c.key === "detalle" || c.key === "descripcion" ? undefined : (typeof val === "string" ? val : undefined)}>{c.key === "detalle" ? <DetalleMovimientoTabla movimiento={r} /> : <span className="mov-ellipsissss">{val}</span>}</div>;
+                      return <div key={c.key} className={["mov-gridCell", c.key === "detalle" ? "mov-gridCell--detalleVisible" : "", c.align === "right" ? "is-right" : "", c.align === "center" ? "is-center" : "", c.strong ? "is-strong" : ""].filter(Boolean).join(" ")} role="cell" data-label={c.label} title={c.key === "detalle" || c.key === "descripcion" ? undefined : (typeof val === "string" ? val : undefined)}>{c.key === "detalle" ? <DetalleMovimientoTabla movimiento={r} /> : <span className="mov-ellipsissss" title={String((val) ?? "")}>{val}</span>}</div>;
                     })}
                   </div>
                   </FilaMovimientoExpandible>

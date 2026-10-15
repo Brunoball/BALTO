@@ -439,12 +439,12 @@ export default function ModalFacturaDatos({
                 <table className="tabla-factura-detalle" style={{ width: "100%", borderCollapse: "collapse" }}>
                   <thead>
                     <tr>
-                      <th style={thStyle}>Descripción</th>
-                      <th style={thStyle}>Cantidad</th>
-                      <th style={thStyle}>Precio Unit.</th>
-                      <th style={thStyle}>Bonif. %</th>
-                      <th style={thStyle}>Subtotal</th>
-                      <th style={thStyle}>Acción</th>
+                      <th style={thStyle} title="Descripción">Descripción</th>
+                      <th style={thStyle} title="Cantidad">Cantidad</th>
+                      <th style={thStyle} title="Precio Unit.">Precio Unit.</th>
+                      <th style={thStyle} title="Bonif. %">Bonif. %</th>
+                      <th style={thStyle} title="Subtotal">Subtotal</th>
+                      <th style={thStyle} title="Acción">Acción</th>
                     </tr>
                   </thead>
                   <tbody ref={tableBodyRef}>

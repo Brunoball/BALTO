@@ -256,7 +256,7 @@ function ChequesCarteraCardsCompra({ cheques, idsSeleccionados, onToggle, esEche
                   lineHeight: 1.3,
                 }}
               >
-                <span style={{ maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                <span style={{ maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={String((safeText(ch?.emisor)) ?? "")}>
                   {safeText(ch?.emisor)}
                 </span>
                 <span style={{ opacity: 0.4 }}>·</span>
@@ -1977,7 +1977,7 @@ export default function ModalNuevaCompra({ open, lists, onClose, onToast, onSave
                                 fontWeight: 500,
                                 color: "#666",
                               }}
-                            >
+                             title={String((`Stock: ${r.stock_disponible}${r.unidad_abreviatura ? ` ${r.unidad_abreviatura}` : ""}`) ?? "")}>
                               {`Stock: ${r.stock_disponible}${r.unidad_abreviatura ? ` ${r.unidad_abreviatura}` : ""}`}
                             </div>
                           )}
@@ -2045,10 +2045,10 @@ export default function ModalNuevaCompra({ open, lists, onClose, onToast, onSave
                           </select>
                         </div>
 
-                        <div className="gm-table-cell gm-table-cell--right gm-table-cell--mono gm-table-cell--soft">
+                        <div className="gm-table-cell gm-table-cell--right gm-table-cell--mono gm-table-cell--soft" title={String((moneyARS(r.ivaMonto)) ?? "")}>
                           {moneyARS(r.ivaMonto)}
                         </div>
-                        <div className="gm-table-cell gm-table-cell--right gm-table-cell--mono gm-table-cell--total">
+                        <div className="gm-table-cell gm-table-cell--right gm-table-cell--mono gm-table-cell--total" title={String((moneyARS(r.total)) ?? "")}>
                           {moneyARS(r.total)}
                         </div>
                         <div className="gm-table-cell gm-table-cell--center" id="delete_cell">

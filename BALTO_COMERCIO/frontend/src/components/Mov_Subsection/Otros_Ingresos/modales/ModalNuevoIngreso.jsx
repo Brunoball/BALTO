@@ -2519,11 +2519,11 @@ export default function ModalNuevoIngreso({
                           </select>
                         </div>
 
-                        <div className="gm-table-cell gm-table-cell--right gm-table-cell--mono gm-table-cell--soft">
+                        <div className="gm-table-cell gm-table-cell--right gm-table-cell--mono gm-table-cell--soft" title={String((moneyARS(r.ivaMonto)) ?? "")}>
                           {moneyARS(r.ivaMonto)}
                         </div>
 
-                        <div className="gm-table-cell gm-table-cell--right gm-table-cell--mono gm-table-cell--total">
+                        <div className="gm-table-cell gm-table-cell--right gm-table-cell--mono gm-table-cell--total" title={String((moneyARS(r.total)) ?? "")}>
                           {moneyARS(r.total)}
                         </div>
 

@@ -375,7 +375,14 @@ export default function Servicios() {
     return "minmax(100px,.8fr)";
   }).join(" ");
   const values = (row) => ({
-    nombre: <span className="servicios-nameCell"><strong>{row.nombre}</strong><small>{row.descripcion || (tab === "trabajadores" ? row.rol : "") || "SIN DESCRIPCIÓN"}</small></span>,
+    nombre: (
+      <span className="servicios-nameCell">
+        <strong title={String(row.nombre || "—")}>{row.nombre}</strong>
+        <small title={String(row.descripcion || (tab === "trabajadores" ? row.rol : "") || "SIN DESCRIPCIÓN")}>
+          {row.descripcion || (tab === "trabajadores" ? row.rol : "") || "SIN DESCRIPCIÓN"}
+        </small>
+      </span>
+    ),
     tipo: row.tipo === "MATERIAL" ? "MATERIAL" : row.tipo === "INSUMO" ? "INSUMO" : row.tipo === "PRODUCTO" ? "PRODUCTO" : "—",
     categoria: row.categoria_nombre || "SIN CATEGORÍA",
     unidad: row.unidad_simbolo || row.unidad_nombre || "—",
@@ -528,7 +535,28 @@ export default function Servicios() {
           <div className="mov-gridBody mov-gridBody--relative">
             {loading ? Array.from({ length: 8 }).map((_, i) => <div key={i} className="mov-gridTable mov-gridTable--row mov-row--skeleton" style={{ gridTemplateColumns: gridCols }}>{columns.map((column) => <div key={column.k} className="mov-gridCell"><span className="mov-skeletonBar" /></div>)}</div>) : visibleRows.length ? visibleRows.map((row) => {
               const display = values(row);
-              return <div key={`${tab}-${idFor(tab, row)}`} className={`mov-gridTable mov-gridTable--row ${Number(row.activo) === 1 ? "" : "servicios-row--inactive"}`} style={{ gridTemplateColumns: gridCols }}>{columns.map((column) => <div key={column.k} data-label={column.l} className={`mov-gridCell ${column.right ? "is-right" : ""} ${column.center ? "is-center" : ""} ${column.k === "acciones" ? "mov-gridCell--actions" : ""}`}>{column.k === "acciones" ? renderActions(row) : <span className="mov-ellipsissss">{display[column.k] ?? "—"}</span>}</div>)}</div>;
+              return (
+                <div key={`${tab}-${idFor(tab, row)}`} className={`mov-gridTable mov-gridTable--row ${Number(row.activo) === 1 ? "" : "servicios-row--inactive"}`} style={{ gridTemplateColumns: gridCols }}>
+                  {columns.map((column) => (
+                    <div
+                      key={column.k}
+                      data-label={column.l}
+                      className={`mov-gridCell ${column.right ? "is-right" : ""} ${column.center ? "is-center" : ""} ${column.k === "acciones" ? "mov-gridCell--actions" : ""}`}
+                    >
+                      {column.k === "acciones" ? renderActions(row) : (
+                        <span
+                          className="mov-ellipsissss"
+                          title={column.k === "nombre"
+                            ? [row.nombre || "—", row.descripcion || (tab === "trabajadores" ? row.rol : "") || "SIN DESCRIPCIÓN"].join(" · ")
+                            : String(display[column.k] ?? "—")}
+                        >
+                          {display[column.k] ?? "—"}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              );
             }) : <div className="cc-emptyState"><FontAwesomeIcon icon={faBoxOpen} className="cc-emptyIcon" /><div className="cc-emptyText">No hay registros para los filtros actuales.</div></div>}
           </div>
         </div>

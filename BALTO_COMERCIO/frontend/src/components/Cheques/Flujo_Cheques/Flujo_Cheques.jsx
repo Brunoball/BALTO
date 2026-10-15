@@ -608,7 +608,7 @@ const Flujo_Cheques = () => {
                                 title={cfg.label}
                               >
                                 <FontAwesomeIcon icon={cfg.icon} />
-                                <span className="flujo-badge__text">
+                                <span className="flujo-badge__text" title={String((cfg.label) ?? "")}>
                                   {cfg.label}
                                 </span>
                               </span>
@@ -685,7 +685,7 @@ const Flujo_Cheques = () => {
                             data-label={c.label}
                             title={typeof val === "string" ? val : undefined}
                           >
-                            <span className="mov-ellipsissss">{val}</span>
+                            <span className="mov-ellipsissss" title={String((val) ?? "")}>{val}</span>
                           </div>
                         );
                       })}

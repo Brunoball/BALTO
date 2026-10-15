@@ -284,10 +284,11 @@ function SelectorMultipleRecursos({
                     key={id}
                     type="button"
                     className={checked ? "is-selected" : ""}
+                    title={String(getLabel(row) ?? "")}
                     onClick={() => toggle(row)}
                     aria-pressed={checked}
                   >
-                    <span className="servicios-multi-select__option-label">{getLabel(row)}</span>
+                    <span className="servicios-multi-select__option-label" title={String(getLabel(row) ?? "")}>{getLabel(row)}</span>
                     <span className="servicios-multi-select__check" aria-hidden="true">{checked ? "✓" : ""}</span>
                   </button>
                 );
@@ -373,8 +374,12 @@ function ArticulosCard({ rows, setRows, catalog }) {
             return (
               <div className="servicios-component-row" key={id}>
                 <div className="servicios-component-row__name">
-                  <strong>{found?.nombre || row.nombre || "MATERIAL / INSUMO"}{Number(found?.activo ?? row.activo ?? 1) === 1 ? "" : " · BAJA"}</strong>
-                  <small>{money(found?.costo_unitario ?? row.costo_unitario ?? 0)} por {unit || "unidad"}</small>
+                  <strong title={`${found?.nombre || row.nombre || "MATERIAL / INSUMO"}${Number(found?.activo ?? row.activo ?? 1) === 1 ? "" : " · BAJA"}`}>
+                    {found?.nombre || row.nombre || "MATERIAL / INSUMO"}{Number(found?.activo ?? row.activo ?? 1) === 1 ? "" : " · BAJA"}
+                  </strong>
+                  <small title={`${money(found?.costo_unitario ?? row.costo_unitario ?? 0)} por ${unit || "unidad"}`}>
+                    {money(found?.costo_unitario ?? row.costo_unitario ?? 0)} por {unit || "unidad"}
+                  </small>
                 </div>
                 <label className="gm-field servicios-component-quantity">
                   <input
@@ -387,7 +392,7 @@ function ArticulosCard({ rows, setRows, catalog }) {
                   />
                   <span className="gm-label gm-label--up">Cantidad</span>
                 </label>
-                <span className="servicios-component-unit">{unit}</span>
+                <span className="servicios-component-unit" title={String(unit)}>{unit}</span>
                 <label className="gm-field servicios-component-iva">
                   <select
                     className="gm-input gm-select servicios-component-iva__select"
@@ -468,8 +473,10 @@ function TrabajadoresCard({ rows, setRows, catalog }) {
             return (
               <div className="servicios-component-row" key={row.id_trabajador}>
                 <div className="servicios-component-row__name">
-                  <strong>{found?.nombre || row.nombre || "TRABAJADOR"}</strong>
-                  <small>
+                  <strong title={String(found?.nombre || row.nombre || "TRABAJADOR")}>
+                    {found?.nombre || row.nombre || "TRABAJADOR"}
+                  </strong>
+                  <small title={`${found?.rol || row.rol || "SIN ROL"} · ${money(costoAplicado)} por hora${cambioTarifa ? ` · actual ${money(costoActual)}` : ""}`}>
                     {found?.rol || row.rol || "SIN ROL"} · {money(costoAplicado)} por hora
                     {cambioTarifa ? ` · actual ${money(costoActual)}` : ""}
                   </small>

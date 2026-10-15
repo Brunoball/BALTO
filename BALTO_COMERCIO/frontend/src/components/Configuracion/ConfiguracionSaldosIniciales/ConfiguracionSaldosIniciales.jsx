@@ -676,19 +676,19 @@ export default function ConfiguracionSaldosIniciales() {
                 </button>
               </div>
               <div className="cfg-si-tableWrap balto-rsp-table-scroll">
-                <table className="cfg-si-table"><thead><tr><th className="is-center">Tipo</th><th className="is-center">Número</th><th>Emisor</th><th>Apertura</th><th className="is-center">Vencimiento</th><th className="is-right">Importe</th><th className="is-center">Estado</th><th className="is-center">Acciones</th></tr></thead>
+                <table className="cfg-si-table"><thead><tr><th className="is-center" title="Tipo">Tipo</th><th className="is-center" title="Número">Número</th><th title="Emisor">Emisor</th><th title="Apertura">Apertura</th><th className="is-center" title="Vencimiento">Vencimiento</th><th className="is-right" title="Importe">Importe</th><th className="is-center" title="Estado">Estado</th><th className="is-center" title="Acciones">Acciones</th></tr></thead>
                   <tbody>{data.cheques.length ? data.cheques.map((r) => (
                     <tr key={r.id_cheque}>
-                      <td className="is-center" data-label="Tipo">{r.tipo}</td>
-                      <td className="is-center" data-label="Número">{r.numero_cheque}</td>
-                      <td data-label="Emisor">{r.emisor}</td>
-                      <td data-label="Apertura">{fmtDate(r.fecha_saldo)}</td>
-                      <td className="is-center" data-label="Vencimiento">{fmtDate(r.fecha_pago)}</td>
-                      <td className="is-right is-strong" data-label="Importe">{moneyARS(r.importe)}</td>
-                      <td className="is-center" data-label="Estado"><span className={`cfg-si-state ${r.estado === "EN_CARTERA" ? "is-ok" : ""}`}>{String(r.estado || "").replaceAll("_", " ")}</span></td>
+                      <td className="is-center" data-label="Tipo" title={String((r.tipo) ?? "")}>{r.tipo}</td>
+                      <td className="is-center" data-label="Número" title={String((r.numero_cheque) ?? "")}>{r.numero_cheque}</td>
+                      <td data-label="Emisor" title={String((r.emisor) ?? "")}>{r.emisor}</td>
+                      <td data-label="Apertura" title={String((fmtDate(r.fecha_saldo)) ?? "")}>{fmtDate(r.fecha_saldo)}</td>
+                      <td className="is-center" data-label="Vencimiento" title={String((fmtDate(r.fecha_pago)) ?? "")}>{fmtDate(r.fecha_pago)}</td>
+                      <td className="is-right is-strong" data-label="Importe" title={String((moneyARS(r.importe)) ?? "")}>{moneyARS(r.importe)}</td>
+                      <td className="is-center" data-label="Estado"><span className={`cfg-si-state ${r.estado === "EN_CARTERA" ? "is-ok" : ""}`} title={String((String(r.estado || "").replaceAll("_", " ")) ?? "")}>{String(r.estado || "").replaceAll("_", " ")}</span></td>
                       <td className="is-center cfg-si-tableActionsCell" data-label="Acciones"><div className="cfg-si-chequeActions"><button type="button" className="cfg-si-fileView" title={Number(r.tiene_archivo || 0) === 1 && Number(r.id_archivo) > 0 ? "Ver archivo del cheque" : "Sin archivo adjunto"} aria-label="Ver archivo del cheque" disabled={Number(r.tiene_archivo || 0) !== 1 || !(Number(r.id_archivo) > 0)} onClick={() => openChequeAttachment(r)}><FontAwesomeIcon icon={faEye} /></button><button type="button" className="cfg-si-dangerIcon" title="Eliminar carga inicial" onClick={() => setChequeAEliminar(r)} disabled={saving}><FontAwesomeIcon icon={faTrash} /></button></div></td>
                     </tr>
-                  )) : <tr><td colSpan="8" className="cfg-si-tableEmpty">No hay cheques iniciales cargados.</td></tr>}</tbody></table>
+                  )) : <tr><td colSpan="8" className="cfg-si-tableEmpty" title="No hay cheques iniciales cargados.">No hay cheques iniciales cargados.</td></tr>}</tbody></table>
               </div>
             </div>
           ) : (
