@@ -8,7 +8,6 @@ import "../../Global/Global_css/Global_oscuro.css";
 import "./Ventas.css";
 
 import Toast from "../../Global/Toast.jsx";
-import useTableScrollGutter from "../../Global/useTableScrollGutter.jsx";
 import Calendario from "../../Global/Calendario/Calendario.jsx";
 import "../../Global/Calendario/calendario.css";
 
@@ -302,7 +301,7 @@ function downloadBlob(content, fileName, mimeType) { const blob = new Blob([cont
 
 export default function Ventas() {
   const API = `${BASE_URL}/api.php`;
-  const [tableWrapRef, hasTableScroll] = useTableScrollGutter();
+
   const { lists: listasCtx, loadingLists: loadingListsCtx, errorLists: errorListsCtx, ensureListsLoaded, refreshLists } = useListas();
   const { dateRange, setDateRange } = useDateRange();
   const [rows, setRows] = useState([]);
@@ -742,8 +741,8 @@ export default function Ventas() {
             <button type="button" className="mov-btn mov-btn--primary" onClick={() => { if (loadingListsCtx) showToast?.("cargando", "Cargando listas… podés ir completando igual.", 2400); setOpenAdd(true); }} title="Crear nuevo movimiento"><FontAwesomeIcon icon={faPlus} /> Nueva Venta</button>
           </div>
         </div>
-        <div className={`mov-gridTable mov-gridTable--head ${hasTableScroll ? "has-y-scroll" : ""}`} style={{ gridTemplateColumns: gridCols }} role="row">{columns.map((c) => <div key={c.key} className={["mov-gridCell", "mov-gridCell--head", c.align === "right" ? "is-right" : "", c.align === "center" ? "is-center" : ""].join(" ")} role="columnheader">{c.label}</div>)}</div>
-        <div className="mov-tableWrap" role="rowgroup" ref={tableWrapRef}><div className={["mov-gridBody", "mov-gridBody--relative", loadingRows ? "mov-softLoading" : ""].join(" ")}>{loadingRows ? <div className="mov-skeletonWrap" aria-busy="true">{Array.from({ length: SKELETON_ROWS }).map((_, i) => renderSkeletonRow(i))}</div> : <>{filteredRows.map((r) => { const key = getRowKey(r); const tieneComprobante = buildComprobanteCandidatesFromRow(r).length > 0; return <FilaMovimientoExpandible key={key} movimiento={r}>
+        <div className="mov-gridTable mov-gridTable--head" style={{ gridTemplateColumns: gridCols }} role="row">{columns.map((c) => <div key={c.key} className={["mov-gridCell", "mov-gridCell--head", c.align === "right" ? "is-right" : "", c.align === "center" ? "is-center" : ""].join(" ")} role="columnheader">{c.label}</div>)}</div>
+        <div className="mov-tableWrap" role="rowgroup"><div className={["mov-gridBody", "mov-gridBody--relative", loadingRows ? "mov-softLoading" : ""].join(" ")}>{loadingRows ? <div className="mov-skeletonWrap" aria-busy="true">{Array.from({ length: SKELETON_ROWS }).map((_, i) => renderSkeletonRow(i))}</div> : <>{filteredRows.map((r) => { const key = getRowKey(r); const tieneComprobante = buildComprobanteCandidatesFromRow(r).length > 0; return <FilaMovimientoExpandible key={key} movimiento={r}>
                     <div key={key} className="mov-gridTable mov-gridTable--row" style={{ gridTemplateColumns: gridCols }} role="row">{columns.map((c) => {
 
                         if (c.key === "acciones") return <div key={c.key} className={["mov-gridCell", "mov-gridCell--actions", "is-center"].join(" ")} role="cell" data-label={c.label}><div className="mov-actionsInline"><button type="button" className={["mov-iconBtn", tieneComprobante ? "mov-iconBtn--comprobante" : "mov-iconBtn--disabled"].join(" ")} title={tieneComprobante ? "Ver comprobantes" : "Sin comprobantes"} disabled={!tieneComprobante || isAnyLoading} onMouseEnter={() => { if (tieneComprobante) handlePrewarmComprobante(r); }} onPointerEnter={() => { if (tieneComprobante) handlePrewarmComprobante(r); }} onFocus={() => { if (tieneComprobante) handlePrewarmComprobante(r); }} onClick={() => { if (tieneComprobante) handleVerComprobante(r); }} style={{ opacity: tieneComprobante ? 1 : 0.35, cursor: tieneComprobante ? "pointer" : "not-allowed" }}><FontAwesomeIcon icon={faEye} /></button><button type="button" className="mov-iconBtn" title="Ver información completa del movimiento" disabled={isAnyLoading} onClick={() => { setSelectedRow(r); setOpenDetalleMovimiento(true); }}><FontAwesomeIcon icon={faInfoCircle} /></button><button type="button" className="mov-iconBtn" title="Emitir nota de crédito" disabled={isAnyLoading || loadingListsCtx} onClick={() => { setSelectedRow(r); setModoNC("NORMAL"); setOpenNC(true); }}><FontAwesomeIcon icon={faFileInvoiceDollar} /></button><button type="button" className="mov-iconBtn mov-iconBtn--danger" title="Eliminar" disabled={isAnyLoading || loadingListsCtx || deletingId === r.id_movimiento} onClick={() => { setSelectedRow(r); setOpenDel(true); }}>{deletingId === r.id_movimiento ? "..." : <FontAwesomeIcon icon={faTrashCan} />}</button></div></div>; const val = c.render ? c.render(r) : safeText(r[c.key]); return <div key={c.key} className={["mov-gridCell", c.key === "detalle" ? "mov-gridCell--detalleVisible" : "", c.align === "right" ? "is-right" : "", c.align === "center" ? "is-center" : "", c.strong ? "is-strong" : ""].filter(Boolean).join(" ")} role="cell" data-label={c.label} title={c.key === "detalle" || c.key === "descripcion" ? undefined : (typeof val === "string" ? val : undefined)}>{c.key === "detalle" ? <DetalleMovimientoTabla movimiento={r} /> : <span className="mov-ellipsissss">{val}</span>}</div>; })}</div>

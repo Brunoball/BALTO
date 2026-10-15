@@ -1263,3 +1263,8 @@ body.dark .doccom-tabsRow .doccom-googleTab.is-active {
     padding-inline: 12px;
   }
 }
+
+/* Gutter persistente: Facturas/Remitos tienen el header dentro del body scroll. */
+.doccom-docTableWrap {
+  scrollbar-gutter: stable;
+}

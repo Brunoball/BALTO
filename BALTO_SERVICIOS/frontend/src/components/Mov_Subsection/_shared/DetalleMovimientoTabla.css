@@ -1,79 +1,253 @@
-/* BALTO: descripción compacta con botón de conceptos en la misma celda y panel en otra fila. */
+/* BALTO | Descripción de movimientos y detalle expandible compartido.
+   Utilizado por la vista general, ventas, compras, ingresos, egresos,
+   recibos, órdenes de pago y presupuestos. */
 .mov-gridCell.mov-gridCell--detalleVisible {
   overflow: hidden;
   white-space: normal;
   min-width: 0;
   align-items: center;
 }
-.mov-detalleTabla {
-  width: 100%; min-width: 0; max-width: 100%; display: flex;
-  flex-direction: column; align-items: flex-start; gap: 3px;
-  line-height: 1.3; text-align: left;
-}
-.mov-detalleTabla__titulo {
-  display: block; width: 100%; min-width: 0; overflow: hidden;
-  white-space: nowrap; text-overflow: ellipsis; font-weight: 600; color: inherit;
-}
-.mov-detalleTabla__aclaracion {
-  display: block; font-size: 11px; font-weight: 400;
-  color: var(--color-text-muted, #8896aa); overflow-wrap: anywhere;
-}
-.mov-detalleTabla__aclaracion--tabla {
-  width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-/* La segunda línea presenta resumen y desplegable juntos, como el patrón de variantes. */
-.mov-detalleTabla__resumenLinea {
-  display: flex; align-items: center; gap: 10px; min-width: 0; max-width: 100%;
-  width: 100%; line-height: 1.3;
-}
-.mov-detalleTabla__resumenLinea .mov-detalleTabla__aclaracion--tabla {
-  flex: 0 1 auto; width: auto; min-width: 0;
-}
-.mov-detalleTabla__boton {
-  display: inline-flex; align-items: center; justify-content: flex-start; gap: 5px;
-  flex: 0 0 auto; padding: 0 2px; border: 0; border-radius: 3px;
-  background: transparent; color: var(--color-primary, #1467c8);
-  font: inherit; font-size: 11px; font-weight: 650; line-height: 1.3;
-  white-space: nowrap; cursor: pointer;
-}
-.mov-detalleTabla__boton:hover, .mov-detalleTabla__boton.is-open {
-  color: var(--color-primary-strong, #173452);
-  text-decoration: underline;
-}
-.mov-detalleTabla__boton:focus-visible {
-  outline: 2px solid var(--color-primary, #1467c8); outline-offset: 2px;
-}
-.mov-detalleTabla__chevron { font-size: 11px; line-height: 1; }
 
-/* El panel es hermano de la fila original: nunca empuja fecha/cliente/importe/acciones. */
+.mov-detalleTabla {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  line-height: 1.3;
+  text-align: left;
+}
+
+.mov-detalleTabla__titulo {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-weight: 600;
+  color: inherit;
+}
+
+.mov-detalleTabla__aclaracion {
+  display: block;
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.4;
+  color: var(--color-text-muted, #738399);
+  overflow-wrap: anywhere;
+}
+
+.mov-detalleTabla__aclaracion--tabla {
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mov-detalleTabla__resumenLinea {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  line-height: 1.3;
+}
+
+.mov-detalleTabla__resumenLinea .mov-detalleTabla__aclaracion--tabla {
+  flex: 0 1 auto;
+  width: auto;
+  min-width: 0;
+}
+
+/* Acción discreta: sólo resalta al interactuar; la flecha rota suavemente. */
+.mov-detalleTabla__boton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 7px;
+  flex: 0 0 auto;
+  min-height: 24px;
+  padding: 3px 6px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-primary, #1467c8);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease;
+}
+
+.mov-detalleTabla__boton:hover,
+.mov-detalleTabla__boton.is-open {
+  background: color-mix(in srgb, var(--color-primary, #1467c8) 7%, transparent);
+  color: var(--color-primary, #1467c8);
+}
+
+.mov-detalleTabla__boton:focus-visible {
+  outline: 2px solid var(--color-primary, #1467c8);
+  outline-offset: 2px;
+}
+
+.mov-detalleTabla__chevron {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-top: -3px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(45deg);
+  transition: transform 240ms cubic-bezier(.2, .7, .2, 1);
+}
+
+.mov-detalleTabla__boton.is-open .mov-detalleTabla__chevron {
+  transform: translateY(3px) rotate(225deg);
+}
+
+/* La fila adicional es hermana de la fila original, nunca altera
+   el grid ni mueve las columnas de fecha, cliente, total o acciones.
+   0fr -> 1fr permite expandir/cerrar alturas variables sin fijar max-height. */
 .mov-detalleTabla__filaExpandida {
-  width: 100%; box-sizing: border-box; background: color-mix(in srgb, var(--color-primary, #1467c8) 3%, var(--color-surface, #fff));
-  border-bottom: 1px solid var(--color-border, #e2e8f0); padding: 0 16px 13px;
+  display: grid;
+  grid-template-rows: 0fr;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  background: transparent;
+  transition: grid-template-rows 285ms cubic-bezier(.22, 1, .36, 1),
+              background-color 220ms ease;
 }
+
+.mov-detalleTabla__filaExpandida.is-open {
+  grid-template-rows: 1fr;
+  background: color-mix(in srgb, var(--color-primary, #1467c8) 2%, var(--color-surface, #fff));
+}
+
+.mov-detalleTabla__recorte {
+  min-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-5px);
+  transition: opacity 200ms ease, transform 280ms cubic-bezier(.22, 1, .36, 1),
+              visibility 0s linear 285ms;
+}
+
+.mov-detalleTabla__filaExpandida.is-open .mov-detalleTabla__recorte {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+  transition: opacity 240ms ease, transform 280ms cubic-bezier(.22, 1, .36, 1),
+              visibility 0s;
+}
+
+/* Panel visualmente ligero, sin el bloque de fondo ni la barra azul gruesa. */
 .mov-detalleTabla__panel {
-  margin: 0 0 0 clamp(12px, 12%, 155px); padding: 12px 18px;
-  border-left: 3px solid var(--color-primary, #1467c8);
-  border-radius: 0 0 8px 8px; box-sizing: border-box;
-  background: color-mix(in srgb, var(--color-primary, #1467c8) 5%, var(--color-surface, #fff));
+  min-width: 0;
+  margin: 9px 16px 12px clamp(16px, 12%, 155px);
+  padding: 11px 16px 5px;
+  box-sizing: border-box;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-left: 2px solid color-mix(in srgb, var(--color-primary, #1467c8) 62%, transparent);
+  border-radius: 9px;
+  background: var(--color-surface, #fff);
 }
+
 .mov-detalleTabla__panelCabecera {
-  display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  color: var(--color-primary-strong, #173452); font-size: 11px; font-weight: 700;
-  letter-spacing: .035em; padding-bottom: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-bottom: 9px;
+  color: var(--color-primary-strong, #173452);
 }
-.mov-detalleTabla__contador { font-size: 11px; font-weight: 500; letter-spacing: normal; color: var(--color-text-muted, #8896aa); }
-.mov-detalleTabla__items { display: flex; flex-direction: column; gap: 0; min-width: 0; }
+
+.mov-detalleTabla__panelTitulo {
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: .01em;
+}
+
+.mov-detalleTabla__contador {
+  flex: 0 0 auto;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--color-text-muted, #738399);
+  white-space: nowrap;
+}
+
+.mov-detalleTabla__items {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
 .mov-detalleTabla__item {
-  display: flex; justify-content: space-between; align-items: center; gap: 16px;
-  min-width: 0; padding: 8px 2px; border-top: 1px solid color-mix(in srgb, var(--color-border, #cbd5e1) 70%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+  padding: 9px 0;
+  border-top: 1px solid color-mix(in srgb, var(--color-border, #e2e8f0) 70%, transparent);
 }
-.mov-detalleTabla__itemInfo { flex: 1; min-width: 0; }
-.mov-detalleTabla__itemNombre { display: block; font-size: 12px; font-weight: 600; overflow-wrap: anywhere; color: var(--color-primary-strong, #173452); }
-.mov-detalleTabla__itemTotal { flex: 0 0 auto; font-size: 12px; font-weight: 600; white-space: nowrap; color: var(--color-primary-strong, #173452); }
+
+.mov-detalleTabla__itemInfo {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.mov-detalleTabla__itemNombre {
+  display: block;
+  font-size: 12px;
+  font-weight: 550;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  color: var(--color-primary-strong, #173452);
+}
+
+.mov-detalleTabla__itemTotal {
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--color-primary-strong, #173452);
+}
+
 @media (max-width: 720px) {
-  .mov-detalleTabla__titulo { white-space: normal; overflow-wrap: anywhere; }
-  .mov-detalleTabla__panel { margin-left: 0; padding: 12px; }
-  .mov-detalleTabla__filaExpandida { padding: 0 12px 12px; }
-  .mov-detalleTabla__item { flex-wrap: wrap; }
-  .mov-detalleTabla__itemTotal { margin-left: auto; }
+  .mov-detalleTabla__titulo {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .mov-detalleTabla__panel {
+    margin: 8px 10px 11px;
+    padding: 10px 12px 3px;
+  }
+
+  .mov-detalleTabla__item {
+    gap: 7px 12px;
+    flex-wrap: wrap;
+  }
+
+  .mov-detalleTabla__itemTotal {
+    margin-left: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mov-detalleTabla__filaExpandida,
+  .mov-detalleTabla__recorte,
+  .mov-detalleTabla__boton,
+  .mov-detalleTabla__chevron {
+    transition: none !important;
+  }
 }

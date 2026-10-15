@@ -6,7 +6,6 @@ import "../../Global/Global_css/Global_oscuro.css";
 import "./DocumentosComerciales.css";
 import "./DocumentosComercialesResponsive.css";
 import ModalVerComprobante from "../../Global/Ver_Comprobantes/ModalVerComprobante.jsx";
-import useTableScrollGutter from "../../Global/useTableScrollGutter.jsx";
 import { readMovPerfCache, writeMovPerfCache, MOV_CACHE_LONG_TTL_MS } from "../_shared/performanceCache.js";
 import { buildDocumentosUrl, documentosRequest } from "./api/documentosComercialesApi.js";
 import { formatFecha, isDocumentosNetworkError, moneyARS, normalizeText, safeText } from "./utils/documentosComercialesUtils.js";
@@ -185,7 +184,7 @@ function DocumentosClientePanel({
   noDocsText = "Probá con otro cliente o limpiá la búsqueda.",
   navigationTabs = null,
 }) {
-  const [tableWrapRef, hasTableScroll] = useTableScrollGutter();
+
   const [qClientes, setQClientes] = useState("");
   const [personasOpen, setPersonasOpen] = useState(false);
   const [qDocumentos, setQDocumentos] = useState("");
@@ -687,12 +686,9 @@ function DocumentosClientePanel({
                   id={`doccom-${normalizeText(grupo) || "documentos"}-tableWrap`}
                   className="doccom-docTableWrap"
                   role="rowgroup"
-                  ref={tableWrapRef}
                 >
                   <div
-                    className={`mov-gridTable mov-gridTable--head doccom-docGridHead ${
-                      hasTableScroll ? "has-y-scroll" : ""
-                    }`}
+                    className="mov-gridTable mov-gridTable--head doccom-docGridHead"
                     style={{ gridTemplateColumns: gridCols }}
                     role="row"
                   >

@@ -10,7 +10,6 @@ import "../../Global/Global_css/Global_oscuro.css";
 import "../Ventas/Ventas.css";
 
 import Toast from "../../Global/Toast.jsx";
-import useTableScrollGutter from "../../Global/useTableScrollGutter.jsx";
 import Calendario from "../../Global/Calendario/Calendario.jsx";
 import "../../Global/Calendario/calendario.css";
 
@@ -335,7 +334,7 @@ function downloadBlob(content, fileName, mimeType) {
 
 export default function OtrosIngresos() {
   const API = `${BASE_URL}/api.php`;
-  const [tableWrapRef, hasTableScroll] = useTableScrollGutter();
+
 
   const {
     lists: listasCtx,
@@ -1703,9 +1702,7 @@ export default function OtrosIngresos() {
         </div>
 
         <div
-          className={`mov-gridTable mov-gridTable--head ${
-            hasTableScroll ? "has-y-scroll" : ""
-          }`}
+          className="mov-gridTable mov-gridTable--head"
           style={{ gridTemplateColumns: gridCols }}
           role="row"
         >
@@ -1725,7 +1722,7 @@ export default function OtrosIngresos() {
           ))}
         </div>
 
-        <div className="mov-tableWrap" role="rowgroup" ref={tableWrapRef}>
+        <div className="mov-tableWrap" role="rowgroup">
           <div
             className={[
               "mov-gridBody",
