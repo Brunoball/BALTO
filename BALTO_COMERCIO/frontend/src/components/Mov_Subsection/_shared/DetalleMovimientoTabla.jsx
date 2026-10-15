@@ -43,23 +43,31 @@ export function FilaMovimientoExpandible({ movimiento, children }) {
   return (
     <ContextoConceptos.Provider value={contexto}>
       {children}
-      {contexto.abierto && (
-        <div className="mov-detalleTabla__filaExpandida" role="row">
-          <div className="mov-detalleTabla__panel" role="cell" id={panelId} aria-label="Conceptos de la operación">
-            <div className="mov-detalleTabla__panelCabecera">
-              <span>CONCEPTOS DEL MOVIMIENTO</span>
-              <span className="mov-detalleTabla__contador">{items.length} conceptos</span>
-            </div>
-            <div className="mov-detalleTabla__items">
-              {items.map((item, i) => (
-                <div className="mov-detalleTabla__item" key={`${item.id_movimiento_item ?? item.id_item ?? item.id_detalle ?? "item"}-${i}`}>
-                  <div className="mov-detalleTabla__itemInfo">
-                    <span className="mov-detalleTabla__itemNombre">{item.nombre_visible}</span>
-                    {resumenItem(item) && <span className="mov-detalleTabla__aclaracion">{resumenItem(item)}</span>}
+      {puedeAbrir && (
+        // La fila permanece montada para animar tanto la apertura como el cierre.
+        // CSS Grid (0fr -> 1fr) adapta la transición a cualquier número de conceptos.
+        <div
+          className={`mov-detalleTabla__filaExpandida${contexto.abierto ? " is-open" : ""}`}
+          role="row"
+          aria-hidden={!contexto.abierto}
+        >
+          <div className="mov-detalleTabla__recorte" role="presentation">
+            <div className="mov-detalleTabla__panel" role="cell" id={panelId} aria-label="Conceptos de la operación">
+              <div className="mov-detalleTabla__panelCabecera">
+                <span className="mov-detalleTabla__panelTitulo">Conceptos del movimiento</span>
+                <span className="mov-detalleTabla__contador">{items.length} conceptos</span>
+              </div>
+              <div className="mov-detalleTabla__items">
+                {items.map((item, i) => (
+                  <div className="mov-detalleTabla__item" key={`${item.id_movimiento_item ?? item.id_item ?? item.id_detalle ?? "item"}-${i}`}>
+                    <div className="mov-detalleTabla__itemInfo">
+                      <span className="mov-detalleTabla__itemNombre">{item.nombre_visible}</span>
+                      {resumenItem(item) && <span className="mov-detalleTabla__aclaracion">{resumenItem(item)}</span>}
+                    </div>
+                    {totalItem(item) && <span className="mov-detalleTabla__itemTotal">{totalItem(item)}</span>}
                   </div>
-                  {totalItem(item) && <span className="mov-detalleTabla__itemTotal">{totalItem(item)}</span>}
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -82,7 +90,7 @@ export function ConceptosMovimientoBoton() {
       onClick={() => contexto.setAbierto((actual) => !actual)}
     >
       <span className="mov-detalleTabla__botonTexto">{contexto.abierto ? "Ocultar" : `Ver (${contexto.cantidad})`}</span>
-      <span aria-hidden="true" className="mov-detalleTabla__chevron">{contexto.abierto ? "▴" : "▾"}</span>
+      <span aria-hidden="true" className="mov-detalleTabla__chevron" />
     </button>
   );
 }

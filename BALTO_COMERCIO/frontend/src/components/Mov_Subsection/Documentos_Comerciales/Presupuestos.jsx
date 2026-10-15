@@ -7,7 +7,6 @@ import "../../Global/Global_css/Global_oscuro.css";
 import "./DocumentosComerciales.css";
 import "./DocumentosComercialesResponsive.css";
 import Toast from "../../Global/Toast.jsx";
-import useTableScrollGutter from "../../Global/useTableScrollGutter.jsx";
 import Calendario from "../../Global/Calendario/Calendario.jsx";
 import "../../Global/Calendario/calendario.css";
 import ModalNuevoPresupuesto from "./modales/ModalNuevoPresupuesto.jsx";
@@ -544,7 +543,6 @@ function documentLabel(tipo) {
 
 export default function Presupuestos() {
   const API = DOCUMENTOS_API;
-  const [tableWrapRef, hasTableScroll] = useTableScrollGutter();
   const { lists: listasCtx, loadingLists, error: errorLists, ensureListsLoaded } = useListas();
   const { dateRange, setDateRange } = useDateRange();
   const [rows, setRows] = useState([]);
@@ -1379,11 +1377,11 @@ export default function Presupuestos() {
           </div>
         </div>
 
-        <div className={`mov-gridTable mov-gridTable--head ${hasTableScroll ? "has-y-scroll" : ""}`} style={{ gridTemplateColumns: gridCols }} role="row">
+        <div className="mov-gridTable mov-gridTable--head" style={{ gridTemplateColumns: gridCols }} role="row">
           {columns.map((c) => <div key={c.key} className={["mov-gridCell", "mov-gridCell--head", c.align === "right" ? "is-right" : "", c.align === "center" ? "is-center" : ""].join(" ")} role="columnheader">{c.label}</div>)}
         </div>
 
-        <div className="mov-tableWrap balto-rsp-table-scroll" role="rowgroup" ref={tableWrapRef}>
+        <div className="mov-tableWrap balto-rsp-table-scroll" role="rowgroup">
           <div className={["mov-gridBody", "mov-gridBody--relative", "balto-rsp-table-body-reset", loadingRows ? "mov-softLoading" : ""].join(" ")}>
             {loadingRows ? <div className="mov-skeletonWrap" aria-busy="true">{Array.from({ length: SKELETON_ROWS }).map((_, i) => renderSkeletonRow(i))}</div> : <>
               {filteredRows.map((r) => {

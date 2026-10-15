@@ -1263,3 +1263,8 @@ body.dark .doccom-tabsRow .doccom-googleTab.is-active {
     padding-inline: 12px;
   }
 }
+
+/* Barra vertical estable también cuando cambia la cantidad de comprobantes. */
+.doccom-docTableWrap {
+  scrollbar-gutter: stable;
+}

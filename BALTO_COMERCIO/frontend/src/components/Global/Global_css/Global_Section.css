@@ -492,9 +492,10 @@ body{overflow: hidden;}
 }
 
 /* =========================================================
-   MOV — Alineación dinámica entre header y cuerpo
-   - El cuerpo conserva su scroll natural
-   - El header reserva gutter únicamente si el cuerpo scrollea
+   MOV — Encabezado y filas alineados, con scroll estable.
+   Header y body son hermanos: reservan siempre el mismo gutter,
+   haya o no contenido suficiente para el scroll vertical.
+   No se vuelve a medir la altura al desplegar los conceptos.
 ========================================================= */
 
 .mov-tableWrap,
@@ -513,7 +514,9 @@ body{overflow: hidden;}
   overflow: hidden;
 }
 
-.mov-gridTable--head.has-y-scroll{
+/* Solo tablas con cabecera FUERA del scroll (no Facturas/Remitos). */
+.mov-card--table > .mov-gridTable--head,
+.mov-card--table > .mov-tableWrap {
   scrollbar-gutter: stable;
 }
 
