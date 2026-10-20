@@ -54,13 +54,20 @@ test('@critical @documentos contratos PDF: venta conserva composición informati
   expect(budgetSource).toContain('const pdfItems = buildPdfItemsPayload();');
   expect(budgetSource).toContain('uploadPresupuestoPdf({ idMovimiento, payload, items: pdfItems })');
 
-  // El builder del presupuesto debe reconocer los metadatos del grupo y dibujar
-  // una sola cabecera del servicio antes de sus componentes.
+  // El builder reconoce los metadatos del servicio, agrupa sus componentes
+  // y usa la cabecera unificada del PDF: modelo + servicio en una misma franja.
+  // La regresión funcional de altura, paginación y texto está en el spec 41.
   expect(budgetBuilderSource).toMatch(/grupoServicio:\s*sanitizePdfText/);
   expect(budgetBuilderSource).toMatch(/grupoClave:\s*sanitizePdfText/);
-  expect(budgetBuilderSource).toContain('function drawServiceBlockTitle');
-  expect(budgetBuilderSource).toContain('const title = drawServiceBlockTitle(doc, firstItem, y, bottomLimit);');
   expect(budgetBuilderSource).toContain('const blocks = groupBudgetItems(items);');
+  expect(budgetBuilderSource).toContain('const tituloModelo = getTituloModeloPresupuesto(data || {});');
+  expect(budgetBuilderSource).toContain('function measureBudgetSectionTitle');
+  expect(budgetBuilderSource).toContain('function drawBudgetSectionTitle');
+  expect(budgetBuilderSource).toContain('if (modelo) partes.push(`PRESUPUESTO: ${modelo}`);');
+  expect(budgetBuilderSource).toContain('if (servicio) partes.push(`SERVICIO: ${servicio}${codigo ? ` · ${codigo}` : ""}`);');
+  expect(budgetBuilderSource).toContain('const junto = partes.join("    |    ");');
+  expect(budgetBuilderSource).toContain('const title = drawBudgetSectionTitle(doc, tituloPendiente ? tituloModelo : "", item, y, bottomLimit);');
+  expect(budgetBuilderSource).toContain('drawColumnsHeader();');
 
   expect(saleSource.match(/nombre_servicio_archivo:\s*getServiceFilenameLabel\(rowsCalc\)/g)?.length || 0).toBeGreaterThanOrEqual(2);
   expect(facturaSource).toMatch(/nombre_servicio_archivo/);

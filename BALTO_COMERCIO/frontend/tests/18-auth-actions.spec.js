@@ -1,4 +1,4 @@
-import { test, expect } from './support/test.js';
+import { test, expect, autoDismissStockNotifications } from './support/test.js';
 import { ENV, patchContextNavigation, patchPageNavigation } from './support/env.js';
 
 async function createPublicContext(browser) {
@@ -98,6 +98,9 @@ test('@auth mostrar contraseña y cerrar sesión', async ({ browser }) => {
   const context = await createPublicContext(browser);
   const page = await context.newPage();
   patchPageNavigation(page);
+  // Este contexto se crea con browser.newContext(), fuera de la fixture global.
+  // Al autenticarse, la notificación de Stock puede abrirse encima del logout.
+  await autoDismissStockNotifications(page);
 
   await page.goto('/');
   const password = page.getByPlaceholder('Contraseña');
@@ -108,6 +111,9 @@ test('@auth mostrar contraseña y cerrar sesión', async ({ browser }) => {
   await expect(password).toHaveAttribute('type', 'password');
 
   await loginFromPublicPage(page);
+  // Esperar a que termine la pantalla de carga tras el login antes de pulsar
+  // el botón. El popup asíncrono queda a cargo del handler anterior.
+  await expect(page.locator('#balto-bootstrap-loader')).toBeHidden({ timeout: 45_000 });
   await page.getByRole('button', { name: /Cerrar sesión/i }).click();
   const logoutDialog = page.getByRole('dialog').filter({ hasText: /Confirmar cierre de sesión/i }).last();
   await expect(logoutDialog).toBeVisible();

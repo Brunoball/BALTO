@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useLayoutEffect, useCallback, useMemo, useRef } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { createPortal } from "react-dom";
 import ModalCargaMasiva from "./modales/ModalCargaMasiva";
 import ModalEditarProducto from "./modales/ModalEditarStock";
@@ -102,6 +103,10 @@ function renderStockChip(value, unidad = "", unidadesMixtas = false) {
 }
 
 const Stock = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [editarTabInicial, setEditarTabInicial] = useState("producto");
+  const [editarVarianteInicial, setEditarVarianteInicial] = useState(null);
   const permiteCodigoBarras = canBaltoUseBarcode();
   const [productosRaw, setProductosRaw] = useState([]);
   const [categorias, setCategorias] = useState([]);
@@ -1836,7 +1841,22 @@ const Stock = () => {
     setPaginaActual(1);
   };
 
+  useEffect(() => {
+    const destino = location.state?.baltoStockDestino;
+    if (!destino) return;
+    // Consumir estado de navegación: actualizar Stock no reabre el modal.
+    navigate(location.pathname + location.search, { replace: true, state: null });
+    const id = Number(destino.productoId);
+    if (!Number.isSafeInteger(id) || id <= 0) return;
+    setEditarTabInicial(destino.tab === "vencimientos" ? "vencimientos" : "producto");
+    setEditarVarianteInicial(Number(destino.varianteId) > 0 ? Number(destino.varianteId) : null);
+    setProductoEditarId(id);
+    setModalEditarAbierto(true);
+  }, [location.state, location.pathname, location.search, navigate]);
+
   const handleAbrirEditar = (id) => {
+    setEditarTabInicial("producto");
+    setEditarVarianteInicial(null);
     if (!id || Number(id) <= 0) {
       mostrarToast("error", "ID de producto inválido.");
       return;
@@ -3334,9 +3354,22 @@ const Stock = () => {
 
       {modalEditarAbierto && productoEditarId && (
         <ModalEditarProducto
+          key={`${productoEditarId}:${editarTabInicial}:${editarVarianteInicial || 0}`}
           productoId={productoEditarId}
+          initialTab={editarTabInicial}
+          initialVarianteId={editarVarianteInicial}
           onClose={handleCerrarEditar}
           onToast={mostrarToast}
+          onVencimientoCambiado={async () => {
+            try {
+              await fetchProductos({ silencioso: true, preservarImagenes: true, preservarScroll: true });
+              if (productoEditarId && variantesAbiertas[productoEditarId]) {
+                await cargarVariantesProducto(productoEditarId, { silencioso: true });
+              }
+            } catch (err) {
+              console.warn("[Stock] Stock retirado, pero la grilla no pudo refrescarse aún.", err);
+            }
+          }}
           onGuardadoIntermedio={async (productoGuardado, opciones = {}) => {
             const productoIdEditado = getProductoId(productoGuardado) || Number(opciones?.productoId || productoEditarId || 0);
 

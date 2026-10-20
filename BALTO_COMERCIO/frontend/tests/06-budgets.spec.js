@@ -1,4 +1,4 @@
-import { test, expect } from './support/test.js';
+import { test, expect, autoDismissStockNotifications } from './support/test.js';
 import { uniqueName, uniqueSku } from './support/data.js';
 import { ENV } from './support/env.js';
 import { installDiagnostics, assertNoCriticalErrors } from './support/diagnostics.js';
@@ -147,6 +147,9 @@ test('@crud @critical presupuesto: dos pestañas no pueden convertirlo dos veces
   await createBudget(page, { productName, quantity: 1, price: 180, ivaPct: 21 });
 
   const secondPage = await context.newPage();
+  // El handler de la fixture sólo cubre `page`: las pestañas adicionales
+  // pueden abrir su propio popup asíncrono de Stock y tapar la conversión.
+  await autoDismissStockNotifications(secondPage);
   const first = await prepareBudgetConversion(page, productName);
   await secondPage.goto('/panel/presupuesto');
   const second = await prepareBudgetConversion(secondPage, productName);
@@ -179,6 +182,7 @@ test('@crud @critical presupuesto: dos pestañas no pueden convertirlo dos veces
   expect(secondSaleId, 'Ambas pestañas deben recibir exactamente el mismo id de venta').toBe(firstSaleId);
 
   const verifier = await context.newPage();
+  await autoDismissStockNotifications(verifier);
   await verifier.goto('/panel/ventas');
   await searchRow(verifier, productName, /Buscar por descripción, cliente/i);
   const sales = verifier.locator('.mov-gridTable--row:visible:not(.mov-row--skeleton)');

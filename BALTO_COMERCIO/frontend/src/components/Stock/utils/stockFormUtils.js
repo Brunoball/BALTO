@@ -80,6 +80,15 @@ export function normalizeStockInput(value, maxDecimals = 3) {
   return raw;
 }
 
+// Valor proveniente de la API/MySQL para precargar campos de stock.
+// Las columnas DECIMAL(., 3) pueden devolver "5.000": se muestra "5",
+// pero se conservan los decimales reales ("5.125" -> "5.125").
+export function stockToInput(value) {
+  if (value === null || value === undefined || String(value).trim() === "") return "";
+  const num = Number(String(value).trim().replace(",", "."));
+  return Number.isFinite(num) ? String(num) : String(value);
+}
+
 export function stockToApi(value) {
   const raw = String(value ?? "").trim().replace(/,/g, ".");
   const n = Number(raw);

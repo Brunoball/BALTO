@@ -1045,6 +1045,8 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
   const [guardarComoModelo, setGuardarComoModelo] = useState(false);
   const [modeloNombre, setModeloNombre] = useState("");
   const [modeloDescripcion, setModeloDescripcion] = useState("");
+  const tieneModeloCargado = Number(modeloOrigen?.id_modelo || 0) > 0;
+  const guardarNuevoModelo = guardarComoModelo && !tieneModeloCargado;
   const [saving, setSaving] = useState(false);
   const [configFacturacion, setConfigFacturacion] = useState(null);
   const [addUI, setAddUI] = useState({
@@ -1526,7 +1528,7 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
     }
     const validItems = computedRows.filter((r) => safeStr(r.detalleText) && r.cantidad > 0 && r.precio > 0);
     if (!validItems.length) return "Agregá al menos un producto o servicio con cantidad y precio.";
-    if (guardarComoModelo && !safeStr(modeloNombre)) return "Ingresá un nombre para guardar el presupuesto como modelo.";
+    if (guardarNuevoModelo && !safeStr(modeloNombre)) return "Ingresá un nombre para guardar el presupuesto como modelo.";
 
     const problems = [];
     computedRows.forEach((r, idx) => {
@@ -1539,7 +1541,7 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
       if (!(r.precio > 0)) problems.push(`Fila ${idx + 1}: el precio debe ser mayor a 0.`);
     });
     return problems[0] || "";
-  }, [clienteSel, fecha, computedRows, condiciones.validezDias, guardarComoModelo, modeloNombre]);
+  }, [clienteSel, fecha, computedRows, condiciones.validezDias, guardarNuevoModelo, modeloNombre]);
 
   const buildItemsPayload = useCallback(() => {
     return computedRows
@@ -1708,9 +1710,9 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
       presupuesto_personalizado: (presupuestoPersonalizado || items.some((it) => it.tipo_item === "MANUAL")) ? 1 : 0,
       id_modelo_origen: Number(modeloOrigen?.id_modelo || 0) || null,
       nombre_modelo_origen: upperStr(modeloOrigen?.nombre),
-      guardar_como_modelo: guardarComoModelo ? 1 : 0,
-      modelo_nombre: guardarComoModelo ? upperStr(modeloNombre) : "",
-      modelo_descripcion: guardarComoModelo ? upperStr(modeloDescripcion) : "",
+      guardar_como_modelo: guardarNuevoModelo ? 1 : 0,
+      modelo_nombre: guardarNuevoModelo ? upperStr(modeloNombre) : "",
+      modelo_descripcion: guardarNuevoModelo ? upperStr(modeloDescripcion) : "",
       items,
       ...getAuditUserPayload(),
     };
@@ -1724,7 +1726,7 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
       const modeloGuardado = creado?.modelo_guardado || creado?.modelo || null;
       onToast?.(
         "exito",
-        guardarComoModelo || modeloGuardado
+        guardarNuevoModelo
           ? "Presupuesto generado y modelo base guardado correctamente."
           : "Presupuesto generado y vinculado correctamente.",
         3400
@@ -1735,7 +1737,7 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
     } finally {
       setSaving(false);
     }
-  }, [API, buildItemsPayload, buildPdfItemsPayload, clienteSel, cliInput, fecha, observaciones, condiciones, guardarComoModelo, modeloDescripcion, modeloNombre, modeloOrigen, onSaved, onToast, presupuestoPersonalizado, totals, uploadPresupuestoPdf, validate]);
+  }, [API, buildItemsPayload, buildPdfItemsPayload, clienteSel, cliInput, fecha, observaciones, condiciones, guardarNuevoModelo, modeloDescripcion, modeloNombre, modeloOrigen, onSaved, onToast, presupuestoPersonalizado, totals, uploadPresupuestoPdf, validate]);
 
   if (!open) return null;
 
@@ -1778,7 +1780,7 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
               <small>En cada fila elegí Servicio, Material / insumo / producto o Detalle manual. El presupuesto no reserva stock.</small>
             </div>
             <div className="presupuesto-mode-actions">
-              {modeloOrigen?.nombre ? (
+              {tieneModeloCargado && modeloOrigen?.nombre ? (
                 <span className="presupuesto-model-loaded" title={safeStr(modeloOrigen.descripcion)}>
                   Modelo cargado: <b>{modeloOrigen.nombre}</b>
                 </span>
@@ -2166,50 +2168,52 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
                     </div>
 
 
-                    <div className={`presupuesto-save-model ${guardarComoModelo ? "is-active" : ""}`}>
-                      <label className="gm-inline-check presupuesto-check-card presupuesto-save-model__toggle">
-                        <input
-                          type="checkbox"
-                          checked={guardarComoModelo}
-                          onChange={(e) => setGuardarComoModelo(e.target.checked)}
-                          disabled={saving}
-                        />
-                        <span className="gm-inline-check__box" aria-hidden="true" />
-                        <span className="presupuesto-check-card__copy">
-                          <b>Guardar también como modelo base</b>
-                          <small>El presupuesto normal se crea igual y queda disponible para convertirlo en venta.</small>
-                        </span>
-                      </label>
+                    {!tieneModeloCargado ? (
+                      <div className={`presupuesto-save-model ${guardarComoModelo ? "is-active" : ""}`}>
+                        <label className="gm-inline-check presupuesto-check-card presupuesto-save-model__toggle">
+                          <input
+                            type="checkbox"
+                            checked={guardarComoModelo}
+                            onChange={(e) => setGuardarComoModelo(e.target.checked)}
+                            disabled={saving}
+                          />
+                          <span className="gm-inline-check__box" aria-hidden="true" />
+                          <span className="presupuesto-check-card__copy">
+                            <b>Guardar también como modelo base</b>
+                            <small>El presupuesto normal se crea igual y queda disponible para convertirlo en venta.</small>
+                          </span>
+                        </label>
 
-                      {guardarComoModelo ? (
-                        <div className="presupuesto-save-model__fields">
-                          <div className="gm-field">
-                            <input
-                              className="gm-input"
-                              type="text"
-                              placeholder=" "
-                              value={modeloNombre}
-                              onChange={(e) => setModeloNombre(upperInput(e.target.value))}
-                              maxLength={150}
-                              disabled={saving}
-                            />
-                            <label className="gm-label">Nombre del modelo *</label>
+                        {guardarComoModelo ? (
+                          <div className="presupuesto-save-model__fields">
+                            <div className="gm-field">
+                              <input
+                                className="gm-input"
+                                type="text"
+                                placeholder=" "
+                                value={modeloNombre}
+                                onChange={(e) => setModeloNombre(upperInput(e.target.value))}
+                                maxLength={150}
+                                disabled={saving}
+                              />
+                              <label className="gm-label">Nombre del modelo *</label>
+                            </div>
+                            <div className="gm-field">
+                              <textarea
+                                className="gm-input presupuesto-model-description"
+                                placeholder=" "
+                                value={modeloDescripcion}
+                                onChange={(e) => setModeloDescripcion(upperInput(e.target.value))}
+                                maxLength={500}
+                                disabled={saving}
+                                rows={2}
+                              />
+                              <label className="gm-label">Descripción del modelo</label>
+                            </div>
                           </div>
-                          <div className="gm-field">
-                            <textarea
-                              className="gm-input presupuesto-model-description"
-                              placeholder=" "
-                              value={modeloDescripcion}
-                              onChange={(e) => setModeloDescripcion(upperInput(e.target.value))}
-                              maxLength={500}
-                              disabled={saving}
-                              rows={2}
-                            />
-                            <label className="gm-label">Descripción del modelo</label>
-                          </div>
-                        </div>
-                      ) : null}
-                    </div>
+                        ) : null}
+                      </div>
+                    ) : null}
 
                     <div className="dc-info presupuesto-info">
                       Se guarda como presupuesto y genera PDF con validez, entrega, pago y condiciones. No impacta caja, ARCA ni medio de pago.

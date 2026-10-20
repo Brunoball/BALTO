@@ -3,6 +3,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import ModalVerComprobante from "../../Global/Ver_Comprobantes/ModalVerComprobante";
 import StockBarcodePanel from "./StockBarcodePanel";
 import StockUnitField from "./StockUnitField";
+import VencimientosAltaFields, { prepararVencimientosAlta, validarVencimientosAlta } from "../vencimientos/VencimientosAltaFields";
 import PricingCoefficientPanel from "./PricingCoefficientPanel";
 import "./ModalCargaIndividualProducto.css";
 import { isTopStockModal } from "./modalStackUtils";
@@ -635,6 +636,7 @@ function emptyVariantRow(tiposProducto = []) {
     precio_promo: "",
     atributos: [emptyVariantAttr()],
     tipos_precio_extra: [],
+    vencimientos: [],
   };
 
   return {
@@ -797,6 +799,7 @@ function buildEmptyForm() {
     id_categoria_stock: "",
     categorias_ids: [],
     tiene_variantes: false,
+    vencimientos: [],
     variantes: [emptyVariantRow()],
     tipos_precio_extra: [],
   };
@@ -826,6 +829,7 @@ export default function ModalCargaIndividualProducto({
   const guardandoRef = useRef(false);
 
   const [guardando, setGuardando] = useState(false);
+  const [altaIncompleta, setAltaIncompleta] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewUrl, setPreviewUrl] = useState("");
   const [previewMime, setPreviewMime] = useState("");
@@ -970,6 +974,7 @@ export default function ModalCargaIndividualProducto({
       setCargaActiva("producto");
       setBarcodeProductoGuardado(null);
       setBarcodeGuardadoContexto(null);
+      setAltaIncompleta(false);
       setErrores({});
       setGuardando(false);
       setImagenFile(null);
@@ -1447,6 +1452,12 @@ export default function ModalCargaIndividualProducto({
       }
     }
 
+    if (!sourceForm.tiene_variantes) {
+      const unidad = unidadesStock.find((u) => String(u.id_stock_unidad ?? u.id) === String(sourceForm.id_stock_unidad));
+      const errorVencimiento = validarVencimientosAlta(sourceForm.vencimientos, sourceForm.stock, Number(unidad?.permite_decimales ?? 1) === 1);
+      if (errorVencimiento) errs.vencimientos = errorVencimiento;
+    }
+
     if (sourceForm.tiene_variantes) {
       const variantesValidas = (sourceForm.variantes || []).filter(variantHasContent);
 
@@ -1465,6 +1476,9 @@ export default function ModalCargaIndividualProducto({
         if (!isValidMoneyValue(variant.precio)) {
           errs[`variante_${idx}_precio`] = `La variante #${numero} necesita precio de venta propio.`;
         }
+        const unidadVariante = unidadesStock.find((u) => String(u.id_stock_unidad ?? u.id) === String(variant.id_stock_unidad || sourceForm.id_stock_unidad));
+        const errorVencimiento = validarVencimientosAlta(variant.vencimientos, variant.stock, Number(unidadVariante?.permite_decimales ?? 1) === 1);
+        if (errorVencimiento) errs[`variante_${idx}_vencimientos`] = `Variante #${numero}: ${errorVencimiento}`;
       });
     }
 
@@ -1638,6 +1652,10 @@ export default function ModalCargaIndividualProducto({
 
   const handleGuardar = async () => {
     if (guardandoRef.current) return;
+    if (altaIncompleta) {
+      mostrarToast("El producto ya se creó. Revisá sus vencimientos desde Editar; no lo vuelvas a agregar.", "error");
+      return;
+    }
 
     const formNormalizado = hydratePricingFormValues(form);
     const errs = validar(formNormalizado);
@@ -1684,6 +1702,8 @@ export default function ModalCargaIndividualProducto({
       fd.append("id_stock_unidad", String(formNormalizado.id_stock_unidad || ""));
       fd.append("descripcion", toCapitalizedText(formNormalizado.descripcion));
       fd.append("tiene_variantes", formNormalizado.tiene_variantes ? "1" : "0");
+      // El backend registra estas partidas dentro de la misma transacción del alta.
+      fd.append("vencimientos", JSON.stringify(usaVariantes ? [] : prepararVencimientosAlta(formNormalizado.vencimientos)));
 
       // El producto se confirma primero en Balto y la sincronización con Tienda Nube
       // se procesa después de cerrar la respuesta HTTP. Así una API externa lenta no
@@ -1722,6 +1742,7 @@ export default function ModalCargaIndividualProducto({
                   valor: toCapitalizedText(attr.valor),
                 })),
               precios: buildVariantPricePayload(variant),
+              vencimientos: prepararVencimientosAlta(variant.vencimientos),
             }))
         : [];
       fd.append("variantes", JSON.stringify(variantesPayload));
@@ -1750,6 +1771,18 @@ export default function ModalCargaIndividualProducto({
       }
 
       const data = await crearProductoStock(fd);
+      const cantidadVencimientos = usaVariantes
+        ? variantesPayload.reduce((total, v) => total + v.vencimientos.length, 0)
+        : prepararVencimientosAlta(formNormalizado.vencimientos).length;
+      // Detecta deploy parcial: nunca asumir que un backend antiguo registró las fechas.
+      if (cantidadVencimientos > 0 && Number(data?.vencimientos_registrados ?? data?.data?.vencimientos_registrados ?? -1) !== cantidadVencimientos) {
+        // El alta podría estar confirmada: no cerrar el formulario ni reintentar a ciegas.
+        setAltaIncompleta(true);
+        throw new Error("El producto fue creado, pero el servidor no confirmó sus vencimientos. No vuelvas a crearlo: actualizá ProductoBaseService.php y verificá las fechas desde Editar producto.");
+      }
+      if (cantidadVencimientos > 0) {
+        window.dispatchEvent(new Event("balto:stock-vencimientos-cambio"));
+      }
       const productoGuardadoBase = data?.producto ?? data?.data?.producto ?? data?.data ?? null;
       const productoGuardado = buildOptimisticProduct(
         productoGuardadoBase,
@@ -1940,6 +1973,17 @@ export default function ModalCargaIndividualProducto({
                 </select>
               </FloatingField>
             </div>
+
+            {!productoConVariantes ? (
+              <VencimientosAltaFields
+                titulo="Fechas de vencimiento del producto"
+                value={form.vencimientos}
+                onChange={(vencimientos) => setForm((p) => ({ ...p, vencimientos }))}
+                stock={form.stock}
+                disabled={guardando || !!barcodeProductoGuardado}
+                error={errores.vencimientos}
+              />
+            ) : null}
 
             <div className="cmi-v2-tabsInline">
               <button type="button" className="cmi-v2-tabBtn" onClick={() => irAPanel(categoriasPanelRef)}>
@@ -2382,6 +2426,15 @@ export default function ModalCargaIndividualProducto({
                       </FloatingField>
                     </div>
 
+                    <VencimientosAltaFields
+                      titulo={`Fechas de vencimiento · Variante #${variantIdx + 1}`}
+                      value={variant.vencimientos}
+                      onChange={(vencimientos) => updateVariant(variantIdx, { vencimientos })}
+                      stock={variant.stock}
+                      disabled={guardando || !!barcodeProductoGuardado}
+                      error={errores[`variante_${variantIdx}_vencimientos`]}
+                    />
+
                     {categoriasSafe.length > 0 ? (
                       <div className="cmi-v2-variantCategories">
                         <div className="cmi-v2-variantCategories__head">
@@ -2588,7 +2641,9 @@ export default function ModalCargaIndividualProducto({
 
       <div className="cmi-footer">
         <span className="mi-card__hint cmi-footer__hint">
-          {barcodeProductoGuardado
+          {altaIncompleta
+            ? "El alta ya ocurrió, pero falta confirmar los vencimientos. No vuelvas a crear el producto. Cerrá y revisalo desde Editar."
+            : barcodeProductoGuardado
             ? "Los códigos ya están disponibles. Finalizá cuando termines de imprimir o escanear."
             : cargaActiva === "codigo_barra"
               ? "Guardá primero para obtener los IDs definitivos y generar los códigos."
@@ -2611,7 +2666,7 @@ export default function ModalCargaIndividualProducto({
             type="button"
             className="mit-btn mit-btn--solid"
             onClick={barcodeProductoGuardado ? handleFinalizarCodigos : handleGuardar}
-            disabled={guardando}
+            disabled={guardando || altaIncompleta}
           >
             {!guardando && <FontAwesomeIcon icon={barcodeProductoGuardado ? faCheck : faFloppyDisk} style={{ fontSize: 13 }} />}
             {guardando

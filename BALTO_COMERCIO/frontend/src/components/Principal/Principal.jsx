@@ -9,6 +9,7 @@ import React, {
 import { useNavigate, useLocation, Outlet } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import LogoBalto from "../../imagenes/Logo_Blanco_Principal.png";
+import AlertasVencimientos from "../Stock/vencimientos/AlertasVencimientos";
 
 import {
   faChartLine,
@@ -893,6 +894,8 @@ const Principal = () => {
 
         <div className="mov-topbar__right">
           <div className="mov-topbar__section">{activeLabel}</div>
+
+          {puedeVerConfiguracion && <AlertasVencimientos />}
 
           <button
             className="pp-themeBtn"

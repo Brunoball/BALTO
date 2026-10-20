@@ -610,28 +610,89 @@ function drawTableHeader(doc, y) {
   return { nextY: y + rowH + 15, cols: c };
 }
 
-function drawTableRow(doc, item, idx, cols, y, maxBodyY) {
+function getTableRowLines(doc, item, idx, cols) {
   set(doc, "helvetica", "normal", 8.7);
   const codeMaxW = cols.x1 - cols.padR - (cols.x0 + cols.padL);
   const descMaxW = cols.x2 - cols.padR - (cols.x1 + cols.padL);
-  const codeLines = wrapCompactByWidth(
-    doc,
-    item.codigo || String(idx + 1),
-    Math.max(20, codeMaxW)
-  );
+  const code = item.codigo || String(idx + 1);
+  const codeLines = wrapCompactByWidth(doc, code, Math.max(20, codeMaxW));
   const descLines = wrapByWidth(doc, item.descripcion, Math.max(20, descMaxW));
-  const lh = 11;
-  const blockH = Math.max(14, Math.max(codeLines.length, descLines.length) * lh);
-  if (y + blockH > maxBodyY) return { y, drawn: false };
+  return { codeLines, descLines, totalLines: Math.max(1, codeLines.length, descLines.length) };
+}
 
-  codeLines.forEach((ln, li) => text(doc, ln, cols.x0 + cols.padL, y + li * lh));
-  descLines.forEach((ln, li) => text(doc, ln, cols.x1 + cols.padL, y + li * lh));
-  text(doc, qtyEs(item.cantidad), cols.x3 - cols.padR, y, { align: "right" });
-  text(doc, s(item.unidad || "u"), cols.x4 - cols.padR, y, { align: "right" });
-  text(doc, moneyEs(item.precio), cols.x5 - cols.padR, y, { align: "right" });
-  text(doc, numEs(item.ivaPct, 2), cols.x6 - cols.padR, y, { align: "right" });
-  text(doc, moneyEs(item.subtotal), cols.x7 - cols.padR, y, { align: "right" });
-  return { y: y + blockH + 5, drawn: true };
+// Imprime todas las líneas que entren. Las descripciones excepcionalmente
+// largas pueden continuar en otra hoja, en vez de perder el renglón entero.
+function drawTableRow(doc, item, idx, cols, y, maxBodyY, lineOffset = 0) {
+  const { codeLines, descLines, totalLines } = getTableRowLines(doc, item, idx, cols);
+  const lh = 11;
+  const availableHeight = maxBodyY - y;
+  const maxLinesHere = availableHeight < 19 ? 0 : Math.floor((availableHeight - 5) / lh);
+  const linesToDraw = Math.min(totalLines - lineOffset, Math.max(0, maxLinesHere));
+  if (linesToDraw < 1) return { y, drawn: false, nextOffset: lineOffset, totalLines };
+
+  const blockH = Math.max(14, linesToDraw * lh);
+  codeLines.slice(lineOffset, lineOffset + linesToDraw)
+    .forEach((ln, li) => text(doc, ln, cols.x0 + cols.padL, y + li * lh));
+  descLines.slice(lineOffset, lineOffset + linesToDraw)
+    .forEach((ln, li) => text(doc, ln, cols.x1 + cols.padL, y + li * lh));
+  if (lineOffset === 0) {
+    text(doc, qtyEs(item.cantidad), cols.x3 - cols.padR, y, { align: "right" });
+    text(doc, s(item.unidad || "u"), cols.x4 - cols.padR, y, { align: "right" });
+    text(doc, moneyEs(item.precio), cols.x5 - cols.padR, y, { align: "right" });
+    text(doc, numEs(item.ivaPct, 2), cols.x6 - cols.padR, y, { align: "right" });
+    text(doc, moneyEs(item.subtotal), cols.x7 - cols.padR, y, { align: "right" });
+  }
+  return { y: y + blockH + 5, drawn: true, nextOffset: lineOffset + linesToDraw, totalLines };
+}
+
+function tableRowHeight(doc, item, cols) {
+  const { totalLines } = getTableRowLines(doc, item, 0, cols);
+  return Math.max(14, totalLines * 11) + 5;
+}
+
+// Los presupuestos creados desde un modelo tienen un nombre comercial propio.
+// El nombre ya llega en el payload del alta; no depende de consultar el modelo
+// otra vez, y no se confunde con las descripciones de los ítems del documento.
+function getTituloModeloPresupuesto(data) {
+  return pickText(
+    data?.nombre_modelo_origen,
+    Number(data?.guardar_como_modelo) === 1 ? data?.modelo_nombre : ""
+  );
+}
+
+// Igual que en Servicios: un único encabezado compacto antes de la tabla.
+// Comercio no dispone del desglose agrupado de servicios, por eso utiliza
+// únicamente el nombre del modelo y no duplica descripciones de productos.
+function measureBudgetSectionTitle(doc, nombreModelo) {
+  const modelo = sanitizePdfText(nombreModelo).toUpperCase();
+  if (!modelo) return null;
+
+  const innerW = doc.internal.pageSize.getWidth() - 20;
+  set(doc, "helvetica", "bold", 9.4);
+  const maxTextW = innerW - 22;
+  const titulo = `PRESUPUESTO: ${modelo}`;
+  const lineas = doc.getTextWidth(titulo) <= maxTextW
+    ? [titulo]
+    : wrapByWidth(doc, titulo, maxTextW);
+  const lineHeight = 11;
+  const altura = 22 + (lineas.length - 1) * lineHeight;
+  return { lineas, altura, totalHeight: altura + 3, lineHeight };
+}
+
+function drawBudgetSectionTitle(doc, nombreModelo, y, maxBodyY) {
+  const title = measureBudgetSectionTitle(doc, nombreModelo);
+  if (!title) return { y, drawn: true };
+  if (y + title.totalHeight > maxBodyY) return { y, drawn: false };
+
+  const B = 10;
+  const innerW = doc.internal.pageSize.getWidth() - B * 2;
+  fillRect(doc, B, y, innerW, title.altura, 0.92);
+  rect(doc, B, y, innerW, title.altura, 0.45);
+  set(doc, "helvetica", "bold", 9.4);
+  title.lineas.forEach((linea, indice) => {
+    text(doc, linea, B + 11, y + 15 + indice * title.lineHeight);
+  });
+  return { y: y + title.totalHeight, drawn: true };
 }
 
 function drawTotalsAndFooter(doc, items, data, y) {
@@ -722,30 +783,52 @@ export async function buildPresupuestoPdf({ data } = {}) {
   const doc = new jsPDF({ unit: "pt", format: "a4", compress: true });
   const logoDataUrl = await fetchTenantLogoDataUrl();
   const items = normalizeItems(data || {});
+  const tituloModelo = getTituloModeloPresupuesto(data || {});
   const H = doc.internal.pageSize.getHeight();
   const B = 10;
   const bottomLimit = H - B - presupuestoFooterRequiredHeight();
   let y;
-  let cols;
+  let cols = getColumns(doc);
+  let pageBodyStartY = 0;
 
   const startPage = () => {
     drawOuter(doc);
-    y = drawHeader(doc, data || {}, logoDataUrl) + 14;
+    // Los presupuestos sin modelo mantienen el espaciado histórico de Comercio.
+    y = drawHeader(doc, data || {}, logoDataUrl) + (tituloModelo ? 8 : 14);
+    if (tituloModelo) {
+      const title = drawBudgetSectionTitle(doc, tituloModelo, y, bottomLimit);
+      if (!title.drawn) throw new Error("El título del modelo no entra en la hoja del presupuesto.");
+      y = title.y;
+    }
     const header = drawTableHeader(doc, y);
     y = header.nextY;
+    pageBodyStartY = y;
     cols = header.cols;
+    if (y + 19 > bottomLimit) {
+      throw new Error("El encabezado del presupuesto no deja espacio para los renglones del PDF.");
+    }
   };
 
   startPage();
-  items.forEach((it, idx) => {
-    const res = drawTableRow(doc, it, idx, cols, y, bottomLimit);
-    if (!res.drawn) {
+  items.forEach((item, idx) => {
+    // Evitar cortar renglones normales: se pasan enteros a la página siguiente.
+    // Las descripciones más largas que una hoja sí se dividen, sin perder líneas.
+    const rowHeight = tableRowHeight(doc, item, cols);
+    const cabeEnPaginaNueva = rowHeight <= bottomLimit - pageBodyStartY;
+    if (y > pageBodyStartY && y + rowHeight > bottomLimit && cabeEnPaginaNueva) {
       doc.addPage();
       startPage();
-      const next = drawTableRow(doc, it, idx, cols, y, bottomLimit);
-      y = next.y;
-    } else {
-      y = res.y;
+    }
+    let lineOffset = 0;
+    while (true) {
+      const res = drawTableRow(doc, item, idx, cols, y, bottomLimit, lineOffset);
+      if (res.drawn) {
+        y = res.y;
+        lineOffset = res.nextOffset;
+      }
+      if (lineOffset >= res.totalLines) break;
+      doc.addPage();
+      startPage();
     }
   });
 

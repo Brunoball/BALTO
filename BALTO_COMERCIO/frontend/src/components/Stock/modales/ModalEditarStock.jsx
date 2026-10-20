@@ -4,6 +4,8 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import "./ModalEditarStock.css";
 import ModalVerComprobante from "../../Global/Ver_Comprobantes/ModalVerComprobante";
 import StockBarcodePanel from "./StockBarcodePanel";
+import VencimientosPanel from "../vencimientos/VencimientosPanel";
+import TnPresentacionesPanel from "./TnPresentacionesPanel";
 import StockUnitField from "./StockUnitField";
 import PricingCoefficientPanel from "./PricingCoefficientPanel";
 import { isTopStockModal } from "./modalStackUtils";
@@ -42,7 +44,7 @@ import {
   stockBarcodeGet,
   withSessionKey,
 } from "../api/stockApi";
-import { normalizeStockInput, stockToApi } from "../utils/stockFormUtils";
+import { normalizeStockInput, stockToApi, stockToInput } from "../utils/stockFormUtils";
 
 function getProductoImageUrlByArchivoId(archivoId) {
   const id = Number(archivoId || 0);
@@ -485,10 +487,7 @@ function normalizarProducto(data) {
       promoItem?.margen_porcentaje ?? ""
     ),
     margen_promo_valor: formatNumberForDisplay(promoItem?.margen_valor ?? ""),
-    stock:
-      p.stock !== null && p.stock !== undefined && p.stock !== ""
-        ? String(p.stock)
-        : "",
+    stock: stockToInput(p.stock),
     id_stock_unidad: String(p.id_stock_unidad ?? ""),
     descripcion: toUpperCaseValue(p.descripcion ?? ""),
     imagen_url: p.imagen_url ?? p.imagen ?? "",
@@ -508,7 +507,7 @@ function normalizarProducto(data) {
             activo: Number(variant.activo ?? 1) === 1,
             nombre_variante: toUpperCaseValue(variant.nombre_variante || variant.nombre || ""),
             sku: toUpperCaseValue(variant.sku || ""),
-            stock: variant.stock !== null && variant.stock !== undefined ? String(variant.stock) : "0",
+            stock: stockToInput(variant.stock ?? 0),
             id_stock_unidad: String(variant.id_stock_unidad ?? p.id_stock_unidad ?? ""),
             categorias_ids: Array.isArray(variant.categorias)
               ? variant.categorias
@@ -1022,6 +1021,9 @@ function buildEmptyForm() {
 
 export default function ModalEditarProducto({
   productoId,
+  initialTab = "producto",
+  initialVarianteId = null,
+  onVencimientoCambiado,
   onClose,
   onGuardado,
   onGuardadoIntermedio,
@@ -1041,7 +1043,7 @@ export default function ModalEditarProducto({
 
   const [form, setForm] = useState(buildEmptyForm());
   const permiteCodigoBarras = canBaltoUseBarcode();
-  const [cargaActiva, setCargaActiva] = useState("producto");
+  const [cargaActiva, setCargaActiva] = useState(initialTab === "vencimientos" ? "vencimientos" : "producto");
   const [barcodeRefreshKey, setBarcodeRefreshKey] = useState(0);
   const [categorias, setCategorias] = useState([]);
   const [loadingCategorias, setLoadingCategorias] = useState(false);
@@ -1333,6 +1335,7 @@ export default function ModalEditarProducto({
       if (
         e.key === "Escape" &&
         isTopStockModal(overlayRef.current) &&
+        !document.querySelector(".sv-retire-dialog") &&
         !guardando &&
         !previewOpen &&
         !miniCategoriaOpen &&
@@ -1365,7 +1368,7 @@ export default function ModalEditarProducto({
       }
 
       setLoading(true);
-      setCargaActiva("producto");
+      setCargaActiva(initialTab === "vencimientos" ? "vencimientos" : "producto");
       setErrores({});
       setVariantesEliminadasIds([]);
       variantesAntesDeDesactivarRef.current = null;
@@ -1375,7 +1378,7 @@ export default function ModalEditarProducto({
 
         if (mounted) {
           setForm(hydratePricingFormValues(normalizarProducto(data)));
-          setCargaActiva("producto");
+          setCargaActiva(initialTab === "vencimientos" ? "vencimientos" : "producto");
         }
       } catch (err) {
         if (mounted) {
@@ -2566,6 +2569,20 @@ export default function ModalEditarProducto({
                   >
                     <FontAwesomeIcon icon={faCubesStacked} /> Variantes
                   </button>
+                  <button type="button"
+                    className={`cmi-v2-mainTab ${cargaActiva === "vencimientos" ? "is-active" : ""}`}
+                    onClick={() => setCargaActiva("vencimientos")}
+                    role="tab" aria-selected={cargaActiva === "vencimientos"}
+                    disabled={isLoading}>
+                    <FontAwesomeIcon icon={faTriangleExclamation} /> Vencimientos
+                  </button>
+                  <button type="button"
+                    className={`cmi-v2-mainTab ${cargaActiva === "presentaciones_tn" ? "is-active" : ""}`}
+                    onClick={() => setCargaActiva("presentaciones_tn")}
+                    role="tab" aria-selected={cargaActiva === "presentaciones_tn"}
+                    disabled={isLoading}>
+                    <FontAwesomeIcon icon={faLayerGroup} /> Tienda Nube
+                  </button>
                   {permiteCodigoBarras ? (
                     <button
                       type="button"
@@ -2580,6 +2597,17 @@ export default function ModalEditarProducto({
                   ) : null}
                 </div>
 
+                {cargaActiva === "presentaciones_tn" && (
+                  <TnPresentacionesPanel productoId={productoId} onToast={mostrarToast} />
+                )}
+                <div className="cmi-vencimientosPanel">
+                  {cargaActiva === "vencimientos" && <VencimientosPanel
+                    productoId={productoId}
+                    initialVarianteId={initialVarianteId}
+                    onVencimientoCambiado={onVencimientoCambiado}
+                    onToast={mostrarToast}
+                  />}
+                </div>
                 {permiteCodigoBarras ? (
                   <StockBarcodePanel
                     productoId={productoId}
@@ -3483,7 +3511,7 @@ export default function ModalEditarProducto({
             <button
               type="button"
               className="mit-btn mit-btn--solid"
-              onClick={handleGuardar}
+              onClick={cargaActiva === "vencimientos" ? () => setCargaActiva("producto") : handleGuardar}
               disabled={isLoading}
             >
               <FontAwesomeIcon
@@ -3491,7 +3519,7 @@ export default function ModalEditarProducto({
                 spin={guardando}
                 style={{ marginRight: 8 }}
               />
-              {guardando ? "Guardando..." : "Guardar cambios"}
+              {guardando ? "Guardando..." : cargaActiva === "vencimientos" ? "Volver a producto" : "Guardar cambios"}
             </button>
           </div>
         </div>

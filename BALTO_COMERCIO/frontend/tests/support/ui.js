@@ -71,6 +71,9 @@ async function keepStockPriceReviewNoticeNonBlocking(page) {
 }
 
 export async function waitForBusyToFinish(scope) {
+  // Las notificaciones tardías se resuelven en el fixture global con
+  // page.addLocatorHandler. No cerrar aquí: si ambos cierres se ejecutan juntos,
+  // se produce una carrera y los tests dedicados a notificaciones pierden el popup.
   const busy = scope.locator('[aria-busy="true"], .mov-skeletonWrap, .gif-carga-container');
   try {
     await busy.first().waitFor({ state: 'hidden', timeout: 15_000 });

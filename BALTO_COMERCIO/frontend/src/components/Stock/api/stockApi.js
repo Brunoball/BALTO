@@ -342,3 +342,21 @@ export const importarArchivoStock = (action, formData, options = {}) =>
   stockPostMultipart(action, formData, options);
 export const generarReporteStock = (params = {}, options = {}) =>
   stockGet("stock_reportes_generar", params, options);
+
+// Fechas de vencimiento por cantidades (partidas), producto o variante.
+export const consultarVencimientosStock = (id_stock_producto) =>
+  stockGet("stock_vencimientos_consultar", { id_stock_producto });
+export const guardarVencimientoStock = (body) =>
+  stockPost("stock_vencimientos_guardar", body);
+export const quitarVencimientoStock = (body) =>
+  stockPost("stock_vencimientos_quitar", body);
+export const retirarStockVencido = (body) =>
+  stockPost("stock_vencimientos_retirar", body);
+export const listarAlertasVencimientoStock = (dias_aviso = 7) =>
+  stockGet("stock_vencimientos_alertas", { dias_aviso });
+
+// Presentaciones configurables de Tienda Nube (cantidad local por unidad vendida).
+export const consultarPresentacionesTnStock = (id_stock_producto) =>
+  stockGet("stock_tn_presentaciones_consultar", { id_stock_producto });
+export const guardarPresentacionTnStock = (body) =>
+  stockPost("stock_tn_presentaciones_guardar", body);

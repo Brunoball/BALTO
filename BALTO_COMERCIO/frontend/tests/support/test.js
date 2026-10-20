@@ -33,6 +33,27 @@ process.once('beforeExit', () => {
 });
 
 /**
+ * Instala el cierre automático de notificaciones solamente en páginas E2E
+ * que NO están probando el centro de notificaciones.
+ *
+ * Debe registrarse también en toda pestaña creada con context.newPage() y
+ * en contextos independientes creados por los tests de autenticación: las
+ * fixtures de Playwright no instalan handlers automáticamente allí.
+ *
+ * El click se ejecuta mediante el botón real de React, sin forzar la acción
+ * contra la interfaz que está probando el test. Así sigue funcionando incluso
+ * cuando la notificación queda detrás de otro modal.
+ */
+export async function autoDismissStockNotifications(page) {
+  const popup = page.getByRole('dialog', { name: 'Notificaciones de Stock' });
+  await page.addLocatorHandler(popup, async () => {
+    const close = popup.getByRole('button', { name: 'Cerrar notificaciones' });
+    await close.evaluate((button) => button.click());
+    await expect(popup).toBeHidden({ timeout: 5_000 });
+  }, { noWaitAfter: true });
+}
+
+/**
  * Fixture automática de seguridad para toda la suite Balto.
  *
  * - Corre una sola vez al finalizar cada worker, incluso si un test normal falla.
@@ -42,9 +63,19 @@ process.once('beforeExit', () => {
  */
 export const test = base.extend({
   _baltoSessionRefresh: [
-    async ({ page, context }, use) => {
+    async ({ page, context }, use, testInfo) => {
       patchContextNavigation(context);
       patchPageNavigation(page);
+
+      // El centro de notificaciones se carga de forma asíncrona y puede abrirse
+      // después de waitForBusyToFinish. En tests ajenos a notificaciones,
+      // cerrarlo justo antes de una interacción evita que tape cualquier botón,
+      // aunque aparezca varios segundos después de la navegación.
+      // Los tests @notificaciones-ui comprueban el popup real sin este manejador.
+      if (!testInfo.title.includes('@notificaciones-ui')) {
+        await autoDismissStockNotifications(page);
+      }
+
       await ensureAdministratorSession(page);
       await use();
     },

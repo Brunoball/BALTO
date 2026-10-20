@@ -627,65 +627,94 @@ function drawTableHeader(doc, y) {
   return { nextY: y + rowH + 15, cols: c };
 }
 
-function drawTableRow(doc, item, idx, cols, y, maxBodyY) {
+function getTableRowLines(doc, item, idx, cols) {
   set(doc, "helvetica", "normal", 8.7);
   const codeMaxW = cols.x1 - cols.padR - (cols.x0 + cols.padL);
   const descMaxW = cols.x2 - cols.padR - (cols.x1 + cols.padL);
-  const codeLines = wrapCompactByWidth(
-    doc,
-    item.desgloseServicio ? (item.codigo || "") : (item.codigo || String(idx + 1)),
-    Math.max(20, codeMaxW)
-  );
+  const code = item.desgloseServicio ? (item.codigo || "") : (item.codigo || String(idx + 1));
+  const codeLines = wrapCompactByWidth(doc, code, Math.max(20, codeMaxW));
   const descLines = wrapByWidth(doc, item.descripcion, Math.max(20, descMaxW));
-  const lh = 11;
-  const blockH = Math.max(14, Math.max(codeLines.length, descLines.length) * lh);
-  if (y + blockH > maxBodyY) return { y, drawn: false };
+  return { codeLines, descLines, totalLines: Math.max(1, codeLines.length, descLines.length) };
+}
 
-  codeLines.forEach((ln, li) => text(doc, ln, cols.x0 + cols.padL, y + li * lh));
-  descLines.forEach((ln, li) => text(doc, ln, cols.x1 + cols.padL, y + li * lh));
-  text(doc, cantidadEs(item.cantidad), cols.x3 - cols.padR, y, { align: "right" });
-  text(doc, s(item.unidad || "u"), cols.x4 - cols.padR, y, { align: "right" });
-  text(doc, moneyEs(item.precio), cols.x5 - cols.padR, y, { align: "right" });
-  text(doc, numEs(item.ivaPct, 2), cols.x6 - cols.padR, y, { align: "right" });
-  text(doc, moneyEs(item.total), cols.x7 - cols.padR, y, { align: "right" });
-  return { y: y + blockH + 5, drawn: true };
+// Imprime todas las líneas que entren. Las descripciones excepcionalmente
+// largas pueden continuar en otra hoja, en vez de perder el renglón entero.
+function drawTableRow(doc, item, idx, cols, y, maxBodyY, lineOffset = 0) {
+  const { codeLines, descLines, totalLines } = getTableRowLines(doc, item, idx, cols);
+  const lh = 11;
+  const availableHeight = maxBodyY - y;
+  const maxLinesHere = availableHeight < 19 ? 0 : Math.floor((availableHeight - 5) / lh);
+  const linesToDraw = Math.min(totalLines - lineOffset, Math.max(0, maxLinesHere));
+  if (linesToDraw < 1) return { y, drawn: false, nextOffset: lineOffset, totalLines };
+
+  const blockH = Math.max(14, linesToDraw * lh);
+  codeLines.slice(lineOffset, lineOffset + linesToDraw)
+    .forEach((ln, li) => text(doc, ln, cols.x0 + cols.padL, y + li * lh));
+  descLines.slice(lineOffset, lineOffset + linesToDraw)
+    .forEach((ln, li) => text(doc, ln, cols.x1 + cols.padL, y + li * lh));
+  if (lineOffset === 0) {
+    text(doc, cantidadEs(item.cantidad), cols.x3 - cols.padR, y, { align: "right" });
+    text(doc, s(item.unidad || "u"), cols.x4 - cols.padR, y, { align: "right" });
+    text(doc, moneyEs(item.precio), cols.x5 - cols.padR, y, { align: "right" });
+    text(doc, numEs(item.ivaPct, 2), cols.x6 - cols.padR, y, { align: "right" });
+    text(doc, moneyEs(item.total), cols.x7 - cols.padR, y, { align: "right" });
+  }
+  return { y: y + blockH + 5, drawn: true, nextOffset: lineOffset + linesToDraw, totalLines };
 }
 
 function tableRowHeight(doc, item, cols) {
-  set(doc, "helvetica", "normal", 8.7);
-  const codeMaxW = cols.x1 - cols.padR - (cols.x0 + cols.padL);
-  const descMaxW = cols.x2 - cols.padR - (cols.x1 + cols.padL);
-  const codeText = item.desgloseServicio ? (item.codigo || "") : (item.codigo || "1");
-  const codeLines = wrapCompactByWidth(doc, codeText, Math.max(20, codeMaxW));
-  const descLines = wrapByWidth(doc, item.descripcion, Math.max(20, descMaxW));
-  const lh = 11;
-  const blockH = Math.max(14, Math.max(codeLines.length, descLines.length) * lh);
-  return blockH + 5;
+  const { totalLines } = getTableRowLines(doc, item, 0, cols);
+  return Math.max(14, totalLines * 11) + 5;
 }
 
-function drawServiceBlockTitle(doc, item, y, maxBodyY) {
-  const W = doc.internal.pageSize.getWidth();
-  const B = 10;
-  const innerW = W - B * 2;
-  const rowH = 26;
-  const gapAfter = 7;
-  if (y + rowH + gapAfter > maxBodyY) return { y, drawn: false };
-
-  fillRect(doc, B, y, innerW, rowH, 0.93);
-  rect(doc, B, y, innerW, rowH, 0.45);
-
-  set(doc, "helvetica", "bold", 9.4);
-  const servicio = sanitizePdfText(item?.grupoServicio || "SERVICIO");
-  const codigo = sanitizePdfText(item?.grupoCodigo || "");
-  const codigoSuffix = codigo ? ` · ${codigo}` : "";
-  text(
-    doc,
-    clampToWidth(doc, `SERVICIO: ${servicio}${codigoSuffix}`, innerW - 20),
-    B + 10,
-    y + 17
+// Los presupuestos creados desde un modelo tienen un nombre comercial propio.
+// El nombre ya llega en el payload del alta; no depende de consultar el modelo
+// otra vez, y no se confunde con las descripciones de los ítems del documento.
+function getTituloModeloPresupuesto(data) {
+  return pickText(
+    data?.nombre_modelo_origen,
+    Number(data?.guardar_como_modelo) === 1 ? data?.modelo_nombre : ""
   );
+}
 
-  return { y: y + rowH + gapAfter, drawn: true };
+// Una sola barra, no dos paneles independientes. En el caso habitual entran
+// modelo y servicio en la MISMA fila; con títulos largos aumenta su altura
+// únicamente lo necesario para no ocultar el texto.
+function measureBudgetSectionTitle(doc, nombreModelo, serviceItem) {
+  const modelo = sanitizePdfText(nombreModelo).toUpperCase();
+  const servicio = sanitizePdfText(serviceItem?.grupoServicio || "").toUpperCase();
+  const codigo = sanitizePdfText(serviceItem?.grupoCodigo || "");
+  const partes = [];
+  if (modelo) partes.push(`PRESUPUESTO: ${modelo}`);
+  if (servicio) partes.push(`SERVICIO: ${servicio}${codigo ? ` · ${codigo}` : ""}`);
+  if (!partes.length) return null;
+
+  const innerW = doc.internal.pageSize.getWidth() - 20;
+  set(doc, "helvetica", "bold", 9.4);
+  const maxTextW = innerW - 22;
+  const junto = partes.join("    |    ");
+  const lineas = doc.getTextWidth(junto) <= maxTextW
+    ? [junto]
+    : partes.flatMap((parte) => wrapByWidth(doc, parte, maxTextW));
+  const lineHeight = 11;
+  const altura = 22 + (lineas.length - 1) * lineHeight;
+  return { lineas, altura, totalHeight: altura + 3, lineHeight };
+}
+
+function drawBudgetSectionTitle(doc, nombreModelo, serviceItem, y, maxBodyY) {
+  const title = measureBudgetSectionTitle(doc, nombreModelo, serviceItem);
+  if (!title) return { y, drawn: true };
+  if (y + title.totalHeight > maxBodyY) return { y, drawn: false };
+
+  const B = 10;
+  const innerW = doc.internal.pageSize.getWidth() - B * 2;
+  fillRect(doc, B, y, innerW, title.altura, 0.92);
+  rect(doc, B, y, innerW, title.altura, 0.45);
+  set(doc, "helvetica", "bold", 9.4);
+  title.lineas.forEach((linea, indice) => {
+    text(doc, linea, B + 11, y + 15 + indice * title.lineHeight);
+  });
+  return { y: y + title.totalHeight, drawn: true };
 }
 
 function groupBudgetItems(items) {
@@ -805,19 +834,21 @@ export async function buildPresupuestoPdf({ data } = {}) {
   const logoDataUrl = await fetchTenantLogoDataUrl();
   const items = normalizeItems(data || {});
   const blocks = groupBudgetItems(items);
+  const tituloModelo = getTituloModeloPresupuesto(data || {});
   const H = doc.internal.pageSize.getHeight();
   const B = 10;
   const bottomLimit = H - B - presupuestoFooterRequiredHeight();
   let y;
   let cols = getColumns(doc);
+  let tituloPendiente = true;
 
-  // La página arranca sólo con encabezado/cliente. El título del servicio se
-  // dibuja ANTES de la grilla, para que el nombre comercial no se mezcle con
-  // materiales, insumos o mano de obra.
   const startPage = () => {
     drawOuter(doc);
-    y = drawHeader(doc, data || {}, logoDataUrl) + 14;
+    y = drawHeader(doc, data || {}, logoDataUrl) + 8;
     cols = getColumns(doc);
+    // El título del presupuesto se repite por hoja, pero comparte la misma
+    // franja con el primer servicio de la página (si existe).
+    tituloPendiente = true;
   };
 
   const drawColumnsHeader = () => {
@@ -826,12 +857,23 @@ export async function buildPresupuestoPdf({ data } = {}) {
     cols = header.cols;
   };
 
-  const startServiceBlock = (firstItem) => {
-    const title = drawServiceBlockTitle(doc, firstItem, y, bottomLimit);
+  const sectionTitle = (item) => measureBudgetSectionTitle(doc, tituloPendiente ? tituloModelo : "", item);
+
+  const startBlock = (item) => {
+    const title = drawBudgetSectionTitle(doc, tituloPendiente ? tituloModelo : "", item, y, bottomLimit);
     if (!title.drawn) return false;
     y = title.y;
+    tituloPendiente = false;
     drawColumnsHeader();
     return true;
+  };
+
+  const newPageForBlock = (item) => {
+    doc.addPage();
+    startPage();
+    if (!startBlock(item) || y + 19 > bottomLimit) {
+      throw new Error("El encabezado del presupuesto no deja espacio para los renglones del PDF.");
+    }
   };
 
   startPage();
@@ -840,44 +882,54 @@ export async function buildPresupuestoPdf({ data } = {}) {
     const firstEntry = block.rows[0];
     const firstItem = firstEntry?.item;
     if (!firstItem) return;
+    const serviceTitleItem = block.isServiceGroup ? firstItem : null;
 
-    // Un pequeño aire entre bloques hace evidente dónde termina un servicio y
-    // comienza el siguiente, sin convertir el nombre del servicio en otra fila.
     if (blockIndex > 0) y += 5;
 
-    if (block.isServiceGroup) {
-      const firstNeeded = 26 + 7 + 22 + 15 + tableRowHeight(doc, firstItem, cols);
-      if (y + firstNeeded > bottomLimit) {
-        doc.addPage();
-        startPage();
-      }
-      startServiceBlock(firstItem);
-    } else {
-      const firstNeeded = 22 + 15 + tableRowHeight(doc, firstItem, cols);
-      if (y + firstNeeded > bottomLimit) {
-        doc.addPage();
-        startPage();
-      }
-      drawColumnsHeader();
+    const titleHeight = sectionTitle(serviceTitleItem)?.totalHeight || 0;
+    const firstNeeded = titleHeight + 22 + 15 + Math.min(tableRowHeight(doc, firstItem, cols), 19);
+    if (y + firstNeeded > bottomLimit) {
+      doc.addPage();
+      startPage();
+    }
+    if (!startBlock(serviceTitleItem)) {
+      throw new Error("El título del presupuesto supera el área disponible del PDF.");
     }
 
     block.rows.forEach(({ item, index }) => {
       const rowHeight = tableRowHeight(doc, item, cols);
       if (y + rowHeight > bottomLimit) {
-        doc.addPage();
-        startPage();
-        if (block.isServiceGroup) startServiceBlock(firstItem);
-        else drawColumnsHeader();
+        newPageForBlock(serviceTitleItem);
       }
 
-      const res = drawTableRow(doc, item, index, cols, y, bottomLimit);
-      if (res.drawn) y = res.y;
+      let lineOffset = 0;
+      // Un ítem puede tener una descripción de más de una página. Nunca se
+      // descarta aunque no quepa entero después de un salto de página.
+      while (true) {
+        const res = drawTableRow(doc, item, index, cols, y, bottomLimit, lineOffset);
+        if (res.drawn) {
+          y = res.y;
+          lineOffset = res.nextOffset;
+        }
+        if (lineOffset >= res.totalLines) break;
+        newPageForBlock(serviceTitleItem);
+      }
     });
   });
+
+  // Presupuesto sin renglones: mantiene su nombre visible sin generar
+  // otra franja innecesaria junto a la tabla.
+  if (!blocks.length && tituloModelo) {
+    const title = drawBudgetSectionTitle(doc, tituloModelo, null, y, bottomLimit);
+    if (title.drawn) y = title.y;
+  }
 
   if (y + presupuestoFooterRequiredHeight() > H - B) {
     doc.addPage();
     startPage();
+    // También se identifica la hoja final si únicamente contiene los totales.
+    const title = drawBudgetSectionTitle(doc, tituloModelo, null, y, bottomLimit);
+    if (title.drawn) y = title.y;
   }
   drawTotalsAndFooter(doc, items, data || {}, y + 10);
   addPageNumbering(doc);
