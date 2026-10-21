@@ -5,6 +5,9 @@ import {
   faChevronDown,
   faChevronUp,
   faClockRotateLeft,
+  faArrowTrendUp,
+  faArrowTrendDown,
+  faScaleBalanced,
   faTimes,
 } from "@fortawesome/free-solid-svg-icons";
 import "./ModalAjustePrecios.css";
@@ -187,22 +190,34 @@ const ModalHistorialPreciosProducto = ({ open, producto, onClose, onToast }) => 
         </div>
 
         <div className="mi-modal__content ap-modal__body">
-          <section className="ap-summaryGrid">
-            <div className="ap-summaryCard">
-              <span>Cambios</span>
-              <strong>{resumen.total}</strong>
+          <section className="ap-summaryGrid ap-historyKpiGrid" aria-label="Resumen del historial de precios">
+            <div className="ap-summaryCard ap-historyKpi ap-historyKpi--changes">
+              <div className="ap-historyKpi__icon" aria-hidden="true"><FontAwesomeIcon icon={faClockRotateLeft} /></div>
+              <div className="ap-historyKpi__body">
+                <span>Cambios</span>
+                <strong>{resumen.total}</strong>
+              </div>
             </div>
-            <div className="ap-summaryCard is-positive">
-              <span>Subas</span>
-              <strong>{resumen.subas}</strong>
+            <div className="ap-summaryCard ap-historyKpi ap-historyKpi--up is-positive">
+              <div className="ap-historyKpi__icon" aria-hidden="true"><FontAwesomeIcon icon={faArrowTrendUp} /></div>
+              <div className="ap-historyKpi__body">
+                <span>Subas</span>
+                <strong>{resumen.subas}</strong>
+              </div>
             </div>
-            <div className="ap-summaryCard is-negative">
-              <span>Bajas</span>
-              <strong>{resumen.bajas}</strong>
+            <div className="ap-summaryCard ap-historyKpi ap-historyKpi--down is-negative">
+              <div className="ap-historyKpi__icon" aria-hidden="true"><FontAwesomeIcon icon={faArrowTrendDown} /></div>
+              <div className="ap-historyKpi__body">
+                <span>Bajas</span>
+                <strong>{resumen.bajas}</strong>
+              </div>
             </div>
-            <div className={`ap-summaryCard ${resumen.difTotal < 0 ? "is-negative" : "is-positive"}`}>
-              <span>Diferencia total</span>
-              <strong>{formatSignedMoney(resumen.difTotal)}</strong>
+            <div className={`ap-summaryCard ap-historyKpi ap-historyKpi--difference ${resumen.difTotal < 0 ? "is-negative" : "is-positive"}`}>
+              <div className="ap-historyKpi__icon" aria-hidden="true"><FontAwesomeIcon icon={faScaleBalanced} /></div>
+              <div className="ap-historyKpi__body">
+                <span>Diferencia total</span>
+                <strong title={formatSignedMoney(resumen.difTotal)}>{formatSignedMoney(resumen.difTotal)}</strong>
+              </div>
             </div>
           </section>
 

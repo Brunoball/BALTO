@@ -73,6 +73,9 @@ export default function ModalEliminar({
   details = null,
   extraContent = null,
   hideDefaultCard = false,
+  modalClassName = "",
+  overlayClassName = "",
+  submitOnEnter = true,
 }) {
   const cancelRef = useRef(null);
 
@@ -142,7 +145,7 @@ export default function ModalEliminar({
         return;
       }
 
-      if (e.key === "Enter" && !loading && !confirmDisabled && onConfirm) {
+      if (e.key === "Enter" && submitOnEnter && !loading && !confirmDisabled && onConfirm) {
         e.preventDefault();
         e.stopPropagation();
         e.stopImmediatePropagation?.();
@@ -159,7 +162,7 @@ export default function ModalEliminar({
       clearTimeout(timer);
       document.removeEventListener("keydown", onKeyDown, true);
     };
-  }, [open, cerrar, loading, confirmDisabled, onConfirm, handleConfirm]);
+  }, [open, cerrar, loading, confirmDisabled, onConfirm, handleConfirm, submitOnEnter]);
 
   const view = useMemo(() => {
     const idMov = row?.id_movimiento ?? row?.idMovimiento ?? row?.id ?? "—";
@@ -234,7 +237,7 @@ export default function ModalEliminar({
 
   return createPortal(
     <div
-      className="mvdel-overlay"
+      className={`mvdel-overlay ${overlayClassName}`.trim()}
       data-modal-overlay="true"
       role="dialog"
       aria-modal="true"
@@ -247,7 +250,7 @@ export default function ModalEliminar({
       }}
     >
       <div
-        className={modalClass}
+        className={`${modalClass} ${modalClassName}`.trim()}
         onMouseDown={(e) => {
           e.stopPropagation();
         }}

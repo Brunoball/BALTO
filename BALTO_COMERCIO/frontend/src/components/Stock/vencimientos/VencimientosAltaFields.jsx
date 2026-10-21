@@ -1,8 +1,12 @@
-import React from "react";
-import { normalizeStockInput } from "../utils/stockFormUtils";
+import React, { useState } from "react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faPlus, faBoxOpen } from "@fortawesome/free-solid-svg-icons";
+import VencimientosResumen from "./VencimientosResumen";
+import ModalPartidaVencimiento from "./ModalPartidaVencimiento";
+import ModalEliminar from "../../Global/Modales/ModalEliminar";
+import VencimientosTabla, { fechaVencimientoTexto } from "./VencimientosTabla";
 import "./vencimientosAlta.css";
 
-const emptyRow = () => ({ fecha_vencimiento: "", cantidad: "", referencia: "" });
 const hasContent = (row) => Boolean(
   String(row?.fecha_vencimiento || "").trim() ||
   String(row?.cantidad ?? "").trim() ||
@@ -42,53 +46,68 @@ export function validarVencimientosAlta(rows = [], stock, permiteDecimales = tru
     if (String(row.referencia || "").length > 100) return `${label}: la referencia no puede superar los 100 caracteres.`;
     total += Number(raw);
   }
-  if (total > stockNum + 0.000001) {
-    return `Las cantidades con vencimiento (${Number(total.toFixed(3))}) superan el stock inicial (${stockNum}).`;
-  }
+  if (total > stockNum + 0.000001) return `Las cantidades con vencimiento (${Number(total.toFixed(3))}) superan el stock inicial (${stockNum}).`;
   return "";
 }
 
-const cantidadTexto = (n) => Number(n || 0).toLocaleString("es-AR", { maximumFractionDigits: 3 });
-
-/** Campos de alta: un producto simple o cada variante puede contener N partidas. */
+/** Alta: no guarda hasta que se confirma el producto; cada partida se edita en un modal. */
 export default function VencimientosAltaFields({
-  value = [], onChange, stock = 0, disabled = false, error = "", titulo = "Fechas de vencimiento",
+  value = [], onChange, stock = 0, disabled = false, error = "", titulo = "Fechas de vencimiento", permiteDecimales = true,
 }) {
   const rows = Array.isArray(value) ? value : [];
+  const [editor, setEditor] = useState(null);
+  const [indiceAQuitar, setIndiceAQuitar] = useState(null);
   const total = rows.reduce((sum, row) => sum + (Number(String(row?.cantidad ?? "").replace(",", ".")) || 0), 0);
   const stockNum = Number(String(stock ?? "").replace(",", ".")) || 0;
-  const update = (index, patch) => onChange(rows.map((r, i) => i === index ? { ...r, ...patch } : r));
+  const editando = editor !== null && editor >= 0;
+  const disponibles = Math.max(0, stockNum - total + (editando ? Number(String(rows[editor]?.cantidad || 0).replace(",", ".")) || 0 : 0));
+  const guardar = (partida) => {
+    const siguientes = editando ? rows.map((r, i) => i === editor ? { ...r, ...partida } : r) : [...rows, partida];
+    const validacion = validarVencimientosAlta(siguientes, stock, permiteDecimales);
+    if (validacion) throw new Error(validacion);
+    onChange(siguientes);
+  };
   return (
     <section className="cmi-vencAlta" aria-label={titulo}>
-      <div className="cmi-vencAlta__head">
-        <div>
-          <strong>{titulo}</strong>
-          <p>Opcional. Registrá la fecha y cantidad de cada partida. Podés agregar varias fechas para el mismo producto.</p>
-        </div>
-        <button type="button" className="cmi-vencAlta__add" disabled={disabled} onClick={() => onChange([...rows, emptyRow()])}>
-          + Agregar vencimiento
-        </button>
+      <div className="sv-section-head"><div><h3>{titulo}</h3><p>Asigná fechas a partidas del stock inicial. Se registrarán al guardar el producto.</p></div>
+        <button type="button" className="sv-primaryBtn" onClick={() => setEditor(-1)} disabled={disabled}><FontAwesomeIcon icon={faPlus}/> Agregar vencimiento</button>
       </div>
-      {rows.length > 0 ? (
-        <div className="cmi-vencAlta__rows">
-          {rows.map((row, i) => (
-            <div className="cmi-vencAlta__row" key={i}>
-              <label>Fecha de vencimiento
-                <input aria-label={`Fecha de vencimiento #${i + 1}`} className="cmi-input" type="date" value={row.fecha_vencimiento || ""} disabled={disabled} onChange={(e) => update(i, { fecha_vencimiento: e.target.value })} />
-              </label>
-              <label>Cantidad
-                <input aria-label={`Cantidad con vencimiento #${i + 1}`} className="cmi-input" inputMode="decimal" placeholder="Ej: 5" value={row.cantidad ?? ""} disabled={disabled} onChange={(e) => update(i, { cantidad: normalizeStockInput(e.target.value) })} />
-              </label>
-              <label>Referencia (opcional)
-                <input aria-label={`Referencia vencimiento #${i + 1}`} className="cmi-input" maxLength={100} placeholder="Ej: partida de octubre" value={row.referencia || ""} disabled={disabled} onChange={(e) => update(i, { referencia: e.target.value })} />
-              </label>
-              <button type="button" className="cmi-vencAlta__remove" aria-label={`Quitar vencimiento #${i + 1}`} disabled={disabled} onClick={() => onChange(rows.filter((_, index) => index !== i))}>Quitar</button>
-            </div>
-          ))}
-        </div>
-      ) : <p className="cmi-vencAlta__empty">Sin vencimientos cargados. Podés dejar el stock sin fecha asignada.</p>}
-      <p className="cmi-vencAlta__summary">Stock con fecha: <b>{cantidadTexto(total)}</b> · Sin fecha asignada: <b>{cantidadTexto(Math.max(0, stockNum - total))}</b></p>
-      {error ? <p className="cmi-vencAlta__error" role="alert">{error}</p> : null}
+      <VencimientosResumen stock={stockNum} asignadas={total}/>
+      <div className="sv-list-head"><h4>Partidas cargadas <span className="sv-count">{rows.length}</span></h4></div>
+      {rows.length
+        ? <VencimientosTabla
+            partidas={rows}
+            esAlta
+            disabled={disabled}
+            onEditar={(_, index) => setEditor(index)}
+            onQuitar={(_, index) => setIndiceAQuitar(index)}
+          />
+        : <div className="sv-empty"><FontAwesomeIcon icon={faBoxOpen}/><strong>Sin vencimientos cargados</strong><span>Podés agregarlos ahora o dejar el stock sin fecha asignada.</span></div>}
+      {error && <p className="sv-inline-error" role="alert">{error}</p>}
+      <ModalEliminar
+        open={indiceAQuitar !== null && !!rows[indiceAQuitar]}
+        loading={disabled}
+        onClose={() => setIndiceAQuitar(null)}
+        onConfirm={() => {
+          if (indiceAQuitar === null || !rows[indiceAQuitar]) return;
+          onChange(rows.filter((_, index) => index !== indiceAQuitar));
+          setIndiceAQuitar(null);
+        }}
+        title="Quitar vencimiento"
+        message="¿Querés quitar esta partida del producto que estás creando?"
+        warning="Solo se quitará de la carga pendiente. El stock inicial del producto no se modifica."
+        confirmLabel="Quitar partida"
+        details={indiceAQuitar !== null && rows[indiceAQuitar] ? [
+          { label: "Vencimiento", value: fechaVencimientoTexto(rows[indiceAQuitar].fecha_vencimiento) },
+          { label: "Cantidad", value: String(rows[indiceAQuitar].cantidad ?? "—") },
+          { label: "Referencia", value: rows[indiceAQuitar].referencia || "—" },
+        ] : []}
+      />
+      <ModalPartidaVencimiento
+        open={editor !== null} initialValue={editando ? { ...rows[editor], __editando: true } : null}
+        onClose={() => setEditor(null)} onSave={guardar} stock={stockNum} maxCantidad={disponibles}
+        permiteDecimales={permiteDecimales} subtitulo={titulo}
+      />
     </section>
   );
 }

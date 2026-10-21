@@ -129,3 +129,212 @@ html[data-theme="oscuro"] .ap-tab.is-active {
   outline: 2px solid color-mix(in srgb, var(--nv-action, #0055BB) 54%, transparent);
   outline-offset: -2px;
 }
+
+/* =========================================================
+   Historial de precios · Indicadores visuales tipo Dashboard
+   Limitado a este modal: no modifica tarjetas de Ajuste de Precios.
+   ========================================================= */
+.ap-modal--historyProduct .ap-historyKpiGrid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.ap-modal--historyProduct .ap-historyKpi {
+  --ap-kpi-tone: #0055bb;
+  --ap-kpi-tint: rgba(75, 184, 255, .16);
+  --ap-kpi-circle: rgba(75, 184, 255, .17);
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 11px;
+  min-width: 0;
+  min-height: 62px;
+  padding: 13px;
+  border: 1px solid rgba(10, 37, 64, .09);
+  border-radius: 17px;
+  background: var(--nv-bg, #fff);
+  text-align: left;
+  box-shadow: 0 12px 30px -24px rgba(10, 37, 64, .42);
+  overflow: hidden;
+  transition: transform .22s cubic-bezier(.4, 0, .2, 1), box-shadow .22s cubic-bezier(.4, 0, .2, 1);
+}
+
+.ap-modal--historyProduct .ap-historyKpi::after {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: auto -27px -49px auto;
+  width: 106px;
+  height: 106px;
+  border-radius: 50%;
+  background: var(--ap-kpi-circle);
+  opacity: 1;
+  pointer-events: none;
+}
+
+.ap-modal--historyProduct .ap-historyKpi > * {
+  position: relative;
+  z-index: 1;
+}
+
+.ap-modal--historyProduct .ap-historyKpi:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 16px 34px -24px rgba(10, 37, 64, .46);
+}
+
+.ap-modal--historyProduct .ap-historyKpi--up {
+  --ap-kpi-tone: #15935b;
+  --ap-kpi-tint: rgba(34, 173, 92, .15);
+  --ap-kpi-circle: rgba(34, 173, 92, .16);
+}
+.ap-modal--historyProduct .ap-historyKpi--down {
+  --ap-kpi-tone: #d64b5b;
+  --ap-kpi-tint: rgba(225, 61, 69, .15);
+  --ap-kpi-circle: rgba(225, 61, 69, .16);
+}
+.ap-modal--historyProduct .ap-historyKpi--difference {
+  --ap-kpi-tone: #b98318;
+  --ap-kpi-tint: rgba(244, 185, 66, .18);
+  --ap-kpi-circle: rgba(244, 185, 66, .19);
+}
+
+.ap-modal--historyProduct .ap-historyKpi__icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 38px;
+  width: 38px;
+  height: 38px;
+  border-radius: 13px;
+  background: var(--ap-kpi-tint);
+  color: var(--ap-kpi-tone);
+  font-size: 15px;
+}
+
+.ap-modal--historyProduct .ap-historyKpi__body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+  min-width: 0;
+  min-height: 38px;
+  padding-top: 2px;
+}
+
+.ap-modal--historyProduct .ap-historyKpi__body span {
+  display: block;
+  margin: 0;
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: .055em;
+  line-height: 1.35;
+  text-transform: uppercase;
+  color: var(--nv-muted, #5a6a7e);
+}
+
+.ap-modal--historyProduct .ap-historyKpi__body strong {
+  display: block;
+  max-width: 100%;
+  font-size: clamp(18px, 1.5vw, 22px);
+  font-weight: 760;
+  line-height: 1.08;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* La lista histórica también conserva el lenguaje visual del Dashboard. */
+.ap-modal--historyProduct .ap-historyItem {
+  border-radius: 17px;
+  border-color: rgba(10, 37, 64, .10);
+  box-shadow: 0 12px 30px -24px rgba(10, 37, 64, .38);
+  transition: border-color .18s ease, box-shadow .22s ease;
+}
+.ap-modal--historyProduct .ap-historyItem:hover {
+  box-shadow: 0 16px 34px -24px rgba(10, 37, 64, .44);
+  border-color: rgba(0, 85, 187, .22);
+}
+
+html[data-theme="oscuro"] .ap-modal--historyProduct .ap-historyKpi {
+  background: #0b1e33 !important;
+  border-color: rgba(255, 255, 255, .1) !important;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, .32) !important;
+}
+html[data-theme="oscuro"] .ap-modal--historyProduct .ap-historyKpi:hover {
+  box-shadow: 0 16px 36px rgba(0, 0, 0, .40) !important;
+}
+html[data-theme="oscuro"] .ap-modal--historyProduct .ap-historyKpi__body span {
+  color: rgba(226, 232, 240, .75);
+}
+html[data-theme="oscuro"] .ap-modal--historyProduct .ap-historyKpi__body strong {
+  color: rgba(241, 245, 249, .95) !important;
+}
+html[data-theme="oscuro"] .ap-modal--historyProduct .ap-historyKpi--up .ap-historyKpi__body strong {
+  color: #67dba2 !important;
+}
+html[data-theme="oscuro"] .ap-modal--historyProduct .ap-historyKpi--down .ap-historyKpi__body strong {
+  color: #ff929e !important;
+}
+html[data-theme="oscuro"] .ap-modal--historyProduct .ap-historyKpi--difference.is-negative .ap-historyKpi__body strong {
+  color: #ff929e !important;
+}
+html[data-theme="oscuro"] .ap-modal--historyProduct .ap-historyKpi--difference.is-positive .ap-historyKpi__body strong {
+  color: #67dba2 !important;
+}
+html[data-theme="oscuro"] .ap-modal--historyProduct .ap-historyKpi--changes {
+  --ap-kpi-tone: #88b9ff;
+  --ap-kpi-circle: rgba(65, 137, 255, .24);
+}
+html[data-theme="oscuro"] .ap-modal--historyProduct .ap-historyKpi--up {
+  --ap-kpi-tone: #67dba2;
+  --ap-kpi-circle: rgba(34, 173, 92, .23);
+}
+html[data-theme="oscuro"] .ap-modal--historyProduct .ap-historyKpi--down {
+  --ap-kpi-tone: #ff929e;
+  --ap-kpi-circle: rgba(225, 61, 69, .23);
+}
+html[data-theme="oscuro"] .ap-modal--historyProduct .ap-historyKpi--difference {
+  --ap-kpi-tone: #ffce79;
+  --ap-kpi-circle: rgba(244, 185, 66, .23);
+}
+html[data-theme="oscuro"] .ap-modal--historyProduct .ap-historyItem {
+  box-shadow: 0 14px 34px rgba(0, 0, 0, .22);
+}
+
+@media (max-width: 1000px) {
+  .ap-modal--historyProduct .ap-historyKpiGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 520px) {
+  .ap-modal--historyProduct .ap-historyKpiGrid { gap: 8px; }
+  .ap-modal--historyProduct .ap-historyKpi {
+    min-height: 78px;
+    padding: 10px;
+    gap: 8px;
+  }
+  .ap-modal--historyProduct .ap-historyKpi__icon {
+    width: 34px;
+    height: 34px;
+    flex-basis: 34px;
+    font-size: 14px;
+  }
+  .ap-modal--historyProduct .ap-historyKpi__body span { font-size: 9.5px; }
+  .ap-modal--historyProduct .ap-historyKpi__body strong { font-size: 18px; }
+  .ap-modal--historyProduct .ap-historyKpi--difference .ap-historyKpi__body strong {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    text-overflow: clip;
+    font-size: 16px;
+    line-height: 1.2;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ap-modal--historyProduct .ap-historyKpi,
+  .ap-modal--historyProduct .ap-historyItem { transition: none; }
+  .ap-modal--historyProduct .ap-historyKpi:hover { transform: none; }
+}

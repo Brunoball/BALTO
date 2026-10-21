@@ -708,3 +708,13 @@ html[data-theme="oscuro"] .cmi-priceBlock--mainPricing .stock-coef .mit-btn--gho
     gap: 12px;
   }
 }
+
+/* Vencimientos del alta: pestaña independiente sin alterar el payload de producto/variantes. */
+.cmi-v2-formShell:not(.cmi-v2-formShell--vencimientos) > .cmi-vencimientosAltaTab{display:none!important}
+.cmi-content--individual .cmi-v2-formShell--vencimientos > :not(.cmi-v2-mainTabs):not(.cmi-vencimientosAltaTab){display:none!important}
+.cmi-vencimientosAltaTab{min-width:0;width:100%;display:flex;flex-direction:column;gap:16px}
+.cmi-vencimientosVarianteList{display:grid;gap:14px;min-width:0}
+.cmi-vencimientosVariante{min-width:0;padding:18px;border:1px solid var(--nv-border,rgba(10,37,64,.12));border-radius:15px;background:var(--nv-surface-soft,var(--mi-bg-soft,#f8fafc))}
+@media(max-width:650px){.cmi-vencimientosVariante{padding:12px}.cmi-content--individual .cmi-v2-mainTabs{max-width:100%;overflow-x:auto;flex-wrap:wrap;border-radius:16px;justify-content:flex-start}}
+
+.cmi-vencimientosVarianteList>.sv-variants-intro{margin:0;color:var(--nv-muted,#64748b);font-size:12px;line-height:1.5}

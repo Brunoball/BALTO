@@ -2536,7 +2536,7 @@ export default function ModalEditarProducto({
             </button>
           </div>
 
-          <div className="mi-modal__content" style={{ overflowY: "auto", padding: 20 }}>
+          <div className={`mi-modal__content${cargaActiva === "presentaciones_tn" ? " cmi-content--tiendanube" : ""}`} style={{ overflowY: "auto", padding: 20 }}>
             {loading ? (
               <div className="cmi-uploadBox">
                 <div className="cmi-uploadBox__title">

@@ -1,20 +1,4 @@
-.sv-panel{display:flex;flex-direction:column;gap:13px;border:1px solid var(--nv-border,#d4dbe5);background:var(--nv-card,#fff);border-radius:14px;padding:18px;color:var(--nv-text,#172b44)}
-.sv-panel h3,.sv-panel h4,.sv-panel p{margin:0}.sv-panel h3{font-size:19px}.sv-panel h4{font-size:15px}.sv-panel p{font-size:13px;line-height:1.55;color:var(--nv-muted,#64748b)}
-.sv-stat-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.sv-stat-grid>div{background:color-mix(in srgb,var(--nv-action,#0055bb) 7%,var(--nv-card,#fff));border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:6px}.sv-stat-grid span{font-size:12px}.sv-stat-grid strong{font-size:20px}
-.sv-form{border-top:1px solid var(--nv-border,#d4dbe5);padding-top:16px;display:flex;flex-direction:column;gap:12px}.sv-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.sv-field{display:flex;flex-direction:column;gap:5px;font-size:12px;font-weight:600}.sv-field input,.sv-field select{font:inherit;font-size:14px;padding:10px;border-radius:8px;border:1px solid var(--nv-border,#cad4e0);background:var(--nv-card,#fff);color:var(--nv-text,#172b44);min-width:0}
-.sv-actions{display:flex;gap:8px}.sv-actions button,.sv-table button{font:inherit;cursor:pointer;border:0;border-radius:7px;padding:8px 12px;color:white;background:var(--nv-action,#0055bb)}.sv-actions button:disabled,.sv-table button:disabled{opacity:.5;cursor:not-allowed}.sv-actions .sv-secondary{background:#65748a}.sv-scroll{max-width:100%;overflow:auto}.sv-table{width:100%;border-collapse:collapse;font-size:12px}.sv-table th,.sv-table td{text-align:left;padding:10px;border-bottom:1px solid var(--nv-border,#dae2ec);white-space:nowrap}.sv-table th{font-size:11px}.sv-table .sv-danger{background:#b4232e}.sv-state{display:inline-block;border-radius:8px;padding:5px 8px;background:#e2f2e8;color:#16643a}.sv-state.sv-expired{background:#ffe0e0;color:#991b1b}.sv-state.sv-soon{background:#fff1cb;color:#92400e}.sv-error{background:#fbe2e5;border-radius:8px;padding:10px;color:#9c2128;font-size:13px}.sv-panel .sv-hint{font-size:12px}
-.cmi-v2-formShell:not(.cmi-v2-formShell--vencimientos) > .cmi-vencimientosPanel{display:none!important}
-.cmi-v2-formShell--vencimientos > :not(.cmi-v2-mainTabs):not(.cmi-vencimientosPanel){display:none!important}
-@media(max-width:650px){.sv-fields{grid-template-columns:1fr}.sv-stat-grid{grid-template-columns:1fr}.sv-panel{padding:12px}}
-
-.sv-panel .sv-secondary{background:#64748b;color:#fff;border:0;border-radius:7px;padding:8px 12px;cursor:pointer}
-.sv-retire-backdrop{position:fixed;inset:0;z-index:20100;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(12,23,38,.65)}
-.sv-retire-dialog{background:var(--nv-card,#fff);color:var(--nv-text,#172b44);width:min(460px,100%);max-height:90vh;overflow:auto;border-radius:15px;padding:24px;box-shadow:0 18px 65px rgba(0,0,0,.28)}
-.sv-retire-dialog h3{margin:0 0 12px;font-size:19px}.sv-retire-dialog p{margin:0 0 15px}
-.sv-retire-form{display:flex;flex-direction:column;gap:14px}
-.sv-field textarea{font:inherit;resize:vertical;border:1px solid var(--nv-border,#cad4e0);background:var(--nv-card,#fff);color:var(--nv-text,#172b44);padding:10px;border-radius:8px}
-.sv-retire-warning{font-size:13px;border:1px solid #d69b3e;border-radius:9px;padding:10px;color:var(--nv-text,#684107);background:color-mix(in srgb,#f59e0b 12%,var(--nv-card,#fff))}
-.sv-retire-form .sv-actions{justify-content:flex-end}.sv-retire-form .sv-danger{background:#b4232e}
-
-.sv-stat-expired{background:color-mix(in srgb,#ef4444 11%,var(--nv-card,#fff))!important}
-.sv-stat-expired strong{color:#c73737}.sv-stat-soon{background:color-mix(in srgb,#f59e0b 12%,var(--nv-card,#fff))!important}
+/* Visibilidad de la pestaña Vencimientos de Editar producto. */
+.cmi-container--editar .cmi-v2-formShell:not(.cmi-v2-formShell--vencimientos) > .cmi-vencimientosPanel{display:none!important}
+.cmi-container--editar .cmi-v2-formShell--vencimientos > :not(.cmi-v2-mainTabs):not(.cmi-vencimientosPanel){display:none!important}
+.cmi-vencimientosPanel{min-width:0;width:100%}

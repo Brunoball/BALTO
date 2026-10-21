@@ -1,0 +1,40 @@
+/* Identidad visual de vencimientos. Variables reutilizadas de BALTO/Dashboard. */
+.sv-panel,.cmi-vencAlta{--sv-border:var(--nv-border,var(--color-border,#d9e0e9));--sv-surface:var(--nv-card,var(--mi-bg,#fff));--sv-text:var(--nv-text,var(--color-text,#0a2540));--sv-muted:var(--nv-muted,var(--color-text-muted,#64748b));--sv-action:var(--nv-action,var(--color-primary,#0055bb));color:var(--sv-text)}
+.sv-panel h3,.sv-panel h4,.sv-panel p{margin:0}
+.sv-panel{width:100%;min-width:0;display:flex;flex-direction:column;gap:16px}
+.sv-section-head{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;min-width:0}
+.sv-section-head h3{margin:0 0 4px;font-size:17px;font-weight:650;color:var(--sv-text)}
+.sv-section-head p{margin:0;color:var(--sv-muted);font-size:12.5px;line-height:1.5;max-width:700px}
+.sv-primaryBtn{min-height:38px;display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--sv-action);border-radius:10px;padding:9px 13px;background:var(--sv-action);color:white;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap;transition:filter .15s ease,transform .15s ease}
+.sv-primaryBtn:hover:not(:disabled){filter:brightness(1.1)}.sv-primaryBtn:active:not(:disabled){transform:translateY(1px)}
+.sv-primaryBtn:disabled,.sv-iconBtn:disabled,.sv-row__actions button:disabled{opacity:.5;cursor:not-allowed}
+.sv-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.sv-kpis--extended{grid-template-columns:repeat(5,minmax(0,1fr))}
+.sv-kpi{--sv-tone:var(--sv-action);--sv-tint:color-mix(in srgb,var(--sv-tone) 11%,transparent);position:relative;isolation:isolate;display:flex;align-items:center;gap:12px;min-width:0;min-height:90px;padding:14px 15px;border:1px solid var(--sv-border);border-radius:16px;background:var(--sv-surface);box-shadow:0 3px 14px rgba(5,35,65,.045);overflow:hidden;transition:transform .2s ease,box-shadow .2s ease}
+.sv-kpi::after{content:"";position:absolute;z-index:-1;bottom:-54px;right:-34px;width:100px;height:100px;border-radius:50%;background:var(--sv-tint);opacity:.7;pointer-events:none}
+.sv-kpi:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(5,35,65,.09)}
+.sv-kpi--green{--sv-tone:#17985d}.sv-kpi--red{--sv-tone:#d44b54}.sv-kpi--yellow{--sv-tone:#cb8d18}.sv-kpi--neutral{--sv-tone:#64748b}
+.sv-kpi__icon{display:grid;place-items:center;flex:0 0 43px;width:43px;height:43px;border-radius:12px;background:var(--sv-tint);color:var(--sv-tone);font-size:17px}
+.sv-kpi__body{display:flex;flex-direction:column;gap:4px;min-width:0}.sv-kpi__label{font-size:11.5px;color:var(--sv-muted);font-weight:500;line-height:1.3}.sv-kpi__value{font-size:23px;font-weight:650;line-height:1.1;color:var(--sv-text);font-variant-numeric:tabular-nums}
+.sv-list-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:2px 0 0}.sv-list-head h4{font-size:13px;color:var(--sv-text);font-weight:650;margin:0}
+.sv-count{display:inline-grid;place-items:center;margin-left:5px;min-width:23px;height:23px;padding:0 5px;font-size:11px;border-radius:7px;background:color-mix(in srgb,var(--sv-action) 10%,var(--sv-surface));color:var(--sv-action)}
+.sv-iconBtn{display:inline-grid;place-items:center;width:34px;height:34px;padding:0;border:1px solid var(--sv-border);background:var(--sv-surface);color:var(--sv-action);border-radius:9px;cursor:pointer;transition:background .15s ease}
+.sv-iconBtn:hover:not(:disabled){background:color-mix(in srgb,var(--sv-action) 9%,var(--sv-surface))}.sv-iconBtn--danger{color:#ca4654}.sv-iconBtn--danger:hover:not(:disabled){background:color-mix(in srgb,#ca4654 8%,var(--sv-surface))}
+.sv-empty{display:flex;flex-direction:column;align-items:center;gap:6px;padding:28px 15px;text-align:center;color:var(--sv-muted);border:1px dashed var(--sv-border);border-radius:14px;background:var(--sv-surface);font-size:12px}
+.sv-empty svg{font-size:22px;opacity:.5;margin-bottom:2px}.sv-empty strong{color:var(--sv-text);font-size:13px;font-weight:600}
+.sv-inline-error,.sv-panel .sv-error{border:1px solid color-mix(in srgb,#c63a4e 24%,transparent);border-radius:10px;color:#bd3b4d;font-size:12px;padding:9px 11px;background:color-mix(in srgb,#c63a4e 7%,var(--sv-surface))}
+.sv-variantPicker{max-width:400px;width:100%;margin-top:7px}
+.sv-variantPicker .cmi-input{min-height:42px}
+.sv-table__buttons{display:flex;align-items:center;gap:6px;justify-content:flex-end}
+.sv-state{display:inline-flex;justify-content:center;min-width:70px;padding:5px 8px;border:1px solid color-mix(in srgb,#17985d 18%,transparent);border-radius:8px;color:#178452;background:color-mix(in srgb,#17985d 9%,var(--sv-surface));font-size:11px;font-weight:600;white-space:nowrap}
+.sv-state.sv-expired{border-color:color-mix(in srgb,#dd4452 18%,transparent);color:#c93c4b;background:color-mix(in srgb,#dd4452 9%,var(--sv-surface))}
+.sv-state.sv-state--empty{color:var(--sv-muted);background:color-mix(in srgb,var(--sv-muted) 8%,var(--sv-surface));border-color:var(--sv-border)}
+.sv-state.sv-soon{border-color:color-mix(in srgb,#d18e0f 18%,transparent);color:#b07911;background:color-mix(in srgb,#d18e0f 9%,var(--sv-surface))}
+.sv-panel .sv-hint{margin:0;color:var(--sv-muted);font-size:11.5px;line-height:1.5}
+html[data-theme="oscuro"] .sv-kpi{box-shadow:none;border-color:rgba(255,255,255,.12)}
+html[data-theme="oscuro"] .sv-state{color:#74dbae}html[data-theme="oscuro"] .sv-state.sv-expired{color:#ff909b}html[data-theme="oscuro"] .sv-state.sv-state--empty{color:var(--sv-muted)}html[data-theme="oscuro"] .sv-state.sv-soon{color:#ffd17e}
+@media(max-width:1050px){.sv-kpis--extended{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:900px){.sv-kpis:not(.sv-kpis--extended){grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:650px){.sv-kpis--extended{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.sv-kpis{gap:8px}.sv-kpi{padding:12px 10px;gap:9px;min-height:79px;border-radius:12px}.sv-kpi__icon{width:34px;height:34px;flex-basis:34px;font-size:13px}.sv-kpi__value{font-size:19px}.sv-kpi__label{font-size:10.5px}.sv-section-head{align-items:stretch}.sv-primaryBtn{width:100%}.sv-iconBtn{width:31px;height:31px}}
+@media(prefers-reduced-motion:reduce){.sv-kpi{transition:none}.sv-kpi:hover{transform:none}}

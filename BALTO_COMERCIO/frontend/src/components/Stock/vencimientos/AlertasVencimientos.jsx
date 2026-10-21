@@ -1,8 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { createPortal } from "react-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faBell, faTriangleExclamation, faXmark, faArrowRight, faMoneyBillTrendUp } from "@fortawesome/free-solid-svg-icons";
+import { faBell, faTriangleExclamation, faXmark, faArrowRight, faMoneyBillTrendUp, faCalendarXmark, faClock, faCircleCheck } from "@fortawesome/free-solid-svg-icons";
 import { listarAlertasVencimientoStock, obtenerRevisionPreciosPendienteStock } from "../api/stockApi";
+import { isTopStockModal } from "../modales/modalStackUtils";
 import "./alertasVencimientos.css";
 
 const fechaLocal = () => {
@@ -32,6 +34,10 @@ export default function AlertasVencimientos() {
   const [abierto, setAbierto] = useState(false);
   const [errores, setErrores] = useState({});
   const [consultado, setConsultado] = useState(false);
+  const [vencimientoSeleccionadoId, setVencimientoSeleccionadoId] = useState(null);
+  const overlayRef = useRef(null);
+  const dialogRef = useRef(null);
+  const closeRef = useRef(null);
 
   const refresh = useCallback(async () => {
     const [venc, precios] = await Promise.allSettled([
@@ -87,14 +93,49 @@ export default function AlertasVencimientos() {
     };
   }, [refresh]);
   useEffect(() => {
-    if (!abierto) return;
-    const escape = (e) => { if (e.key === "Escape") setAbierto(false); };
-    document.addEventListener("keydown", escape);
-    return () => document.removeEventListener("keydown", escape);
+    if (!abierto) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    const previousFocus = document.activeElement;
+    document.body.style.overflow = "hidden";
+    const focusTimer = window.setTimeout(() => closeRef.current?.focus(), 0);
+    const handleKeys = (event) => {
+      if (!isTopStockModal(overlayRef.current)) return;
+      if (event.key === "Escape") {
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation?.();
+        setAbierto(false);
+      } else if (event.key === "Tab" && dialogRef.current) {
+        const elements = Array.from(dialogRef.current.querySelectorAll('button:not(:disabled), [href], input:not(:disabled), [tabindex]:not([tabindex="-1"])'));
+        if (!elements.length) return;
+        const first = elements[0];
+        const last = elements[elements.length - 1];
+        if (event.shiftKey && (document.activeElement === first || !dialogRef.current.contains(document.activeElement))) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && (document.activeElement === last || !dialogRef.current.contains(document.activeElement))) {
+          event.preventDefault();
+          first.focus();
+        }
+      }
+    };
+    document.addEventListener("keydown", handleKeys, true);
+    return () => {
+      window.clearTimeout(focusTimer);
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", handleKeys, true);
+      if (previousFocus?.isConnected) previousFocus.focus?.();
+    };
   }, [abierto]);
 
   const total = alertas.length + (revision ? 1 : 0);
   const vencidos = useMemo(() => alertas.filter(v => Number(v.dias_restantes) < 0).length, [alertas]);
+  // Si hay varias partidas, el botón del pie gestiona la seleccionada.
+  // Con una sola partida funciona directamente, sin exigir interacción extra.
+  const partidaSeleccionada = useMemo(() =>
+    alertas.find(v => String(v.id_vencimiento) === String(vencimientoSeleccionadoId)) || alertas[0] || null,
+    [alertas, vencimientoSeleccionadoId]
+  );
   const verPartida = (partida) => {
     setAbierto(false);
     navigate("/panel/stock", {state:{baltoStockDestino:{productoId:Number(partida.id_stock_producto),varianteId:Number(partida.id_stock_variante || 0),tab:"vencimientos",ts:Date.now()}}});
@@ -106,37 +147,85 @@ export default function AlertasVencimientos() {
   };
 
   return <>
-    <button type="button" className={`sv-bell ${total ? "sv-bell--active" : ""}`}
+    <button type="button" className={`pp-themeBtn sv-bell ${total ? "sv-bell--active" : ""}`}
       aria-label={`Notificaciones de Stock${total ? `: ${total}` : ""}`}
+      aria-haspopup="dialog" aria-expanded={abierto}
       title="Notificaciones: vencimientos y revisiones de precios"
       onClick={() => { setAbierto(true); refresh(); }}>
       <FontAwesomeIcon icon={faBell} />{total > 0 && <span className="sv-bell-count">{total > 99 ? "99+" : total}</span>}
     </button>
-    {abierto && <div className="sv-alert-backdrop" role="presentation" onMouseDown={() => setAbierto(false)}>
-      <section className="sv-alert-dialog" role="dialog" aria-modal="true" aria-label="Notificaciones de Stock" onMouseDown={e => e.stopPropagation()}>
-        <div className="sv-alert-header"><div><h2><FontAwesomeIcon icon={faBell} /> Notificaciones de Stock</h2><p>Vencimientos y cambios del coeficiente ponderado pendientes de revisar.</p></div>
-          <button type="button" aria-label="Cerrar notificaciones" onClick={()=>setAbierto(false)}><FontAwesomeIcon icon={faXmark}/></button>
-        </div>
-        <div className="sv-alert-summary"><span>{vencidos} vencidos</span><span>{alertas.length - vencidos} próximos a vencer</span><span>{revision ? "1 revisión de precios" : "Sin revisiones de precios"}</span></div>
-        <div className="sv-alert-body">
-          {!consultado && <p>Consultando notificaciones…</p>}
-          {Object.values(errores).map((mensaje) => <div key={mensaje} className="sv-alert-error" role="alert">{mensaje}</div>)}
-          {revision && <article className="sv-alert-entry sv-alert-entry--pricing">
-            <div className="sv-alert-main"><strong><FontAwesomeIcon icon={faMoneyBillTrendUp} /> Revisión de precios pendiente</strong>
-              <div className="sv-alert-meta">Cambió el coeficiente ponderado: {coeficiente(revision.coeficiente_base)} → {coeficiente(revision.coeficiente_actual)}. Los precios no se modifican hasta que lo confirmes en Stock.</div>
-              <button type="button" className="sv-alert-go" onClick={verPrecios}>Ir a Stock y revisar precios <FontAwesomeIcon icon={faArrowRight}/></button>
-            </div><span className="sv-alert-days">Revisar</span>
-          </article>}
-          {alertas.map((v) => {const days=Number(v.dias_restantes);return <article key={v.id_vencimiento} className={`sv-alert-entry ${days < 0 ? "sv-alert-entry--expired" : ""}`}>
-            <div className="sv-alert-main"><strong><FontAwesomeIcon icon={faTriangleExclamation} /> {v.producto_nombre}{v.variante_nombre ? ` · ${v.variante_nombre}` : ""}</strong>
-              <div className="sv-alert-meta">Vence: {mostrarFecha(v.fecha_vencimiento)} · Cantidad: {cantidad(v.cantidad_disponible)}{v.referencia ? ` · ${v.referencia}` : ""}</div>
-              <button type="button" className="sv-alert-go" onClick={() => verPartida(v)}>Ver producto y gestionar vencimiento <FontAwesomeIcon icon={faArrowRight}/></button>
-            </div><span className="sv-alert-days">{days < 0 ? `Vencido hace ${Math.abs(days)} día(s)` : days === 0 ? "Vence hoy" : `Faltan ${days} día(s)`}</span>
-          </article>;})}
-          {consultado && !total && !Object.keys(errores).length && <p>No hay notificaciones pendientes. Todo al día.</p>}
-        </div>
-        <div className="sv-alert-footer"><button type="button" className="sv-alert-secondary" onClick={()=>setAbierto(false)}>Cerrar</button></div>
-      </section>
-    </div>}
+    {abierto && createPortal(
+      <div ref={overlayRef} data-stock-modal-overlay="true" className="mi-modal__overlay sv-alert-backdrop"
+        onMouseDown={(event) => event.stopPropagation()} onClick={(event) => event.stopPropagation()}>
+        <section ref={dialogRef} className="mi-modal__container sv-alert-dialog" role="dialog" aria-modal="true" aria-labelledby="sv-alert-title" aria-describedby="sv-alert-subtitle">
+          <header className="mi-modal__header sv-alert-header">
+            <div className="mi-modal__head-icon" aria-hidden="true"><FontAwesomeIcon icon={faBell}/></div>
+            <div className="mi-modal__head-left">
+              <h2 id="sv-alert-title" className="mi-modal__title">Notificaciones de Stock</h2>
+              <p id="sv-alert-subtitle" className="mi-modal__subtitle">Vencimientos y revisiones de precios pendientes.</p>
+            </div>
+            <button ref={closeRef} type="button" className="mi-modal__close" aria-label="Cerrar notificaciones" onClick={() => setAbierto(false)}><FontAwesomeIcon icon={faXmark}/></button>
+          </header>
+          <div className="sv-alert-body">
+            <div className="sv-alert-summary" aria-label="Resumen de notificaciones">
+              <div className="sv-alert-stat sv-alert-stat--expired">
+                <span className="sv-alert-stat__icon" aria-hidden="true"><FontAwesomeIcon icon={faCalendarXmark}/></span>
+                <div className="sv-alert-stat__body"><span className="sv-alert-stat__label">Vencidos</span><strong className="sv-alert-stat__value">{vencidos}</strong></div>
+              </div>
+              <div className="sv-alert-stat sv-alert-stat--soon">
+                <span className="sv-alert-stat__icon" aria-hidden="true"><FontAwesomeIcon icon={faClock}/></span>
+                <div className="sv-alert-stat__body"><span className="sv-alert-stat__label">Próximos a vencer</span><strong className="sv-alert-stat__value">{alertas.length - vencidos}</strong></div>
+              </div>
+              <div className="sv-alert-stat sv-alert-stat--pricing">
+                <span className="sv-alert-stat__icon" aria-hidden="true"><FontAwesomeIcon icon={faMoneyBillTrendUp}/></span>
+                <div className="sv-alert-stat__body"><span className="sv-alert-stat__label">Revisión de precios</span><strong className="sv-alert-stat__value">{revision ? 1 : 0}</strong></div>
+              </div>
+            </div>
+            {alertas.length > 1 && <p className="sv-alert-selection-hint">Seleccioná una partida para gestionar su vencimiento.</p>}
+            <div className="sv-alert-list">
+              {!consultado && <div className="sv-alert-empty" role="status">Consultando notificaciones…</div>}
+              {Object.values(errores).map((mensaje) => <div key={mensaje} className="sv-alert-error" role="alert"><FontAwesomeIcon icon={faTriangleExclamation}/>{mensaje}</div>)}
+              {revision && <article className="sv-alert-entry sv-alert-entry--pricing">
+                <div className="sv-alert-main"><strong><FontAwesomeIcon icon={faMoneyBillTrendUp}/> Revisión de precios pendiente</strong>
+                  <div className="sv-alert-meta">Cambió el coeficiente ponderado: {coeficiente(revision.coeficiente_base)} → {coeficiente(revision.coeficiente_actual)}. Los precios no se modifican hasta que lo confirmes en Stock.</div>
+                  <button type="button" className="mit-btn mit-btn--ghost sv-alert-go" onClick={verPrecios}>Ir a Stock y revisar precios <FontAwesomeIcon icon={faArrowRight}/></button>
+                </div><span className="sv-alert-days sv-alert-days--pricing">Revisar</span>
+              </article>}
+              {alertas.map((v) => {
+                const days = Number(v.dias_restantes);
+                const seleccionable = alertas.length > 1;
+                const seleccionada = String(partidaSeleccionada?.id_vencimiento) === String(v.id_vencimiento);
+                return <article key={v.id_vencimiento}
+                  className={`sv-alert-entry sv-alert-entry--product ${days < 0 ? "sv-alert-entry--expired" : ""} ${seleccionable ? "sv-alert-entry--selectable" : ""} ${seleccionable && seleccionada ? "sv-alert-entry--selected" : ""}`}
+                  role={seleccionable ? "button" : undefined}
+                  tabIndex={seleccionable ? 0 : undefined}
+                  aria-pressed={seleccionable ? seleccionada : undefined}
+                  aria-label={seleccionable ? `Seleccionar vencimiento de ${v.producto_nombre}${v.variante_nombre ? `, ${v.variante_nombre}` : ""}, ${mostrarFecha(v.fecha_vencimiento)}` : undefined}
+                  onClick={seleccionable ? () => setVencimientoSeleccionadoId(v.id_vencimiento) : undefined}
+                  onKeyDown={seleccionable ? (event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      setVencimientoSeleccionadoId(v.id_vencimiento);
+                    }
+                  } : undefined}>
+                  <div className="sv-alert-main sv-alert-product-info">
+                    <strong><FontAwesomeIcon icon={faTriangleExclamation}/> {v.producto_nombre}{v.variante_nombre ? ` · ${v.variante_nombre}` : ""}</strong>
+                    <div className="sv-alert-meta">Vence: {mostrarFecha(v.fecha_vencimiento)} · Cantidad: {cantidad(v.cantidad_disponible)}{v.referencia ? ` · ${v.referencia}` : ""}</div>
+                  </div>
+                  <span className={`sv-alert-days ${days < 0 ? "sv-alert-days--expired" : ""}`}>{days < 0 ? `Vencido hace ${Math.abs(days)} día(s)` : days === 0 ? "Vence hoy" : `Faltan ${days} día(s)`}</span>
+                </article>;
+              })}
+              {consultado && !total && !Object.keys(errores).length && <div className="sv-alert-empty"><FontAwesomeIcon icon={faCircleCheck}/><strong>Todo al día</strong><span>No hay notificaciones pendientes.</span></div>}
+            </div>
+          </div>
+          <footer className="sv-alert-footer">
+            <button type="button" className="mit-btn mit-btn--solid" onClick={() => setAbierto(false)}>Cerrar</button>
+            {partidaSeleccionada && <button type="button" className="mit-btn mit-btn--ghost sv-alert-footer__manage" onClick={() => verPartida(partidaSeleccionada)}>
+              Ver producto y gestionar vencimiento <FontAwesomeIcon icon={faArrowRight}/>
+            </button>}
+          </footer>
+        </section>
+      </div>, document.body
+    )}
   </>;
 }

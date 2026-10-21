@@ -1,0 +1,87 @@
+/* Ajustes estructurales únicamente: colores, tipografía, encabezado, filas y botones
+ * provienen de Global_Section.css (mov-gridTable / mov-gridCell / mov-iconBtn). */
+.sv-gridScroll {
+  width: 100%;
+  min-width: 0;
+  max-height: min(370px, 44dvh);
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  border: 1px solid var(--sv-border, var(--color-border));
+  border-radius: var(--radius-lg, 12px);
+}
+.sv-gridTable { min-width: 0; width: 100%; }
+.sv-gridRow {
+  grid-template-columns: minmax(112px, 1.05fr) minmax(108px, .95fr) minmax(120px, 1.5fr) minmax(122px, 1fr) minmax(118px, 1fr);
+}
+.sv-gridHeadGroup { position: sticky; top: 0; z-index: 5; }
+.sv-gridHeader { position: relative; top: auto; z-index: 2; }
+.sv-gridHeader .mov-gridCell--head { min-width: 0; font-size: 10px; padding-inline: 10px; }
+/* La cabecera global usa --color-primary-strong, que en oscuro es texto claro.
+   Fuera de .mov-page no se aplica la corrección de Global_oscuro.css;
+   acotamos el ajuste a esta tabla, sin alterar las otras secciones. */
+html[data-theme="oscuro"] .sv-gridHeader.mov-gridTable--head,
+body.dark .sv-gridHeader.mov-gridTable--head {
+  background: var(--color-bg-soft, #0a1928);
+  border-bottom-color: var(--color-border, rgba(255,255,255,.10));
+  color: var(--color-text, #eaf0f7);
+}
+html[data-theme="oscuro"] .sv-gridHeader .mov-gridCell--head,
+body.dark .sv-gridHeader .mov-gridCell--head {
+  color: var(--color-text, #eaf0f7);
+}
+
+.sv-gridDataRow { min-height: 50px; }
+.sv-gridDataRow .sv-gridCell { padding: 9px 10px; font-size: 12px; }
+.sv-gridCell .sv-gridText { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sv-gridCell--status, .sv-gridCell--actions { overflow: visible; }
+.sv-gridCell--quantity { font-variant-numeric: tabular-nums; }
+.sv-gridCell--actions .sv-table__buttons { justify-content: center; flex-wrap: nowrap; }
+.sv-gridCell--actions .mov-iconBtn { flex: 0 0 29px; height: 29px; width: 29px; }
+.sv-gridCell--actions .mov-iconBtn:disabled { opacity: .48; }
+html[data-theme="oscuro"] .sv-gridDataRow { background: var(--sv-surface); border-bottom-color: var(--sv-border); }
+html[data-theme="oscuro"] .sv-gridDataRow:hover { background: color-mix(in srgb, var(--sv-action) 8%, var(--sv-surface)); }
+html[data-theme="oscuro"] .sv-gridCell { color: var(--sv-text); }
+html[data-theme="oscuro"] .sv-gridCell--actions .mov-iconBtn { background: var(--sv-surface); border-color: var(--sv-border); color: var(--sv-action); }
+html[data-theme="oscuro"] .sv-gridCell--actions .mov-iconBtn--danger { color: #ff909b; }
+html[data-theme="oscuro"] .sv-gridCell--actions .mov-iconBtn:hover:not(:disabled) { background: color-mix(in srgb, var(--sv-action) 10%, var(--sv-surface)); }
+/* Adaptar por ancho real del listado: también funciona dentro de modales estrechos y en tablet. */
+.sv-gridScroll { container-type: inline-size; }
+@container (max-width: 640px) {
+  .sv-gridHeader { display: none; }
+  .sv-gridBody { display: grid; gap: 8px; padding: 8px; }
+  .sv-gridDataRow {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px 10px;
+    padding: 10px;
+    background: var(--sv-surface, var(--color-surface));
+    border: 1px solid var(--sv-border, var(--color-border));
+    border-radius: 10px;
+  }
+  .sv-gridDataRow .sv-gridCell {
+    display: flex;
+    min-height: 0;
+    padding: 0;
+    gap: 4px;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    text-align: left;
+    white-space: normal;
+    overflow: hidden;
+  }
+  .sv-gridDataRow .sv-gridCell::before {
+    content: attr(data-label);
+    display: block;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--sv-muted, var(--color-text-muted));
+  }
+  .sv-gridDataRow .sv-gridCell--status { align-items: flex-start; }
+  .sv-gridDataRow .sv-gridCell--actions { grid-column: 1 / -1; flex-direction: row; justify-content: space-between; align-items: center; overflow: visible; border-top: 1px solid var(--sv-border); padding-top: 8px; }
+  .sv-gridDataRow .sv-gridCell--actions .sv-table__buttons { justify-content: flex-end; }
+  .sv-gridDataRow .sv-gridCell .sv-gridText { max-width: 100%; }
+  .sv-gridDataRow .sv-gridCell .sv-state { max-width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) { .sv-gridRow { transition: none; } }

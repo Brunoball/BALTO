@@ -3,6 +3,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import ModalVerComprobante from "../../Global/Ver_Comprobantes/ModalVerComprobante";
 import StockBarcodePanel from "./StockBarcodePanel";
 import StockUnitField from "./StockUnitField";
+import TnPresentacionesPanel from "./TnPresentacionesPanel";
 import VencimientosAltaFields, { prepararVencimientosAlta, validarVencimientosAlta } from "../vencimientos/VencimientosAltaFields";
 import PricingCoefficientPanel from "./PricingCoefficientPanel";
 import "./ModalCargaIndividualProducto.css";
@@ -31,6 +32,7 @@ import {
   faLayerGroup,
   faCheck,
   faPlus,
+  faCalendarDays,
 } from "@fortawesome/free-solid-svg-icons";
 
 import {
@@ -1845,7 +1847,7 @@ export default function ModalCargaIndividualProducto({
   return (
     <div style={{ display: visible ? "contents" : "none" }}>
       <div
-        className="mi-modal__content cmi-content--individual"
+        className={`mi-modal__content cmi-content--individual${cargaActiva === "presentaciones_tn" ? " cmi-content--tiendanube" : ""}`}
       >
         <div
           className={`cmi-v2-formShell cmi-v2-formShell--${cargaActiva}`}
@@ -1874,6 +1876,21 @@ export default function ModalCargaIndividualProducto({
             >
               <FontAwesomeIcon icon={faCubesStacked} /> Variantes
             </button>
+            <button type="button" className={`cmi-v2-mainTab ${cargaActiva === "vencimientos" ? "is-active" : ""}`}
+              onClick={() => setCargaActiva("vencimientos")} role="tab" aria-selected={cargaActiva === "vencimientos"}
+              disabled={!!barcodeProductoGuardado}>
+              <FontAwesomeIcon icon={faCalendarDays} /> Vencimientos
+            </button>
+            <button
+              type="button"
+              className={`cmi-v2-mainTab ${cargaActiva === "presentaciones_tn" ? "is-active" : ""}`}
+              onClick={() => setCargaActiva("presentaciones_tn")}
+              role="tab"
+              aria-selected={cargaActiva === "presentaciones_tn"}
+              disabled={!!barcodeProductoGuardado}
+            >
+              <FontAwesomeIcon icon={faLayerGroup} /> Tienda Nube
+            </button>
             {permiteCodigoBarras ? (
               <button
                 type="button"
@@ -1885,6 +1902,39 @@ export default function ModalCargaIndividualProducto({
                 <FontAwesomeIcon icon={faBarcode} /> Código de barra
               </button>
             ) : null}
+          </div>
+
+          {cargaActiva === "presentaciones_tn" && (
+            <TnPresentacionesPanel preview={form} />
+          )}
+
+          <div className="cmi-vencimientosAltaTab">
+            {!productoConVariantes ? (
+              <VencimientosAltaFields
+                titulo="Fechas de vencimiento del producto"
+                value={form.vencimientos}
+                onChange={(vencimientos) => setForm((p) => ({ ...p, vencimientos }))}
+                stock={form.stock} disabled={guardando || !!barcodeProductoGuardado}
+                permiteDecimales={Number(unidadesStock.find((u) => String(u.id_stock_unidad ?? u.id) === String(form.id_stock_unidad))?.permite_decimales ?? 1) === 1}
+                error={errores.vencimientos}
+              />
+            ) : (form.variantes || []).filter(variantHasContent).length ? (
+              <div className="cmi-vencimientosVarianteList">
+                <p className="sv-variants-intro">Cada variante tiene sus propias partidas. Se registran al guardar el producto.</p>
+                {(form.variantes || []).map((variant, variantIdx) => variantHasContent(variant) ? (
+                  <div key={variantIdx} className="cmi-vencimientosVariante">
+                    <VencimientosAltaFields
+                      titulo={variant.nombre_variante ? `Variante · ${variant.nombre_variante}` : `Fechas de vencimiento · Variante #${variantIdx + 1}`}
+                      value={variant.vencimientos}
+                      onChange={(vencimientos) => updateVariant(variantIdx, { vencimientos })}
+                      stock={variant.stock} disabled={guardando || !!barcodeProductoGuardado}
+                      permiteDecimales={Number(unidadesStock.find((u) => String(u.id_stock_unidad ?? u.id) === String(variant.id_stock_unidad || form.id_stock_unidad))?.permite_decimales ?? 1) === 1}
+                      error={errores[`variante_${variantIdx}_vencimientos`]}
+                    />
+                  </div>
+                ) : null)}
+              </div>
+            ) : <div className="sv-empty">Primero agregá una variante con nombre desde la pestaña Variantes.</div>}
           </div>
 
           {permiteCodigoBarras ? (
@@ -1974,16 +2024,6 @@ export default function ModalCargaIndividualProducto({
               </FloatingField>
             </div>
 
-            {!productoConVariantes ? (
-              <VencimientosAltaFields
-                titulo="Fechas de vencimiento del producto"
-                value={form.vencimientos}
-                onChange={(vencimientos) => setForm((p) => ({ ...p, vencimientos }))}
-                stock={form.stock}
-                disabled={guardando || !!barcodeProductoGuardado}
-                error={errores.vencimientos}
-              />
-            ) : null}
 
             <div className="cmi-v2-tabsInline">
               <button type="button" className="cmi-v2-tabBtn" onClick={() => irAPanel(categoriasPanelRef)}>
@@ -2426,14 +2466,6 @@ export default function ModalCargaIndividualProducto({
                       </FloatingField>
                     </div>
 
-                    <VencimientosAltaFields
-                      titulo={`Fechas de vencimiento · Variante #${variantIdx + 1}`}
-                      value={variant.vencimientos}
-                      onChange={(vencimientos) => updateVariant(variantIdx, { vencimientos })}
-                      stock={variant.stock}
-                      disabled={guardando || !!barcodeProductoGuardado}
-                      error={errores[`variante_${variantIdx}_vencimientos`]}
-                    />
 
                     {categoriasSafe.length > 0 ? (
                       <div className="cmi-v2-variantCategories">

@@ -1,0 +1,18 @@
+/* Modal específico, construido sobre el contrato global mi-modal y cmi-floatingField. */
+.sv-partida-overlay{z-index:10000000000;overflow-y:auto;overscroll-behavior:contain}
+.sv-partida-modal{width:min(560px,100%);max-height:min(90dvh,740px);min-height:0;flex:0 1 auto;background:var(--mi-bg,var(--nv-card,#fff));color:var(--nv-text,#0a2540)}
+.sv-partida-form{display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.sv-partida-content{padding:25px 22px 18px;overflow-y:auto;display:flex;flex-direction:column;gap:20px}
+.sv-partida-stock{display:flex;align-items:center;flex-wrap:wrap;gap:8px 16px;padding:12px 14px;border:1px solid var(--nv-border,rgba(10,37,64,.12));border-radius:12px;background:var(--nv-surface-soft,var(--mi-bg-soft,#f8fafc));color:var(--nv-muted,#64748b);font-size:12px}
+.sv-partida-stock svg{color:var(--nv-action,#0055bb)}.sv-partida-stock strong{color:var(--nv-text,#0a2540);font-weight:650;margin-left:4px}
+.sv-partida-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px 12px}.sv-partida-full{grid-column:1 / -1}
+.sv-partida-fields .cmi-floatingField{min-width:0}.sv-partida-fields .cmi-input{width:100%;min-height:46px}
+.sv-partida-fields textarea.cmi-input{resize:vertical;min-height:76px}
+.sv-partida-error{font-size:12px;color:var(--color-danger,#bf2939);margin:0}
+.sv-partida-footer{display:flex;justify-content:flex-end;gap:10px;align-items:center;padding:14px 22px;border-top:1px solid var(--nv-border,rgba(10,37,64,.1));background:var(--mi-bg,var(--nv-card,#fff))}
+.sv-partida-footer .mit-btn{min-height:40px;display:inline-flex;align-items:center;gap:7px;justify-content:center}
+html[data-theme="oscuro"] .sv-partida-modal{background:var(--mi-bg,#101e2b);color:var(--nv-text,#e5eaf0)}
+html[data-theme="oscuro"] .sv-partida-stock{background:rgba(255,255,255,.035);border-color:rgba(255,255,255,.12)}
+html[data-theme="oscuro"] .sv-partida-stock strong{color:#eaf1f9}
+@media(max-width:580px){.sv-partida-overlay{padding:12px}.sv-partida-modal{max-height:100%;width:100%;border-radius:14px}.sv-partida-content{padding:24px 16px 18px}.sv-partida-footer{padding:12px 16px}.sv-partida-footer>.mit-btn{flex:1}.sv-partida-fields{grid-template-columns:1fr;gap:20px}.sv-partida-full{grid-column:auto}}
+@media(prefers-reduced-motion:reduce){.sv-partida-overlay,.sv-partida-modal{animation:none}}

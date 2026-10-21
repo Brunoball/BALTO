@@ -1,11 +1,6 @@
-.cmi-vencAlta{margin:12px 0 16px;padding:16px;border-radius:14px;border:1px solid var(--nv-border,#d3dce6);background:var(--nv-card,#fff);color:var(--nv-text,#172b44)}
-.cmi-vencAlta__head{display:flex;justify-content:space-between;gap:16px;align-items:center;flex-wrap:wrap}
-.cmi-vencAlta__head strong{font-size:14px}.cmi-vencAlta__head p{font-size:12px;margin:5px 0;color:var(--nv-muted,#64748b);line-height:1.5}
-.cmi-vencAlta__add{border:1px solid var(--nv-action,#0055bb);border-radius:8px;color:var(--nv-action,#0055bb);background:transparent;font-weight:600;padding:9px 12px;cursor:pointer}
-.cmi-vencAlta__rows{display:grid;gap:9px;margin-top:14px}.cmi-vencAlta__row{display:grid;grid-template-columns:minmax(155px,1.1fr) minmax(95px,.65fr) minmax(145px,1fr) auto;align-items:end;gap:10px;padding:10px;border:1px solid var(--nv-border,#d3dce6);border-radius:9px}
-.cmi-vencAlta__row label{display:grid;gap:5px;font-size:12px;font-weight:600;min-width:0}.cmi-vencAlta__row .cmi-input{min-width:0;width:100%;box-sizing:border-box}
-.cmi-vencAlta__remove{border:0;border-radius:8px;background:rgba(200,30,55,.09);color:#b4232e;cursor:pointer;padding:10px}
-.cmi-vencAlta__summary,.cmi-vencAlta__empty{font-size:12px;margin:12px 0 0;color:var(--nv-muted,#64748b)}.cmi-vencAlta__error{font-size:12px;margin:8px 0 0;color:#b4232e;font-weight:600}
-.cmi-vencAlta button:disabled{opacity:.6;cursor:not-allowed}
-@media(max-width:760px){.cmi-vencAlta__row{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.cmi-vencAlta__row label:nth-child(3){grid-column:span 2}}
-@media(max-width:430px){.cmi-vencAlta__row{grid-template-columns:1fr}.cmi-vencAlta__row label:nth-child(3){grid-column:auto}}
+/* Alta de vencimientos: usa los mismos KPI, campos y botones del control de stock. */
+.cmi-vencAlta{min-width:0;display:flex;flex-direction:column;gap:16px;color:var(--nv-text,#0a2540)}
+.cmi-vencAlta h3,.cmi-vencAlta h4,.cmi-vencAlta p{margin:0}
+.cmi-vencAlta .sv-section-head{margin-bottom:0}
+.cmi-vencAlta .sv-list-head{margin-bottom:-6px}
+@media(max-width:640px){.cmi-vencAlta{gap:12px}}

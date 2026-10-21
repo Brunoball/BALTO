@@ -21,3 +21,6 @@
 .cmi-container--editar .cmi-v2-tabBtn {
   font-weight: 500;
 }
+
+/* Las cuatro pestañas deben mantenerse accesibles también en móviles. */
+@media(max-width:650px){.cmi-container--editar .cmi-v2-mainTabs{max-width:100%;flex-wrap:wrap;justify-content:flex-start;border-radius:16px}}
