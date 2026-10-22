@@ -141,10 +141,178 @@
 }
 .sv-alert-days--expired { border-color: rgba(197,62,74,.2); background: rgba(197,62,74,.09); color: #bc3d4c; }
 .sv-alert-days--pricing { border-color: rgba(0,85,187,.2); background: rgba(0,85,187,.08); color: var(--mi-primary, #0055bb); }
-.sv-alert-go.mit-btn {
-  display: inline-flex; align-items: center; gap: 9px; max-width: 100%;
-  min-height: 35px; margin-top: 12px; padding: 7px 11px; font-size: 12px;
-  text-align: left; line-height: 1.4;
+/* Revisión de precios: tarjeta destacada con los mismos radios, sombras y
+   acentos suaves que los indicadores superiores del modal. */
+.sv-alert-dialog .sv-alert-entry--pricing {
+  --sv-pricing-accent: var(--color-primary, #0055bb);
+  --sv-pricing-wash: rgba(0, 85, 187, .055);
+  --sv-pricing-border: rgba(0, 85, 187, .13);
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content;
+  grid-template-areas:
+    "identity status"
+    "comparison action";
+  align-items: start;
+  column-gap: 20px;
+  row-gap: 10px;
+  padding: 17px 18px;
+  background: linear-gradient(115deg, var(--sv-pricing-wash), transparent 60%), var(--mi-bg, #fff);
+  border-color: var(--sv-pricing-border);
+}
+.sv-alert-entry--pricing::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: var(--sv-pricing-accent);
+}
+.sv-alert-entry--pricing::after {
+  content: "";
+  position: absolute;
+  width: 185px;
+  height: 185px;
+  right: -97px;
+  top: -116px;
+  border-radius: 50%;
+  background: rgba(0, 85, 187, .065);
+  pointer-events: none;
+  z-index: 0;
+}
+.sv-alert-entry--pricing > * { position: relative; z-index: 1; }
+/* Estado en la esquina superior derecha, con el CTA alineado justo debajo. */
+.sv-alert-dialog .sv-alert-entry--pricing > .sv-alert-days--pricing {
+  grid-area: status;
+  justify-self: end;
+  align-self: start;
+  width: max-content;
+  max-width: 100%;
+  margin: 0;
+}
+.sv-alert-pricing__identity {
+  grid-area: identity;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-width: 0;
+}
+.sv-alert-pricing__icon {
+  display: grid;
+  place-items: center;
+  width: 41px;
+  height: 41px;
+  flex: 0 0 41px;
+  border-radius: 13px;
+  background: rgba(0, 85, 187, .10);
+  color: var(--sv-pricing-accent);
+  font-size: 17px;
+}
+.sv-alert-pricing__heading { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.sv-alert-pricing__heading strong {
+  color: var(--mi-text, #0a2540);
+  font-size: 13.5px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+.sv-alert-pricing__heading > span { color: var(--mi-muted, #64748b); font-size: 12px; line-height: 1.45; }
+.sv-alert-pricing__comparison {
+  grid-area: comparison;
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+  padding: 11px 13px;
+  border: 1px solid var(--mi-border, rgba(10,37,64,.1));
+  border-radius: 12px;
+  background: var(--mi-bg-soft, #f8fafc);
+}
+.sv-alert-pricing__coefficient { display: flex; flex: 1 1 0; flex-direction: column; gap: 4px; min-width: 0; }
+.sv-alert-pricing__coefficient > span {
+  color: var(--mi-muted, #64748b);
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+.sv-alert-pricing__coefficient > strong {
+  color: var(--mi-text, #0a2540);
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -.02em;
+  line-height: 1.25;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.sv-alert-pricing__coefficient--current > strong { color: var(--sv-pricing-accent); }
+.sv-alert-pricing__arrow {
+  flex: 0 0 29px;
+  width: 29px;
+  height: 29px;
+  display: grid;
+  place-items: center;
+  align-self: center;
+  border-radius: 50%;
+  background: rgba(0,85,187,.095);
+  color: var(--sv-pricing-accent);
+  font-size: 11px;
+}
+.sv-alert-dialog .sv-alert-entry--pricing > .sv-alert-go.mit-btn {
+  grid-area: action;
+  justify-self: end;
+  align-self: center;
+  width: max-content;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  max-width: 100%;
+  min-height: 39px;
+  margin: 0;
+  padding: 9px 14px;
+  border: 1px solid var(--sv-pricing-accent);
+  border-radius: 10px;
+  background: var(--sv-pricing-accent);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+  text-align: left;
+  text-decoration: none;
+  box-shadow: 0 5px 12px rgba(0,85,187,.12);
+  transition: background-color .18s ease, border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+}
+.sv-alert-dialog .sv-alert-go.mit-btn:hover {
+  background: var(--color-primary-hover, #004597);
+  border-color: var(--color-primary-hover, #004597);
+  box-shadow: 0 8px 18px rgba(0,85,187,.20);
+  transform: translateY(-1px);
+}
+.sv-alert-dialog .sv-alert-go.mit-btn:focus-visible {
+  outline: 2px solid var(--sv-pricing-accent);
+  outline-offset: 3px;
+}
+.sv-alert-go svg { flex: 0 0 auto; font-size: 12px; }
+/* El modo oscuro tiene su propio contraste para textos, iconos y CTA. */
+html[data-theme="oscuro"] .sv-alert-dialog .sv-alert-entry--pricing {
+  --sv-pricing-accent: #81b5ff;
+  --sv-pricing-wash: rgba(65, 137, 255, .07);
+  --sv-pricing-border: rgba(112, 168, 248, .20);
+}
+html[data-theme="oscuro"] .sv-alert-entry--pricing::after { background: rgba(65, 137, 255, .10); }
+html[data-theme="oscuro"] .sv-alert-pricing__icon,
+html[data-theme="oscuro"] .sv-alert-pricing__arrow { background: rgba(80, 148, 255, .16); }
+html[data-theme="oscuro"] .sv-alert-dialog .sv-alert-go.mit-btn {
+  background: #246bc5;
+  border-color: #357fdd;
+  color: #fff;
+  box-shadow: 0 5px 14px rgba(0,0,0,.20);
+}
+html[data-theme="oscuro"] .sv-alert-dialog .sv-alert-go.mit-btn:hover {
+  background: #307cdd;
+  border-color: #5597ed;
+  box-shadow: 0 8px 18px rgba(0,0,0,.28);
 }
 .sv-alert-error { display: flex; gap: 8px; align-items: center; padding: 11px 13px; border-radius: 10px; background: rgba(220,38,38,.08); border: 1px solid rgba(220,38,38,.17); color: #bf3542; font-size: 12px; }
 .sv-alert-empty {
@@ -192,6 +360,22 @@ html[data-theme="oscuro"] .sv-alert-error { color: #ff9ca7; }
   .sv-alert-body { padding: 13px; }
 }
 @media (max-width: 650px) {
+  .sv-alert-dialog .sv-alert-entry--pricing {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "identity status"
+      "comparison comparison"
+      "action action";
+    gap: 11px 10px;
+  }
+  .sv-alert-dialog .sv-alert-entry--pricing > .sv-alert-go.mit-btn {
+    width: auto;
+    max-width: 100%;
+    white-space: normal;
+    text-align: center;
+  }
+}
+@media (max-width: 650px) {
   .sv-alert-dialog .sv-alert-entry--product { grid-template-columns: minmax(0, 1fr); gap: 10px; }
   .sv-alert-dialog .sv-alert-entry--product > .sv-alert-days { justify-self: end; }
 }
@@ -200,7 +384,15 @@ html[data-theme="oscuro"] .sv-alert-error { color: #ff9ca7; }
   .sv-alert-dialog.mi-modal__container { width: 100%; max-height: 100%; }
   .sv-alert-entry:not(.sv-alert-entry--product) { flex-direction: column; gap: 8px; }
   .sv-alert-days { align-self: flex-start; }
-  .sv-alert-go.mit-btn { width: 100%; justify-content: center; }
+  .sv-alert-dialog .sv-alert-entry--pricing { padding: 14px; gap: 12px; }
+  .sv-alert-dialog .sv-alert-entry--pricing > .sv-alert-go.mit-btn {
+    justify-self: stretch;
+    width: 100%;
+    justify-content: center;
+  }
+  .sv-alert-pricing__comparison { padding: 10px; }
+  .sv-alert-pricing__coefficient > strong { font-size: 14px; }
+  .sv-alert-pricing__icon { width: 35px; height: 35px; flex-basis: 35px; font-size: 15px; }
   .sv-alert-summary { gap: 7px; }
   .sv-alert-stat { padding: 10px; gap: 8px; min-height: 78px; }
   .sv-alert-stat__icon { width: 34px; height: 34px; flex-basis: 34px; font-size: 14px; }
@@ -209,7 +401,7 @@ html[data-theme="oscuro"] .sv-alert-error { color: #ff9ca7; }
   .sv-alert-footer { padding: 10px 13px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .sv-alert-dialog, .sv-alert-backdrop, .sv-alert-go.mit-btn { animation: none; transition: none; }
+  .sv-alert-dialog, .sv-alert-backdrop, .sv-alert-dialog .sv-alert-go.mit-btn { animation: none; transition: none; }
   .sv-alert-stat { transition: none; }
   .sv-alert-stat:hover { transform: none; }
 }

@@ -186,10 +186,28 @@ export default function AlertasVencimientos() {
               {!consultado && <div className="sv-alert-empty" role="status">Consultando notificaciones…</div>}
               {Object.values(errores).map((mensaje) => <div key={mensaje} className="sv-alert-error" role="alert"><FontAwesomeIcon icon={faTriangleExclamation}/>{mensaje}</div>)}
               {revision && <article className="sv-alert-entry sv-alert-entry--pricing">
-                <div className="sv-alert-main"><strong><FontAwesomeIcon icon={faMoneyBillTrendUp}/> Revisión de precios pendiente</strong>
-                  <div className="sv-alert-meta">Cambió el coeficiente ponderado: {coeficiente(revision.coeficiente_base)} → {coeficiente(revision.coeficiente_actual)}. Los precios no se modifican hasta que lo confirmes en Stock.</div>
-                  <button type="button" className="mit-btn mit-btn--ghost sv-alert-go" onClick={verPrecios}>Ir a Stock y revisar precios <FontAwesomeIcon icon={faArrowRight}/></button>
-                </div><span className="sv-alert-days sv-alert-days--pricing">Revisar</span>
+                <div className="sv-alert-pricing__identity">
+                  <span className="sv-alert-pricing__icon" aria-hidden="true"><FontAwesomeIcon icon={faMoneyBillTrendUp}/></span>
+                  <div className="sv-alert-pricing__heading">
+                    <strong>Revisión de precios pendiente</strong>
+                    <span>Cambió el coeficiente ponderado</span>
+                  </div>
+                </div>
+                <span className="sv-alert-days sv-alert-days--pricing">Revisar</span>
+                <div className="sv-alert-pricing__comparison" aria-label={`Coeficiente anterior: ${coeficiente(revision.coeficiente_base)}. Coeficiente actual: ${coeficiente(revision.coeficiente_actual)}`}>
+                  <div className="sv-alert-pricing__coefficient">
+                    <span>Coeficiente anterior</span>
+                    <strong>{coeficiente(revision.coeficiente_base)}</strong>
+                  </div>
+                  <span className="sv-alert-pricing__arrow" aria-hidden="true"><FontAwesomeIcon icon={faArrowRight}/></span>
+                  <div className="sv-alert-pricing__coefficient sv-alert-pricing__coefficient--current">
+                    <span>Coeficiente actual</span>
+                    <strong>{coeficiente(revision.coeficiente_actual)}</strong>
+                  </div>
+                </div>
+                <button type="button" className="mit-btn sv-alert-go" onClick={verPrecios}>
+                  Ir a Stock y revisar precios <FontAwesomeIcon icon={faArrowRight} aria-hidden="true"/>
+                </button>
               </article>}
               {alertas.map((v) => {
                 const days = Number(v.dias_restantes);
