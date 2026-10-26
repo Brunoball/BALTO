@@ -20,6 +20,7 @@ import Toast from "../../Global/Toast";
 import ModalEliminar from "../../Global/Modales/ModalEliminar";
 import useTableScrollGutter from "../../Global/useTableScrollGutter";
 import * as configuracionApi from "../api/configuracionApi";
+import { consultarPoliticaUnidadesStock } from "../../Stock/api/stockApi";
 import ModalDetalleLista from "./ModalDetalleLista";
 import ModalCategoriaStock from "./ModalCategoriaStock";
 import ModalUnidadStock from "./ModalUnidadStock";
@@ -69,6 +70,7 @@ export default function ConfiguracionListasCategorias() {
   const [deleteModal, setDeleteModal] = useState({ kind: null, item: null });
   const [statusModal, setStatusModal] = useState({ kind: null, item: null });
   const [toast, setToast] = useState(null);
+  const [unidadBloqueada, setUnidadBloqueada] = useState(null);
 
   const notify = useCallback((tipo, mensaje, duracion = 3800) => {
     setToast({ key: Date.now(), tipo, mensaje, duracion });
@@ -94,6 +96,24 @@ export default function ConfiguracionListasCategorias() {
   useEffect(() => {
     cargar();
   }, [cargar]);
+
+  useEffect(() => {
+    let activo = true;
+    consultarPoliticaUnidadesStock()
+      .then((result) => {
+        if (activo) setUnidadBloqueada((result?.unidad_bloqueada ?? result?.data?.unidad_bloqueada) === true);
+      })
+      .catch(() => {
+        // Falla segura: hasta poder verificar el tenant, no exponemos acciones de unidades.
+        if (activo) setUnidadBloqueada(null);
+      });
+    return () => { activo = false; };
+  }, []);
+
+  useEffect(() => {
+    if (unidadBloqueada !== false && tab === "unidades_stock") setTab("detalles");
+    if (unidadBloqueada !== false && modal.kind === "unidades_stock") setModal({ kind: null, item: null });
+  }, [unidadBloqueada, tab, modal.kind]);
 
   const rows = useMemo(() => {
     const q = buscar.trim().toLocaleUpperCase("es-AR");
@@ -344,7 +364,7 @@ export default function ConfiguracionListasCategorias() {
         <div>
           <span className="cfg-listas-eyebrow">Configuración</span>
           <h1>Listas y categorías</h1>
-          <p>Administrá detalles de Movimientos, medios de pago, categorías y unidades de medida que utiliza Stock.</p>
+          <p>Administrá detalles de Movimientos, medios de pago y categorías de Stock{unidadBloqueada === false ? ", además de unidades de medida." : "."}</p>
         </div>
         <button type="button" className="mov-btn mov-btn--primary" onClick={() => navigate("/panel/configuracion")}>
           <FontAwesomeIcon icon={faArrowLeft} /> Volver
@@ -354,7 +374,7 @@ export default function ConfiguracionListasCategorias() {
       <section className="cfg-listas-card balto-rsp-table-shell balto-rsp-table-clip">
         <div className="cfg-listas-toolbar">
           <div className="cfg-listas-tabs" role="tablist">
-            {TABS.map((item) => (
+            {TABS.filter((item) => item.value !== "unidades_stock" || unidadBloqueada === false).map((item) => (
               <button key={item.value} type="button" className={tab === item.value ? "is-active" : ""} onClick={() => { setTab(item.value); setBuscar(""); }}>
                 {item.label}
               </button>
@@ -441,7 +461,7 @@ export default function ConfiguracionListasCategorias() {
       <ModalDetalleLista open={modal.kind === "detalles"} item={modal.item} saving={saving} onClose={() => setModal({ kind: null, item: null })} onSave={guardarDetalle} onToast={notify} />
       <ModalMedioPago open={modal.kind === "medios_pago"} item={modal.item} saving={saving} onClose={() => setModal({ kind: null, item: null })} onSave={guardarMedioPago} onToast={notify} />
       <ModalCategoriaStock open={modal.kind === "categorias_stock"} item={modal.item} categorias={data.categorias_stock} saving={saving} onClose={() => setModal({ kind: null, item: null })} onSave={guardarCategoria} onToast={notify} />
-      <ModalUnidadStock open={modal.kind === "unidades_stock"} item={modal.item} saving={saving} onClose={() => setModal({ kind: null, item: null })} onSave={guardarUnidad} onToast={notify} />
+      <ModalUnidadStock open={unidadBloqueada === false && modal.kind === "unidades_stock"} item={modal.item} saving={saving} onClose={() => setModal({ kind: null, item: null })} onSave={guardarUnidad} onToast={notify} />
 
       <ModalEliminar
         open={Boolean(statusModal.kind)}

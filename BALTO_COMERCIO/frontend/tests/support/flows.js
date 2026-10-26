@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test';
+import { waitStockEditorUnitsReady } from './stock-units.js';
 import {
   clickSaveAndWait,
   completeRemainingAmount,
@@ -124,6 +125,7 @@ export async function editStockProduct(page, productName, updates) {
   const row = await searchRow(page, productName, /Buscar por nombre, SKU o variante/i);
   await row.locator('button[title="Editar"]').click();
   const dialog = await waitDialog(page, 'Editar producto');
+  await waitStockEditorUnitsReady(page, dialog);
 
   if (updates.name) await dialog.locator('input[name="nombre"]').fill(updates.name);
   if (updates.stock !== undefined) await dialog.locator('input[name="stock"]').fill(String(updates.stock));

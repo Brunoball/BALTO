@@ -3,7 +3,7 @@ import * as XLSX from 'xlsx';
 import { authenticatedApi, expectApiSuccess } from './support/api.js';
 import { uniqueName, uniqueSku } from './support/data.js';
 import { createStockProductFixture } from './support/stock-fixtures.js';
-import { listStockUnits } from './support/stock-units.js';
+import { getStockE2EFixtureUnit } from './support/stock-units.js';
 import { deleteUnusedStockProduct } from './support/flows.js';
 import { requireMutations, waitDialog, waitForBusyToFinish } from './support/ui.js';
 
@@ -11,29 +11,36 @@ function reportPayload(body) {
   return body?.data && body.data?.tipo ? body.data : body || {};
 }
 
-test('@stock @reportes @critical inventario fraccionario valoriza stock real × precio unitario y Excel conserva las fórmulas', async ({ page }, testInfo) => {
+test('@stock @reportes @critical inventario valoriza el stock real y Excel conserva las fórmulas según la unidad habilitada', async ({ page }, testInfo) => {
   await requireMutations(test, page);
   test.setTimeout(3 * 60_000);
 
-  const units = await listStockUnits(page, 'todos');
-  const fractionalUnit = units.find((unit) =>
-    Number(unit?.activo ?? 1) === 1 &&
-    Number(unit?.permite_decimales || 0) === 1,
-  );
-  expect(fractionalUnit, 'Debe existir una unidad fraccionable activa para validar kg/litros').toBeTruthy();
+  // No se prueba la integración Tienda Nube: solo se respeta la política
+  // real del tenant. Con TN conectada el backend expone exclusivamente UNIDAD.
+  // Sin TN se prioriza una unidad fraccionable para conservar esa regresión.
+  const unit = await getStockE2EFixtureUnit(page, { preferFractional: true });
+  const quantity = unit.fractional ? 1.575 : 2;
+  const cost = 15000;
+  const salePrice = 26778;
+  const expectedCost = quantity * cost;
+  const expectedSale = quantity * salePrice;
+  if (unit.tnConnected) {
+    expect(unit.fractional, 'Tienda Nube conectada no debe exponer una unidad decimal').toBe(false);
+    expect(Number(unit.permite_decimales || 0)).toBe(0);
+  }
 
-  const productName = uniqueName('STOCK-VALUACION-FRACC', 65);
-  const sku = uniqueSku('VALFRAC');
+  const productName = uniqueName('STOCK-VALUACION-REPORTE', 65);
+  const sku = uniqueSku('VALREP');
   let created = false;
 
   try {
     await createStockProductFixture(page, {
       name: productName,
       sku,
-      stock: 1.575,
-      cost: 15000,
-      price: 26778,
-      unitId: Number(fractionalUnit.id_stock_unidad),
+      stock: quantity,
+      cost,
+      price: salePrice,
+      unitId: Number(unit.id_stock_unidad),
     });
     created = true;
 
@@ -46,11 +53,11 @@ test('@stock @reportes @critical inventario fraccionario valoriza stock real × 
     const row = rows.find((item) => String(item?.sku || '').trim().toUpperCase() === sku.toUpperCase());
 
     expect(row, `El reporte debe incluir el producto ${sku}`).toBeTruthy();
-    expect(Number(row.stock)).toBeCloseTo(1.575, 3);
-    expect(Number(row.precio_costo)).toBeCloseTo(15000, 2);
-    expect(Number(row.precio_venta)).toBeCloseTo(26778, 2);
-    expect(Number(row.valor_costo), '1,575 × $15.000 debe valorizar $23.625').toBeCloseTo(23625, 5);
-    expect(Number(row.valor_venta), '1,575 × $26.778 debe valorizar $42.175,35').toBeCloseTo(42175.35, 5);
+    expect(Number(row.stock)).toBeCloseTo(quantity, unit.fractional ? 3 : 0);
+    expect(Number(row.precio_costo)).toBeCloseTo(cost, 2);
+    expect(Number(row.precio_venta)).toBeCloseTo(salePrice, 2);
+    expect(Number(row.valor_costo), 'La valorización al costo debe multiplicar el stock real').toBeCloseTo(expectedCost, 5);
+    expect(Number(row.valor_venta), 'La valorización potencial debe multiplicar el stock real').toBeCloseTo(expectedSale, 5);
 
     await page.goto('/panel/stock');
     await waitForBusyToFinish(page);
@@ -128,7 +135,7 @@ test('@stock @reportes @critical inventario fraccionario valoriza stock real × 
     const downloadPromise = page.waitForEvent('download');
     await dialog.getByRole('button', { name: /Exportar Excel/i }).click();
     const download = await downloadPromise;
-    const outputPath = testInfo.outputPath('inventario-general-fraccional.xlsx');
+    const outputPath = testInfo.outputPath('inventario-general-valoracion.xlsx');
     await download.saveAs(outputPath);
 
     const workbook = XLSX.readFile(outputPath, { cellDates: false, cellFormula: true });
@@ -166,8 +173,8 @@ test('@stock @reportes @critical inventario fraccionario valoriza stock real × 
 
     expect(sheet[valueCostAddress]?.f).toBe(`${stockAddress}*${costAddress}`);
     expect(sheet[valueSaleAddress]?.f).toBe(`${stockAddress}*${saleAddress}`);
-    expect(Number(sheet[valueCostAddress]?.v)).toBeCloseTo(23625, 5);
-    expect(Number(sheet[valueSaleAddress]?.v)).toBeCloseTo(42175.35, 5);
+    expect(Number(sheet[valueCostAddress]?.v)).toBeCloseTo(expectedCost, 5);
+    expect(Number(sheet[valueSaleAddress]?.v)).toBeCloseTo(expectedSale, 5);
   } finally {
     if (created) {
       await deleteUnusedStockProduct(page, productName).catch(() => {});

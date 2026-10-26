@@ -2,7 +2,7 @@ import { test, expect } from './support/test.js';
 import { authenticatedApi, expectApiSuccess } from './support/api.js';
 import { uniqueName, uniqueSku } from './support/data.js';
 import { createStockProductFixture } from './support/stock-fixtures.js';
-import { listStockUnits } from './support/stock-units.js';
+import { getStockE2EFixtureUnit, waitStockEditorUnitsReady } from './support/stock-units.js';
 import { createVariantStockProduct } from './support/barcodes.js';
 import { deleteUnusedStockProduct } from './support/flows.js';
 import { requireMutations, searchRow, waitDialog, waitForBusyToFinish } from './support/ui.js';
@@ -57,20 +57,27 @@ async function writePrices(page, productId, prices, variantId = null) {
   return expectApiSuccess(response, 'No se pudo guardar el cambio individual de precios');
 }
 
-async function fractionalUnitId(page) {
-  const units = await listStockUnits(page, 'todos');
-  const unit = units.find((row) =>
-    Number(row.activo ?? 1) === 1 &&
-    Number(row.permite_decimales || 0) === 1 &&
-    Number(row.es_default || 0) !== 1
-  );
-  expect(unit, 'Hace falta una unidad fraccionable activa para evitar sincronización externa de los fixtures').toBeTruthy();
+async function fixtureUnitId(page) {
+  // Las mutaciones pasan por requireMutations(), que verifica el aislamiento TN.
+  // No se debe exigir una unidad que el negocio conectado no puede utilizar.
+  const unit = await getStockE2EFixtureUnit(page);
   return Number(unit.id_stock_unidad);
 }
 
 test('@stock @search @critical el buscador conserva texto y foco ante escritura, pegado y refresco', async ({ page }) => {
+  // La notificación tardía de vencimientos puede abrirse en medio de
+  // pressSequentially y robar un carácter al cerrar su propio overlay.
+  // Esperamos la primera lectura de alertas antes de probar foco y teclado.
+  const alertsLoaded = page.waitForResponse((res) =>
+    new URL(res.url()).searchParams.get('action') === 'stock_vencimientos_alertas',
+    { timeout: 30_000 },
+  );
   await page.goto('/panel/stock');
   await waitForBusyToFinish(page);
+  await alertsLoaded;
+  // support/test.js ya cierra automáticamente este popup con addLocatorHandler.
+  // No cerrarlo otra vez: el handler puede desmontar el botón entre isVisible()
+  // y evaluate(), dando un falso timeout antes de comprobar el buscador.
   const search = page.locator('.stock-page .cc-filter--search input').first();
   await expect(search).toBeVisible();
   await search.click();
@@ -100,7 +107,7 @@ test('@stock @sku @critical SKU duplicado identifica producto existente, sin cre
   try {
     const response = await createStockProductFixture(page, {
       name, sku, stock: 3, cost: 120, price: 220,
-      unitId: await fractionalUnitId(page),
+      unitId: await fixtureUnitId(page),
     });
     expect(Number(payload(response).producto?.id_stock_producto || 0)).toBeGreaterThan(0);
     created = true;
@@ -131,7 +138,7 @@ test('@stock @historial @critical editar precio, repetirlo y quitar promoción d
   try {
     const response = await createStockProductFixture(page, {
       name, sku, stock: 3, cost: 120, price: 200,
-      unitId: await fractionalUnitId(page),
+      unitId: await fixtureUnitId(page),
     });
     const productId = Number(payload(response).producto?.id_stock_producto || 0);
     expect(productId).toBeGreaterThan(0);
@@ -206,6 +213,9 @@ test('@stock @variants @sku @historial crear y editar variante sin SKU conserva 
     const dialog = await waitDialog(page, 'Editar producto');
     await expect(dialog.locator('.cmi-v2-variantPanelOnly')).toBeHidden();
     await dialog.getByRole('tab', { name: /^Variantes$/i }).click();
+    // El botón puede habilitarse antes de que llegue la política de unidades;
+    // guardar en ese instante no emite POST y deja el waitForResponse colgado.
+    await waitStockEditorUnitsReady(page, dialog, { variant: true });
     const card = dialog.locator('.cmi-v2-variantCard').first();
     await expect(card).toBeVisible();
     await expect(card.getByPlaceholder('SKU', { exact: true })).toHaveValue('');

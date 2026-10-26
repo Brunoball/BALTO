@@ -227,7 +227,7 @@ function ConfiguracionInicio() {
       {
         id: "listas-categorias",
         title: "Listas y categorías",
-        description: "Administrá detalles, medios de pago, categorías y unidades de stock desde un solo lugar.",
+        description: "Administrá detalles, medios de pago y categorías de stock. Las unidades se configuran solamente en negocios sin Tienda Nube.",
         route: "/panel/configuracion?seccion=listas-categorias",
         status: { text: "Administrable", type: "success" },
         metaTop: "Datos configurables",

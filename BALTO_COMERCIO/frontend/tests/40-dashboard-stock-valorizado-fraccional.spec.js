@@ -17,6 +17,8 @@ async function dashboardStockValue(page) {
 }
 
 test('@dashboard @stock @critical stock valorizado respeta cantidades fraccionarias y usa costo, no venta', async ({ page }) => {
+  const policy = expectApiSuccess(await authenticatedApi(page, 'stock_unidades_politica'));
+  test.skip(Boolean(policy.tiendanube_conectada), 'Tienda Nube conectada: stock fraccionario no permitido.');
   await requireMutations(test, page);
   test.setTimeout(3 * 60_000);
 

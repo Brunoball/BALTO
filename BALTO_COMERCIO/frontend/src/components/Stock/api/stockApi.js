@@ -19,6 +19,11 @@ function markStockWriteStarted() {
   stockReadGeneration += 1;
 }
 
+// Permite descartar precargas previas cuando se inicia cualquier escritura en Stock.
+export function getStockReadGeneration() {
+  return stockReadGeneration;
+}
+
 function stockGetRequestKey(action, params = {}, strict = true) {
   const canonical = new URLSearchParams();
   const entries = params instanceof URLSearchParams
@@ -264,6 +269,8 @@ export const listarCategoriasStock = (params = {}, options = {}) =>
   stockGet("stock_categorias_listar", params, options);
 export const crearCategoriaStock = (body = {}, options = {}) =>
   stockPost("stock_categorias_crear", body, options);
+export const consultarPoliticaUnidadesStock = (options = {}) =>
+  stockGet("stock_unidades_politica", {}, options);
 export const listarUnidadesStock = (params = {}, options = {}) =>
   stockGet("stock_unidades_listar", params, options);
 export const crearUnidadStock = (body = {}, options = {}) =>
@@ -354,9 +361,3 @@ export const retirarStockVencido = (body) =>
   stockPost("stock_vencimientos_retirar", body);
 export const listarAlertasVencimientoStock = (dias_aviso = 7) =>
   stockGet("stock_vencimientos_alertas", { dias_aviso });
-
-// Presentaciones configurables de Tienda Nube (cantidad local por unidad vendida).
-export const consultarPresentacionesTnStock = (id_stock_producto) =>
-  stockGet("stock_tn_presentaciones_consultar", { id_stock_producto });
-export const guardarPresentacionTnStock = (body) =>
-  stockPost("stock_tn_presentaciones_guardar", body);

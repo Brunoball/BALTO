@@ -345,6 +345,8 @@ test('@configuracion @critical @stock listas y categorías: categoría con produ
 });
 
 test('@configuracion @stock @unidades @crud unidades de stock: alta, edición, baja, reactivación y eliminación', async ({ page }) => {
+  const policy = expectApiSuccess(await authenticatedApi(page, 'stock_unidades_politica'));
+  test.skip(Boolean(policy.tiendanube_conectada), 'Con Tienda Nube conectada, las unidades de stock están bloqueadas por diseño.');
   await requireMutations(test, page);
   const unitName = uniqueName('CFG-UNIDAD-FRACCION', 60);
   const editedName = `${unitName}-EDITADA`.slice(0, 70);

@@ -2,7 +2,7 @@ import { test, expect } from './support/test.js';
 import { authenticatedApi, expectApiSuccess } from './support/api.js';
 import { createStockProductFixture } from './support/stock-fixtures.js';
 import { createVariantStockProduct } from './support/barcodes.js';
-import { listStockUnits } from './support/stock-units.js';
+import { getStockE2EFixtureUnit } from './support/stock-units.js';
 import { uniqueName, uniqueSku } from './support/data.js';
 import { requireMutations, waitForBusyToFinish } from './support/ui.js';
 
@@ -26,9 +26,7 @@ async function consultar(page, id) {
 test('@stock @vencimientos @critical retiro dirigido no hace FEFO doble y deja stock real correcto', async ({ page }) => {
   await requireMutations(test, page);
   test.setTimeout(180000);
-  const unidades = await listStockUnits(page, 'todos');
-  const fraccionable = unidades.find(u => Number(u.activo ?? 1) === 1 && Number(u.permite_decimales) === 1 && Number(u.es_default) !== 1);
-  expect(fraccionable, 'Se necesita una unidad fraccionable para el fixture aislado').toBeTruthy();
+  const fraccionable = await getStockE2EFixtureUnit(page);
   const name = uniqueName('VENC-RETIRO');
   let created = false;
   try {
@@ -115,9 +113,7 @@ test('@stock @vencimientos @ui @notificaciones-ui notificación abre producto y 
   await requireMutations(test, page);
   test.setTimeout(180000);
   const name = uniqueName('VENC-LINK');
-  const unidades = await listStockUnits(page, 'todos');
-  const u = unidades.find(x => Number(x.activo ?? 1) === 1 && Number(x.permite_decimales) === 1 && Number(x.es_default) !== 1);
-  expect(u).toBeTruthy();
+  const u = await getStockE2EFixtureUnit(page);
   let created = false;
   try {
     const product = unwrap(await createStockProductFixture(page, {
@@ -146,7 +142,11 @@ test('@stock @vencimientos @ui @notificaciones-ui notificación abre producto y 
     await expect(modal).toBeVisible();
     const fila = modal.locator('.sv-alert-entry').filter({ hasText: name });
     await expect(fila).toBeVisible({ timeout: 30_000 });
-    await fila.getByRole('button', { name: /Ver producto y gestionar vencimiento/i }).click();
+    // Cada alerta selecciona una partida; el botón para gestionarla está
+    // en el pie del diálogo (no dentro de .sv-alert-entry).
+    await fila.click();
+    await expect(modal.getByRole('button', { name: /Ver producto y gestionar vencimiento/i })).toBeVisible();
+    await modal.getByRole('button', { name: /Ver producto y gestionar vencimiento/i }).click();
     await expect(page).toHaveURL(/\/panel\/stock/);
     const editor = page.getByRole('dialog').filter({ hasText: 'Editar producto' }).first();
     await expect(editor.getByRole('tab', { name: /Vencimientos/i })).toHaveAttribute('aria-selected', 'true');

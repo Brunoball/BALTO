@@ -1,3 +1,4 @@
+import { crearReceptorConsumidorFinal, validarConsumidorFinalSinIdentificar } from "../../Facturacion/utils/consumidorFinal";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import "../../../Global/Global_css/GlobalsModalsV2.css";
@@ -379,6 +380,7 @@ function normalizeConfigFacturacionPdf(cfg) {
 
 function buildClienteFiscalPdf(fiscal, clienteBase, nombreFallback) {
   const f = fiscal && typeof fiscal === "object" ? fiscal : {};
+  if (Number(f.doc_tipo) === 99) return { ...crearReceptorConsumidorFinal(), id_cliente: Number(clienteBase?.id_cliente || 0) || null };
   const c = clienteBase && typeof clienteBase === "object" ? clienteBase : {};
   const cuit = safeStr(f.cuit || f.doc_nro || c.cuit || c.doc_nro);
   return {
@@ -1131,7 +1133,7 @@ export default function ModalAsignarPresupuestoVenta({
     return {
       id_pago: null,
       id_sistema: null,
-      labelCliente: fiscal?.razon_social || clienteBase.nombre || "Cliente",
+      labelCliente: clienteBase.nombre || fiscal?.razon_social || "Cliente",
       labelSistema: "Venta desde presupuesto",
       cliente_facturacion: fiscal || fiscalPdfParaInterno(),
       config_facturacion: cfg || {},
@@ -1421,6 +1423,22 @@ export default function ModalAsignarPresupuestoVenta({
     resolveFiscalParaFacturar,
     buildComprobantePayload,
   ]);
+
+  const iniciarFacturaConsumidorFinal = useCallback(async () => {
+    if (isBaltoDemoMode()) { showToast("advertencia", DEMO_BLOCK_MESSAGE, 5200); return; }
+    const error = validate("facturar") || validarConsumidorFinalSinIdentificar(total);
+    if (error) { showToast("advertencia", error, 5200); return; }
+    setSaving(true);
+    try {
+      const cfg = await fetchConfigFacturacion();
+      const fiscal = crearReceptorConsumidorFinal();
+      const data = buildComprobantePayload(cfg, fiscal, null, { observaciones: "Factura emitida desde presupuesto convertido en venta." });
+      setFiscalParaFacturar(fiscal);
+      setResumenFacturaData(data);
+      setOpenResumenFactura(true);
+    } catch (e) { showToast("error", e?.message || "No se pudo preparar la factura."); }
+    finally { setSaving(false); }
+  }, [validate, total, showToast, fetchConfigFacturacion, buildComprobantePayload]);
 
   const shouldNeedFiscalPanel = open && mostrarCuitFiscal && !clienteFiscalDb && clienteBase.id_cliente > 0;
 
@@ -1724,6 +1742,14 @@ export default function ModalAsignarPresupuestoVenta({
                           />
                         ) : null}
 
+                        {!convertido && (
+                          <div className="dc-factura-final-choice">
+                            <button type="button" disabled={saving || loading} onClick={iniciarFacturaConsumidorFinal}>
+                              Facturar a consumidor final sin CUIT
+                            </button>
+                            <small>La venta conserva el cliente del presupuesto. Disponible para montos menores a $10.000.000.</small>
+                          </div>
+                        )}
                         {shouldNeedFiscalPanel ? (
                           <>
                             <div className="gm-section-divider" />
@@ -1782,6 +1808,8 @@ export default function ModalAsignarPresupuestoVenta({
         open={openResumenFactura}
         onClose={() => setOpenResumenFactura(false)}
         onBack={() => setOpenResumenFactura(false)}
+        onCambiarReceptor={(receptor) => { setResumenFacturaData((prev) => prev ? ({ ...prev, cliente_facturacion: receptor }) : prev); setFiscalParaFacturar(receptor); }}
+        onEditarReceptor={() => { setOpenResumenFactura(false); setMostrarCuitFiscal(true); }}
         onCloseAll={() => setOpenResumenFactura(false)}
         apiBase={API}
         action="ventas"

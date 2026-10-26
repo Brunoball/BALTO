@@ -2,7 +2,7 @@ import { test, expect } from './support/test.js';
 import { authenticatedApi, expectApiSuccess } from './support/api.js';
 import { uniqueName, uniqueSku, RUN_PREFIX } from './support/data.js';
 import { createStockProductFixture } from './support/stock-fixtures.js';
-import { listStockUnits } from './support/stock-units.js';
+import { getStockE2EFixtureUnit } from './support/stock-units.js';
 import { requireMutations } from './support/ui.js';
 
 function stockPayload(body) {
@@ -65,7 +65,7 @@ function priceForType(rows, typeId) {
 
 function assertNoTiendaNubeJobs(sync, context) {
   if (!sync || typeof sync !== 'object') return;
-  expect(Number(sync.encolados || 0), `${context}: el fixture fraccionable no debe encolar Tienda Nube`).toBe(0);
+  expect(Number(sync.encolados || 0), `${context}: el fixture E2E aislado no debe encolar Tienda Nube`).toBe(0);
   expect(Number(sync.pendientes || 0), `${context}: no debe dejar jobs TN pendientes`).toBe(0);
 }
 
@@ -100,13 +100,8 @@ test('@stock @backend @critical mutaciones locales: update, SKU, impacto y preci
   await requireMutations(test, page);
   test.setTimeout(3 * 60_000);
 
-  const units = await listStockUnits(page, 'todos');
-  const fractionalUnit = units.find((unit) =>
-    Number(unit?.activo ?? 1) === 1 &&
-    Number(unit?.permite_decimales || 0) === 1 &&
-    Number(unit?.es_default || 0) !== 1,
-  );
-  expect(fractionalUnit, 'Debe existir al menos una unidad fraccionable activa para aislar este test de Tienda Nube').toBeTruthy();
+  const fixtureUnit = await getStockE2EFixtureUnit(page);
+  // Las cantidades decimales sólo son válidas en tenants sin TN y con unidad fraccionable.
 
   const productName = uniqueName('STOCK-BACKEND-REG');
   const sku = uniqueSku('SBR');
@@ -115,16 +110,16 @@ test('@stock @backend @critical mutaciones locales: update, SKU, impacto y preci
   const createdBody = await createStockProductFixture(page, {
     name: productName,
     sku,
-    stock: 2.75,
+    stock: fixtureUnit.fractional ? 2.75 : 3,
     cost: 100,
     price: 175,
-    unitId: Number(fractionalUnit.id_stock_unidad),
+    unitId: Number(fixtureUnit.id_stock_unidad),
   });
   const created = extractProduct(createdBody);
   const productId = Number(created?.id_stock_producto || created?.id || 0);
   expect(productId, 'El alta debe devolver el ID real del producto').toBeGreaterThan(0);
-  expect(Number(created?.id_stock_unidad || 0)).toBe(Number(fractionalUnit.id_stock_unidad));
-  expect(Number(created?.stock || 0)).toBeCloseTo(2.75, 3);
+  expect(Number(created?.id_stock_unidad || 0)).toBe(Number(fixtureUnit.id_stock_unidad));
+  expect(Number(created?.stock || 0)).toBeCloseTo(fixtureUnit.fractional ? 2.75 : 3, 3);
   assertNoTiendaNubeJobs(stockPayload(createdBody).tiendanube_sync, 'Alta del producto E2E');
 
   await expectCatalogChange(page, stockVersions(baseline));
@@ -134,16 +129,16 @@ test('@stock @backend @critical mutaciones locales: update, SKU, impacto y preci
     method: 'POST',
     body: {
       id_stock_producto: productId,
-      stock: 3.125,
+      stock: fixtureUnit.fractional ? 3.125 : 4,
       descripcion: `${RUN_PREFIX} REGRESION STOCK BACKEND`,
     },
   });
   const updateBody = expectApiSuccess(updateResult, 'No se pudo actualizar parcialmente el producto de Stock');
   const updated = extractProduct(updateBody);
   expect(Number(updated?.id_stock_producto || updated?.id || 0)).toBe(productId);
-  expect(Number(updated?.stock || 0)).toBeCloseTo(3.125, 3);
+  expect(Number(updated?.stock || 0)).toBeCloseTo(fixtureUnit.fractional ? 3.125 : 4, 3);
   expect(String(updated?.nombre || '')).toBe(productName);
-  expect(Number(updated?.id_stock_unidad || 0)).toBe(Number(fractionalUnit.id_stock_unidad));
+  expect(Number(updated?.id_stock_unidad || 0)).toBe(Number(fixtureUnit.id_stock_unidad));
   assertNoTiendaNubeJobs(stockPayload(updateBody).tiendanube_sync, 'Update parcial del producto E2E');
   await expectCatalogChange(page, stockVersions(beforeUpdate));
 
@@ -152,7 +147,7 @@ test('@stock @backend @critical mutaciones locales: update, SKU, impacto y preci
   });
   const detailBody = expectApiSuccess(detailResult, 'No se pudo releer el producto actualizado');
   const detail = extractProduct(detailBody);
-  expect(Number(detail?.stock || 0)).toBeCloseTo(3.125, 3);
+  expect(Number(detail?.stock || 0)).toBeCloseTo(fixtureUnit.fractional ? 3.125 : 4, 3);
   expect(String(detail?.descripcion || '')).toContain(RUN_PREFIX);
 
   const imagesResult = await authenticatedApi(page, 'stock_imagenes_listar', {
@@ -298,28 +293,23 @@ test('@stock @backend @variants @critical variante: transición simple→variant
   await requireMutations(test, page);
   test.setTimeout(3 * 60_000);
 
-  const units = await listStockUnits(page, 'todos');
-  const fractionalUnit = units.find((unit) =>
-    Number(unit?.activo ?? 1) === 1 &&
-    Number(unit?.permite_decimales || 0) === 1 &&
-    Number(unit?.es_default || 0) !== 1,
-  );
-  expect(fractionalUnit, 'Debe existir una unidad fraccionable activa para aislar variantes de Tienda Nube').toBeTruthy();
+  const fixtureUnit = await getStockE2EFixtureUnit(page);
+  // Las cantidades decimales sólo son válidas en tenants sin TN y con unidad fraccionable.
 
   const productName = uniqueName('STOCK-VAR-BACKEND');
   const productSku = uniqueSku('SVB-P');
   const createdBody = await createStockProductFixture(page, {
     name: productName,
     sku: productSku,
-    stock: 6.5,
+    stock: fixtureUnit.fractional ? 6.5 : 6,
     cost: 80,
     price: 140,
-    unitId: Number(fractionalUnit.id_stock_unidad),
+    unitId: Number(fixtureUnit.id_stock_unidad),
   });
   const product = extractProduct(createdBody);
   const productId = Number(product?.id_stock_producto || product?.id || 0);
   expect(productId).toBeGreaterThan(0);
-  assertNoTiendaNubeJobs(stockPayload(createdBody).tiendanube_sync, 'Alta del padre fraccionable');
+  assertNoTiendaNubeJobs(stockPayload(createdBody).tiendanube_sync, 'Alta del padre E2E');
 
   const baseline = await getStockChanges(page);
   const variantName = uniqueName('VARIANTE-BACKEND', 65);
@@ -330,8 +320,8 @@ test('@stock @backend @variants @critical variante: transición simple→variant
       id_stock_producto: productId,
       nombre_variante: variantName,
       sku: variantSku,
-      stock: 1.375,
-      id_stock_unidad: Number(fractionalUnit.id_stock_unidad),
+      stock: fixtureUnit.fractional ? 1.375 : 2,
+      id_stock_unidad: Number(fixtureUnit.id_stock_unidad),
       atributos: [],
       categorias: [],
       precios: [],
@@ -344,9 +334,9 @@ test('@stock @backend @variants @critical variante: transición simple→variant
   expect(variantId, 'El alta de variante debe devolver un ID real').toBeGreaterThan(0);
   expect(String(variant.nombre_variante || '')).toBe(variantName);
   expect(String(variant.sku || '')).toBe(variantSku);
-  expect(Number(variant.stock || 0)).toBeCloseTo(1.375, 3);
-  expect(Number(variant.id_stock_unidad || 0)).toBe(Number(fractionalUnit.id_stock_unidad));
-  assertNoTiendaNubeJobs(createVariantData.tiendanube_sync, 'Alta de variante fraccionable');
+  expect(Number(variant.stock || 0)).toBeCloseTo(fixtureUnit.fractional ? 1.375 : 2, 3);
+  expect(Number(variant.id_stock_unidad || 0)).toBe(Number(fixtureUnit.id_stock_unidad));
+  assertNoTiendaNubeJobs(createVariantData.tiendanube_sync, 'Alta de variante E2E');
   await expectCatalogChange(page, stockVersions(baseline));
 
   const parentResult = await authenticatedApi(page, 'stock_producto_obtener', {
@@ -356,8 +346,8 @@ test('@stock @backend @variants @critical variante: transición simple→variant
   const parent = extractProduct(parentBody);
   expect(Number(parent?.tiene_variantes || 0), 'El padre debe pasar a modo variantes').toBe(1);
   expect(Number(parent?.stock_producto || 0), 'La fila física del producto padre debe quedar con stock 0 al pasar a variantes').toBeCloseTo(0, 3);
-  expect(Number(parent?.stock_variantes || 0), 'El resumen debe reflejar el stock de las variantes activas').toBeCloseTo(1.375, 3);
-  expect(Number(parent?.stock || 0), 'El campo stock público debe representar el stock agregado de variantes').toBeCloseTo(1.375, 3);
+  expect(Number(parent?.stock_variantes || 0), 'El resumen debe reflejar el stock de las variantes activas').toBeCloseTo(fixtureUnit.fractional ? 1.375 : 2, 3);
+  expect(Number(parent?.stock || 0), 'El campo stock público debe representar el stock agregado de variantes').toBeCloseTo(fixtureUnit.fractional ? 1.375 : 2, 3);
 
   const listResult = await authenticatedApi(page, 'stock_variantes_listar', {
     query: { id_stock_producto: productId, activo: 'todos', _: Date.now() },
@@ -379,7 +369,7 @@ test('@stock @backend @variants @critical variante: transición simple→variant
     method: 'POST',
     body: {
       id_stock_variante: variantId,
-      stock: 4.875,
+      stock: fixtureUnit.fractional ? 4.875 : 5,
     },
   });
   const updateVariantBody = expectApiSuccess(updateVariantResult, 'No se pudo actualizar parcialmente la variante');
@@ -388,9 +378,9 @@ test('@stock @backend @variants @critical variante: transición simple→variant
   expect(Number(updatedVariant.id_stock_variante || 0)).toBe(variantId);
   expect(String(updatedVariant.nombre_variante || '')).toBe(variantName);
   expect(String(updatedVariant.sku || '')).toBe(variantSku);
-  expect(Number(updatedVariant.stock || 0)).toBeCloseTo(4.875, 3);
-  expect(Number(updatedVariant.id_stock_unidad || 0)).toBe(Number(fractionalUnit.id_stock_unidad));
-  assertNoTiendaNubeJobs(updateVariantData.tiendanube_sync, 'Update parcial de variante fraccionable');
+  expect(Number(updatedVariant.stock || 0)).toBeCloseTo(fixtureUnit.fractional ? 4.875 : 5, 3);
+  expect(Number(updatedVariant.id_stock_unidad || 0)).toBe(Number(fixtureUnit.id_stock_unidad));
+  assertNoTiendaNubeJobs(updateVariantData.tiendanube_sync, 'Update parcial de variante E2E');
   await expectCatalogChange(page, stockVersions(beforeUpdate));
 
   const duplicateSku = await authenticatedApi(page, 'stock_variante_validar_sku', {

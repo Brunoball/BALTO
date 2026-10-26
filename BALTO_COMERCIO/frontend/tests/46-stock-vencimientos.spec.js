@@ -3,7 +3,7 @@ import { authenticatedApi, expectApiSuccess } from './support/api.js';
 import { createStockProductFixture } from './support/stock-fixtures.js';
 import { createVariantStockProduct } from './support/barcodes.js';
 import { deleteUnusedStockProduct } from './support/flows.js';
-import { listStockUnits } from './support/stock-units.js';
+import { getStockE2EFixtureUnit } from './support/stock-units.js';
 import { uniqueName, uniqueSku } from './support/data.js';
 import { requireMutations } from './support/ui.js';
 
@@ -25,9 +25,7 @@ test('@stock @vencimientos @critical cantidades, alertas, validación y FEFO en 
   await requireMutations(test,page);
   test.setTimeout(180000);
   const name = uniqueName('VENC-SIMPLE');
-  const units = await listStockUnits(page,'todos');
-  const fraccionable = units.find(u => Number(u.activo ?? 1)===1 && Number(u.permite_decimales)===1 && Number(u.es_default)!==1);
-  expect(fraccionable,'Se necesita unidad fraccionable para no sincronizar fixtures TN').toBeTruthy();
+  const fraccionable = await getStockE2EFixtureUnit(page);
   let creado = false;
   try {
     const created = data(await createStockProductFixture(page,{name,sku:uniqueSku('VENC'),stock:10,cost:20,price:50,unitId:Number(fraccionable.id_stock_unidad)}));
@@ -98,9 +96,7 @@ test('@stock @vencimientos @ui @notificaciones-ui popup y pestaña de edición m
   await requireMutations(test,page);
   test.setTimeout(150000);
   const name=uniqueName('VENC-POPUP');
-  const units=await listStockUnits(page,'todos');
-  const u=units.find(row=>Number(row.activo??1)===1 && Number(row.permite_decimales)===1 && Number(row.es_default)!==1);
-  expect(u).toBeTruthy();
+  const u = await getStockE2EFixtureUnit(page);
   let created=false;
   try {
     const res=data(await createStockProductFixture(page,{name,sku:uniqueSku('ALERT'),stock:5,cost:15,price:30,unitId:Number(u.id_stock_unidad)}));
@@ -120,27 +116,49 @@ test('@stock @vencimientos @ui @notificaciones-ui popup y pestaña de edición m
 
     const {searchRow} = await import('./support/ui.js');
     const row=await searchRow(page,name,/Buscar por nombre, SKU o variante/i);
+    let consultasProducto = 0;
+    const esConsulta = (url) => {
+      const parsed = new URL(url);
+      return parsed.searchParams.get('action') === 'stock_vencimientos_consultar'
+        && Number(parsed.searchParams.get('id_stock_producto')) === id;
+    };
+    const onRequest = (request) => { if (esConsulta(request.url())) consultasProducto += 1; };
+    page.on('request', onRequest);
+    // Vencimientos comienza a precargarse al abrir el editor, sin esperar al tab.
+    const precarga = page.waitForResponse((response) => esConsulta(response.url()), { timeout: 30000 });
     await row.getByTitle('Editar').click();
+    await precarga;
     const edit=page.getByRole('dialog').filter({has:page.getByText('Editar producto',{exact:true})}).last();
     await expect(edit).toBeVisible();
     // La API expone DECIMAL(.,3) (p.ej. "5.000"), pero el input debe mostrar "5".
     await expect(edit.locator('input[name="stock"]')).toHaveValue('5');
     await edit.getByRole('tab',{name:'Vencimientos'}).click();
     await expect(edit.getByText('Partidas registradas')).toBeVisible();
-    await expect(edit.locator('.sv-table tbody tr')).toHaveCount(1);
-    await expect(edit.getByText('Con vencimiento registrado')).toBeVisible();
-    const partida = edit.locator('.sv-table tbody tr').first();
-    await partida.getByRole('button', { name: 'Editar', exact: true }).click();
-    await expect(edit.locator('.sv-form input[type="number"]')).toHaveValue('2');
-    await partida.getByRole('button', { name: 'Retirar stock' }).click();
-    const retiro = edit.getByRole('dialog', {name:'Confirmar retiro de stock vencido'});
-    await expect(retiro.locator('input[type="number"]')).toHaveValue('2');
-    await retiro.locator('input[type="number"]').fill('1');
+    expect(consultasProducto, 'Al abrir Vencimientos no debe duplicarse la consulta inicial').toBe(1);
+    page.off('request', onRequest);
+    const tabla = edit.getByRole('table', { name: 'Partidas con vencimiento' });
+    await expect(tabla.locator('.sv-gridDataRow')).toHaveCount(1);
+    const partida = tabla.locator('.sv-gridDataRow').first();
+    await expect(partida).toContainText('2');
+    // La edición usa un modal propio en un portal, y los botones tienen
+    // nombres accesibles con la fecha de cada partida.
+    await partida.getByRole('button', { name: /Editar partida del/i }).click();
+    const modalEdicion = page.getByRole('dialog', { name: 'Editar vencimiento' });
+    await expect(modalEdicion.getByLabel('Cantidad *')).toHaveValue('2');
+    await modalEdicion.getByRole('button', { name: 'Cancelar' }).click();
+    await expect(modalEdicion).toBeHidden();
+    await partida.getByRole('button', { name: /Retirar stock de partida del/i }).click();
+    // ModalEliminar también se monta en document.body, fuera del editor.
+    const retiro = page.getByRole('dialog', { name: 'Retirar unidades del inventario' });
+    await expect(retiro.getByLabel('Cantidad a retirar *')).toHaveValue('2');
+    await retiro.getByLabel('Cantidad a retirar *').fill('1');
+    const respuestaRetiro = page.waitForResponse((r) =>
+      r.request().method() === 'POST' && new URL(r.url()).searchParams.get('action') === 'stock_vencimientos_retirar',
+      { timeout: 30_000 });
     await retiro.getByRole('button', { name: 'Confirmar retiro' }).click();
-    // El retiro local debe confirmarse. Si el backend informa un error de
-    // sincronización externa, la UI conserva una advertencia más larga,
-    // que no debe confundirse con un fallo del descuento local.
-    await expect(page.getByText(/^Stock retirado correctamente(?:\. Revisá la sincronización con Tienda Nube\.)?$/)).toBeVisible();
+    const resRetiro = await respuestaRetiro;
+    expect(resRetiro.status(), 'El retiro local debe confirmarse por API').toBeLessThan(400);
+    await expect(retiro).toBeHidden();
     const despues = await vencimientos(page, id);
     expect(despues).toHaveLength(1);
     expect(Number(despues[0].cantidad_disponible)).toBe(1);

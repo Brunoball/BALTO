@@ -1,0 +1,13 @@
+/* Solo los negocios conectados a Tienda Nube: selector UNIDAD bloqueado. */
+.cmi-unitLocked:disabled {
+  cursor: not-allowed !important;
+  background-color: #e9edf2 !important;
+  color: #596577 !important;
+  opacity: 1 !important;
+  border-color: #cbd2dc !important;
+}
+html[data-theme="oscuro"] .cmi-unitLocked:disabled {
+  background-color: #313844 !important;
+  border-color: #495363 !important;
+  color: #c7ced9 !important;
+}

@@ -99,7 +99,7 @@ function formatPercentDisplay(value) {
   if (num === null) return cleanDecoratedNumber(value);
 
   return `${num.toLocaleString("es-AR", {
-    minimumFractionDigits: 0,
+    minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })} %`;
 }

@@ -1,11 +1,10 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import "./ModalEditarStock.css";
 import ModalVerComprobante from "../../Global/Ver_Comprobantes/ModalVerComprobante";
 import StockBarcodePanel from "./StockBarcodePanel";
 import VencimientosPanel from "../vencimientos/VencimientosPanel";
-import TnPresentacionesPanel from "./TnPresentacionesPanel";
 import StockUnitField from "./StockUnitField";
 import PricingCoefficientPanel from "./PricingCoefficientPanel";
 import { isTopStockModal } from "./modalStackUtils";
@@ -36,6 +35,8 @@ import {
   actualizarProductoStock,
   crearCategoriaStock,
   crearTipoPrecioStock,
+  consultarVencimientosStock,
+  getStockReadGeneration,
   getUsuarioAuditData,
   listarCategoriasStock,
   listarTiposPrecioStock,
@@ -106,7 +107,19 @@ function formatNumberForDisplay(value) {
   if (Number.isNaN(num)) return "";
   if (Number.isInteger(num)) return num.toString();
 
-  return num.toString().replace(".", ",");
+  // Evitar que un cálculo de margen o precio muestre decimales interminables.
+  // No agregamos ceros acá para no interferir con la escritura en tiempo real.
+  return Number(num.toFixed(2)).toString().replace(".", ",");
+}
+
+function formatMarginWithCents(value) {
+  if (value === null || value === undefined || value === "") return "";
+
+  const num = typeof value === "number"
+    ? value
+    : Number(String(value).trim().replace(",", "."));
+
+  return Number.isFinite(num) ? num.toFixed(2).replace(".", ",") : "";
 }
 
 function formatNumberWithCents(value) {
@@ -204,9 +217,9 @@ function recalculatePricingGroup({
     return {
       price: formatNumberForDisplay(p),
       marginPct:
-        c !== null ? formatNumberForDisplay(pct) : formatNumberForDisplay(marginPct),
+        c !== null ? formatMarginWithCents(pct) : formatNumberForDisplay(marginPct),
       marginValue:
-        c !== null ? formatNumberForDisplay(val) : formatNumberForDisplay(marginValue),
+        c !== null ? formatMarginWithCents(val) : formatNumberForDisplay(marginValue),
     };
   }
 
@@ -225,7 +238,7 @@ function recalculatePricingGroup({
     return {
       price: formatNumberForDisplay(p),
       marginPct: formatNumberForDisplay(pct),
-      marginValue: formatNumberForDisplay(val),
+      marginValue: formatMarginWithCents(val),
     };
   }
 
@@ -243,7 +256,7 @@ function recalculatePricingGroup({
 
     return {
       price: formatNumberForDisplay(p),
-      marginPct: formatNumberForDisplay(pct),
+      marginPct: formatMarginWithCents(pct),
       marginValue: formatNumberForDisplay(val),
     };
   }
@@ -278,13 +291,19 @@ function hydratePricingGroupValues({ cost, price, marginPct, marginValue }) {
     return { price: "", marginPct: "", marginValue: "" };
   }
 
-  return recalculatePricingGroup({
+  const result = recalculatePricingGroup({
     cost,
     price,
     marginPct,
     marginValue,
     source,
   });
+
+  return {
+    ...result,
+    marginPct: formatMarginWithCents(result.marginPct),
+    marginValue: formatMarginWithCents(result.marginValue),
+  };
 }
 
 function hydratePricingFormValues(sourceForm) {
@@ -462,8 +481,8 @@ function normalizarProducto(data) {
       id_tipo_precio_stock: String(item?.id_tipo_precio_stock ?? item?.id ?? ""),
       tipo_nombre: normalizeOptionLabel(item, item?.tipo_nombre ?? ""),
       precio: formatNumberForDisplay(item?.precio ?? item?.monto ?? ""),
-      margen_porcentaje: formatNumberForDisplay(item?.margen_porcentaje ?? ""),
-      margen_valor: formatNumberForDisplay(item?.margen_valor ?? ""),
+      margen_porcentaje: formatMarginWithCents(item?.margen_porcentaje ?? ""),
+      margen_valor: formatMarginWithCents(item?.margen_valor ?? ""),
     }));
 
   return {
@@ -476,17 +495,17 @@ function normalizarProducto(data) {
     precio: formatNumberForDisplay(
       ventaItem?.precio ?? ventaItem?.monto ?? p.precio ?? ""
     ),
-    margen_venta_porcentaje: formatNumberForDisplay(
+    margen_venta_porcentaje: formatMarginWithCents(
       ventaItem?.margen_porcentaje ?? ""
     ),
-    margen_venta_valor: formatNumberForDisplay(ventaItem?.margen_valor ?? ""),
+    margen_venta_valor: formatMarginWithCents(ventaItem?.margen_valor ?? ""),
     precio_promo: formatNumberForDisplay(
       promoItem?.precio ?? promoItem?.monto ?? p.precio_promo ?? ""
     ),
-    margen_promo_porcentaje: formatNumberForDisplay(
+    margen_promo_porcentaje: formatMarginWithCents(
       promoItem?.margen_porcentaje ?? ""
     ),
-    margen_promo_valor: formatNumberForDisplay(promoItem?.margen_valor ?? ""),
+    margen_promo_valor: formatMarginWithCents(promoItem?.margen_valor ?? ""),
     stock: stockToInput(p.stock),
     id_stock_unidad: String(p.id_stock_unidad ?? ""),
     descripcion: toUpperCaseValue(p.descripcion ?? ""),
@@ -526,8 +545,8 @@ function normalizarProducto(data) {
               return normalizeVariantExtraPriceRow(tipo, {
                 ...tipo,
                 precio: formatNumberForDisplay(precioVariante?.precio ?? precioVariante?.monto ?? ""),
-                margen_porcentaje: formatNumberForDisplay(precioVariante?.margen_porcentaje ?? ""),
-                margen_valor: formatNumberForDisplay(precioVariante?.margen_valor ?? ""),
+                margen_porcentaje: formatMarginWithCents(precioVariante?.margen_porcentaje ?? ""),
+                margen_valor: formatMarginWithCents(precioVariante?.margen_valor ?? ""),
                 precio_heredado: !!(precioVariante?.precio_heredado || precioVariante?.heredado || precioVariante?.origen_precio === "producto"),
                 heredado: !!(precioVariante?.precio_heredado || precioVariante?.heredado || precioVariante?.origen_precio === "producto"),
                 origen_precio: precioVariante?.origen_precio ?? "",
@@ -550,10 +569,10 @@ function normalizarProducto(data) {
             ),
             tipo_nombre: normalizeOptionLabel(item, item?.tipo_nombre ?? ""),
             precio: formatNumberForDisplay(item?.precio ?? item?.monto ?? ""),
-            margen_porcentaje: formatNumberForDisplay(
+            margen_porcentaje: formatMarginWithCents(
               item?.margen_porcentaje ?? ""
             ),
-            margen_valor: formatNumberForDisplay(item?.margen_valor ?? ""),
+            margen_valor: formatMarginWithCents(item?.margen_valor ?? ""),
           }))
         : tiposExtra,
   };
@@ -1035,6 +1054,43 @@ export default function ModalEditarProducto({
   const variantesPanelRef = useRef(null);
   const inputImagenRef = useRef(null);
   const variantesAntesDeDesactivarRef = useRef(null);
+  // La precarga queda limitada a este modal y a un producto; nunca se comparte
+  // entre negocios, sesiones ni ediciones. Se reutiliza durante la ventana
+  // de validez también si React vuelve a montar el panel de Vencimientos.
+  const precargaVencimientosRef = useRef(null);
+  const consultarVencimientosInicial = useCallback((idProducto) => {
+    const id = Number(idProducto);
+    const entrada = precargaVencimientosRef.current;
+    // No consumir la referencia: en desarrollo o al alternar pestañas el panel
+    // puede montarse de nuevo, provocando un segundo GET innecesario. La
+    // generación invalida la respuesta si hubo alguna escritura en Stock.
+    const reutilizable = entrada && entrada.id === id
+      && entrada.generacion === getStockReadGeneration()
+      && (!entrada.finalizada || Date.now() - entrada.inicio < 10000);
+    return reutilizable ? entrada.promesa : consultarVencimientosStock(id);
+  }, []);
+
+  useEffect(() => {
+    const id = Number(productoId);
+    if (!(id > 0)) return undefined;
+    const entrada = {
+      id, generacion: getStockReadGeneration(), inicio: Date.now(),
+      finalizada: false, promesa: null,
+    };
+    precargaVencimientosRef.current = entrada;
+    entrada.promesa = consultarVencimientosStock(id)
+      .then((datos) => { entrada.finalizada = true; return datos; })
+      .catch((error) => {
+        entrada.finalizada = true;
+        if (precargaVencimientosRef.current === entrada) precargaVencimientosRef.current = null;
+        throw error;
+      });
+    // La precarga es opcional: un fallo nunca debe interferir con la edición.
+    entrada.promesa.catch(() => {});
+    return () => {
+      if (precargaVencimientosRef.current === entrada) precargaVencimientosRef.current = null;
+    };
+  }, [productoId]);
 
   const [loading, setLoading] = useState(true);
   const [guardando, setGuardando] = useState(false);
@@ -1051,6 +1107,15 @@ export default function ModalEditarProducto({
   const [loadingTiposPrecio, setLoadingTiposPrecio] = useState(false);
   const [unidadesStock, setUnidadesStock] = useState([]);
   const [loadingUnidadesStock, setLoadingUnidadesStock] = useState(false);
+  const [unidadBloqueada, setUnidadBloqueada] = useState(null);
+  const [unidadObligatoria, setUnidadObligatoria] = useState("");
+  const [unidadesProductoOriginal, setUnidadesProductoOriginal] = useState([]);
+  const unidadHistoricaDistinta = Boolean(
+    unidadBloqueada && unidadObligatoria && unidadesProductoOriginal.some((id) =>
+      Number(id) > 0 && String(id) !== unidadObligatoria
+    )
+  );
+  const [unidadHistoricaConfirmada, setUnidadHistoricaConfirmada] = useState(false);
 
   const [nuevaImagenFile, setNuevaImagenFile] = useState(null);
   const [nuevaImagenPreview, setNuevaImagenPreview] = useState("");
@@ -1184,13 +1249,11 @@ export default function ModalEditarProducto({
     const fetchCatalogos = async () => {
       setLoadingCategorias(true);
       setLoadingTiposPrecio(true);
-      setLoadingUnidadesStock(true);
 
       try {
-        const [resListas, resTipos, resUnidades] = await Promise.allSettled([
+        const [resListas, resTipos] = await Promise.allSettled([
           listarCategoriasStock(),
           listarTiposPrecioStock(),
-          listarUnidadesStock({ activo: "todos" }),
         ]);
 
         if (!cancelado) {
@@ -1259,25 +1322,11 @@ export default function ModalEditarProducto({
             setTiposPrecio([]);
           }
 
-          if (resUnidades.status === "fulfilled") {
-            const rawUnidades = resUnidades.value?.unidades || resUnidades.value?.data?.unidades || [];
-            const unidades = Array.isArray(rawUnidades) ? rawUnidades : [];
-            setUnidadesStock(unidades);
-            const def = unidades.find((u) => Number(u?.es_default || 0) === 1 && Number(u?.activo ?? 1) === 1);
-            if (def) {
-              setForm((prev) => ({
-                ...prev,
-                id_stock_unidad: prev.id_stock_unidad || String(def.id_stock_unidad || def.id || ""),
-                variantes: (prev.variantes || []).map((v) => ({ ...v, id_stock_unidad: v.id_stock_unidad || String(def.id_stock_unidad || def.id || "") })),
-              }));
-            }
-          }
         }
       } finally {
         if (!cancelado) {
           setLoadingCategorias(false);
           setLoadingTiposPrecio(false);
-          setLoadingUnidadesStock(false);
         }
       }
     };
@@ -1288,6 +1337,75 @@ export default function ModalEditarProducto({
       cancelado = true;
     };
   }, []);
+
+  useEffect(() => {
+    let cancelado = false;
+    setLoadingUnidadesStock(true);
+    setUnidadBloqueada(null);
+    setUnidadObligatoria("");
+
+    listarUnidadesStock({ activo: "todos" })
+      .then((politicaUnidades) => {
+        if (cancelado) return;
+        // La política viene del servidor; nunca suponer que está desconectado
+        // ante una respuesta incompleta o un error de red.
+        const politica = politicaUnidades?.data || politicaUnidades;
+        const bloqueoRaw = politicaUnidades?.unidad_bloqueada ?? politica?.unidad_bloqueada;
+        if (typeof bloqueoRaw !== "boolean") {
+          throw new Error("El servidor no informó la política de unidades.");
+        }
+        const bloqueada = bloqueoRaw === true;
+        const rawUnidades = politicaUnidades?.unidades ?? politica?.unidades ?? [];
+        const unidades = Array.isArray(rawUnidades) ? rawUnidades : [];
+        const def = unidades.find((u) => Number(u?.es_default || 0) === 1 && Number(u?.activo ?? 1) === 1);
+        const idFijo = String(politicaUnidades?.id_stock_unidad_obligatoria ?? politica?.id_stock_unidad_obligatoria ?? def?.id_stock_unidad ?? def?.id ?? "");
+        if (bloqueada && !idFijo) throw new Error("No se encontró la unidad obligatoria de Tienda Nube.");
+
+        setUnidadesStock(unidades);
+        setUnidadObligatoria(bloqueada ? idFijo : "");
+        setUnidadBloqueada(bloqueada);
+        if (def && !bloqueada) {
+          setForm((prev) => ({
+            ...prev,
+            id_stock_unidad: prev.id_stock_unidad || String(def.id_stock_unidad || def.id || ""),
+            variantes: (prev.variantes || []).map((v) => ({
+              ...v,
+              id_stock_unidad: v.id_stock_unidad || String(def.id_stock_unidad || def.id || ""),
+            })),
+          }));
+        }
+      })
+      .catch((error) => {
+        if (!cancelado) {
+          // Se mantiene el bloqueo de guardado: no degradar a la política libre.
+          console.warn("[Stock] No se pudo verificar la política de unidades:", error);
+        }
+      })
+      .finally(() => {
+        if (!cancelado) setLoadingUnidadesStock(false);
+      });
+
+    return () => { cancelado = true; };
+  }, []);
+
+  // La política puede llegar antes o después del detalle del producto.
+  // Normalizamos el estado en ambos casos sin modificar la base hasta guardar.
+  useEffect(() => {
+    if (!unidadBloqueada || !unidadObligatoria || loading) return;
+    setForm((prev) => {
+      const variantes = prev.variantes || [];
+      const hayUnidadAnterior =
+        (Number(prev.id_stock_unidad || 0) > 0 && String(prev.id_stock_unidad) !== unidadObligatoria) ||
+        variantes.some((v) => Number(v.id_stock_unidad || 0) > 0 && String(v.id_stock_unidad) !== unidadObligatoria);
+      if (!hayUnidadAnterior && String(prev.id_stock_unidad) === unidadObligatoria &&
+          variantes.every((v) => String(v.id_stock_unidad) === unidadObligatoria)) return prev;
+      return {
+        ...prev,
+        id_stock_unidad: unidadObligatoria,
+        variantes: variantes.map((v) => ({ ...v, id_stock_unidad: unidadObligatoria })),
+      };
+    });
+  }, [unidadBloqueada, unidadObligatoria, loading, form.id_stock_unidad, form.variantes]);
 
   useEffect(() => {
     return () => {
@@ -1371,13 +1489,20 @@ export default function ModalEditarProducto({
       setCargaActiva(initialTab === "vencimientos" ? "vencimientos" : "producto");
       setErrores({});
       setVariantesEliminadasIds([]);
+      setUnidadesProductoOriginal([]);
+      setUnidadHistoricaConfirmada(false);
       variantesAntesDeDesactivarRef.current = null;
 
       try {
         const data = await obtenerProductoStock(productoId);
 
         if (mounted) {
-          setForm(hydratePricingFormValues(normalizarProducto(data)));
+          const producto = hydratePricingFormValues(normalizarProducto(data));
+          setUnidadesProductoOriginal([
+            producto.id_stock_unidad,
+            ...(producto.variantes || []).map((v) => v.id_stock_unidad || producto.id_stock_unidad),
+          ]);
+          setForm(producto);
           setCargaActiva(initialTab === "vencimientos" ? "vencimientos" : "producto");
         }
       } catch (err) {
@@ -2194,6 +2319,14 @@ export default function ModalEditarProducto({
 
   const handleGuardar = async (options = {}) => {
     const mantenerAbierto = options?.mantenerAbierto === true;
+    if (unidadBloqueada === null) {
+      mostrarToast("No se pudo verificar la política de unidades. Reintentá abrir el producto.", "error");
+      return false;
+    }
+    if (unidadHistoricaDistinta && !unidadHistoricaConfirmada) {
+      mostrarToast("Revisá las cantidades y confirmá el cambio de unidad antes de guardar.", "error");
+      return false;
+    }
     const formNormalizado = hydratePricingFormValues(form);
     const errs = validar(formNormalizado);
 
@@ -2536,7 +2669,7 @@ export default function ModalEditarProducto({
             </button>
           </div>
 
-          <div className={`mi-modal__content${cargaActiva === "presentaciones_tn" ? " cmi-content--tiendanube" : ""}`} style={{ overflowY: "auto", padding: 20 }}>
+          <div className="mi-modal__content" style={{ overflowY: "auto", padding: 20 }}>
             {loading ? (
               <div className="cmi-uploadBox">
                 <div className="cmi-uploadBox__title">
@@ -2576,13 +2709,6 @@ export default function ModalEditarProducto({
                     disabled={isLoading}>
                     <FontAwesomeIcon icon={faTriangleExclamation} /> Vencimientos
                   </button>
-                  <button type="button"
-                    className={`cmi-v2-mainTab ${cargaActiva === "presentaciones_tn" ? "is-active" : ""}`}
-                    onClick={() => setCargaActiva("presentaciones_tn")}
-                    role="tab" aria-selected={cargaActiva === "presentaciones_tn"}
-                    disabled={isLoading}>
-                    <FontAwesomeIcon icon={faLayerGroup} /> Tienda Nube
-                  </button>
                   {permiteCodigoBarras ? (
                     <button
                       type="button"
@@ -2597,13 +2723,11 @@ export default function ModalEditarProducto({
                   ) : null}
                 </div>
 
-                {cargaActiva === "presentaciones_tn" && (
-                  <TnPresentacionesPanel productoId={productoId} onToast={mostrarToast} />
-                )}
                 <div className="cmi-vencimientosPanel">
                   {cargaActiva === "vencimientos" && <VencimientosPanel
                     productoId={productoId}
                     initialVarianteId={initialVarianteId}
+                    consultarInicial={consultarVencimientosInicial}
                     onVencimientoCambiado={onVencimientoCambiado}
                     onToast={mostrarToast}
                   />}
@@ -2617,6 +2741,8 @@ export default function ModalEditarProducto({
                     onToast={mostrarToast}
                     onSavePendingChanges={() => handleGuardar({ mantenerAbierto: true })}
                     productSaving={guardando}
+                    productSaveReady={unidadBloqueada !== null && !loadingUnidadesStock && !loading && (!unidadBloqueada || !!unidadObligatoria)}
+                    productSaveError={unidadBloqueada === null && !loadingUnidadesStock}
                     refreshKey={barcodeRefreshKey}
                   />
                 ) : null}
@@ -2670,10 +2796,22 @@ export default function ModalEditarProducto({
                       unidades={unidadesStock}
                       onChange={(id) => setForm((prev) => ({ ...prev, id_stock_unidad: id }))}
                       onUnitsChange={setUnidadesStock}
-                      disabled={guardando || loadingUnidadesStock}
+                      disabled={guardando || loadingUnidadesStock || unidadBloqueada === null}
+                      locked={unidadBloqueada === true}
+                      lockedUnitId={unidadObligatoria}
                       onToast={(tipo, mensaje) => mostrarToast(mensaje, tipo)}
                     />
                   </FloatingField>
+                  {unidadBloqueada && unidadHistoricaDistinta && (
+                    <label className="cmi-v2-variantModeNotice" role="alert">
+                      El producto tenía otra unidad de medida. Se seleccionó UNIDAD por la conexión con Tienda Nube,
+                      pero la cantidad de stock no se convirtió automáticamente. Revisá las cantidades antes de guardar.
+                      <span style={{ display: "block", marginTop: 8 }}>
+                        <input type="checkbox" checked={unidadHistoricaConfirmada}
+                          onChange={(e) => setUnidadHistoricaConfirmada(e.target.checked)} /> Confirmo que revisé las cantidades.
+                      </span>
+                    </label>
+                  )}
 
                   <FloatingField label="Categoría" icon={faTag}>
                     <select
@@ -3185,7 +3323,9 @@ export default function ModalEditarProducto({
                                 unidades={unidadesStock}
                                 onChange={(id) => updateVariant(variantIdx, { id_stock_unidad: id })}
                                 onUnitsChange={setUnidadesStock}
-                                disabled={isLoading || loadingUnidadesStock}
+                                disabled={isLoading || loadingUnidadesStock || unidadBloqueada === null}
+                                locked={unidadBloqueada === true}
+                                lockedUnitId={unidadObligatoria}
                                 onToast={(tipo, mensaje) => mostrarToast(mensaje, tipo)}
                               />
                             </FloatingField>

@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { crearUnidadStock, actualizarUnidadStock } from "../api/stockApi";
 import { isTopStockModal } from "./modalStackUtils";
+import "./StockUnitField.css";
 
 function unitId(unit) {
   return String(unit?.id_stock_unidad ?? unit?.id ?? "");
@@ -112,6 +113,8 @@ export default function StockUnitField({
   onChange,
   onUnitsChange,
   disabled = false,
+  locked = false,
+  lockedUnitId = "",
   onToast,
   className = "cmi-input cmi-select",
 }) {
@@ -125,6 +128,17 @@ export default function StockUnitField({
     () => (unidades || []).find((u) => unitId(u) === String(value || "")) || null,
     [unidades, value]
   );
+  const unidadFija = useMemo(
+    () => (unidades || []).find((u) => unitId(u) === String(lockedUnitId || "")) ||
+      (unidades || []).find((u) => Number(u?.es_default || 0) === 1) || null,
+    [unidades, lockedUnitId]
+  );
+  const valor = locked ? unitId(unidadFija) || String(lockedUnitId || "") : String(value || "");
+
+  useEffect(() => {
+    if (locked && mode && !saving) setMode("");
+  }, [locked, mode, saving]);
+
   const disponibles = useMemo(
     () => (unidades || []).filter((u) => Number(u?.activo ?? 1) === 1 || unitId(u) === String(value || "")),
     [unidades, value]
@@ -207,9 +221,10 @@ export default function StockUnitField({
   return (
     <>
       <select
-        className={className}
-        value={String(value || "")}
-        disabled={disabled || saving}
+        className={locked ? `${className} cmi-unitLocked` : className}
+        value={valor}
+        disabled={disabled || saving || locked}
+        title={locked ? "Con Tienda Nube conectada, la unidad de stock es UNIDAD y no se puede cambiar." : undefined}
         onChange={(event) => {
           const next = event.target.value;
           if (next === "__new_unit__") return openNew();
@@ -217,14 +232,18 @@ export default function StockUnitField({
           onChange?.(next);
         }}
       >
-        <option value="">Seleccionar unidad</option>
-        {disponibles.map((unit) => (
+        {locked ? (
+          <option value={valor}>UNIDAD (u)</option>
+        ) : (
+          <option value="">Seleccionar unidad</option>
+        )}
+        {!locked && disponibles.map((unit) => (
           <option key={unitId(unit)} value={unitId(unit)}>
             {String(unit.nombre || "UNIDAD")} ({String(unit.abreviatura || "u")})
           </option>
         ))}
-        <option value="__new_unit__">+ Nueva unidad</option>
-        {selected && Number(selected?.es_default || 0) !== 1 ? (
+        {!locked && <option value="__new_unit__">+ Nueva unidad</option>}
+        {!locked && selected && Number(selected?.es_default || 0) !== 1 ? (
           <option value="__edit_unit__">✎ Editar unidad seleccionada</option>
         ) : null}
       </select>

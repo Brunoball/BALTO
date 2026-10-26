@@ -7,10 +7,12 @@ import { DEMO_BLOCK_MESSAGE, isBaltoDemoMode } from "../../../utils/demoMode";
 
 import { buildBaltoInvoicePdf, saveBaltoInvoicePdf } from "../../../utils/FacturaPdfBuilder";
 import { buildNotaCreditoPdf, saveNotaCreditoPdf } from "../../../utils/NotaCreditoPdfBuilder";
+import { crearReceptorConsumidorFinal, validarConsumidorFinalSinIdentificar } from "./utils/consumidorFinal";
 
 const DOC_TIPOS = [ 
   { id: 80, label: "CUIT (80)" },
   { id: 96, label: "DNI (96)" },
+  { id: 99, label: "Consumidor final (99)" },
 ];
 
 // IMPORTANTE:
@@ -107,6 +109,7 @@ function normalizeEmisorPdfInfo(data = {}, fact = {}) {
 
 function normalizeClienteFacturacionPdfInfo(data = {}, fallback = {}) {
   const cf = data?.cliente_facturacion || data?.cliente || {};
+  if (Number(fallback?.doc_tipo) === 99 || Number(cf?.doc_tipo) === 99) return crearReceptorConsumidorFinal();
   const docNro = pickText(cf?.doc_nro, cf?.cuit, cf?.dni, fallback?.doc_nro, data?.doc_nro).replace(/\D/g, "");
   const cuit = pickText(cf?.cuit, Number(cf?.doc_tipo || fallback?.doc_tipo) === 80 ? docNro : "", data?.cliente_cuit);
   const condicion = pickText(cf?.cond_iva, cf?.condicion_iva, data?.cond_iva_receptor, data?.cliente_condicion_iva);
@@ -419,6 +422,8 @@ export default function ModalFacturaBaltoResumen({
   ptoVta,
   onFacturada,
   onDone,
+  onCambiarReceptor,
+  onEditarReceptor,
   forceTestAmount = false,
   testAmount = 1000,
   skipMovimientoAutocreacion = false,
@@ -430,6 +435,7 @@ export default function ModalFacturaBaltoResumen({
   const [previewUrl, setPreviewUrl] = useState("");
   const [error, setError] = useState("");
   const [confirm, setConfirm] = useState(false);
+  const [selectorReceptorAbierto, setSelectorReceptorAbierto] = useState(false);
   const [tabActiva, setTabActiva] = useState("resumen");
   const firstRef = useRef(null);
 
@@ -642,6 +648,7 @@ export default function ModalFacturaBaltoResumen({
   );
 
   const nombreCliente =
+    (Number(docTipo) === 99 ? dataFacturacion?.labelCliente : "") ||
     clienteFacturaInfo?.razon_social ||
     dataFacturacion?.labelCliente ||
     dataFacturacion?.cliente ||
@@ -681,7 +688,7 @@ export default function ModalFacturaBaltoResumen({
       vtoISO: vtoPagoISO,
       montoTxt: moneyARS(monto),
       comprobante: getCbteLabel(cbteTipoEfectivo),
-      receptorTxt: doc ? `${docLabel}: ${doc}` : "—",
+      receptorTxt: Number(docTipo) === 99 ? "Consumidor final (sin identificar)" : (doc ? `${docLabel}: ${doc}` : "—"),
       pvTxt: pv || "—",
       iva: clienteFacturaInfo?.cond_iva || clienteFacturaInfo?.condicion_iva || "—",
       domicilio: clienteFacturaInfo?.domicilio || "—",
@@ -698,6 +705,7 @@ export default function ModalFacturaBaltoResumen({
     docNro,
     ptoVtaEfectivo,
     docLabel,
+    docTipo,
     clienteFacturaInfo,
     dataFacturacion,
     cbteTipoEfectivo,
@@ -733,6 +741,7 @@ export default function ModalFacturaBaltoResumen({
     if (!open) return;
     setError("");
     setConfirm(false);
+    setSelectorReceptorAbierto(false);
     setTabActiva("resumen");
     movimientoIdRef.current = Number(dataFacturacion?.id_movimiento || 0) || 0;
     cbteNoEmitidoRef.current = null;
@@ -998,7 +1007,13 @@ useEffect(() => {
     const doc = String(docNro ?? "").replace(/\D/g, "");
     const pv = String(ptoVtaEfectivo ?? "").replace(/\D/g, "");
 
-    if (!doc) return { ok: false, msg: "Falta documento." };
+    if (Number(docTipo) === 99) {
+      const advertencia = validarConsumidorFinalSinIdentificar(monto);
+      if (advertencia) return { ok: false, msg: advertencia };
+      if (![6, 11].includes(Number(cbteTipoEfectivo)) && !usarModoNC) {
+        return { ok: false, msg: "El consumidor final sin identificar sólo está habilitado para facturas B o C." };
+      }
+    } else if (!doc) return { ok: false, msg: "Falta documento." };
     if (!pv) return { ok: false, msg: "Falta punto de venta." };
 
     if (!usarModoNC && !safeText(configSeleccionada?.cuit)) {
@@ -1013,18 +1028,18 @@ useEffect(() => {
       return { ok: false, msg: "CUIT inválido (11 dígitos)." };
     }
 
-    if (!safeText(dataFacturacion?.cliente_facturacion?.razon_social)) {
+    if (Number(docTipo) !== 99 && !safeText(dataFacturacion?.cliente_facturacion?.razon_social)) {
       return { ok: false, msg: "Falta razón social / apellido y nombre del cliente." };
     }
 
-    if (
+    if (Number(docTipo) !== 99 &&
       !safeText(dataFacturacion?.cliente_facturacion?.cond_iva) &&
       !safeText(dataFacturacion?.cliente_facturacion?.condicion_iva)
     ) {
       return { ok: false, msg: "Falta condición frente al IVA del cliente." };
     }
 
-    if (!safeText(dataFacturacion?.cliente_facturacion?.domicilio)) {
+    if (Number(docTipo) !== 99 && !safeText(dataFacturacion?.cliente_facturacion?.domicilio)) {
       return { ok: false, msg: "Falta domicilio del cliente." };
     }
 
@@ -1061,6 +1076,7 @@ useEffect(() => {
     dataFacturacion,
     configSeleccionada,
     usarModoNC,
+    cbteTipoEfectivo,
     docNro,
     ptoVtaEfectivo,
     docTipo,
@@ -1216,7 +1232,7 @@ useEffect(() => {
         vto_pago: isoToYmd8(vtoPagoISO) || null,
 
         doc_tipo: Number(docTipo) || null,
-        doc_nro: String(docNro || "").replace(/\D/g, "") || null,
+        doc_nro: Number(docTipo) === 99 ? "0" : (String(docNro || "").replace(/\D/g, "") || null),
         cbte_tipo: Number(cbteTipoEfectivo) || null,
         pto_vta: Number(ptoVtaEfectivo) || null,
 
@@ -1329,7 +1345,7 @@ useEffect(() => {
             ...clienteFacturaInfo,
             doc_tipo: Number(docTipo),
             doc_nro: String(v.docN),
-            cuit: Number(docTipo) === 80 ? String(v.docN) : clienteFacturaInfo?.cuit || "",
+            cuit: Number(docTipo) === 80 ? String(v.docN) : "",
           },
 
           doc_tipo: Number(docTipo),
@@ -1376,6 +1392,13 @@ useEffect(() => {
             dataFacturacion?.operacion_id_origen || dataFacturacion?.operation_origin_id || 0
           ) || null,
 
+          // NC: el backend exige validar la factura fiscal original ANTES de pedir CAE.
+          // Estos datos ya llegan desde ModalEmitirNotaCreditoVenta, pero deben
+          // viajar explícitamente en la solicitud a wsfe_emitir.php.
+          id_comprobante_fiscal_original: Number(
+            dataFacturacion?.id_comprobante_fiscal_original ?? dataFacturacion?.factura_original?.id_comprobante_fiscal ?? 0
+          ) || null,
+          factura_original: dataFacturacion?.factura_original || null,
           cbtes_asoc: normalizeCbtesAsocFrontend(dataFacturacion?.cbtes_asoc || [], dataFacturacion?.factura_original || null),
 
           emisor_nombre: emisorNombre || null,
@@ -1753,7 +1776,25 @@ useEffect(() => {
                         <div className="mfr-info-row"><b>Sistema</b><span>{resumen.sistema}</span></div>
                         <div className="mfr-info-row"><b>Fecha</b><span>{ymdToHuman(resumen.fechaISO)}</span></div>
                         <div className="mfr-info-row"><b>Vencimiento</b><span>{ymdToHuman(resumen.vtoISO)}</span></div>
-                        <div className="mfr-info-row"><b>Receptor</b><span>{resumen.receptorTxt}</span></div>
+                        <div className="mfr-info-row"><b>Receptor</b><span>{resumen.receptorTxt}{!usarModoNC && onCambiarReceptor && (
+                          <button type="button" className="mfr-cambiar-receptor" disabled={loading} onClick={() => setSelectorReceptorAbierto((v) => !v)}>
+                            Cambiar
+                          </button>
+                        )}</span></div>
+                        {selectorReceptorAbierto && !usarModoNC && (
+                          <div className="mfr-receptor-selector">
+                            <strong>¿Cómo querés facturar?</strong>
+                            <button type="button" disabled={loading} onClick={() => {
+                              const msg = validarConsumidorFinalSinIdentificar(monto);
+                              if (msg) { setError(msg); return; }
+                              if (![6, 11].includes(Number(cbteTipoEfectivo))) { setError("Esta opción requiere factura B o C."); return; }
+                              onCambiarReceptor(crearReceptorConsumidorFinal());
+                              setConfirm(false); setError(""); setSelectorReceptorAbierto(false);
+                            }}>Consumidor final sin identificar</button>
+                            <button type="button" disabled={loading} onClick={() => { setConfirm(false); setSelectorReceptorAbierto(false); onEditarReceptor?.(); }}>Facturar con CUIT (consultar ARCA)</button>
+                            <small>Sólo elegí esta opción si el comprador real es consumidor final. Se conserva el cliente comercial; ARCA exige identificar al receptor desde $10.000.000.</small>
+                          </div>
+                        )}
                         <div className="mfr-info-row"><b>Punto de venta</b><span>{resumen.pvTxt}</span></div>
                         <div className="mfr-info-row"><b>IVA cliente</b><span>{resumen.iva}</span></div>
                         <div className="mfr-info-row"><b>Domicilio cliente</b><span>{resumen.domicilio}</span></div>

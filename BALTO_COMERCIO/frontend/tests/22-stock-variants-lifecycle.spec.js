@@ -2,6 +2,7 @@ import { test, expect } from './support/test.js';
 import { uniqueName, uniqueSku } from './support/data.js';
 import { deleteUnusedStockProduct } from './support/flows.js';
 import { requireMutations, searchRow, waitDialog, waitForBusyToFinish } from './support/ui.js';
+import { waitStockEditorUnitsReady } from './support/stock-units.js';
 
 function requestAction(request) {
   const fromUrl = new URL(request.url()).searchParams.get('action');
@@ -92,6 +93,7 @@ test('@stock @crud variantes: alta, atributos, baja, reactivación y eliminació
   const editDialog = await waitDialog(page, 'Editar producto');
   await expect(editDialog.locator('.cmi-v2-variantPanelOnly')).toBeHidden();
   await editDialog.getByRole('tab', { name: /^Variantes$/i }).click();
+  await waitStockEditorUnitsReady(page, editDialog, { variant: true });
   const editVariantCard = editDialog
     .locator('.cmi-v2-variantCard')
     .filter({ has: page.locator(`input[value="${variantSku}"]`) })

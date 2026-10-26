@@ -96,6 +96,9 @@ test('@stock @pricing @critical margen real y coeficiente ponderado usan la fór
 
   expect(numberFromInput(await marginPct.inputValue())).toBeCloseTo(50, 2);
   expect(numberFromInput(await marginValue.inputValue())).toBeCloseTo(100, 2);
+  // Todos los márgenes visibles de Stock deben limitarse a dos decimales.
+  expect(await marginPct.inputValue()).toMatch(/^50,00(?:\s*%)?$/);
+  expect(await marginValue.inputValue()).toMatch(/100,00/);
 
   // 20% de margen real sobre precio con costo 100 implica precio 125 y ganancia 25.
   await marginPct.fill('20');

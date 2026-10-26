@@ -2,7 +2,7 @@ import { test, expect } from './support/test.js';
 import { authenticatedApi, expectApiSuccess } from './support/api.js';
 import { requireMutations, waitDialog, waitForBusyToFinish } from './support/ui.js';
 import { deleteUnusedStockProduct } from './support/flows.js';
-import { listStockUnits } from './support/stock-units.js';
+import { getStockE2EFixtureUnit } from './support/stock-units.js';
 import { uniqueName, uniqueSku } from './support/data.js';
 
 const getData = (res) => res?.data && typeof res.data === 'object' ? { ...res.data, ...res } : res || {};
@@ -26,9 +26,7 @@ function productoBase(nombre, sku, unidadId, stock = 10) {
 test('@stock @vencimientos @critical alta simple registra partidas de manera atómica y valida cantidades', async ({ page }) => {
   await requireMutations(test, page);
   test.setTimeout(150000);
-  const unidades = await listStockUnits(page, 'todos');
-  const unidad = unidades.find(u => Number(u.activo ?? 1) === 1 && Number(u.permite_decimales) === 1 && Number(u.es_default) !== 1);
-  expect(unidad, 'Se necesita unidad fraccionable y aislada de Tienda Nube').toBeTruthy();
+  const unidad = await getStockE2EFixtureUnit(page);
   const name = uniqueName('VENC-ALTA-SIMPLE');
   const payload = {
     ...productoBase(name, uniqueSku('VAA'), Number(unidad.id_stock_unidad)),
@@ -58,9 +56,7 @@ test('@stock @vencimientos @critical alta simple registra partidas de manera at�
 test('@stock @vencimientos @critical alta con variantes asocia cada vencimiento a su propia variante', async ({ page }) => {
   await requireMutations(test, page);
   test.setTimeout(150000);
-  const unidades = await listStockUnits(page, 'todos');
-  const unidad = unidades.find(u => Number(u.activo ?? 1) === 1 && Number(u.permite_decimales) === 1 && Number(u.es_default) !== 1);
-  expect(unidad).toBeTruthy();
+  const unidad = await getStockE2EFixtureUnit(page);
   const name = uniqueName('VENC-ALTA-VARIANTE');
   const base = productoBase(name, uniqueSku('VAV'), Number(unidad.id_stock_unidad), 0);
   const variantes = [
@@ -96,11 +92,8 @@ test('@stock @vencimientos @ui Agregar producto muestra fecha en simple y en var
     await waitForBusyToFinish(page);
     await page.getByRole('button', { name: /Agregar producto/i }).first().click();
     const dialog = await waitDialog(page, 'Productos');
-    const simple = dialog.getByRole('region', { name: 'Fechas de vencimiento del producto' });
-    await expect(simple.getByRole('button', { name: /Agregar vencimiento/i })).toBeVisible();
-    await simple.getByRole('button', { name: /Agregar vencimiento/i }).click();
-    await simple.getByRole('textbox', { name: 'Cantidad con vencimiento #1' }).fill('3');
-    await simple.getByLabel('Fecha de vencimiento #1').fill(fecha(22));
+    // Primero cargamos stock real: el modal de partidas valida contra
+    // la cantidad disponible y no admite asignar 3 si el stock está vacío.
     await dialog.locator('input[name="nombre"]').fill(name);
     await dialog.locator('input[name="sku"]').fill(uniqueSku('VUI'));
     await dialog.locator('input[name="stock"]').fill('6');
@@ -109,14 +102,34 @@ test('@stock @vencimientos @ui Agregar producto muestra fecha en simple y en var
     await dialog.locator('input[name="precio"]').fill('20');
     await dialog.locator('input[name="precio"]').blur();
 
+    // Desde el rediseño, las partidas viven en la pestaña Vencimientos
+    // y se cargan mediante un modal propio, NO inputs en línea.
+    await dialog.getByRole('tab', { name: 'Vencimientos' }).click();
+    const simple = dialog.getByRole('region', { name: 'Fechas de vencimiento del producto' });
+    await expect(simple.getByRole('button', { name: /Agregar vencimiento/i })).toBeVisible();
+    await simple.getByRole('button', { name: /Agregar vencimiento/i }).click();
+    const vencimientoModal = page.getByRole('dialog', { name: 'Agregar vencimiento' });
+    await expect(vencimientoModal).toBeVisible();
+    await vencimientoModal.getByLabel('Fecha de vencimiento *').fill(fecha(22));
+    await vencimientoModal.getByLabel('Cantidad *').fill('3');
+    await vencimientoModal.getByRole('button', { name: 'Agregar vencimiento' }).click();
+    await expect(vencimientoModal).toBeHidden();
+    await expect(simple.getByRole('table', { name: 'Partidas con vencimiento' }).locator('.sv-gridDataRow')).toHaveCount(1);
     // Variantes tienen sus campos propios (sin duplicar las fechas del padre).
     await dialog.getByRole('tab', { name: 'Variantes' }).click();
     await dialog.getByRole('checkbox', { name: 'Tiene variantes' }).check();
-    const variantRegion = dialog.getByRole('region', { name: /Fechas de vencimiento · Variante #1/ });
+    // La sección de partidas por variante sólo aparece si la variante tiene nombre.
+    await dialog.locator('.cmi-v2-variantCard').first()
+      .getByPlaceholder(/TALLE M \/ NEGRO/i).fill('VARIANTE E2E');
+    await dialog.getByRole('tab', { name: 'Vencimientos' }).click();
+    const variantRegion = dialog.locator('.cmi-vencimientosVariante').first()
+      .getByRole('region', { name: /Variante/i });
     await expect(variantRegion.getByRole('button', { name: /Agregar vencimiento/i })).toBeVisible();
+    await dialog.getByRole('tab', { name: 'Variantes' }).click();
     await dialog.getByRole('checkbox', { name: 'Tiene variantes' }).uncheck();
+    await dialog.getByRole('tab', { name: 'Vencimientos' }).click();
+    await expect(simple.getByRole('table', { name: 'Partidas con vencimiento' }).locator('.sv-gridDataRow')).toHaveCount(1);
     await dialog.getByRole('tab', { name: /Producto original/ }).click();
-    await expect(simple.getByLabel('Fecha de vencimiento #1')).toHaveValue(fecha(22));
 
     const response = page.waitForResponse(r => r.request().method() === 'POST' && new URL(r.url()).searchParams.get('action') === 'stock_productos_crear', { timeout: 120000 });
     await dialog.getByRole('button', { name: /Guardar producto/i }).last().click();

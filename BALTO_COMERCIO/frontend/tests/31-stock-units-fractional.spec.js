@@ -82,6 +82,14 @@ async function expectCreditNoteContextUnit(page, action, movementId, unit) {
   return item;
 }
 
+// Las pruebas fraccionarias cubren negocios SIN Tienda Nube.
+// Para tenants conectados la suite específica 49 verifica el bloqueo obligatorio.
+test.beforeEach(async ({ page }) => {
+  const response = await authenticatedApi(page, 'stock_unidades_politica');
+  const policy = expectApiSuccess(response);
+  test.skip(Boolean(policy.tiendanube_conectada), 'Tienda Nube conectada: unidades fraccionarias bloqueadas por diseño.');
+});
+
 test('@stock @unidades @critical contrato de unidades: UNIDAD sigue entera y las fraccionables conservan 3 decimales', async ({ page }) => {
   test.setTimeout(3 * 60_000);
   await requireMutations(test, page);

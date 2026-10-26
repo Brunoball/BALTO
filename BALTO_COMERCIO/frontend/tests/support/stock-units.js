@@ -28,6 +28,57 @@ export async function getDefaultStockUnit(page) {
   return unit;
 }
 
+/** Fixture compatible con la política REAL del tenant.
+ * requireMutations() debe ejecutarse ANTES: sólo modifica datos aislados E2E.
+ * Nunca crea unidades ni intenta eludir el bloqueo de Tienda Nube.
+ */
+export async function getStockE2EFixtureUnit(page, { preferFractional = true } = {}) {
+  const policyResult = await authenticatedApi(page, 'stock_unidades_politica');
+  const policy = expectApiSuccess(policyResult, 'No se pudo consultar la política de unidades');
+  const connected = Boolean(policy.tiendanube_conectada);
+  const units = await listStockUnits(page, 'todos');
+  const defaultUnit = units.find((unit) => Number(unit?.es_default || 0) === 1)
+    || units.find((unit) => String(unit?.nombre || '').toUpperCase() === 'UNIDAD');
+  expect(defaultUnit, 'Debe existir la unidad UNIDAD en el tenant E2E').toBeTruthy();
+  const fractional = !connected && preferFractional
+    ? units.find((unit) => Number(unit?.activo ?? 1) === 1 &&
+      Number(unit?.permite_decimales || 0) === 1 &&
+      Number(unit?.es_default || 0) !== 1)
+    : null;
+  const unit = fractional || defaultUnit;
+  if (connected) {
+    expect(Number(unit.id_stock_unidad)).toBe(Number(policy.id_stock_unidad_obligatoria));
+  }
+  return {
+    ...unit,
+    tnConnected: connected,
+    fractional: Number(unit?.permite_decimales || 0) === 1,
+  };
+}
+
+/** Evita pulsar Guardar mientras el editor todavía no leyó la política.
+ * En esa ventana React muestra un toast y no envía el POST.
+ */
+export async function waitStockEditorUnitsReady(page, dialog, { variant = false } = {}) {
+  const policy = expectApiSuccess(await authenticatedApi(page, 'stock_unidades_politica'),
+    'No se pudo verificar la política de unidades del editor');
+  // Filtrar por la etiqueta, no por el texto total de la caja:
+  // dentro del select figura además la opción 'UNIDAD (u)'.
+  const label = page.locator('.cmi-floatingLabel').filter({
+    hasText: variant ? /^Unidad\s*\*$/i : /^Unidad de stock$/i,
+  });
+  const select = dialog.locator('.cmi-floatingField').filter({ has: label }).locator('select').first();
+  await expect(select, 'El selector de unidades del editor debe estar montado').toBeVisible({ timeout: 30_000 });
+  if (policy.tiendanube_conectada) {
+    await expect(select).toHaveValue(String(policy.id_stock_unidad_obligatoria), { timeout: 30_000 });
+    await expect(select.locator('option')).toHaveCount(1);
+    await expect(select).toBeDisabled();
+  } else {
+    await expect(select).toBeEnabled({ timeout: 30_000 });
+  }
+  return policy;
+}
+
 export async function createStockUnit(page, { name, abbreviation, decimals = true }) {
   const result = await authenticatedApi(page, 'stock_unidad_crear', {
     method: 'POST',

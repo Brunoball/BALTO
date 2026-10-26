@@ -18,7 +18,7 @@ import "./ModalRetirarVencimiento.css";
 const cantidadTexto = (n) => Number(n || 0).toLocaleString("es-AR", { maximumFractionDigits: 3 });
 const fechaTexto = fechaVencimientoTexto;
 
-export default function VencimientosPanel({ productoId, initialVarianteId = null, onVencimientoCambiado, onToast }) {
+export default function VencimientosPanel({ productoId, initialVarianteId = null, consultarInicial = consultarVencimientosStock, onVencimientoCambiado, onToast }) {
   const [datos, setDatos] = useState(null);
   const [variante, setVariante] = useState(String(initialVarianteId || 0));
   const [retirar, setRetirar] = useState(null);
@@ -39,12 +39,13 @@ export default function VencimientosPanel({ productoId, initialVarianteId = null
   useEffect(() => {
     let vigente = true;
     setCargando(true);
-    consultarVencimientosStock(productoId)
+    // Si el editor ya inició la consulta, usar esa misma promesa sin otro GET.
+    Promise.resolve().then(() => consultarInicial(productoId))
       .then((res) => { if (vigente) { setDatos(res); setError(""); } })
       .catch((err) => { if (vigente) setError(err.message || "No se pudieron cargar los vencimientos."); })
       .finally(() => { if (vigente) setCargando(false); });
     return () => { vigente = false; };
-  }, [productoId]);
+  }, [productoId, consultarInicial]);
 
   useEffect(() => {
     if (!retirar) return undefined;

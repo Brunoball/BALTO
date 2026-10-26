@@ -202,6 +202,8 @@ export default function StockBarcodePanel({
   onToast,
   onSavePendingChanges,
   productSaving = false,
+  productSaveReady = true,
+  productSaveError = false,
   refreshKey = 0,
   className = "",
 }) {
@@ -373,7 +375,7 @@ export default function StockBarcodePanel({
   }, [idProducto, loadedProductId, items, nombreProducto, tieneVariantes, formVariantRows, onSavePendingChanges]);
 
   const savePendingProductChanges = async () => {
-    if (savingProduct || productSaving || typeof onSavePendingChanges !== "function") return;
+    if (savingProduct || productSaving || !productSaveReady || typeof onSavePendingChanges !== "function") return;
     setSavingProduct(true);
     try {
       const ok = await onSavePendingChanges();
@@ -523,10 +525,12 @@ export default function StockBarcodePanel({
               type="button"
               className="mit-btn mit-btn--solid"
               onClick={savePendingProductChanges}
-              disabled={savingProduct || productSaving || typeof onSavePendingChanges !== "function"}
+              disabled={savingProduct || productSaving || !productSaveReady || typeof onSavePendingChanges !== "function"}
             >
               <FontAwesomeIcon icon={savingProduct || productSaving ? faSpinner : faCheck} spin={savingProduct || productSaving} />
-              {savingProduct || productSaving ? "Guardando cambios..." : "Guardar cambios y generar códigos"}
+              {!productSaveReady
+                ? (productSaveError ? "Error al verificar unidades: reabrí el producto" : "Verificando unidades...")
+                : savingProduct || productSaving ? "Guardando cambios..." : "Guardar cambios y generar códigos"}
             </button>
           </div>
         </div>

@@ -7,6 +7,8 @@ import { authenticatedApi, expectApiSuccess } from './support/api.js';
 
 test('@stock @crud @critical stock: alta, edición y eliminación definitiva', async ({ page }, testInfo) => {
   await requireMutations(test, page);
+  // Hostinger + escritura + recarga + historial pueden superar los 60 s por defecto.
+  test.setTimeout(4 * 60_000);
   const diagnostics = installDiagnostics(page);
   const originalName = uniqueName('STOCK-CRUD');
   const editedName = `${originalName}-EDITADO`.slice(0, 70);

@@ -1011,3 +1011,9 @@ body.dark .presupuesto-save-model.is-active {
     justify-content: flex-start;
   }
 }
+
+/* Facturación de presupuestos a consumidor final sin CUIT. */
+.dc-factura-final-choice{display:grid;gap:6px;padding:10px;border:1px solid rgba(0,85,187,.2);border-radius:10px;margin-top:10px}
+.dc-factura-final-choice button{cursor:pointer;border:1px solid #0055bb;background:transparent;color:#0055bb;font-weight:600;border-radius:7px;padding:9px;text-align:left}
+.dc-factura-final-choice button:disabled{opacity:.55;cursor:not-allowed}
+.dc-factura-final-choice small{font-size:11px;line-height:1.4;opacity:.85}

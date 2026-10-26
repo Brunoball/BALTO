@@ -3,7 +3,6 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import ModalVerComprobante from "../../Global/Ver_Comprobantes/ModalVerComprobante";
 import StockBarcodePanel from "./StockBarcodePanel";
 import StockUnitField from "./StockUnitField";
-import TnPresentacionesPanel from "./TnPresentacionesPanel";
 import VencimientosAltaFields, { prepararVencimientosAlta, validarVencimientosAlta } from "../vencimientos/VencimientosAltaFields";
 import PricingCoefficientPanel from "./PricingCoefficientPanel";
 import "./ModalCargaIndividualProducto.css";
@@ -138,7 +137,7 @@ function formatPercentDisplay(value) {
   if (num === null) return cleanDecoratedNumber(value);
 
   return `${num.toLocaleString("es-AR", {
-    minimumFractionDigits: 0,
+    minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })} %`;
 }
@@ -846,6 +845,8 @@ export default function ModalCargaIndividualProducto({
   const [imagenFile, setImagenFile] = useState(null);
   const [unidadesStock, setUnidadesStock] = useState([]);
   const [loadingUnidadesStock, setLoadingUnidadesStock] = useState(false);
+  const [unidadBloqueada, setUnidadBloqueada] = useState(null);
+  const [unidadObligatoria, setUnidadObligatoria] = useState("");
 
   const [miniCategoriaOpen, setMiniCategoriaOpen] = useState(false);
   const [miniCategoriaNombre, setMiniCategoriaNombre] = useState("");
@@ -944,17 +945,24 @@ export default function ModalCargaIndividualProducto({
     if (!open) return;
     let cancelled = false;
     setLoadingUnidadesStock(true);
+    setUnidadBloqueada(null);
+    setUnidadObligatoria("");
     listarUnidadesStock({ activo: "todos" })
       .then((res) => {
         if (cancelled) return;
         const list = res?.unidades || res?.data?.unidades || [];
         setUnidadesStock(Array.isArray(list) ? list : []);
+        const bloqueada = (res?.unidad_bloqueada ?? res?.data?.unidad_bloqueada) === true;
+        setUnidadBloqueada(bloqueada);
         const def = (Array.isArray(list) ? list : []).find((u) => Number(u?.es_default || 0) === 1 && Number(u?.activo ?? 1) === 1);
-        if (def) {
+        const idFijo = String(res?.id_stock_unidad_obligatoria ?? res?.data?.id_stock_unidad_obligatoria ?? def?.id_stock_unidad ?? def?.id ?? "");
+        setUnidadObligatoria(bloqueada ? idFijo : "");
+        if (def || (bloqueada && idFijo)) {
+          const idDefault = String(def?.id_stock_unidad ?? def?.id ?? "");
           setForm((prev) => ({
             ...prev,
-            id_stock_unidad: prev.id_stock_unidad || String(def.id_stock_unidad || def.id || ""),
-            variantes: (prev.variantes || []).map((v) => ({ ...v, id_stock_unidad: v.id_stock_unidad || String(def.id_stock_unidad || def.id || "") })),
+            id_stock_unidad: bloqueada ? idFijo : prev.id_stock_unidad || idDefault,
+            variantes: (prev.variantes || []).map((v) => ({ ...v, id_stock_unidad: bloqueada ? idFijo : v.id_stock_unidad || idDefault })),
           }));
         }
       })
@@ -1847,7 +1855,7 @@ export default function ModalCargaIndividualProducto({
   return (
     <div style={{ display: visible ? "contents" : "none" }}>
       <div
-        className={`mi-modal__content cmi-content--individual${cargaActiva === "presentaciones_tn" ? " cmi-content--tiendanube" : ""}`}
+        className="mi-modal__content cmi-content--individual"
       >
         <div
           className={`cmi-v2-formShell cmi-v2-formShell--${cargaActiva}`}
@@ -1881,16 +1889,6 @@ export default function ModalCargaIndividualProducto({
               disabled={!!barcodeProductoGuardado}>
               <FontAwesomeIcon icon={faCalendarDays} /> Vencimientos
             </button>
-            <button
-              type="button"
-              className={`cmi-v2-mainTab ${cargaActiva === "presentaciones_tn" ? "is-active" : ""}`}
-              onClick={() => setCargaActiva("presentaciones_tn")}
-              role="tab"
-              aria-selected={cargaActiva === "presentaciones_tn"}
-              disabled={!!barcodeProductoGuardado}
-            >
-              <FontAwesomeIcon icon={faLayerGroup} /> Tienda Nube
-            </button>
             {permiteCodigoBarras ? (
               <button
                 type="button"
@@ -1904,9 +1902,6 @@ export default function ModalCargaIndividualProducto({
             ) : null}
           </div>
 
-          {cargaActiva === "presentaciones_tn" && (
-            <TnPresentacionesPanel preview={form} />
-          )}
 
           <div className="cmi-vencimientosAltaTab">
             {!productoConVariantes ? (
@@ -1993,7 +1988,9 @@ export default function ModalCargaIndividualProducto({
                   unidades={unidadesStock}
                   onChange={(id) => setForm((p) => ({ ...p, id_stock_unidad: id }))}
                   onUnitsChange={setUnidadesStock}
-                  disabled={loadingUnidadesStock}
+                  disabled={loadingUnidadesStock || unidadBloqueada === null}
+                  locked={unidadBloqueada === true}
+                  lockedUnitId={unidadObligatoria}
                   onToast={(tipo, mensaje) => mostrarToast(mensaje, tipo)}
                 />
               </FloatingField>
@@ -2460,7 +2457,9 @@ export default function ModalCargaIndividualProducto({
                           unidades={unidadesStock}
                           onChange={(id) => updateVariant(variantIdx, { id_stock_unidad: id })}
                           onUnitsChange={setUnidadesStock}
-                          disabled={loadingUnidadesStock}
+                          disabled={loadingUnidadesStock || unidadBloqueada === null}
+                          locked={unidadBloqueada === true}
+                          lockedUnitId={unidadObligatoria}
                           onToast={(tipo, mensaje) => mostrarToast(mensaje, tipo)}
                         />
                       </FloatingField>

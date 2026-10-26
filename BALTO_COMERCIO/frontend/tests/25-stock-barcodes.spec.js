@@ -301,7 +301,11 @@ test('@stock @barcode @variants variantes: un BL-V por ID real, guardado sin cer
     page.on('request', countUpdate);
     await dialog.getByRole('tab', { name: /Código de barra/i }).click();
     await expect(dialog).toContainText(/Hay cambios de variantes sin guardar/i);
-    await dialog.getByRole('button', { name: /Guardar cambios y generar códigos/i }).click();
+    // El editor carga las unidades de forma independiente. No intentar guardar
+    // mientras el backend todavía no informó si Tienda Nube bloquea la unidad.
+    const pendingSave = dialog.getByRole('button', { name: /Guardar cambios y generar códigos/i });
+    await expect(pendingSave, 'La política de unidades debe verificarse antes del guardado').toBeEnabled({ timeout: 45_000 });
+    await pendingSave.click();
     await page.waitForTimeout(300);
     expect(updateRequests, 'Una variante inválida no debe disparar el UPDATE ni simular éxito').toBe(0);
     await expect(page.locator('body')).not.toContainText(/Cambios guardados\. Los códigos ya usan los IDs definitivos/i);
@@ -418,6 +422,10 @@ test('@stock @barcode @variants variantes: un BL-V por ID real, guardado sin cer
 });
 
 test('@stock @barcode @security empleado puede leer con pistola pero no guardar ni quitar asociaciones', async ({ page, browser }) => {
+  // La prueba inicia una sesión adicional, valida permisos y elimina los fixtures.
+  // El límite global de 60 s puede cortarla durante el cleanup aun cuando las
+  // respuestas 403 y las lecturas de códigos ya se hayan comprobado.
+  test.setTimeout(3 * 60_000);
   await requireMutations(test, page);
   const productName = uniqueName('BARCODE-PERMISOS');
   const productSku = uniqueSku('BCPERM');
