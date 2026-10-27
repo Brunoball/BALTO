@@ -3,6 +3,8 @@ import { createPortal } from "react-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faBuilding,
+  faCircleInfo,
+  faReceipt,
   faCheckCircle,
   faIdCard,
   faMagnifyingGlass,
@@ -147,6 +149,13 @@ export default function ModalClienteFiscalArca({
                 </div>
               </div>
 
+              {description && (
+                <div className="gcf-client-card__notice">
+                  <FontAwesomeIcon icon={faCircleInfo} aria-hidden="true" />
+                  <div>{description}</div>
+                </div>
+              )}
+
               {esConsumidorFinal ? (
                 <div className="gcf-client-empty">
                   <div className="gcf-client-empty__icon"><FontAwesomeIcon icon={faCheckCircle} /></div>
@@ -194,14 +203,27 @@ export default function ModalClienteFiscalArca({
             <aside className="nc-aside gcf-side-panel" aria-label="Consulta de CUIT">
               {permitirConsumidorFinal && (
                 <div className="gcf-modo-emision" role="group" aria-label="Modo de facturación">
-                  <label><input type="radio" name="gcf-modo-emision" checked={!esConsumidorFinal} onChange={() => setModo("cuit")} disabled={busy} /> Facturar con CUIT</label>
-                  <label><input type="radio" name="gcf-modo-emision" checked={esConsumidorFinal} onChange={() => setModo("consumidor_final")} disabled={busy} /> Consumidor final sin identificar</label>
+                  <label className={`gcf-modo-emision__option ${!esConsumidorFinal ? "is-selected" : ""}`}>
+                    <input type="radio" name="gcf-modo-emision" checked={!esConsumidorFinal} onChange={() => setModo("cuit")} disabled={busy} />
+                    <span className="gcf-modo-emision__radio" aria-hidden="true" />
+                    <span className="gcf-modo-emision__icon" aria-hidden="true"><FontAwesomeIcon icon={faIdCard} /></span>
+                    <span className="gcf-modo-emision__name">Facturar con CUIT</span>
+                  </label>
+                  <label className={`gcf-modo-emision__option ${esConsumidorFinal ? "is-selected" : ""}`}>
+                    <input type="radio" name="gcf-modo-emision" checked={esConsumidorFinal} onChange={() => setModo("consumidor_final")} disabled={busy} />
+                    <span className="gcf-modo-emision__radio" aria-hidden="true" />
+                    <span className="gcf-modo-emision__icon" aria-hidden="true"><FontAwesomeIcon icon={faReceipt} /></span>
+                    <span className="gcf-modo-emision__name">Consumidor final sin identificar</span>
+                  </label>
                 </div>
               )}
               {esConsumidorFinal ? (
-                <div className="gcf-alert gcf-final-info" role="status">
-                  <b>Consumidor final sin CUIT</b>
-                  <span>Disponible para operaciones inferiores a $10.000.000. Usá esta opción únicamente si el comprador real es consumidor final y no necesita identificarse.</span>
+                <div className="gcf-alert gcf-alert--info gcf-final-info" role="status">
+                  <span className="gcf-alert__icon" aria-hidden="true"><FontAwesomeIcon icon={faCircleInfo} /></span>
+                  <div className="gcf-alert__content">
+                    <b>Consumidor final sin CUIT</b>
+                    <span>Disponible para operaciones inferiores a $10.000.000. Usá esta opción únicamente si el comprador real es consumidor final y no necesita identificarse.</span>
+                  </div>
                 </div>
               ) : <section className="nc-section gcf-panel-section">
                 <div className="nc-section-head">
@@ -246,7 +268,8 @@ export default function ModalClienteFiscalArca({
 
               {error && (
                 <div className="gcf-alert gcf-alert--error" role="alert">
-                  {error}
+                  <span className="gcf-alert__icon" aria-hidden="true"><FontAwesomeIcon icon={faCircleInfo} /></span>
+                  <span className="gcf-alert__content">{error}</span>
                 </div>
               )}
 

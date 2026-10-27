@@ -1,6 +1,7 @@
 import React, { useMemo, useState, useCallback, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { facturacionFetch } from "./api/facturacionApi.js";
-import { FaCheck } from "react-icons/fa";
+import { FaCheck, FaIdCard, FaUser, FaInfoCircle } from "react-icons/fa";
 import "./ModalFacturaBaltoResumen.css";
 import "../../Global/Global_css/Global_oscuro.css";
 import { DEMO_BLOCK_MESSAGE, isBaltoDemoMode } from "../../../utils/demoMode";
@@ -772,6 +773,16 @@ useEffect(() => {
     document.removeEventListener("keydown", onKey, true);
   };
 }, [open, loading, onClose]);
+
+  // El resumen se monta en document.body y nunca desplaza la página de fondo.
+  // Se conserva el overflow anterior porque el modal de origen puede tener su propio bloqueo.
+  useEffect(() => {
+    if (!open) return undefined;
+    const root = document.documentElement;
+    const originalOverflow = root.style.overflow;
+    root.style.overflow = "hidden";
+    return () => { root.style.overflow = originalOverflow; };
+  }, [open]);
 
   useEffect(() => {
     let revokeUrl = "";
@@ -1656,13 +1667,8 @@ useEffect(() => {
     if (!loading) onClose?.();
   };
 
-  return (
-    <div
-      className="mi-modal__overlay"
-      onClick={(e) =>
-        e.target.classList.contains("mi-modal__overlay") && cerrar()
-      }
-    >
+  return createPortal(
+    <div className="mi-modal__overlay mfr-modal__overlay">
       <div
         className="mi-modal__container mfr-modal"
         role="dialog"
@@ -1777,22 +1783,30 @@ useEffect(() => {
                         <div className="mfr-info-row"><b>Fecha</b><span>{ymdToHuman(resumen.fechaISO)}</span></div>
                         <div className="mfr-info-row"><b>Vencimiento</b><span>{ymdToHuman(resumen.vtoISO)}</span></div>
                         <div className="mfr-info-row"><b>Receptor</b><span>{resumen.receptorTxt}{!usarModoNC && onCambiarReceptor && (
-                          <button type="button" className="mfr-cambiar-receptor" disabled={loading} onClick={() => setSelectorReceptorAbierto((v) => !v)}>
-                            Cambiar
+                          <button type="button" className="mfr-cambiar-receptor" disabled={loading} aria-expanded={selectorReceptorAbierto} onClick={() => setSelectorReceptorAbierto((v) => !v)}>
+                            {selectorReceptorAbierto ? "Ocultar opciones" : "Cambiar"}
                           </button>
                         )}</span></div>
                         {selectorReceptorAbierto && !usarModoNC && (
-                          <div className="mfr-receptor-selector">
-                            <strong>¿Cómo querés facturar?</strong>
-                            <button type="button" disabled={loading} onClick={() => {
-                              const msg = validarConsumidorFinalSinIdentificar(monto);
-                              if (msg) { setError(msg); return; }
-                              if (![6, 11].includes(Number(cbteTipoEfectivo))) { setError("Esta opción requiere factura B o C."); return; }
-                              onCambiarReceptor(crearReceptorConsumidorFinal());
-                              setConfirm(false); setError(""); setSelectorReceptorAbierto(false);
-                            }}>Consumidor final sin identificar</button>
-                            <button type="button" disabled={loading} onClick={() => { setConfirm(false); setSelectorReceptorAbierto(false); onEditarReceptor?.(); }}>Facturar con CUIT (consultar ARCA)</button>
-                            <small>Sólo elegí esta opción si el comprador real es consumidor final. Se conserva el cliente comercial; ARCA exige identificar al receptor desde $10.000.000.</small>
+                          <div className="mfr-receptor-selector" role="group" aria-label="Cambiar tipo de receptor fiscal">
+                            <strong className="mfr-receptor-selector__title">¿Cómo querés facturar?</strong>
+                            <div className="mfr-receptor-selector__options">
+                              <button type="button" className="mfr-receptor-selector__option" disabled={loading} onClick={() => {
+                                const msg = validarConsumidorFinalSinIdentificar(monto);
+                                if (msg) { setError(msg); return; }
+                                if (![6, 11].includes(Number(cbteTipoEfectivo))) { setError("Esta opción requiere factura B o C."); return; }
+                                onCambiarReceptor(crearReceptorConsumidorFinal());
+                                setConfirm(false); setError(""); setSelectorReceptorAbierto(false);
+                              }}>
+                                <span className="mfr-receptor-selector__icon" aria-hidden="true"><FaUser /></span>
+                                <span className="mfr-receptor-selector__option-text"><b>Consumidor final sin identificar</b><small>Facturar sin consultar un CUIT.</small></span>
+                              </button>
+                              <button type="button" className="mfr-receptor-selector__option" disabled={loading} onClick={() => { setConfirm(false); setSelectorReceptorAbierto(false); onEditarReceptor?.(); }}>
+                                <span className="mfr-receptor-selector__icon" aria-hidden="true"><FaIdCard /></span>
+                                <span className="mfr-receptor-selector__option-text"><b>Facturar con CUIT</b><small>Consultar y confirmar los datos en ARCA.</small></span>
+                              </button>
+                            </div>
+                            <p className="mfr-receptor-selector__notice"><FaInfoCircle aria-hidden="true" /> <span>Elegí consumidor final solo cuando corresponda al comprador real. Se conserva el cliente comercial; ARCA exige identificar al receptor desde $10.000.000.</span></p>
                           </div>
                         )}
                         <div className="mfr-info-row"><b>Punto de venta</b><span>{resumen.pvTxt}</span></div>
@@ -1918,5 +1932,6 @@ useEffect(() => {
         </div>
       </div>
     </div>
+    , document.body
   );
 }

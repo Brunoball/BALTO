@@ -168,8 +168,8 @@ html.balto-visual-viewport-ready {
 
 }
 
-/* El teclado puede desplazar el viewport: el overlay también debe seguirlo.
-   El scroll del overlay mantiene accesibles los modales altos. */
+/* El teclado puede desplazar el viewport: el overlay debe seguirlo.
+   NUNCA se desplaza la capa exterior: el contenido del modal se desplaza dentro. */
 html.balto-visual-viewport-ready :is(.mi-modal__overlay, .gm-modal-overlay) {
   top: var(--balto-visual-viewport-top) !important;
   left: var(--balto-visual-viewport-left) !important;
@@ -180,8 +180,8 @@ html.balto-visual-viewport-ready :is(.mi-modal__overlay, .gm-modal-overlay) {
   padding: max(12px, var(--balto-safe-top)) max(12px, var(--balto-safe-right))
     max(12px, var(--balto-safe-bottom)) max(12px, var(--balto-safe-left)) !important;
   box-sizing: border-box;
-  overflow-y: auto;
-  overscroll-behavior: contain;
+  overflow: hidden !important;
+  overscroll-behavior: none;
 }
 
 html.balto-visual-viewport-ready
@@ -200,4 +200,67 @@ html.balto-visual-viewport-ready
   > .gm-modal-container--movement {
   min-height: min(94vh, 100%) !important;
   max-height: min(94vh, 100%) !important;
+}
+
+/* =========================================================
+   CONTRATO GLOBAL — SCROLL EXCLUSIVAMENTE DENTRO DEL MODAL
+   El scroll del documento no se transfiere a la capa de fondo;
+   funciona aun con varios modales apilados (React portals).
+   :has() no añade listeners y se libera al cerrar el último modal.
+   ========================================================= */
+html:has(:is(
+  .mi-modal__overlay, .gm-modal-overlay,
+  .mi-mini__overlay, .gm-mini-overlay,
+  .mp-modal__overlay, .mu-overlay,
+  .pp-modal-overlay, .tn-modal-overlay
+)),
+body:has(:is(
+  .mi-modal__overlay, .gm-modal-overlay,
+  .mi-mini__overlay, .gm-mini-overlay,
+  .mp-modal__overlay, .mu-overlay,
+  .pp-modal-overlay, .tn-modal-overlay
+)) {
+  overflow: hidden !important;
+  overscroll-behavior: none !important;
+}
+
+/* Ni la capa de fondo ni los overlays comunes pueden convertirse en
+   superficies desplazables: un modal alto se limita al viewport visible. */
+:is(
+  .mi-modal__overlay, .gm-modal-overlay,
+  .mi-mini__overlay, .gm-mini-overlay,
+  .mp-modal__overlay, .mu-overlay,
+  .pp-modal-overlay, .tn-modal-overlay
+) {
+  overflow: hidden !important;
+  overscroll-behavior: none;
+}
+
+:is(.mi-modal__overlay, .gm-modal-overlay)
+  > :is(.mi-modal__container, .gm-modal-container) {
+  min-height: 0;
+  max-height: 100%;
+  overflow: hidden;
+}
+
+/* Los cuerpos comunes son los responsables de hacer scroll cuando
+   el contenido excede el alto disponible; el header/footer siguen fijos. */
+:is(.mi-modal__container, .gm-modal-container)
+  > :is(.mi-modal__content, .gm-modal-content) {
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Los modales de facturación heredados usan este cuerpo sin una regla
+   previa de overflow. No modificar el resumen: tiene tabs + panel propios. */
+.mi-modal__container:not(.mfr-modal) > .mit-modal__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
 }

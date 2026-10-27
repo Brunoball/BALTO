@@ -91,7 +91,6 @@
   border-radius: 999px;
   background: var(--nv-head-bg);
   border: 1px solid var(--nv-border);
-  color: var(--nv-muted);
   font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
@@ -406,8 +405,152 @@ html[data-theme="oscuro"] .gcf-client-empty {
   }
 }
 
-/* Selector fiscal optativo: solo aparece en flujos de facturación, no en altas de clientes. */
-.gcf-modo-emision {display:grid; gap:10px; padding:12px; border:1px solid rgba(35,101,184,.22); border-radius:12px; background:rgba(35,101,184,.045); margin-bottom:12px;}
-.gcf-modo-emision label {display:flex; align-items:center; gap:9px; font-weight:600; cursor:pointer; font-size:13px;}
-.gcf-modo-emision input {accent-color:#0055bb; width:16px; height:16px;}
-.gcf-final-info {display:grid; gap:8px; line-height:1.45; font-size:13px; padding:14px; border:1px solid rgba(35,101,184,.2); border-radius:10px;}
+/* Opciones fiscales: radios accesibles con diseño de tarjeta. */
+.gcf-modo-emision {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  margin-bottom: 4px;
+  background: var(--nv-surface, #f7f9fc);
+  border: 1px solid var(--nv-border-md, #d3deed);
+  border-radius: 14px;
+}
+
+.gcf-modo-emision__option {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-height: 48px;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--nv-border-md, #d3deed);
+  background: var(--nv-bg, #fff);
+  color: var(--nv-text, #0a2540);
+  font-size: 13px;
+  font-weight: 550;
+  line-height: 1.35;
+  cursor: pointer;
+  transition: border-color .18s ease, background .18s ease, box-shadow .18s ease;
+}
+
+.gcf-modo-emision__option:hover:not(:has(input:disabled)) {
+  border-color: rgba(0, 85, 187, .48);
+  background: rgba(0, 85, 187, .035);
+}
+
+.gcf-modo-emision__option.is-selected {
+  border-color: rgba(0, 85, 187, .45);
+  background: rgba(0, 85, 187, .075);
+}
+
+.gcf-modo-emision__option:has(input:focus-visible) {
+  outline: 2px solid var(--nv-action, #0055bb);
+  outline-offset: 2px;
+}
+
+.gcf-modo-emision__option:has(input:disabled) { opacity: .6; cursor: not-allowed; }
+.gcf-modo-emision__option input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+
+.gcf-modo-emision__radio {
+  display: grid;
+  place-items: center;
+  flex: 0 0 20px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1.5px solid var(--nv-muted, #7b8795);
+  background: var(--nv-bg, #fff);
+  transition: border-color .18s ease, background .18s ease;
+}
+
+.gcf-modo-emision__radio::after {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #fff;
+  transform: scale(0);
+  transition: transform .18s ease;
+}
+
+.gcf-modo-emision__option.is-selected .gcf-modo-emision__radio {
+  border-color: var(--nv-action, #0055bb);
+  background: var(--nv-action, #0055bb);
+}
+.gcf-modo-emision__option.is-selected .gcf-modo-emision__radio::after { transform: scale(1); }
+.gcf-modo-emision__icon { color: var(--nv-action, #0055bb); width: 18px; text-align: center; flex: 0 0 18px; }
+.gcf-modo-emision__name { min-width: 0; }
+
+.gcf-client-card__notice {
+  margin: 0 22px;
+  padding: 11px 12px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--nv-muted, #5a6a7e);
+  background: rgba(0, 85, 187, .04);
+  border: 1px solid rgba(0, 85, 187, .13);
+  border-radius: 12px;
+}
+.gcf-client-card__notice > svg { color: var(--nv-action, #0055bb); flex: 0 0 auto; margin-top: 2px; }
+.gcf-client-card__notice b { color: var(--nv-text, #0a2540); }
+
+.gcf-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.gcf-alert__icon {
+  width: 30px;
+  height: 30px;
+  flex: 0 0 30px;
+  display: grid;
+  place-items: center;
+  color: var(--nv-action, #0055bb);
+  background: rgba(0, 85, 187, .10);
+  border-radius: 9px;
+}
+.gcf-alert__content { flex: 1; min-width: 0; display: grid; gap: 5px; }
+.gcf-alert__content b { color: var(--nv-text, #0a2540); font-size: 13px; }
+.gcf-alert__content span { color: var(--nv-muted, #5a6a7e); }
+.gcf-alert--info { border-color: rgba(0, 85, 187, .20); background: rgba(0, 85, 187, .065); }
+.gcf-alert--error .gcf-alert__icon { color: #b91c1c; background: rgba(239, 68, 68, .10); }
+
+html[data-theme="oscuro"] .gcf-modo-emision {
+  background: rgba(255, 255, 255, .025);
+  border-color: rgba(255, 255, 255, .13);
+}
+html[data-theme="oscuro"] .gcf-modo-emision__option {
+  background: rgba(255, 255, 255, .035);
+  border-color: rgba(255, 255, 255, .14);
+}
+html[data-theme="oscuro"] .gcf-modo-emision__option.is-selected {
+  background: rgba(45, 131, 246, .17);
+  border-color: rgba(100, 163, 255, .52);
+}
+html[data-theme="oscuro"] .gcf-modo-emision__radio {
+  background: rgba(6, 18, 28, .95);
+  border-color: rgba(255, 255, 255, .5);
+}
+html[data-theme="oscuro"] .gcf-modo-emision__option.is-selected .gcf-modo-emision__radio {
+  background: #3b91ff;
+  border-color: #3b91ff;
+}
+html[data-theme="oscuro"] .gcf-modo-emision__icon,
+html[data-theme="oscuro"] .gcf-client-card__notice > svg { color: #8bbdff; }
+html[data-theme="oscuro"] .gcf-client-card__notice,
+html[data-theme="oscuro"] .gcf-alert--info {
+  background: rgba(45, 131, 246, .10);
+  border-color: rgba(120, 170, 240, .26);
+}
+html[data-theme="oscuro"] .gcf-alert__content b { color: rgba(255,255,255,.92); }
+html[data-theme="oscuro"] .gcf-alert__content span { color: rgba(210,220,235,.76); }
+html[data-theme="oscuro"] .gcf-alert--error .gcf-alert__icon { color: #fecaca; }
+
+@media (max-width: 520px) {
+  .gcf-client-card__notice { margin-inline: 16px; }
+  .gcf-modo-emision__option { padding: 10px; }
+}
