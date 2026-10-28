@@ -43,6 +43,11 @@ export default function useAnalisisFinancieroDatos(data) {
   const ventas =
     mainRows.find((r) => safeText(r.id).toLowerCase() === "ventas")?.importe ?? 0;
 
+  const otrosIngresos = toNumberOrZero(data?.valores?.otros_ingresos ?? data?.data?.valores?.otros_ingresos);
+  const gastosPersonales = toNumberOrZero(data?.valores?.gastos_personales ?? data?.data?.valores?.gastos_personales);
+  const deudasPorCobrar = toNumberOrZero(data?.valores?.deudas_por_cobrar ?? data?.data?.valores?.deudas_por_cobrar);
+  const deudasPorPagar = toNumberOrZero(data?.valores?.deudas_por_pagar ?? data?.data?.valores?.deudas_por_pagar);
+
   const costoVariable =
     mainRows.find((r) => safeText(r.id).toLowerCase() === "costo_variable")?.importe ??
     findImporte(mainRows, [{ includes: ["costo variable", "variable"] }]);
@@ -57,7 +62,7 @@ export default function useAnalisisFinancieroDatos(data) {
 
   const resultadoNeto =
     mainRows.find((r) => safeText(r.id).toLowerCase() === "resultado_neto")?.importe ??
-    ventas - costoVariable - costoFijo - otrosEgresos;
+    ventas + otrosIngresos - costoVariable - costoFijo - otrosEgresos;
 
   const totalDisponibilidades = useMemo(
     () => disponibilidades.reduce((acc, item) => acc + toNumberOrZero(item.importe), 0),
@@ -100,6 +105,10 @@ export default function useAnalisisFinancieroDatos(data) {
 
   return {
     costoFijo,
+    otrosIngresos,
+    gastosPersonales,
+    deudasPorCobrar,
+    deudasPorPagar,
     costoVariable,
     disponibilidades,
     mainRows,

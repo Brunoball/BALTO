@@ -125,13 +125,15 @@ export function normalizeRows(raw) {
 
   if (raw && typeof raw === "object") {
     const ventas = toNumberOrZero(raw?.ventas);
+    const otrosIngresos = toNumberOrZero(raw?.otros_ingresos ?? raw?.otrosIngresos);
     const costoVar = toNumberOrZero(raw?.costo_variable ?? raw?.costoVariable);
     const costoFijo = toNumberOrZero(raw?.costo_fijo ?? raw?.costoFijo);
     const otrosEgresos = toNumberOrZero(raw?.otros_egresos ?? raw?.otrosEgresos);
-    const resultadoNeto = ventas - costoVar - costoFijo - otrosEgresos;
+    const resultadoNeto = ventas + otrosIngresos - costoVar - costoFijo - otrosEgresos;
 
     return [
       { id: "ventas", concepto: "VENTAS", importe: ventas, tipo: "ingreso" },
+      { id: "otros_ingresos", concepto: "OTROS INGRESOS", importe: otrosIngresos, tipo: "ingreso" },
       { id: "costo_variable", concepto: "COSTO VARIABLE", importe: costoVar, tipo: "egreso" },
       { id: "costo_fijo", concepto: "COSTO FIJO", importe: costoFijo, tipo: "egreso" },
       { id: "otros_egresos", concepto: "OTROS EGRESOS", importe: otrosEgresos, tipo: "egreso" },
@@ -167,10 +169,11 @@ export function computeDerivedRows(rows) {
   const base = Array.isArray(rows) ? [...rows] : [];
 
   const ventas = findImporte(base, [{ id: "ventas" }, { includes: ["ventas", "ingresos", "venta"] }]);
+  const otrosIngresos = findImporte(base, [{ id: "otros_ingresos" }]);
   const costoVar = findImporte(base, [{ id: "costo_variable" }, { includes: ["costo variable", "variable"] }]);
   const costoFijo = findImporte(base, [{ id: "costo_fijo" }, { includes: ["costo fijo", "fijo"] }]);
   const otrosEgresos = findImporte(base, [{ id: "otros_egresos" }, { includes: ["otros egresos", "egresos"] }]);
-  const resultadoNeto = ventas - costoVar - costoFijo - otrosEgresos;
+  const resultadoNeto = ventas + otrosIngresos - costoVar - costoFijo - otrosEgresos;
 
   const filtered = base.filter((r) => safeText(r.id).toLowerCase() !== "gastos_personales");
 
