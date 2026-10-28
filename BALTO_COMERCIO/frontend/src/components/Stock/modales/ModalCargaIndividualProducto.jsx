@@ -1673,8 +1673,14 @@ export default function ModalCargaIndividualProducto({
     if (Object.keys(errs).length > 0) {
       setErrores(errs);
       setForm((p) => ({ ...p, ...formNormalizado }));
-      if (Object.keys(errs).some((key) => key === "variantes" || key.startsWith("variante_"))) {
+      // Con las pestañas separadas, mostrar directamente el campo con error.
+      const primerError = Object.keys(errs)[0] || "";
+      if (primerError === "vencimientos" || primerError.endsWith("_vencimientos")) {
+        setCargaActiva("vencimientos");
+      } else if (primerError === "variantes" || primerError.startsWith("variante_")) {
         setCargaActiva("variantes");
+      } else if (["precio", "precio_costo", "precio_promo"].includes(primerError) || primerError.startsWith("tipo_")) {
+        setCargaActiva("precios");
       } else {
         setCargaActiva("producto");
       }
@@ -1871,7 +1877,18 @@ export default function ModalCargaIndividualProducto({
               disabled={!!barcodeProductoGuardado}
               title={barcodeProductoGuardado ? "El producto ya fue guardado. Finalizá la gestión de códigos para editar otros datos." : undefined}
             >
-              <FontAwesomeIcon icon={faBoxOpen} /> Producto original
+              <FontAwesomeIcon icon={faBoxOpen} /> Datos generales
+            </button>
+            <button
+              type="button"
+              className={`cmi-v2-mainTab ${cargaActiva === "precios" ? "is-active" : ""}`}
+              onClick={() => setCargaActiva("precios")}
+              role="tab"
+              aria-selected={cargaActiva === "precios"}
+              disabled={!!barcodeProductoGuardado}
+              title={barcodeProductoGuardado ? "El producto ya fue guardado. Finalizá la gestión de códigos para editar precios." : undefined}
+            >
+              <FontAwesomeIcon icon={faMoneyBillTrendUp} /> Precios
             </button>
             <button
               type="button"
@@ -1897,7 +1914,7 @@ export default function ModalCargaIndividualProducto({
                 role="tab"
                 aria-selected={cargaActiva === "codigo_barra"}
               >
-                <FontAwesomeIcon icon={faBarcode} /> Código de barra
+                <FontAwesomeIcon icon={faBarcode} /> Códigos
               </button>
             ) : null}
           </div>
@@ -1941,7 +1958,7 @@ export default function ModalCargaIndividualProducto({
               onToast={mostrarToast}
             />
           ) : null}
-          <section style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <section className="cmi-v2-generalOnly" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             <SectionTitle label="Datos del producto" />
 
             <FloatingField label="Nombre del producto *" error={errores.nombre}>
@@ -2123,7 +2140,7 @@ export default function ModalCargaIndividualProducto({
             </div>
           </section>
 
-          <div className={`cmi-priceBlock cmi-priceBlock--mainPricing ${productoConVariantes ? "cmi-priceBlock--disabledByVariants" : ""}`}>
+          <div className={`cmi-priceBlock cmi-v2-priceOnly cmi-priceBlock--mainPricing ${productoConVariantes ? "cmi-priceBlock--disabledByVariants" : ""}`}>
             <div className="cmi-mainPricing__head">
               <div className="cmi-mainPricing__heading">
                 <span className="cmi-mainPricing__icon" aria-hidden="true">
@@ -2253,7 +2270,7 @@ export default function ModalCargaIndividualProducto({
             </div>
           </div>
 
-          <div className={`cmi-priceBlock ${productoConVariantes ? "cmi-priceBlock--typesForVariants" : ""}`}>
+          <div className={`cmi-priceBlock cmi-v2-priceOnly ${productoConVariantes ? "cmi-priceBlock--typesForVariants" : ""}`}>
             <div className="cmi-priceBlock__title">
               <FontAwesomeIcon icon={faLayerGroup} />
               {productoConVariantes ? "Tipos de precio para variantes" : "Tipos de precio adicionales"}
@@ -2578,6 +2595,7 @@ export default function ModalCargaIndividualProducto({
             )}
           </div>
 
+          <div className="cmi-v2-generalOnly cmi-v2-extraGeneral">
           <FloatingField label="Descripción" icon={faAlignLeft}>
             <textarea
               name="descripcion"
@@ -2666,6 +2684,7 @@ export default function ModalCargaIndividualProducto({
                 </div>
               </div>
             )}
+          </div>
           </div>
         </div>
       </div>

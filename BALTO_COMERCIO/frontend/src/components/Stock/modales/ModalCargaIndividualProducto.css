@@ -718,3 +718,22 @@ html[data-theme="oscuro"] .cmi-priceBlock--mainPricing .stock-coef .mit-btn--gho
 @media(max-width:650px){.cmi-vencimientosVariante{padding:12px}.cmi-content--individual .cmi-v2-mainTabs{max-width:100%;overflow-x:auto;flex-wrap:wrap;border-radius:16px;justify-content:flex-start}}
 
 .cmi-vencimientosVarianteList>.sv-variants-intro{margin:0;color:var(--nv-muted,#64748b);font-size:12px;line-height:1.5}
+
+/* Separar los campos por pestaña sin modificar el diseño original
+   de los botones, contenedores ni las tarjetas de Stock. */
+.cmi-v2-formShell--producto > .cmi-v2-priceOnly,
+.cmi-v2-formShell--precios > :not(.cmi-v2-mainTabs):not(.cmi-v2-priceOnly) {
+  display: none !important;
+}
+
+/* Conservar el espaciado previo al agrupar campos existentes. */
+.cmi-v2-productData,
+.cmi-v2-extraGeneral {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+.cmi-content--individual .cmi-v2-extraGeneral {
+  gap: 18px;
+}

@@ -89,12 +89,15 @@
   gap: 6px;
   padding: 4px 8px;
   border-radius: 999px;
-  background: var(--nv-head-bg);
-  border: 1px solid var(--nv-border);
+  /* En modo claro el fondo global del encabezado es azul oscuro;
+     usamos un chip suave con texto azul de alto contraste. */
+  background: rgba(0, 85, 187, .09);
+  border: 1px solid rgba(0, 85, 187, .24);
   font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: .075em;
+  color: #084d92;
 }
 
 .gcf-client-card__heading h3 {
@@ -553,4 +556,13 @@ html[data-theme="oscuro"] .gcf-alert--error .gcf-alert__icon { color: #fecaca; }
 @media (max-width: 520px) {
   .gcf-client-card__notice { margin-inline: 16px; }
   .gcf-modo-emision__option { padding: 10px; }
+}
+
+/* El chip del encabezado debe ser legible tanto en dark global
+   como cuando el modal recibe la clase mi-modal--dark. */
+html[data-theme="oscuro"] .gcf-client-card__eyebrow,
+.mi-modal--dark .gcf-client-card__eyebrow {
+  color: #e2e8f0 !important;
+  background: rgba(148, 163, 184, .14);
+  border-color: rgba(186, 208, 240, .23);
 }

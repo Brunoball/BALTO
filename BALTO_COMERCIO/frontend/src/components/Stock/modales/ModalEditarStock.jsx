@@ -2337,8 +2337,12 @@ export default function ModalEditarProducto({
         ...formNormalizado,
       }));
 
-      if (Object.keys(errs).some((key) => key === "variantes" || key.startsWith("variante_"))) {
+      // Llevar al usuario a la pestaña del primer dato inválido.
+      const primerError = Object.keys(errs)[0] || "";
+      if (primerError === "variantes" || primerError.startsWith("variante_")) {
         setCargaActiva("variantes");
+      } else if (["precio", "precio_costo", "precio_promo"].includes(primerError) || primerError.startsWith("tipo_")) {
+        setCargaActiva("precios");
       } else {
         setCargaActiva("producto");
       }
@@ -2690,7 +2694,17 @@ export default function ModalEditarProducto({
                     aria-selected={cargaActiva === "producto"}
                     disabled={isLoading}
                   >
-                    <FontAwesomeIcon icon={faBoxOpen} /> Producto original
+                    <FontAwesomeIcon icon={faBoxOpen} /> Datos generales
+                  </button>
+                  <button
+                    type="button"
+                    className={`cmi-v2-mainTab ${cargaActiva === "precios" ? "is-active" : ""}`}
+                    onClick={() => setCargaActiva("precios")}
+                    role="tab"
+                    aria-selected={cargaActiva === "precios"}
+                    disabled={isLoading}
+                  >
+                    <FontAwesomeIcon icon={faMoneyBillTrendUp} /> Precios
                   </button>
                   <button
                     type="button"
@@ -2718,7 +2732,7 @@ export default function ModalEditarProducto({
                       aria-selected={cargaActiva === "codigo_barra"}
                       disabled={isLoading}
                     >
-                      <FontAwesomeIcon icon={faBarcode} /> Código de barra
+                      <FontAwesomeIcon icon={faBarcode} /> Códigos
                     </button>
                   ) : null}
                 </div>
@@ -2746,6 +2760,7 @@ export default function ModalEditarProducto({
                     refreshKey={barcodeRefreshKey}
                   />
                 ) : null}
+                <section className="cmi-v2-generalOnly cmi-v2-productData">
                 <FloatingField
                   label="Nombre del producto *"
                   icon={faBoxOpen}
@@ -2938,7 +2953,9 @@ export default function ModalEditarProducto({
                   </div>
                 </div>
 
-                <div className={`cmi-priceBlock cmi-priceBlock--mainPricing ${productoConVariantes ? "cmi-priceBlock--disabledByVariants" : ""}`}>
+                </section>
+
+                <div className={`cmi-priceBlock cmi-v2-priceOnly cmi-priceBlock--mainPricing ${productoConVariantes ? "cmi-priceBlock--disabledByVariants" : ""}`}>
                   <div className="cmi-mainPricing__head">
                     <div className="cmi-mainPricing__heading">
                       <span className="cmi-mainPricing__icon" aria-hidden="true">
@@ -3077,7 +3094,7 @@ export default function ModalEditarProducto({
                   </div>
                 </div>
 
-                <div className={`cmi-priceBlock ${productoConVariantes ? "cmi-priceBlock--typesForVariants" : ""}`}>
+                <div className={`cmi-priceBlock cmi-v2-priceOnly ${productoConVariantes ? "cmi-priceBlock--typesForVariants" : ""}`}>
                   <div className="cmi-priceBlock__title">
                     <FontAwesomeIcon icon={faLayerGroup} /> {productoConVariantes ? "Tipos de precio para variantes" : "Tipos de precio adicionales"}
                   </div>
@@ -3428,6 +3445,7 @@ export default function ModalEditarProducto({
                   )}
                 </div>
 
+                <div className="cmi-v2-generalOnly cmi-v2-extraGeneral">
                 <FloatingField label="Descripción" icon={faAlignLeft}>
                   <textarea
                     name="descripcion"
@@ -3633,6 +3651,7 @@ export default function ModalEditarProducto({
                       </div>
                     </div>
                   )}
+                </div>
                 </div>
               </div>
             )}
