@@ -2040,3 +2040,298 @@ html[data-theme="oscuro"] .stock-tableActions .stock-actionBtn--reportes {
   overflow: hidden;
   clip-path: inset(50%);
 }
+
+/* ========================================================
+   Stock · pestañas como Presupuestos y contador en el pie
+   ======================================================== */
+.stock-page .stock-titleBlock {
+  min-width: 205px;
+}
+.stock-page .stock-listTabs {
+  display: flex;
+  align-items: flex-end;
+  width: max-content;
+  max-width: 100%;
+  margin-top: 3px;
+  border-bottom: 1px solid var(--mov-border, rgba(15,23,42,.12));
+}
+.stock-page .stock-listTab {
+  position: relative;
+  appearance: none;
+  border: 1px solid transparent;
+  border-bottom: 0;
+  border-radius: 12px 12px 0 0;
+  background: transparent;
+  padding: 8px 10px 10px;
+  color: var(--mov-muted, #64748b);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color .18s ease, background .18s ease, border-color .18s ease;
+}
+.stock-page .stock-listTab:hover {
+  color: var(--mov-text, #111827);
+  background: rgba(15, 23, 42, .045);
+}
+.stock-page .stock-listTab.is-active {
+  color: var(--balto-action, #0055bb);
+  background: var(--mov-card, #fff);
+  border-color: var(--mov-border, rgba(15, 23, 42, .12));
+  border-bottom-color: var(--mov-card, #fff);
+}
+.stock-page .stock-listTab.is-active::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 12px;
+  right: 12px;
+  height: 3px;
+  border-radius: 999px 999px 0 0;
+  background: var(--balto-action, #0055bb);
+}
+.stock-page .stock-listTab:focus-visible {
+  outline: 2px solid var(--balto-action, #0055bb);
+  outline-offset: -2px;
+}
+html[data-theme="oscuro"] .stock-page .stock-listTabs,
+body.dark .stock-page .stock-listTabs {
+  border-bottom-color: rgba(148, 163, 184, .16);
+}
+html[data-theme="oscuro"] .stock-page .stock-listTab:hover,
+body.dark .stock-page .stock-listTab:hover {
+  color: #e2e8f0;
+  background: rgba(148, 163, 184, .08);
+}
+html[data-theme="oscuro"] .stock-page .stock-listTab.is-active,
+body.dark .stock-page .stock-listTab.is-active {
+  color: #7db2ff;
+  background: rgba(15,23,42,.96);
+  border-color: rgba(148,163,184,.22);
+  border-bottom-color: rgba(15,23,42,.96);
+}
+html[data-theme="oscuro"] .stock-page .stock-listTab.is-active::after,
+body.dark .stock-page .stock-listTab.is-active::after {
+  background: #7db2ff;
+}
+
+/* El contador ocupa el extremo izquierdo aun cuando hay una sola página. */
+.stock-page .stock-tableFooter {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.stock-page .stock-tableFooter__count {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin-right: auto;
+  color: var(--mov-muted, #64748b);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.stock-page .stock-tableFooter__count b {
+  color: var(--mov-text, #1e293b);
+  font-weight: 650;
+}
+.stock-page .stock-tableFooter > .prod-pagination {
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+.stock-page .stock-tableFooter > .stock-tableActionsMobile {
+  flex: 0 0 auto;
+}
+.stock-page .stock-pageNavCompact {
+  display: none;
+}
+html[data-theme="oscuro"] .stock-page .stock-tableFooter__count b,
+body.dark .stock-page .stock-tableFooter__count b {
+  color: #e2e8f0;
+}
+
+/* Mantener visible el contador si la paginación se oculta. */
+@media (min-width: 1501px) {
+  .stock-page .stock-tableFooter--onlyActions {
+    display: flex;
+  }
+  .stock-page .stock-tableWrap--without-pagination {
+    min-height: calc(100vh - 300px) !important;
+    max-height: calc(100vh - 300px) !important;
+  }
+}
+@media (max-width: 1500px) {
+  /* El pie nunca salta a otra línea: contador | paginación | acciones. */
+  .stock-page .stock-tableFooter {
+    flex-wrap: nowrap;
+  }
+  .stock-page .stock-tableFooter > .stock-tableActionsMobile {
+    flex: 0 0 auto;
+    width: auto;
+    min-width: 0;
+    justify-content: flex-end;
+  }
+  .stock-page .stock-tableFooter > .prod-pagination {
+    min-width: 0;
+  }
+}
+@media (max-width: 980px) {
+  .stock-page .stock-titleBlock {
+    min-width: 0;
+  }
+}
+@media (max-width: 620px) {
+  .stock-page .stock-listTabs {
+    width: 100%;
+  }
+  .stock-page .stock-listTab {
+    flex: 1 1 0;
+    padding-inline: 6px;
+    font-size: 11px;
+  }
+  .stock-page .stock-tableFooter {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+  }
+  .stock-page .stock-tableFooter__count {
+    flex: 1 1 auto;
+    font-size: 11px;
+  }
+  .stock-page .stock-countLong,
+  .stock-page .stock-pageNavFull,
+  .stock-page .prod-pagination__pages {
+    display: none;
+  }
+  .stock-page .stock-pageNavCompact {
+    display: inline;
+  }
+  .stock-page .prod-pagination {
+    flex: 0 0 auto;
+    justify-content: flex-end;
+    gap: 3px;
+  }
+  .stock-page .prod-pagination__btn--nav {
+    min-width: 29px;
+    width: 29px;
+    padding-inline: 4px;
+    font-size: 20px;
+  }
+  .stock-page .prod-pagination__summary {
+    order: 0;
+    flex-basis: auto;
+    font-size: 11px;
+    padding-inline: 3px;
+  }
+  .stock-page .stock-tableFooter > .stock-tableActionsMobile {
+    flex: 0 0 auto;
+    width: auto;
+  }
+}
+
+/* Stock: un único renglón para el resumen, las páginas y las acciones.
+   Sobrescribe las reglas históricas que repartían el footer en dos filas. */
+.stock-page .stock-tableFooter {
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  min-height: 50px;
+  gap: 10px;
+}
+.stock-page .stock-tableFooter__count {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin-right: auto;
+}
+.stock-page .stock-tableFooter > .prod-pagination,
+.stock-page .stock-tableFooter > .stock-tableActionsMobile {
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 0;
+  margin-top: 0;
+  align-self: center;
+}
+.stock-page .stock-tableFooter .prod-pagination,
+.stock-page .stock-tableFooter .prod-pagination__pages,
+.stock-page .stock-tableFooter .stock-tableActionsMobile {
+  flex-wrap: nowrap;
+}
+
+/* Al reducir el ancho se compacta la paginación, no el alto del pie. */
+@media (max-width: 1350px) {
+  .stock-page .stock-tableFooter .stock-pageNavFull,
+  .stock-page .stock-tableFooter .prod-pagination__pages {
+    display: none;
+  }
+  .stock-page .stock-tableFooter .stock-pageNavCompact {
+    display: inline;
+  }
+  .stock-page .stock-tableFooter .prod-pagination {
+    gap: 4px;
+  }
+  .stock-page .stock-tableFooter .prod-pagination__btn--nav {
+    width: 30px;
+    min-width: 30px;
+    padding-inline: 4px;
+    font-size: 19px;
+  }
+  .stock-page .stock-tableFooter .prod-pagination__summary {
+    flex: 0 0 auto;
+    order: 0;
+    padding-inline: 3px;
+  }
+}
+
+/* Los accesos secundarios conservan su función mostrando solo el icono. */
+@media (max-width: 1050px) {
+  .stock-page .stock-tableFooter .stock-tableActionsMobile {
+    gap: 6px;
+  }
+  .stock-page .stock-tableFooter .stock-tableActionsMobile .stock-actionBtn__text {
+    display: none;
+  }
+  .stock-page .stock-tableFooter .stock-tableActionsMobile .stock-actionBtn {
+    flex: 0 0 36px;
+    width: 36px;
+    min-width: 36px;
+    height: 34px;
+    padding: 0;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 620px) {
+  .stock-page .stock-tableFooter {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 6px;
+    padding: 6px;
+  }
+  .stock-page .stock-tableFooter__count {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 11px;
+    white-space: nowrap;
+  }
+  .stock-page .stock-tableFooter > .stock-tableActionsMobile {
+    flex: 0 0 auto;
+    width: auto;
+    min-width: 0;
+    gap: 5px;
+    justify-content: flex-end;
+  }
+  .stock-page .stock-tableFooter .stock-tableActionsMobile .stock-actionBtn {
+    flex: 0 0 32px;
+    width: 32px;
+    min-width: 32px;
+    height: 32px;
+  }
+  .stock-page .stock-tableFooter .prod-pagination {
+    gap: 2px;
+  }
+  .stock-page .stock-tableFooter .prod-pagination__btn--nav {
+    min-width: 26px;
+    width: 26px;
+  }
+}

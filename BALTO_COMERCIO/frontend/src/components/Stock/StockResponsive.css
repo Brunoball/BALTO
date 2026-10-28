@@ -51,21 +51,23 @@
    fila y permanecen alineados horizontalmente.
 ========================================================= */
 @media (max-width: 620px) {
-  .stock-page .stock-tableActionsMobile {
+  .stock-page .stock-tableFooter > .stock-tableActionsMobile {
     display: flex !important;
+    flex: 0 0 auto !important;
     flex-direction: row !important;
     flex-wrap: nowrap !important;
     align-items: center !important;
-    justify-content: stretch !important;
-    gap: 8px !important;
-    width: 100% !important;
-  }
-
-  .stock-page .stock-tableActionsMobile .mov-btn,
-  .stock-page .stock-tableActionsMobile .stock-actionBtn {
-    flex: 1 1 0 !important;
+    justify-content: flex-end !important;
+    gap: 5px !important;
     width: auto !important;
     min-width: 0 !important;
-    max-width: none !important;
+  }
+
+  .stock-page .stock-tableFooter > .stock-tableActionsMobile .mov-btn,
+  .stock-page .stock-tableFooter > .stock-tableActionsMobile .stock-actionBtn {
+    flex: 0 0 32px !important;
+    width: 32px !important;
+    min-width: 32px !important;
+    max-width: 32px !important;
   }
 }

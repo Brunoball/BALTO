@@ -2680,13 +2680,14 @@ const Stock = () => {
         <button
           type="button"
           className="prod-pagination__btn prod-pagination__btn--nav"
+          aria-label="Página anterior"
           onClick={() => {
             descartarPosicionScrollTabla();
             setPaginaActual((p) => Math.max(1, p - 1));
           }}
           disabled={paginaActual === 1}
         >
-          Anterior
+          <span className="stock-pageNavFull">Anterior</span><span className="stock-pageNavCompact" aria-hidden="true">‹</span>
         </button>
 
         <div className="prod-pagination__pages">
@@ -2712,64 +2713,49 @@ const Stock = () => {
         </div>
 
         <span className="prod-pagination__summary">
-          Página {paginaActual} de {totalPaginas}
+          <span className="stock-pageNavFull">Página {paginaActual} de {totalPaginas}</span>
+          <span className="stock-pageNavCompact">{paginaActual} / {totalPaginas}</span>
         </span>
 
         <button
           type="button"
           className="prod-pagination__btn prod-pagination__btn--nav"
+          aria-label="Página siguiente"
           onClick={() => {
             descartarPosicionScrollTabla();
             setPaginaActual((p) => Math.min(totalPaginas, p + 1));
           }}
           disabled={paginaActual === totalPaginas}
         >
-          Siguiente
+          <span className="stock-pageNavFull">Siguiente</span><span className="stock-pageNavCompact" aria-hidden="true">›</span>
         </button>
       </div>
     );
   };
 
+  const handleCambiarVistaStock = (verBajas) => {
+    if (mostrarDadosDeBaja === verBajas) return;
+    descartarPosicionScrollTabla();
+    const seed = Date.now();
+    setErroresImagenes({});
+    setReintentosImagenes({});
+    setVersionImagenPorProducto((prev) => {
+      const next = { ...prev };
+      productosRaw.forEach((item) => {
+        const id = getProductoId(item);
+        if (id && Number(item?.imagen_archivo_id || 0) > 0) next[id] = seed;
+      });
+      return next;
+    });
+    setMostrarDadosDeBaja(verBajas);
+    setPaginaActual(1);
+  };
+
   const renderStockToolbarActions = (extraClassName = "", options = {}) => {
-    const { showToggleBajas = true, showReportes = true, showAjustePrecios = true, showAgregarProducto = true } = options;
+    const { showReportes = true, showAjustePrecios = true, showAgregarProducto = true } = options;
 
     return (
       <div className={["stock-tableActions", extraClassName].filter(Boolean).join(" ")}>
-        {showToggleBajas ? (
-          <button
-            type="button"
-            className={[
-              "mov-btn",
-              mostrarDadosDeBaja ? "mov-btn--primary" : "mov-btn--ghost",
-              "stock-actionBtn",
-              "stock-actionBtn--bajas",
-            ].join(" ")}
-            aria-label={mostrarDadosDeBaja ? "Ver activos" : "Ver dados de baja"}
-            title={mostrarDadosDeBaja ? "Ver activos" : "Ver dados de baja"}
-            onClick={() => {
-              descartarPosicionScrollTabla();
-              const seed = Date.now();
-              setErroresImagenes({});
-              setReintentosImagenes({});
-              setVersionImagenPorProducto((prev) => {
-                const next = { ...prev };
-                productosRaw.forEach((item) => {
-                  const id = getProductoId(item);
-                  if (id && Number(item?.imagen_archivo_id || 0) > 0) next[id] = seed;
-                });
-                return next;
-              });
-              setMostrarDadosDeBaja((prev) => !prev);
-              setPaginaActual(1);
-            }}
-          >
-            <FontAwesomeIcon icon={faRotateLeft} />
-            <span className="stock-actionBtn__text">
-              {mostrarDadosDeBaja ? "Ver activos" : "Ver dados de baja"}
-            </span>
-          </button>
-        ) : null}
-
         {showReportes ? (
           <button
             type="button"
@@ -2835,17 +2821,27 @@ const Stock = () => {
         <section className="mov-card mov-card--table balto-rsp-table-shell">
           <div className="mov-card__head">
             <div className="mov-card__headLeft">
-              <div className="title-mov">
+              <div className="title-mov stock-titleBlock">
                 <div className="mov-card__title">Stock · Productos</div>
-                <div className="mov-card__hint">
-                  {totalProductos > 0 ? (
-                    <>
-                      Mostrando <b>{inicioProductosVisibles}</b>–<b>{finProductosVisibles}</b> de{" "}
-                      <b>{totalProductos}</b> {mostrarDadosDeBaja ? "productos dados de baja" : "productos"}
-                    </>
-                  ) : (
-                    <>Sin productos para mostrar</>
-                  )}
+                <div className="stock-listTabs" role="tablist" aria-label="Vista de productos de stock">
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={!mostrarDadosDeBaja}
+                    className={`stock-listTab ${!mostrarDadosDeBaja ? "is-active" : ""}`}
+                    onClick={() => handleCambiarVistaStock(false)}
+                  >
+                    Activos
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={mostrarDadosDeBaja}
+                    className={`stock-listTab ${mostrarDadosDeBaja ? "is-active" : ""}`}
+                    onClick={() => handleCambiarVistaStock(true)}
+                  >
+                    Dados de baja
+                  </button>
                 </div>
               </div>
 
@@ -2938,7 +2934,7 @@ const Stock = () => {
             </div>
 
             <div className="mov-card__actions stock-tableActionsAddMobile">
-              {renderStockToolbarActions("", { showToggleBajas: false, showReportes: false, showAjustePrecios: false })}
+              {renderStockToolbarActions("", { showReportes: false, showAjustePrecios: false })}
             </div>
           </div>
 
@@ -3261,7 +3257,19 @@ const Stock = () => {
             </div>
           </div>
 
-          <div className={["stock-tableFooter", totalPaginas <= 1 ? "stock-tableFooter--onlyActions" : ""].filter(Boolean).join(" ")}>
+          <div className="stock-tableFooter">
+            <div className="stock-tableFooter__count" aria-live="polite">
+              {totalProductos > 0 ? (
+                <>
+                  <span className="stock-countLong">Mostrando </span>
+                  <b>{inicioProductosVisibles}</b>–<b>{finProductosVisibles}</b> de{" "}
+                  <b>{totalProductos}</b>
+                  <span className="stock-countLong"> {mostrarDadosDeBaja ? "productos dados de baja" : "productos"}</span>
+                </>
+              ) : (
+                <>Sin {mostrarDadosDeBaja ? "productos dados de baja" : "productos"} para mostrar</>
+              )}
+            </div>
             {renderStockPagination("stock-pagination--footer")}
             {renderStockToolbarActions("stock-tableActionsMobile", { showAgregarProducto: false })}
           </div>
