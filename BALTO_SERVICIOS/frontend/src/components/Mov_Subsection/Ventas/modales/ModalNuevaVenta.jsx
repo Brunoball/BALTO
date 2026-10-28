@@ -9,6 +9,7 @@ import "../../../Global/Global_css/GlobalMovementEntryResponsive.css";
 import "../../../Global/Global_css/roots.css";
 import BASE_URL from "../../../../config/config";
 import ModalFacturaBaltoResumen from "../../Facturacion/ModalFacturaBaltoResumen.jsx";
+import { crearReceptorConsumidorFinal, validarConsumidorFinalSinIdentificar } from "../../Facturacion/utils/consumidorFinal";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFileInvoiceDollar, faPlus, faMoneyCheckDollar } from "@fortawesome/free-solid-svg-icons";
 import GlobalAutocomplete from "../../../Global/GlobalAutocomplete/GlobalAutocomplete.jsx";
@@ -621,6 +622,7 @@ function buildClienteFiscalPdf(fiscalSource, clienteSource, nombreFallback = "Cl
     safeStr(cliente.nombre) ||
     safeStr(nombreFallback) ||
     "Cliente";
+  if (Number(fiscal.doc_tipo) === 99) return { ...crearReceptorConsumidorFinal(), id_cliente: fiscal.id_cliente || getClienteId(cliente) || null };
   const docNro = safeStr(fiscal.doc_nro || fiscal.cuit || cliente.doc_nro || cliente.cuit || cliente.dni || "");
   const cuit = safeStr(fiscal.cuit || cliente.cuit || (String(fiscal.doc_tipo) === "80" ? docNro : ""));
   const condicion = safeStr(fiscal.condicion_iva || cliente.condicion_iva || cliente.cond_iva || "");
@@ -2632,6 +2634,10 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
           total: Number(r.total || 0),
         }));
 
+      const tiposFiscales = rowsCalc.filter(isUsableSaleRow).map((r) => String(r?.tipo_item || "").toUpperCase());
+      const hayServicios = tiposFiscales.some((tipo) => tipo === "SERVICIO" || tipo === "DETALLE" || tipo === "MANUAL");
+      const hayProductos = tiposFiscales.some((tipo) => tipo === "ARTICULO");
+      const conceptoFiscal = hayServicios ? (hayProductos ? 3 : 2) : 1;
       const puntoVenta = Number(String(cfg?.punto_venta || "2").replace(/\D/g, "")) || 2;
       const codigoCbte = Number(String(cfg?.codigo_comprobante || "11").replace(/\D/g, "")) || 11;
       const mediosPayload = buildMediosPagoPayload(mediosFilas, mediosPagoList);
@@ -2665,6 +2671,9 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
         id_clasificacion: null,
         fecha_cbte_iso: String(fecha).slice(0, 10),
         vto_pago_iso: plusDaysISOFrom(fecha, 10),
+        fch_serv_desde: String(fecha).slice(0, 10),
+        fch_serv_hasta: String(fecha).slice(0, 10),
+        concepto: conceptoFiscal,
         cbte_tipo: codigoCbte,
         pto_vta: puntoVenta,
         items_facturacion: items,
@@ -3409,6 +3418,18 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
     },
     [validate, showToast, resolveFiscalForFacturacion, configFacturacion, configsFacturacion, fetchConfigFacturacion, buildResumenFacturaPayload]
   );
+
+  const facturarConsumidorFinal = useCallback(async () => {
+    if (!selectedClienteId) {
+      setFiscalError("Para conservar la trazabilidad de la venta, seleccioná un cliente antes de facturar sin CUIT.");
+      return;
+    }
+    const msg = validarConsumidorFinalSinIdentificar(resumen.total);
+    if (msg) { setFiscalError(msg); showToast("advertencia", msg, 5200); return; }
+    setFiscalError("");
+    setFiscalPanelOpen(false);
+    await abrirResumenFactura(crearReceptorConsumidorFinal());
+  }, [resumen.total, selectedClienteId, showToast, abrirResumenFactura]);
 
   const finalizarFacturacionYGuardarVenta = useCallback(
     async (factEmitida) => {
@@ -4176,6 +4197,8 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
           open={openResumenFactura}
           onClose={() => setOpenResumenFactura(false)}
           onBack={() => setOpenResumenFactura(false)}
+          onCambiarReceptor={(receptor) => setResumenFacturaData((prev) => prev ? ({ ...prev, cliente_facturacion: receptor }) : prev)}
+          onEditarReceptor={() => { setOpenResumenFactura(false); setFiscalPanelOpen(true); }}
           onCloseAll={cerrarFlujoFacturacion}
           apiBase={`${BASE_URL}/api.php`}
           action="movimientos"
@@ -4218,6 +4241,8 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
         saving={saving}
         confirmText="Confirmar y facturar"
         requireFiscalData={false}
+        permitirConsumidorFinal
+        onConfirmarConsumidorFinal={facturarConsumidorFinal}
         onCuitChange={(v) => {
           setFiscalCuitInput(v);
           setFiscalArcaData(null);

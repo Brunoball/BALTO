@@ -1,16 +1,19 @@
 import React, { useMemo, useState, useCallback, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { facturacionFetch } from "./api/facturacionApi.js";
-import { FaCheck } from "react-icons/fa";
+import { FaCheck, FaIdCard, FaUser, FaInfoCircle } from "react-icons/fa";
 import "./ModalFacturaBaltoResumen.css";
 import "../../Global/Global_css/Global_oscuro.css";
 import { DEMO_BLOCK_MESSAGE, isBaltoDemoMode } from "../../../utils/demoMode";
 
 import { buildBaltoInvoicePdf, saveBaltoInvoicePdf } from "../../../utils/FacturaPdfBuilder";
 import { buildNotaCreditoPdf, saveNotaCreditoPdf } from "../../../utils/NotaCreditoPdfBuilder";
+import { crearReceptorConsumidorFinal, validarConsumidorFinalSinIdentificar } from "./utils/consumidorFinal";
 
 const DOC_TIPOS = [ 
   { id: 80, label: "CUIT (80)" },
   { id: 96, label: "DNI (96)" },
+  { id: 99, label: "Consumidor final (99)" },
 ];
 
 // IMPORTANTE:
@@ -107,6 +110,7 @@ function normalizeEmisorPdfInfo(data = {}, fact = {}) {
 
 function normalizeClienteFacturacionPdfInfo(data = {}, fallback = {}) {
   const cf = data?.cliente_facturacion || data?.cliente || {};
+  if (Number(fallback?.doc_tipo) === 99 || Number(cf?.doc_tipo) === 99) return crearReceptorConsumidorFinal();
   const docNro = pickText(cf?.doc_nro, cf?.cuit, cf?.dni, fallback?.doc_nro, data?.doc_nro).replace(/\D/g, "");
   const cuit = pickText(cf?.cuit, Number(cf?.doc_tipo || fallback?.doc_tipo) === 80 ? docNro : "", data?.cliente_cuit);
   const condicion = pickText(cf?.cond_iva, cf?.condicion_iva, data?.cond_iva_receptor, data?.cliente_condicion_iva);
@@ -419,6 +423,8 @@ export default function ModalFacturaBaltoResumen({
   ptoVta,
   onFacturada,
   onDone,
+  onCambiarReceptor,
+  onEditarReceptor,
   forceTestAmount = false,
   testAmount = 1000,
   skipMovimientoAutocreacion = false,
@@ -430,6 +436,10 @@ export default function ModalFacturaBaltoResumen({
   const [previewUrl, setPreviewUrl] = useState("");
   const [error, setError] = useState("");
   const [confirm, setConfirm] = useState(false);
+  const [selectorReceptorAbierto, setSelectorReceptorAbierto] = useState(false);
+  // Conserva los datos fiscales completos mientras el usuario prueba la opción
+  // consumidor final. No se guardan ni se reemplazan los datos del cliente.
+  const ultimoReceptorConCuitRef = useRef(null);
   const [tabActiva, setTabActiva] = useState("resumen");
   const firstRef = useRef(null);
 
@@ -641,7 +651,20 @@ export default function ModalFacturaBaltoResumen({
     [dataFacturacion, docTipo, docNro]
   );
 
+  useEffect(() => {
+    if (!open) {
+      ultimoReceptorConCuitRef.current = null;
+      return;
+    }
+    const receptor = data?.cliente_facturacion;
+    if (Number(receptor?.doc_tipo) !== 99 && onlyDigits(receptor?.cuit || receptor?.doc_nro).length === 11) {
+      // Guardar también razón social, IVA y domicilio; ARCA los necesita al emitir.
+      ultimoReceptorConCuitRef.current = { ...receptor };
+    }
+  }, [open, data?.cliente_facturacion]);
+
   const nombreCliente =
+    (Number(docTipo) === 99 ? dataFacturacion?.labelCliente : "") ||
     clienteFacturaInfo?.razon_social ||
     dataFacturacion?.labelCliente ||
     dataFacturacion?.cliente ||
@@ -681,7 +704,7 @@ export default function ModalFacturaBaltoResumen({
       vtoISO: vtoPagoISO,
       montoTxt: moneyARS(monto),
       comprobante: getCbteLabel(cbteTipoEfectivo),
-      receptorTxt: doc ? `${docLabel}: ${doc}` : "—",
+      receptorTxt: Number(docTipo) === 99 ? "Consumidor final (sin identificar)" : (doc ? `${docLabel}: ${doc}` : "—"),
       pvTxt: pv || "—",
       iva: clienteFacturaInfo?.cond_iva || clienteFacturaInfo?.condicion_iva || "—",
       domicilio: clienteFacturaInfo?.domicilio || "—",
@@ -698,6 +721,7 @@ export default function ModalFacturaBaltoResumen({
     docNro,
     ptoVtaEfectivo,
     docLabel,
+    docTipo,
     clienteFacturaInfo,
     dataFacturacion,
     cbteTipoEfectivo,
@@ -731,13 +755,22 @@ export default function ModalFacturaBaltoResumen({
 
   useEffect(() => {
     if (!open) return;
+    // Reiniciar el estado visual únicamente cuando se abre el resumen.
+    // El objeto dataFacturacion también cambia al seleccionar el emisor o
+    // alternar CUIT/consumidor final; hacerlo dependencia cerraba el selector
+    // mientras el usuario intentaba elegir "Facturar con CUIT".
     setError("");
     setConfirm(false);
+    setSelectorReceptorAbierto(false);
     setTabActiva("resumen");
     movimientoIdRef.current = Number(dataFacturacion?.id_movimiento || 0) || 0;
     cbteNoEmitidoRef.current = null;
-    setTimeout(() => firstRef.current?.focus?.(), 0);
-  }, [open, dataFacturacion]);
+    const focoTimer = setTimeout(() => firstRef.current?.focus?.(), 0);
+    return () => clearTimeout(focoTimer);
+    // dataFacturacion se lee al abrir; los cambios posteriores se reflejan
+    // en el resumen sin reiniciar la interacción del usuario.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
 useEffect(() => {
   if (!open) return;
@@ -763,6 +796,16 @@ useEffect(() => {
     document.removeEventListener("keydown", onKey, true);
   };
 }, [open, loading, onClose]);
+
+  // El resumen se monta en document.body y nunca desplaza la página de fondo.
+  // Se conserva el overflow anterior porque el modal de origen puede tener su propio bloqueo.
+  useEffect(() => {
+    if (!open) return undefined;
+    const root = document.documentElement;
+    const originalOverflow = root.style.overflow;
+    root.style.overflow = "hidden";
+    return () => { root.style.overflow = originalOverflow; };
+  }, [open]);
 
   useEffect(() => {
     let revokeUrl = "";
@@ -998,7 +1041,13 @@ useEffect(() => {
     const doc = String(docNro ?? "").replace(/\D/g, "");
     const pv = String(ptoVtaEfectivo ?? "").replace(/\D/g, "");
 
-    if (!doc) return { ok: false, msg: "Falta documento." };
+    if (Number(docTipo) === 99) {
+      const advertencia = validarConsumidorFinalSinIdentificar(monto);
+      if (advertencia) return { ok: false, msg: advertencia };
+      if (![6, 11].includes(Number(cbteTipoEfectivo)) && !usarModoNC) {
+        return { ok: false, msg: "El consumidor final sin identificar sólo está habilitado para facturas B o C." };
+      }
+    } else if (!doc) return { ok: false, msg: "Falta documento." };
     if (!pv) return { ok: false, msg: "Falta punto de venta." };
 
     if (!usarModoNC && !safeText(configSeleccionada?.cuit)) {
@@ -1013,18 +1062,18 @@ useEffect(() => {
       return { ok: false, msg: "CUIT inválido (11 dígitos)." };
     }
 
-    if (!safeText(dataFacturacion?.cliente_facturacion?.razon_social)) {
+    if (Number(docTipo) !== 99 && !safeText(dataFacturacion?.cliente_facturacion?.razon_social)) {
       return { ok: false, msg: "Falta razón social / apellido y nombre del cliente." };
     }
 
-    if (
+    if (Number(docTipo) !== 99 &&
       !safeText(dataFacturacion?.cliente_facturacion?.cond_iva) &&
       !safeText(dataFacturacion?.cliente_facturacion?.condicion_iva)
     ) {
       return { ok: false, msg: "Falta condición frente al IVA del cliente." };
     }
 
-    if (!safeText(dataFacturacion?.cliente_facturacion?.domicilio)) {
+    if (Number(docTipo) !== 99 && !safeText(dataFacturacion?.cliente_facturacion?.domicilio)) {
       return { ok: false, msg: "Falta domicilio del cliente." };
     }
 
@@ -1061,6 +1110,7 @@ useEffect(() => {
     dataFacturacion,
     configSeleccionada,
     usarModoNC,
+    cbteTipoEfectivo,
     docNro,
     ptoVtaEfectivo,
     docTipo,
@@ -1216,7 +1266,7 @@ useEffect(() => {
         vto_pago: isoToYmd8(vtoPagoISO) || null,
 
         doc_tipo: Number(docTipo) || null,
-        doc_nro: String(docNro || "").replace(/\D/g, "") || null,
+        doc_nro: Number(docTipo) === 99 ? "0" : (String(docNro || "").replace(/\D/g, "") || null),
         cbte_tipo: Number(cbteTipoEfectivo) || null,
         pto_vta: Number(ptoVtaEfectivo) || null,
 
@@ -1322,6 +1372,9 @@ useEffect(() => {
       const body = {
         data: {
           id_movimiento: idMovimiento,
+          // El backend exige identidad comercial para Otros Ingresos, aun cuando
+          // el receptor fiscal sea Consumidor Final anónimo (99/0).
+          id_cliente: Number(dataFacturacion?.id_cliente || 0) || null,
           id_pago: v.id_pago,
           id_sistema: v.id_sistema,
 
@@ -1329,7 +1382,7 @@ useEffect(() => {
             ...clienteFacturaInfo,
             doc_tipo: Number(docTipo),
             doc_nro: String(v.docN),
-            cuit: Number(docTipo) === 80 ? String(v.docN) : clienteFacturaInfo?.cuit || "",
+            cuit: Number(docTipo) === 80 ? String(v.docN) : "",
           },
 
           doc_tipo: Number(docTipo),
@@ -1353,6 +1406,9 @@ useEffect(() => {
 
           fecha_cbte_iso: fechaCbteISO,
           vto_pago_iso: vtoPagoISO,
+          // Servicios: fechas reales enviadas al WSFE para Concepto 2/3.
+          fch_serv_desde: dataFacturacion?.fch_serv_desde || fechaCbteISO,
+          fch_serv_hasta: dataFacturacion?.fch_serv_hasta || fechaCbteISO,
           fecha_cbte: isoToYmd8(fechaCbteISO),
           vto_pago: isoToYmd8(vtoPagoISO),
 
@@ -1376,6 +1432,13 @@ useEffect(() => {
             dataFacturacion?.operacion_id_origen || dataFacturacion?.operation_origin_id || 0
           ) || null,
 
+          // NC: el backend exige validar la factura fiscal original ANTES de pedir CAE.
+          // Estos datos ya llegan desde ModalEmitirNotaCreditoVenta, pero deben
+          // viajar explícitamente en la solicitud a wsfe_emitir.php.
+          id_comprobante_fiscal_original: Number(
+            dataFacturacion?.id_comprobante_fiscal_original ?? dataFacturacion?.factura_original?.id_comprobante_fiscal ?? 0
+          ) || null,
+          factura_original: dataFacturacion?.factura_original || null,
           cbtes_asoc: normalizeCbtesAsocFrontend(dataFacturacion?.cbtes_asoc || [], dataFacturacion?.factura_original || null),
 
           emisor_nombre: emisorNombre || null,
@@ -1633,13 +1696,8 @@ useEffect(() => {
     if (!loading) onClose?.();
   };
 
-  return (
-    <div
-      className="mi-modal__overlay"
-      onClick={(e) =>
-        e.target.classList.contains("mi-modal__overlay") && cerrar()
-      }
-    >
+  return createPortal(
+    <div className="mi-modal__overlay mfr-modal__overlay">
       <div
         className="mi-modal__container mfr-modal"
         role="dialog"
@@ -1753,7 +1811,45 @@ useEffect(() => {
                         <div className="mfr-info-row"><b>Sistema</b><span>{resumen.sistema}</span></div>
                         <div className="mfr-info-row"><b>Fecha</b><span>{ymdToHuman(resumen.fechaISO)}</span></div>
                         <div className="mfr-info-row"><b>Vencimiento</b><span>{ymdToHuman(resumen.vtoISO)}</span></div>
-                        <div className="mfr-info-row"><b>Receptor</b><span>{resumen.receptorTxt}</span></div>
+                        <div className="mfr-info-row"><b>Receptor</b><span>{resumen.receptorTxt}{!usarModoNC && onCambiarReceptor && (
+                          <button type="button" className="mfr-cambiar-receptor" disabled={loading} aria-expanded={selectorReceptorAbierto} onClick={() => setSelectorReceptorAbierto((v) => !v)}>
+                            {selectorReceptorAbierto ? "Ocultar opciones" : "Cambiar"}
+                          </button>
+                        )}</span></div>
+                        {selectorReceptorAbierto && !usarModoNC && (
+                          <div className="mfr-receptor-selector" role="group" aria-label="Cambiar tipo de receptor fiscal">
+                            <strong className="mfr-receptor-selector__title">¿Cómo querés facturar?</strong>
+                            <div className="mfr-receptor-selector__options">
+                              <button type="button" className="mfr-receptor-selector__option" disabled={loading} onClick={() => {
+                                const msg = validarConsumidorFinalSinIdentificar(monto);
+                                if (msg) { setError(msg); return; }
+                                if (![6, 11].includes(Number(cbteTipoEfectivo))) { setError("Esta opción requiere factura B o C."); return; }
+                                onCambiarReceptor(crearReceptorConsumidorFinal());
+                                setConfirm(false); setError(""); setSelectorReceptorAbierto(false);
+                              }}>
+                                <span className="mfr-receptor-selector__icon" aria-hidden="true"><FaUser /></span>
+                                <span className="mfr-receptor-selector__option-text"><b>Consumidor final sin identificar</b><small>Facturar sin consultar un CUIT.</small></span>
+                              </button>
+                              <button type="button" className="mfr-receptor-selector__option" disabled={loading} onClick={() => {
+                                setConfirm(false);
+                                setError("");
+                                setSelectorReceptorAbierto(false);
+                                const receptorGuardado = ultimoReceptorConCuitRef.current;
+                                if (receptorGuardado && onlyDigits(receptorGuardado.cuit || receptorGuardado.doc_nro).length === 11) {
+                                  // Ya pasó por el resumen con este CUIT: restaurar sin abrir ARCA.
+                                  onCambiarReceptor({ ...receptorGuardado });
+                                } else {
+                                  // No hay ficha fiscal previa: se mantiene el flujo de consulta.
+                                  onEditarReceptor?.();
+                                }
+                              }}>
+                                <span className="mfr-receptor-selector__icon" aria-hidden="true"><FaIdCard /></span>
+                                <span className="mfr-receptor-selector__option-text"><b>Facturar con CUIT</b><small>{ultimoReceptorConCuitRef.current ? "Usar el CUIT ya cargado, sin consultar ARCA." : "Consultar y confirmar los datos en ARCA."}</small></span>
+                              </button>
+                            </div>
+                            <p className="mfr-receptor-selector__notice"><FaInfoCircle aria-hidden="true" /> <span>Elegí consumidor final solo cuando corresponda al comprador real. Se conserva el cliente comercial; ARCA exige identificar al receptor desde $10.000.000.</span></p>
+                          </div>
+                        )}
                         <div className="mfr-info-row"><b>Punto de venta</b><span>{resumen.pvTxt}</span></div>
                         <div className="mfr-info-row"><b>IVA cliente</b><span>{resumen.iva}</span></div>
                         <div className="mfr-info-row"><b>Domicilio cliente</b><span>{resumen.domicilio}</span></div>
@@ -1877,5 +1973,6 @@ useEffect(() => {
         </div>
       </div>
     </div>
+    , document.body
   );
 }

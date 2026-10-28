@@ -437,6 +437,9 @@ export default function ModalFacturaBaltoResumen({
   const [error, setError] = useState("");
   const [confirm, setConfirm] = useState(false);
   const [selectorReceptorAbierto, setSelectorReceptorAbierto] = useState(false);
+  // Conserva los datos fiscales completos mientras el usuario prueba la opción
+  // consumidor final. No se guardan ni se reemplazan los datos del cliente.
+  const ultimoReceptorConCuitRef = useRef(null);
   const [tabActiva, setTabActiva] = useState("resumen");
   const firstRef = useRef(null);
 
@@ -648,6 +651,18 @@ export default function ModalFacturaBaltoResumen({
     [dataFacturacion, docTipo, docNro]
   );
 
+  useEffect(() => {
+    if (!open) {
+      ultimoReceptorConCuitRef.current = null;
+      return;
+    }
+    const receptor = data?.cliente_facturacion;
+    if (Number(receptor?.doc_tipo) !== 99 && onlyDigits(receptor?.cuit || receptor?.doc_nro).length === 11) {
+      // Guardar también razón social, IVA y domicilio; ARCA los necesita al emitir.
+      ultimoReceptorConCuitRef.current = { ...receptor };
+    }
+  }, [open, data?.cliente_facturacion]);
+
   const nombreCliente =
     (Number(docTipo) === 99 ? dataFacturacion?.labelCliente : "") ||
     clienteFacturaInfo?.razon_social ||
@@ -740,14 +755,22 @@ export default function ModalFacturaBaltoResumen({
 
   useEffect(() => {
     if (!open) return;
+    // Reiniciar el estado visual únicamente cuando se abre el resumen.
+    // El objeto dataFacturacion también cambia al seleccionar el emisor o
+    // alternar CUIT/consumidor final; hacerlo dependencia cerraba el selector
+    // mientras el usuario intentaba elegir "Facturar con CUIT".
     setError("");
     setConfirm(false);
     setSelectorReceptorAbierto(false);
     setTabActiva("resumen");
     movimientoIdRef.current = Number(dataFacturacion?.id_movimiento || 0) || 0;
     cbteNoEmitidoRef.current = null;
-    setTimeout(() => firstRef.current?.focus?.(), 0);
-  }, [open, dataFacturacion]);
+    const focoTimer = setTimeout(() => firstRef.current?.focus?.(), 0);
+    return () => clearTimeout(focoTimer);
+    // dataFacturacion se lee al abrir; los cambios posteriores se reflejan
+    // en el resumen sin reiniciar la interacción del usuario.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
 useEffect(() => {
   if (!open) return;
@@ -1801,9 +1824,21 @@ useEffect(() => {
                                 <span className="mfr-receptor-selector__icon" aria-hidden="true"><FaUser /></span>
                                 <span className="mfr-receptor-selector__option-text"><b>Consumidor final sin identificar</b><small>Facturar sin consultar un CUIT.</small></span>
                               </button>
-                              <button type="button" className="mfr-receptor-selector__option" disabled={loading} onClick={() => { setConfirm(false); setSelectorReceptorAbierto(false); onEditarReceptor?.(); }}>
+                              <button type="button" className="mfr-receptor-selector__option" disabled={loading} onClick={() => {
+                                setConfirm(false);
+                                setError("");
+                                setSelectorReceptorAbierto(false);
+                                const receptorGuardado = ultimoReceptorConCuitRef.current;
+                                if (receptorGuardado && onlyDigits(receptorGuardado.cuit || receptorGuardado.doc_nro).length === 11) {
+                                  // Ya pasó por el resumen con este CUIT: restaurar sin abrir ARCA.
+                                  onCambiarReceptor({ ...receptorGuardado });
+                                } else {
+                                  // No hay ficha fiscal previa: se mantiene el flujo de consulta.
+                                  onEditarReceptor?.();
+                                }
+                              }}>
                                 <span className="mfr-receptor-selector__icon" aria-hidden="true"><FaIdCard /></span>
-                                <span className="mfr-receptor-selector__option-text"><b>Facturar con CUIT</b><small>Consultar y confirmar los datos en ARCA.</small></span>
+                                <span className="mfr-receptor-selector__option-text"><b>Facturar con CUIT</b><small>{ultimoReceptorConCuitRef.current ? "Usar el CUIT ya cargado, sin consultar ARCA." : "Consultar y confirmar los datos en ARCA."}</small></span>
                               </button>
                             </div>
                             <p className="mfr-receptor-selector__notice"><FaInfoCircle aria-hidden="true" /> <span>Elegí consumidor final solo cuando corresponda al comprador real. Se conserva el cliente comercial; ARCA exige identificar al receptor desde $10.000.000.</span></p>

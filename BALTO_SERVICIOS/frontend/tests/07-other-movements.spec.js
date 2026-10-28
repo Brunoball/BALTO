@@ -108,6 +108,17 @@ test('@crud otros ingresos: cliente sólo fiscal + resumen global sin asociarlo 
     items: [description],
   });
   await expect(invoiceStep.dialog).toContainText(/CLIENTE FISCAL PLAYWRIGHT/i);
+  // Regresión fiscal sin enviar nada a ARCA: CUIT -> 99/0 -> CUIT.
+  const receptorRow = invoiceStep.dialog.locator('.mfr-info-row').filter({ hasText: 'Receptor' });
+  await expect(receptorRow).toContainText('20123456786');
+  await invoiceStep.dialog.getByRole('button', { name: /^Cambiar$/ }).click();
+  await invoiceStep.dialog.getByRole('button', { name: /Consumidor final sin identificar/i }).click();
+  await expect(receptorRow).toContainText(/Consumidor final|99/i);
+  await invoiceStep.dialog.getByRole('button', { name: /^Cambiar$/ }).click();
+  await invoiceStep.dialog.getByRole('group', { name: /Cambiar tipo de receptor fiscal/i })
+    .getByRole('button', { name: /Facturar con CUIT/i }).click();
+  await expect(receptorRow).toContainText('20123456786');
+  await expect(invoiceStep.dialog).toContainText(/DOMICILIO DE PRUEBA/i);
   await invoiceStep.dialog.getByRole('button', { name: /Volver/i }).last().click();
   await expect(invoiceStep.dialog).toBeHidden();
 
@@ -161,6 +172,16 @@ test('@crud otros ingresos: cliente sin ficha fiscal abre el modal global de CUI
   await expect(invoiceStep.dialog).toContainText(/Consulta ARCA/i);
   await expect(invoiceStep.dialog.locator('input[inputmode="numeric"]')).toBeVisible();
   await expect(invoiceStep.dialog.getByRole('button', { name: /Confirmar y facturar/i })).toBeDisabled();
+  await invoiceStep.dialog.getByRole('radio', { name: /Consumidor final sin identificar/i }).check();
+  await invoiceStep.dialog.getByRole('button', { name: /^Continuar sin CUIT$/i }).click();
+  await expect(invoiceStep.dialog).toBeHidden();
+  const summaryStep = await detectOtherIncomeInvoiceStep(page);
+  expect(summaryStep.kind).toBe('summary');
+  await expect(summaryStep.dialog).toContainText(/Consumidor final/i);
+  await summaryStep.dialog.getByRole('button', { name: /^Cambiar$/ }).click();
+  await summaryStep.dialog.getByRole('button', { name: /Facturar con CUIT/i }).click();
+  await expect(summaryStep.dialog).toBeHidden();
+  await expect(invoiceStep.dialog).toBeVisible();
   await invoiceStep.dialog.getByRole('button', { name: /Cancelar/i }).click();
   await expect(invoiceStep.dialog).toBeHidden();
   expect(createRequests, 'Cancelar el paso de CUIT no debe crear el ingreso.').toHaveLength(0);

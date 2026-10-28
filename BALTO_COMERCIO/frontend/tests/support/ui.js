@@ -290,50 +290,65 @@ export async function selectFirstAutocomplete(scope, labelText, preferredText = 
   if (!wrap) wrap = candidates.first();
 
   const input = wrap.locator('input').first();
-  await expect(input).toBeVisible();
-  await input.click();
-
+  const page = scope.page();
   const requested = String(preferredText || '').trim();
-  if (requested) await input.fill(requested);
+  const options = page.locator('#ga-portal-list .ga-item:not(.is-empty)');
 
-  const options = scope.page().locator('#ga-portal-list .ga-item:not(.is-empty)');
-  await expect(options.first()).toBeVisible({ timeout: 12_000 });
+  // El centro de Notificaciones de Stock puede abrirse justo después de enfocar
+  // el cliente. Su cierre automático (support/test.js) desmonta el portal del
+  // autocompletado; no se debe forzar el click sobre un elemento tapado.
+  // Reabrimos la lista una sola vez si desapareció durante la interacción.
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    await expect(input).toBeVisible();
 
-  let option = null;
-  let text = '';
+    try {
+      await input.click();
+      if (requested) await input.fill(requested);
 
-  if (requested) {
-    const matching = options
-      .filter({ hasText: new RegExp(escapeRegExp(requested), 'i') })
-      .filter({ hasNotText: /agregar/i })
-      .first();
-    await expect(
-      matching,
-      `Debe existir ${labelText} "${requested}" en el autocompletado`,
-    ).toBeVisible({ timeout: 15_000 });
-    option = matching;
-    text = (await matching.innerText()).trim();
-  } else {
-    // La opción de alta se renderiza de inmediato, pero las listas globales pueden
-    // terminar de hidratarse unos instantes después de abrir el modal. Esperamos
-    // explícitamente una opción real para no confundir esa carga asincrónica con
-    // una base sin clientes/proveedores existentes.
-    const existingOptions = options.filter({ hasNotText: /agregar/i });
-    await expect(
-      existingOptions.first(),
-      `Debe existir al menos un ${labelText} real en el autocompletado`,
-    ).toBeVisible({ timeout: 30_000 });
+      if (attempt > 0) {
+        // Si el input siguió enfocado, click no vuelve a disparar onFocus.
+        // ArrowDown reabre la lista mediante el onKeyDown real del componente.
+        await input.press('ArrowDown');
+      }
 
-    option = existingOptions.first();
-    text = (await option.innerText()).trim();
+      await expect(options.first()).toBeVisible({ timeout: 12_000 });
+
+      let option;
+      if (requested) {
+        option = options
+          .filter({ hasText: new RegExp(escapeRegExp(requested), 'i') })
+          .filter({ hasNotText: /agregar/i })
+          .first();
+        await expect(
+          option,
+          `Debe existir ${labelText} "${requested}" en el autocompletado`,
+        ).toBeVisible({ timeout: 15_000 });
+      } else {
+        // La opción de alta aparece antes que los clientes/proveedores reales,
+        // que pueden seguir hidratándose mientras el formulario se carga.
+        option = options.filter({ hasNotText: /agregar/i }).first();
+        await expect(
+          option,
+          `Debe existir al menos un ${labelText} real en el autocompletado`,
+        ).toBeVisible({ timeout: 30_000 });
+      }
+
+      const text = (await option.innerText()).trim();
+      await option.click({ timeout: attempt === 0 ? 8_000 : 15_000 });
+      return text;
+    } catch (error) {
+      // Si aún existe la lista, no es la carrera con el popup: conservar el
+      // fallo original para que el test no esconda problemas funcionales.
+      const dropdownVisible = await page.locator('#ga-portal-list').isVisible().catch(() => false);
+      if (attempt > 0 || dropdownVisible) throw error;
+
+      await expect(
+        page.getByRole('dialog', { name: 'Notificaciones de Stock' }),
+      ).toBeHidden({ timeout: 5_000 });
+    }
   }
 
-  if (!option) {
-    throw new Error(`No hay ${labelText} existentes para seleccionar; sólo aparece la opción de alta.`);
-  }
-
-  await option.click();
-  return text;
+  throw new Error(`No se pudo seleccionar ${labelText} del autocompletado.`);
 }
 
 export async function selectProduct(scope, productName, options = {}) {

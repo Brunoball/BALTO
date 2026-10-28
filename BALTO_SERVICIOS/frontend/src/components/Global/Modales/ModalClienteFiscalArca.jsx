@@ -1,8 +1,10 @@
-import React, { useEffect, useMemo, useRef } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faBuilding,
+  faCircleInfo,
+  faReceipt,
   faCheckCircle,
   faIdCard,
   faMagnifyingGlass,
@@ -47,16 +49,21 @@ export default function ModalClienteFiscalArca({
   confirmText = "Confirmar",
   footerHelp = "",
   requireFiscalData = false,
+  permitirConsumidorFinal = false,
+  onConfirmarConsumidorFinal,
   onCuitChange,
   onLookup,
   onClose,
   onConfirm,
 }) {
   const inputRef = useRef(null);
+  const [modo, setModo] = useState("cuit");
+  const esConsumidorFinal = permitirConsumidorFinal && modo === "consumidor_final";
   const busy = loading || saving;
   const cleanCuit = normalizeCuitInput(cuit);
   const cuitOk = cleanCuit.length === 11;
-  const canConfirm = cuitOk && (!requireFiscalData || !!fiscalData) && !busy;
+  const canConfirm = !busy && (esConsumidorFinal ? !!onConfirmarConsumidorFinal : cuitOk && (!requireFiscalData || !!fiscalData));
+  const confirmar = () => esConsumidorFinal ? onConfirmarConsumidorFinal?.() : onConfirm?.();
 
   const helperText = useMemo(() => {
     if (footerHelp) return footerHelp;
@@ -67,10 +74,14 @@ export default function ModalClienteFiscalArca({
   }, [footerHelp, requireFiscalData]);
 
   useEffect(() => {
-    if (!open) return undefined;
+    if (open) setModo("cuit");
+  }, [open]);
+
+  useEffect(() => {
+    if (!open || esConsumidorFinal) return undefined;
     const timer = setTimeout(() => inputRef.current?.focus(), 0);
     return () => clearTimeout(timer);
-  }, [open]);
+  }, [open, esConsumidorFinal]);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -85,8 +96,8 @@ export default function ModalClienteFiscalArca({
       if (event.key === "Enter" && !busy) {
         event.preventDefault();
         if (canConfirm) {
-          onConfirm?.();
-        } else if (cuitOk) {
+          confirmar();
+        } else if (!esConsumidorFinal && cuitOk) {
           onLookup?.();
         }
       }
@@ -94,7 +105,7 @@ export default function ModalClienteFiscalArca({
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [open, busy, canConfirm, cuitOk, onClose, onConfirm, onLookup]);
+  }, [open, busy, canConfirm, cuitOk, esConsumidorFinal, onClose, onConfirm, onConfirmarConsumidorFinal, onLookup]);
 
   if (!open) return null;
 
@@ -130,15 +141,27 @@ export default function ModalClienteFiscalArca({
             <section className="gcf-client-card" aria-label="Tarjeta del cliente">
               <div className="gcf-client-card__top">
                 <div className="gcf-client-card__avatar" aria-hidden="true">
-                  <FontAwesomeIcon icon={fiscalData ? faBuilding : faUser} />
+                  <FontAwesomeIcon icon={esConsumidorFinal || fiscalData ? faBuilding : faUser} />
                 </div>
                 <div className="gcf-client-card__heading">
                   <span className="gcf-client-card__eyebrow">Cliente fiscal</span>
-                  <h3>{fiscalData ? safeText(fiscalData.razon_social) : infoTitle}</h3>
+                  <h3>{esConsumidorFinal ? "A CONSUMIDOR FINAL" : fiscalData ? safeText(fiscalData.razon_social) : infoTitle}</h3>
                 </div>
               </div>
 
-              {fiscalData ? (
+              {description && (
+                <div className="gcf-client-card__notice">
+                  <FontAwesomeIcon icon={faCircleInfo} aria-hidden="true" />
+                  <div>{description}</div>
+                </div>
+              )}
+
+              {esConsumidorFinal ? (
+                <div className="gcf-client-empty">
+                  <div className="gcf-client-empty__icon"><FontAwesomeIcon icon={faCheckCircle} /></div>
+                  <div><b>Sin identificación fiscal</b><span>Documento 99 / número 0. No se consultará el padrón ni se modificarán los datos del cliente de BALTO.</span></div>
+                </div>
+              ) : fiscalData ? (
                 <>
                   <div className="gcf-client-card__status gcf-client-card__status--success">
                     <FontAwesomeIcon icon={faCheckCircle} />
@@ -178,7 +201,31 @@ export default function ModalClienteFiscalArca({
             </section>
 
             <aside className="nc-aside gcf-side-panel" aria-label="Consulta de CUIT">
-              <section className="nc-section gcf-panel-section">
+              {permitirConsumidorFinal && (
+                <div className="gcf-modo-emision" role="group" aria-label="Modo de facturación">
+                  <label className={`gcf-modo-emision__option ${!esConsumidorFinal ? "is-selected" : ""}`}>
+                    <input type="radio" name="gcf-modo-emision" checked={!esConsumidorFinal} onChange={() => setModo("cuit")} disabled={busy} />
+                    <span className="gcf-modo-emision__radio" aria-hidden="true" />
+                    <span className="gcf-modo-emision__icon" aria-hidden="true"><FontAwesomeIcon icon={faIdCard} /></span>
+                    <span className="gcf-modo-emision__name">Facturar con CUIT</span>
+                  </label>
+                  <label className={`gcf-modo-emision__option ${esConsumidorFinal ? "is-selected" : ""}`}>
+                    <input type="radio" name="gcf-modo-emision" checked={esConsumidorFinal} onChange={() => setModo("consumidor_final")} disabled={busy} />
+                    <span className="gcf-modo-emision__radio" aria-hidden="true" />
+                    <span className="gcf-modo-emision__icon" aria-hidden="true"><FontAwesomeIcon icon={faReceipt} /></span>
+                    <span className="gcf-modo-emision__name">Consumidor final sin identificar</span>
+                  </label>
+                </div>
+              )}
+              {esConsumidorFinal ? (
+                <div className="gcf-alert gcf-alert--info gcf-final-info" role="status">
+                  <span className="gcf-alert__icon" aria-hidden="true"><FontAwesomeIcon icon={faCircleInfo} /></span>
+                  <div className="gcf-alert__content">
+                    <b>Consumidor final sin CUIT</b>
+                    <span>Disponible para operaciones inferiores a $10.000.000. Usá esta opción únicamente si el comprador real es consumidor final y no necesita identificarse.</span>
+                  </div>
+                </div>
+              ) : <section className="nc-section gcf-panel-section">
                 <div className="nc-section-head">
                   <span className="nc-section-dot" />
                   <span>Consulta ARCA</span>
@@ -217,22 +264,23 @@ export default function ModalClienteFiscalArca({
                     {loading ? searchingText : lookupText}
                   </button>
                 </div>
-              </section>
+              </section>}
 
               {error && (
                 <div className="gcf-alert gcf-alert--error" role="alert">
-                  {error}
+                  <span className="gcf-alert__icon" aria-hidden="true"><FontAwesomeIcon icon={faCircleInfo} /></span>
+                  <span className="gcf-alert__content">{error}</span>
                 </div>
               )}
 
-              {helperText && <div className="gcf-modal__help">{helperText}</div>}
+              {!esConsumidorFinal && helperText && <div className="gcf-modal__help">{helperText}</div>}
 
               <div className="gcf-modal__actions">
                 <button type="button" className="mit-btn mit-btn--ghost" onClick={onClose} disabled={busy}>
                   Cancelar
                 </button>
-                <button type="button" className="mit-btn mit-btn--solid" onClick={onConfirm} disabled={!canConfirm}>
-                  {saving ? "Guardando..." : confirmText}
+                <button type="button" className="mit-btn mit-btn--solid" onClick={confirmar} disabled={!canConfirm}>
+                  {saving ? "Procesando..." : esConsumidorFinal ? "Continuar sin CUIT" : confirmText}
                 </button>
               </div>
             </aside>

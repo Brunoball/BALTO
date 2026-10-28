@@ -5,7 +5,20 @@
 
 .mfr-modal{
   width: min(1120px, 96vw);
-  max-height: 92vh;
+  height: min(92dvh, 920px);
+  max-height: calc(100dvh - 32px);
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Aislado del modal que lo invoca: únicamente el contenido central debe desplazarse. */
+.mfr-modal__overlay {
+  z-index: 10000000001;
+  overflow: hidden !important;
+  overscroll-behavior: none;
+  align-items: center;
 }
 
 .mfr-body{
@@ -13,6 +26,7 @@
   flex-direction: column;
   min-height: 0;
   flex: 1 1 auto;
+  overflow: hidden;
   background:
     radial-gradient(circle at 0 0, rgba(0, 85, 187, .08), transparent 28%),
     linear-gradient(180deg, var(--nv-surface, #F7F9FC), var(--nv-bg, #fff));
@@ -71,6 +85,9 @@
   overflow-x: hidden;
   min-height: 0;
   flex: 1 1 auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-gutter: stable;
 }
 
 .mfr-card,
@@ -395,13 +412,18 @@
 
 .mfr-preview-card{
   padding: 10px !important;
-  min-height: 50vh;
-  max-height: 50vh;
+  min-height: min(52dvh, 600px);
+  height: min(52dvh, 600px);
+  max-height: none;
+  display: flex;
+  flex-direction: column;
 }
 
 .mfr-preview{
   width: 100%;
-  height: 56vh;
+  height: 100%;
+  min-height: 0;
+  flex: 1 1 auto;
   display: block;
   border: 1px solid var(--nv-border, rgba(15, 23, 42, .10));
   border-radius: 14px;
@@ -411,6 +433,7 @@
 .mfr-actions{
   background: rgba(255, 255, 255, .86);
   backdrop-filter: blur(10px);
+  flex-shrink: 0;
 }
 
 .mfr-btn{
@@ -519,7 +542,7 @@ html[data-theme="oscuro"] .mfr-alert--error{
 @media (max-width: 640px){
   .mfr-modal{
     width: 100vw;
-    max-height: var(--balto-visual-viewport-height, 100dvh);
+    max-height: 100vh;
     border-radius: 0;
   }
 
@@ -568,5 +591,139 @@ html[data-theme="oscuro"] .mfr-alert--error{
 
   .mfr-preview{
     height: 68vh;
+  }
+}
+
+/* Cambio de receptor fiscal: selector compacto y legible dentro del resumen. */
+.mfr-cambiar-receptor {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 10px;
+  padding: 4px 8px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--nv-action, #0055bb);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: background .16s ease, border-color .16s ease;
+}
+.mfr-cambiar-receptor:hover, .mfr-cambiar-receptor[aria-expanded="true"] {
+  background: rgba(0, 85, 187, .08);
+  border-color: rgba(0, 85, 187, .18);
+}
+.mfr-cambiar-receptor:focus-visible { outline: 2px solid var(--nv-action, #0055bb); outline-offset: 2px; }
+.mfr-cambiar-receptor:disabled { opacity: .5; cursor: not-allowed; }
+
+.mfr-receptor-selector {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid rgba(0, 85, 187, .20);
+  border-radius: 12px;
+  background: rgba(0, 85, 187, .05);
+  animation: mfr-selector-appear .18s ease-out;
+}
+@keyframes mfr-selector-appear {
+  from { opacity: 0; transform: translateY(-5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.mfr-receptor-selector__title { color: var(--nv-text, #0a2540); font-size: 14px; font-weight: 650; }
+.mfr-receptor-selector__options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.mfr-receptor-selector__option {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--nv-border-md, #bfd0e5);
+  border-radius: 11px;
+  background: var(--nv-bg, #fff);
+  color: var(--nv-text, #0a2540);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color .18s ease, background .18s ease, box-shadow .18s ease;
+}
+.mfr-receptor-selector__option:hover:not(:disabled) {
+  background: rgba(0, 85, 187, .04);
+  border-color: rgba(0, 85, 187, .50);
+  box-shadow: 0 5px 14px rgba(0, 85, 187, .06);
+}
+.mfr-receptor-selector__option:focus-visible { outline: 2px solid var(--nv-action, #0055bb); outline-offset: 2px; }
+.mfr-receptor-selector__option:disabled { opacity: .5; cursor: not-allowed; }
+.mfr-receptor-selector__icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 32px;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  color: var(--nv-action, #0055bb);
+  background: rgba(0, 85, 187, .085);
+}
+.mfr-receptor-selector__option-text { display: grid; gap: 4px; min-width: 0; }
+.mfr-receptor-selector__option-text b { font-size: 13px; font-weight: 650; color: var(--nv-text, #0a2540); }
+.mfr-receptor-selector__option-text small { font-size: 11.5px; line-height: 1.45; color: var(--nv-muted, #5a6a7e); }
+.mfr-receptor-selector__notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin: 0;
+  color: var(--nv-muted, #5a6a7e);
+  font-size: 11.5px;
+  line-height: 1.55;
+}
+.mfr-receptor-selector__notice svg { flex: 0 0 auto; margin-top: 2px; color: var(--nv-action, #0055bb); }
+
+html[data-theme="oscuro"] .mfr-receptor-selector { background: rgba(45, 131, 246, .10); border-color: rgba(120, 170, 240, .27); }
+html[data-theme="oscuro"] .mfr-receptor-selector__option { background: rgba(255,255,255,.045); border-color: rgba(255,255,255,.14); }
+html[data-theme="oscuro"] .mfr-receptor-selector__option:hover:not(:disabled) { background: rgba(45, 131, 246, .13); border-color: rgba(120,170,240,.5); }
+html[data-theme="oscuro"] .mfr-receptor-selector__icon { background: rgba(45, 131, 246, .18); }
+html[data-theme="oscuro"] .mfr-receptor-selector__title, html[data-theme="oscuro"] .mfr-receptor-selector__option-text b { color: rgba(255,255,255,.93); }
+html[data-theme="oscuro"] .mfr-receptor-selector__option-text small, html[data-theme="oscuro"] .mfr-receptor-selector__notice { color: rgba(210,220,235,.75); }
+html[data-theme="oscuro"] .mfr-receptor-selector__icon, html[data-theme="oscuro"] .mfr-receptor-selector__notice svg, html[data-theme="oscuro"] .mfr-cambiar-receptor { color: #8bbdff; }
+
+@media (max-width: 640px) {
+  .mfr-modal__overlay { padding: 0; }
+  .mfr-modal { height: 100dvh; max-height: 100dvh; }
+  .mfr-receptor-selector__options { grid-template-columns: 1fr; }
+  .mfr-preview { height: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mfr-receptor-selector { animation: none; }
+  .mfr-receptor-selector__option, .mfr-cambiar-receptor { transition: none; }
+}
+
+/* El resumen conserva exactamente un área desplazable dentro del modal.
+   El viewport visual limita el contenedor, nunca se desplaza el overlay. */
+html.balto-visual-viewport-ready .mfr-modal__overlay {
+  overflow: hidden !important;
+  align-items: center !important;
+}
+html.balto-visual-viewport-ready .mfr-modal__overlay > .mfr-modal {
+  min-height: 0 !important;
+  max-height: 100% !important;
+}
+.mfr-modal__overlay .mfr-body > .mfr-tabs,
+.mfr-modal__overlay .mfr-body > .mfr-actions {
+  flex: 0 0 auto;
+}
+.mfr-modal__overlay .mfr-body > :is(.mfr-tabpanel, .mfr-preview-panel) {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+@media (max-width: 640px) {
+  .mfr-modal__overlay { padding: 0 !important; }
+  .mfr-modal__overlay > .mfr-modal {
+    width: 100%;
+    height: 100%;
+    max-height: 100% !important;
+    border-radius: 0;
   }
 }

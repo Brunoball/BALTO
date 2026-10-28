@@ -373,6 +373,15 @@ function getEmisor(data, fact) {
 
 function getReceptor(fact, data) {
   const cf = data?.cliente_facturacion || null;
+  if (Number(fact?.doc_tipo ?? cf?.doc_tipo ?? data?.doc_tipo) === 99) {
+    return {
+      cuit: "Sin identificar",
+      razon: "A CONSUMIDOR FINAL",
+      dom: "NR",
+      condIva: "Consumidor Final",
+      condVenta: sanitizePdfText(s(fact?.condicion_venta || cf?.cond_venta || data?.condicion_venta || FIX.cond_venta_default)),
+    };
+  }
 
   const docNro = s(
     fact?.doc_nro ?? cf?.doc_nro ?? data?.doc_nro ?? ""

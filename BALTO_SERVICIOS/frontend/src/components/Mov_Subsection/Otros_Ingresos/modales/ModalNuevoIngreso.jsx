@@ -11,6 +11,7 @@ import ModalClienteFiscalArca from "../../../Global/Modales/ModalClienteFiscalAr
 import ModalNuevaDescripcion from "./ModalNuevaDescripcion.jsx";
 import ModalVerComprobante from "../../../Global/Ver_Comprobantes/ModalVerComprobante.jsx";
 import ModalFacturaBaltoResumen from "../../Facturacion/ModalFacturaBaltoResumen.jsx";
+import { crearReceptorConsumidorFinal, validarConsumidorFinalSinIdentificar } from "../../Facturacion/utils/consumidorFinal";
 import "../../../Global/Global_css/GlobalsModalsV2.css";
 import "../../../Global/Global_css/Global_responsive.css";
 import "../../../Global/Global_css/roots.css";
@@ -170,6 +171,7 @@ function normalizeArcaSummary(summary) {
 }
 function normalizeClienteFiscalDb(data) {
   const s = data && typeof data === "object" ? data : {};
+  if (Number(s.doc_tipo) === 99) return { ...crearReceptorConsumidorFinal(), id_cliente: Number(s.id_cliente || 0) || null };
   return {
     id_cliente_fiscal: Number(s.id_cliente_fiscal || 0) || null,
     id_cliente: Number(s.id_cliente || 0) || null,
@@ -304,6 +306,9 @@ function buildIngresoFacturaDraft(payload, operationKey, context = {}) {
     labelSistema: "Nuevo otro ingreso",
     fecha_cbte_iso: safeStr(payload?.fecha).slice(0, 10) || todayISO(),
     vto_pago_iso: plusDaysISOFrom(payload?.fecha, 10),
+    concepto: 2,
+    fch_serv_desde: safeStr(payload?.fecha).slice(0, 10) || todayISO(),
+    fch_serv_hasta: safeStr(payload?.fecha).slice(0, 10) || todayISO(),
     cbte_tipo: codigoComprobante,
     pto_vta: puntoVenta,
     cliente_facturacion: {
@@ -1728,7 +1733,7 @@ export default function ModalNuevoIngreso({
       nombre: selectedClienteNombre,
     });
     if (!cliente.id_cliente) throw new Error("Seleccioná un cliente antes de facturar.");
-    if (!fiscal.cuit || !fiscal.razon_social) throw new Error("El cliente no tiene datos fiscales válidos.");
+    if (Number(fiscal.doc_tipo) !== 99 && (!fiscal.cuit || !fiscal.razon_social)) throw new Error("El cliente no tiene datos fiscales válidos.");
 
     const payload = buildPayload();
     if (!facturaOperationKeyRef.current) {
@@ -1780,6 +1785,23 @@ export default function ModalNuevoIngreso({
       setSavingAction(null);
     }
   }, [fiscalCuitInput, fiscalArcaData, consultarCuitArca, guardarClienteFiscalDesdeArca, selectedClienteId, abrirResumenFactura, showToast]);
+
+  const facturarConsumidorFinal = useCallback(async () => {
+    if (!(Number(selectedClienteId) > 0)) {
+      setFiscalError("Seleccioná un cliente antes de facturar.");
+      return;
+    }
+    const payload = buildPayload();
+    const msg = validarConsumidorFinalSinIdentificar(payload?.monto_total ?? payload?.total);
+    if (msg) { setFiscalError(msg); showToast("advertencia", msg); return; }
+    try {
+      await abrirResumenFactura(crearReceptorConsumidorFinal());
+      setFiscalPanelOpen(false);
+      setFiscalError("");
+    } catch (error) {
+      setFiscalError(error?.message || "No se pudo preparar la factura a consumidor final.");
+    }
+  }, [selectedClienteId, buildPayload, abrirResumenFactura, showToast]);
 
   const onClickFacturar = useCallback(async () => {
     if (saving) return;
@@ -2050,8 +2072,7 @@ export default function ModalNuevoIngreso({
     async (facturaEmitida) => {
       if (saving) return;
       if (!facturaDraft?.payload || !facturaDraft?.data) {
-        showToast("error", "No se encontró el borrador del ingreso a facturar.");
-        return;
+        throw new Error("No se encontró el borrador del ingreso a facturar. Reabrí el borrador sin volver a emitir.");
       }
 
       setSavingAction("facturar");
@@ -2107,6 +2128,9 @@ export default function ModalNuevoIngreso({
               }. Volvé a presionar Facturar para reintentar sin duplicar el ingreso.`
             : error?.message || "No se pudo facturar el ingreso."
         );
+        // No cerrar el resumen ni marcarlo finalizado después de un fallo post-CAE.
+        // La misma operacion_key permite recuperar la autorización sin duplicarla.
+        throw error;
       } finally {
         setSaving(false);
         setSavingAction(null);
@@ -2616,6 +2640,8 @@ export default function ModalNuevoIngreso({
           onBack={() => {
             if (!saving) setOpenFactura(false);
           }}
+          onCambiarReceptor={(receptor) => setFacturaDraft((prev) => prev ? ({ ...prev, data: { ...prev.data, cliente_facturacion: receptor } }) : prev)}
+          onEditarReceptor={() => { setOpenFactura(false); setFiscalPanelOpen(true); }}
           onCloseAll={() => {
             if (!saving) setOpenFactura(false);
           }}
@@ -2655,6 +2681,8 @@ export default function ModalNuevoIngreso({
         saving={saving && savingAction === "facturar"}
         confirmText="Confirmar y facturar"
         requireFiscalData={false}
+        permitirConsumidorFinal
+        onConfirmarConsumidorFinal={facturarConsumidorFinal}
         onCuitChange={(value) => {
           setFiscalCuitInput(value);
           setFiscalArcaData(null);

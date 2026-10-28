@@ -380,7 +380,15 @@ export default function ModalEmitirNotaCreditoVenta({
       fecha_cbte_iso: todayISO(), vto_pago_iso: todayISO(), cbte_tipo: Number(contexto?.nota_credito?.cbte_tipo || 13),
       pto_vta: Number(contexto?.nota_credito?.pto_vta || 2), items_facturacion: itemsFactura,
       total_ars: totalSeleccionado, monto: totalSeleccionado, importe: totalSeleccionado,
-      observaciones: observaciones || MOTIVOS.find(([k]) => k === motivo)?.[1] || "Nota de crédito", concepto: 1,
+      observaciones: observaciones || MOTIVOS.find(([k]) => k === motivo)?.[1] || "Nota de crédito",
+      // El comprobante fiscal de una NC por servicio también requiere Concepto 2/3.
+      concepto: (() => {
+        const tipos = (contexto?.items || []).map((it) => String(it?.tipo_item || it?.tipo_item_db || "").toUpperCase());
+        const servicios = tipos.some((tipo) => ["SERVICIO", "DETALLE", "MANUAL"].includes(tipo));
+        const productos = tipos.some((tipo) => ["ARTICULO", "PRODUCTO"].includes(tipo));
+        return servicios ? (productos ? 3 : 2) : (actionScope === "otros_ingresos" ? 2 : 1);
+      })(),
+      fch_serv_desde: todayISO(), fch_serv_hasta: todayISO(),
       config_facturacion: cfg, id_config_facturacion: cfg.id_config_facturacion || cfg.idConfigFacturacion || null,
       idConfigFacturacion: cfg.idConfigFacturacion || cfg.id_config_facturacion || null, emisor: cfg,
       id_comprobante_original: Number(contexto?.factura_original?.id_comprobante || 0) || null,
@@ -503,8 +511,23 @@ export default function ModalEmitirNotaCreditoVenta({
 
   const continuar = () => {
     if (isBaltoDemoMode()) return showToast("advertencia", DEMO_BLOCK_MESSAGE, 5200);
+    if (modalidad === "ARCA" && contexto?.nota_credito_pendiente) {
+      const nc = contexto.nota_credito_pendiente;
+      return setError(`La nota de crédito ${numeroComprobante(nc.pto_vta, nc.cbte_nro)} ya fue autorizada por ARCA (CAE ${nc.cae}) pero quedó pendiente de aplicar. No emitas otra: conciliá esa autorización.`);
+    }
     if (modalidad === "ARCA" && !asociacionFiscalValida) {
       return setError("No se pudo identificar correctamente la factura ARCA original. No se emitirá ninguna nota de crédito sin el comprobante asociado.");
+    }
+    if (modalidad === "ARCA" && contexto?.factura_original) {
+      const original = contexto.factura_original;
+      const actual = contexto.cliente_facturacion || {};
+      const tipoOriginal = Number(original.doc_tipo || 0);
+      const tipoActual = Number(actual.doc_tipo || 0);
+      const nroOriginal = tipoOriginal === 99 ? "0" : onlyDigits(original.doc_nro);
+      const nroActual = tipoActual === 99 ? "0" : onlyDigits(actual.doc_nro || actual.cuit);
+      if (!tipoOriginal || !nroOriginal || tipoOriginal !== tipoActual || nroOriginal !== nroActual) {
+        return setError("El receptor fiscal difiere de la factura original. No se enviará ninguna nota de crédito a ARCA.");
+      }
     }
     if (!puedeContinuar) {
       if (esEliminacionTotal && !coincideTotalEliminacion) return setError(`No se pudo calcular exactamente el saldo total pendiente del ${entityLabel}.`);
@@ -568,6 +591,13 @@ export default function ModalEmitirNotaCreditoVenta({
               </div>
             )}
 
+            {contexto?.nota_credito_pendiente && (
+              <div className="ncv-feedback ncv-feedback--error" role="alert">
+                Ya hay una nota de crédito autorizada por ARCA ({numeroComprobante(
+                  contexto.nota_credito_pendiente.pto_vta, contexto.nota_credito_pendiente.cbte_nro
+                )}). Debe conciliarse antes de solicitar otra autorización.
+              </div>
+            )}
             {contexto && (
               <>
                 {modalidad === "ARCA" && (
