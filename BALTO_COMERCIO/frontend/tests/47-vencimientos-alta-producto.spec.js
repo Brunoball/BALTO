@@ -1,4 +1,5 @@
 import { test, expect } from './support/test.js';
+import { fillStockPrices, openStockEditorTab } from './support/stock-editor.js';
 import { authenticatedApi, expectApiSuccess } from './support/api.js';
 import { requireMutations, waitDialog, waitForBusyToFinish } from './support/ui.js';
 import { deleteUnusedStockProduct } from './support/flows.js';
@@ -97,10 +98,7 @@ test('@stock @vencimientos @ui Agregar producto muestra fecha en simple y en var
     await dialog.locator('input[name="nombre"]').fill(name);
     await dialog.locator('input[name="sku"]').fill(uniqueSku('VUI'));
     await dialog.locator('input[name="stock"]').fill('6');
-    await dialog.locator('input[name="precio_costo"]').fill('10');
-    await dialog.locator('input[name="precio_costo"]').blur();
-    await dialog.locator('input[name="precio"]').fill('20');
-    await dialog.locator('input[name="precio"]').blur();
+    await fillStockPrices(dialog, { cost: 10, price: 20 });
 
     // Desde el rediseño, las partidas viven en la pestaña Vencimientos
     // y se cargan mediante un modal propio, NO inputs en línea.
@@ -129,7 +127,7 @@ test('@stock @vencimientos @ui Agregar producto muestra fecha en simple y en var
     await dialog.getByRole('checkbox', { name: 'Tiene variantes' }).uncheck();
     await dialog.getByRole('tab', { name: 'Vencimientos' }).click();
     await expect(simple.getByRole('table', { name: 'Partidas con vencimiento' }).locator('.sv-gridDataRow')).toHaveCount(1);
-    await dialog.getByRole('tab', { name: /Producto original/ }).click();
+    await openStockEditorTab(dialog, 'general');
 
     const response = page.waitForResponse(r => r.request().method() === 'POST' && new URL(r.url()).searchParams.get('action') === 'stock_productos_crear', { timeout: 120000 });
     await dialog.getByRole('button', { name: /Guardar producto/i }).last().click();

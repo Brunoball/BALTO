@@ -501,11 +501,9 @@ export async function searchRow(page, query, placeholderPattern = /Buscar/i) {
 
   const stockModeIsInactive = async () => {
     if (!isStockPage) return false;
-    return page
-      .getByRole('button', { name: /Ver activos/i })
-      .first()
-      .isVisible()
-      .catch(() => false);
+    // Stock ahora usa pestañas, no los antiguos botones "Ver activos / Ver dados de baja".
+    return (await page.getByRole('tab', { name: /^Dados de baja$/i })
+      .getAttribute('aria-selected').catch(() => null)) === 'true';
   };
 
   const waitStockListResponse = (expectedInactive, expectedQuery = null, timeout = 7_000) => {
@@ -602,7 +600,7 @@ export async function searchRow(page, query, placeholderPattern = /Buscar/i) {
     await expect(searchAfterReload).toBeVisible({ timeout: 7_000 });
 
     if (wasInactive) {
-      const showInactive = page.getByRole('button', { name: /Ver dados de baja/i }).first();
+      const showInactive = page.getByRole('tab', { name: /^Dados de baja$/i });
       await expect(showInactive).toBeVisible({ timeout: 5_000 });
       const inactiveResponsePromise = waitStockListResponse(true, null, 7_000);
       await showInactive.click();
@@ -610,7 +608,8 @@ export async function searchRow(page, query, placeholderPattern = /Buscar/i) {
       if (inactiveResponse && !inactiveResponse.ok()) {
         throw new Error(`El listado de productos dados de baja respondió HTTP ${inactiveResponse.status()}.`);
       }
-      await expect(page.getByRole('button', { name: /Ver activos/i }).first()).toBeVisible({ timeout: 5_000 });
+      await expect(showInactive).toHaveAttribute('aria-selected', 'true', { timeout: 5_000 });
+      await expect(page.getByRole('tab', { name: /^Activos$/i })).toHaveAttribute('aria-selected', 'false');
     }
 
     await waitForBusyToFinish(page);

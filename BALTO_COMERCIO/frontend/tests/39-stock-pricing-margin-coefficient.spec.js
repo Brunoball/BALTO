@@ -1,4 +1,5 @@
 import { test, expect } from './support/test.js';
+import { openStockEditorTab } from './support/stock-editor.js';
 import { authenticatedApi, expectApiSuccess } from './support/api.js';
 import { waitDialog, waitForBusyToFinish } from './support/ui.js';
 
@@ -82,6 +83,7 @@ test('@stock @pricing @critical margen real y coeficiente ponderado usan la fór
   await page.getByRole('button', { name: /Agregar producto/i }).first().click();
 
   const dialog = await waitDialog(page, 'Productos');
+  await openStockEditorTab(dialog, 'prices');
   await expect(dialog.getByTestId('stock-coeficiente-ponderado')).toBeVisible();
 
   const cost = dialog.locator('input[name="precio_costo"]');

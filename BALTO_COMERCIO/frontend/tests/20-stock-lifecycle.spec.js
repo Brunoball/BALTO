@@ -51,7 +51,8 @@ test('@stock @crud @critical stock: baja, listado de bajas, reactivación y elim
   });
   await expect(lowDialog).toBeHidden({ timeout: 30_000 });
 
-  await page.getByRole('button', { name: /Ver dados de baja/i }).first().click();
+  await page.getByRole('tab', { name: /^Dados de baja$/i }).click();
+  await expect(page.getByRole('tab', { name: /^Dados de baja$/i })).toHaveAttribute('aria-selected', 'true');
   await waitForBusyToFinish(page);
   row = await searchRow(page, sku, /Buscar por nombre, SKU o variante/i);
   await expect(row).toContainText(/Dado de baja|Inactivo/i);
@@ -60,10 +61,51 @@ test('@stock @crud @critical stock: baja, listado de bajas, reactivación y elim
     await row.getByTitle('Dar de alta producto').click();
   });
 
-  await page.getByRole('button', { name: /Ver activos/i }).first().click();
+  await page.getByRole('tab', { name: /^Activos$/i }).click();
+  await expect(page.getByRole('tab', { name: /^Activos$/i })).toHaveAttribute('aria-selected', 'true');
   await waitForBusyToFinish(page);
   row = await searchRow(page, sku, /Buscar por nombre, SKU o variante/i);
   await expect(row).toContainText(name);
 
   await deleteUnusedStockProduct(page, name);
+});
+
+// Verificación de la navegación nueva, incluso cuando el tenant no tiene productos de baja.
+// No crea, elimina ni modifica ningún registro y puede usarse para el smoke de despliegue.
+test('@stock @ui @critical stock: pestañas Activos / Dados de baja consultan el estado correcto', async ({ page }) => {
+  await page.goto('/panel/stock');
+  await waitForBusyToFinish(page);
+
+  const tabs = page.getByRole('tablist', { name: 'Vista de productos de stock' });
+  const activos = tabs.getByRole('tab', { name: 'Activos', exact: true });
+  const bajas = tabs.getByRole('tab', { name: 'Dados de baja', exact: true });
+  await expect(activos).toHaveAttribute('aria-selected', 'true');
+  await expect(bajas).toHaveAttribute('aria-selected', 'false');
+
+  const stockListResponse = (activo) => page.waitForResponse((response) => {
+    if (response.request().method() !== 'GET') return false;
+    try {
+      const url = new URL(response.url());
+      return url.searchParams.get('action') === 'stock_productos_listar'
+        && url.searchParams.get('activo') === String(activo);
+    } catch {
+      return false;
+    }
+  }, { timeout: 30_000 });
+
+  const bajasResponsePromise = stockListResponse(0);
+  await bajas.click();
+  const bajasResponse = await bajasResponsePromise;
+  expect(bajasResponse.status()).toBeLessThan(400);
+  await expect(bajas).toHaveAttribute('aria-selected', 'true');
+  await expect(activos).toHaveAttribute('aria-selected', 'false');
+  await expect(page.getByRole('button', { name: 'Agregar producto', exact: true }).first()).toBeDisabled();
+
+  const activosResponsePromise = stockListResponse(1);
+  await activos.click();
+  const activosResponse = await activosResponsePromise;
+  expect(activosResponse.status()).toBeLessThan(400);
+  await expect(activos).toHaveAttribute('aria-selected', 'true');
+  await expect(bajas).toHaveAttribute('aria-selected', 'false');
+  await expect(page.getByRole('button', { name: 'Agregar producto', exact: true }).first()).toBeEnabled();
 });

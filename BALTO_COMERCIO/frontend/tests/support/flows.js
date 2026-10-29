@@ -1,5 +1,6 @@
 import { expect } from '@playwright/test';
 import { waitStockEditorUnitsReady } from './stock-units.js';
+import { fillStockPrices } from './stock-editor.js';
 import {
   clickSaveAndWait,
   completeRemainingAmount,
@@ -48,10 +49,7 @@ export async function createStockProduct(page, product) {
   await dialog.locator('input[name="nombre"]').fill(product.name);
   await dialog.locator('input[name="sku"]').fill(product.sku);
   await dialog.locator('input[name="stock"]').fill(String(product.stock ?? 10));
-  await dialog.locator('input[name="precio_costo"]').fill(String(product.cost ?? 100));
-  await dialog.locator('input[name="precio_costo"]').blur();
-  await dialog.locator('input[name="precio"]').fill(String(product.price ?? 150));
-  await dialog.locator('input[name="precio"]').blur();
+  await fillStockPrices(dialog, { cost: product.cost ?? 100, price: product.price ?? 150 });
 
   // En corridas remotas largas Hostinger puede devolver un 500 transitorio
   // mientras rota conexiones/sesiones. Reintentamos únicamente 5xx/429/408.
@@ -130,8 +128,7 @@ export async function editStockProduct(page, productName, updates) {
   if (updates.name) await dialog.locator('input[name="nombre"]').fill(updates.name);
   if (updates.stock !== undefined) await dialog.locator('input[name="stock"]').fill(String(updates.stock));
   if (updates.price !== undefined) {
-    await dialog.locator('input[name="precio"]').fill(String(updates.price));
-    await dialog.locator('input[name="precio"]').blur();
+    await fillStockPrices(dialog, { price: updates.price });
   }
 
   const updateResponsePromise = page.waitForResponse(

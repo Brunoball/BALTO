@@ -1,4 +1,5 @@
 import { test, expect } from './support/test.js';
+import { fillStockPrices, openStockEditorTab } from './support/stock-editor.js';
 import { uniqueName, uniqueSku } from './support/data.js';
 import { authenticatedApi, expectApiSuccess } from './support/api.js';
 import { createStockProductFixture } from './support/stock-fixtures.js';
@@ -211,8 +212,8 @@ test('@stock @unidades @ui Stock: crea unidad desde el selector y guarda stock f
   await dialog.locator('input[name="nombre"]').fill(productName);
   await dialog.locator('input[name="sku"]').fill(sku);
   await dialog.locator('input[name="stock"]').fill('7,625');
-  await dialog.locator('input[name="precio_costo"]').fill('100');
-  await dialog.locator('input[name="precio"]').fill('160');
+  await fillStockPrices(dialog, { cost: 100, price: 160 });
+  await openStockEditorTab(dialog, 'general');
 
   const unitField = dialog.locator('.fl-field').filter({ hasText: /Unidad de stock/i }).first();
   const select = unitField.locator('select').first();

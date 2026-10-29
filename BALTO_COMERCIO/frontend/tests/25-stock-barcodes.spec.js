@@ -3,6 +3,7 @@ import { authenticatedApi, expectApiSuccess } from './support/api.js';
 import { uniqueName, uniqueSku } from './support/data.js';
 import { createStockProduct, deleteUnusedStockProduct } from './support/flows.js';
 import { requireMutations, searchRow, waitDialog, waitForBusyToFinish } from './support/ui.js';
+import { fillStockPrices, openStockEditorTab } from './support/stock-editor.js';
 import { cleanupTestUser, createEmployeeTestUser, loginTestUserInNewContext } from './support/users.js';
 import {
   barcodeApi,
@@ -43,7 +44,8 @@ async function setProductActiveState(page, sku, active) {
 
   // Para reactivar primero hay que entrar al listado de bajas; el producto ya no
   // existe en la grilla activa, así que buscarlo antes siempre devuelve 0 filas.
-  await page.getByRole('button', { name: /Ver dados de baja/i }).first().click();
+  await page.getByRole('tab', { name: /^Dados de baja$/i }).click();
+  await expect(page.getByRole('tab', { name: /^Dados de baja$/i })).toHaveAttribute('aria-selected', 'true');
   await waitForBusyToFinish(page);
   const row = await searchRow(page, sku, /Buscar por nombre, SKU o variante/i);
   const responsePromise = page.waitForResponse((response) =>
@@ -69,12 +71,9 @@ test('@stock @barcode @alta guardar desde Código de barra mantiene el modal abi
     await dialog.locator('input[name="nombre"]').fill(productName);
     await dialog.locator('input[name="sku"]').fill(productSku);
     await dialog.locator('input[name="stock"]').fill('4');
-    await dialog.locator('input[name="precio_costo"]').fill('80');
-    await dialog.locator('input[name="precio_costo"]').blur();
-    await dialog.locator('input[name="precio"]').fill('140');
-    await dialog.locator('input[name="precio"]').blur();
+    await fillStockPrices(dialog, { cost: 80, price: 140 });
 
-    await dialog.getByRole('tab', { name: /Código de barra/i }).click();
+    await openStockEditorTab(dialog, 'barcodes');
     await expect(dialog).toContainText(/Primero hay que guardar el producto/i);
     const saveAndGenerate = dialog.getByRole('button', { name: /Guardar y generar códigos/i });
     await expect(saveAndGenerate).toBeEnabled();
@@ -149,7 +148,7 @@ test('@stock @barcode @critical producto simple: BL-P, código físico, duplicad
     const productRow = await searchRow(page, productSku, /Buscar por nombre, SKU o variante/i);
     await productRow.getByTitle('Editar').click();
     const dialog = await waitDialog(page, 'Editar producto');
-    await dialog.getByRole('tab', { name: /Código de barra/i }).click();
+    await openStockEditorTab(dialog, 'barcodes');
     const card = dialog.locator('.stock-barcode__card').first();
     await expect(card).toBeVisible({ timeout: 30_000 });
     await expect(card).toContainText(`BL-P-${productId}`);
@@ -274,7 +273,7 @@ test('@stock @barcode @variants variantes: un BL-V por ID real, guardado sin cer
     const row = await searchRow(page, parentSku, /Buscar por nombre, SKU o variante/i);
     await row.getByTitle('Editar').click();
     const dialog = await waitDialog(page, 'Editar producto');
-    await dialog.getByRole('tab', { name: /Código de barra/i }).click();
+    await openStockEditorTab(dialog, 'barcodes');
     await expect(dialog.locator('.stock-barcode__card')).toHaveCount(2, { timeout: 30_000 });
     await expect(dialog.locator('.stock-barcode__section--internal .stock-barcode__svg')).toHaveCount(2);
     await expect(dialog.getByRole('button', { name: /Imprimir todos/i })).toBeEnabled();
@@ -299,7 +298,7 @@ test('@stock @barcode @variants variantes: un BL-V por ID real, guardado sin cer
       ) updateRequests += 1;
     };
     page.on('request', countUpdate);
-    await dialog.getByRole('tab', { name: /Código de barra/i }).click();
+    await openStockEditorTab(dialog, 'barcodes');
     await expect(dialog).toContainText(/Hay cambios de variantes sin guardar/i);
     // El editor carga las unidades de forma independiente. No intentar guardar
     // mientras el backend todavía no informó si Tienda Nube bloquea la unidad.
@@ -321,7 +320,7 @@ test('@stock @barcode @variants variantes: un BL-V por ID real, guardado sin cer
     await priceField.locator('input').fill(String(third.price));
     await priceField.locator('input').blur();
 
-    await dialog.getByRole('tab', { name: /Código de barra/i }).click();
+    await openStockEditorTab(dialog, 'barcodes');
     await expect(dialog).toContainText(/Hay cambios de variantes sin guardar/i);
     const updatePromise = page.waitForResponse((response) =>
       response.request().method() === 'POST' &&
