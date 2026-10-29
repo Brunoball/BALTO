@@ -8,7 +8,6 @@
 .sv-partida-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px 12px}.sv-partida-full{grid-column:1 / -1}
 .sv-partida-fields .cmi-floatingField{min-width:0}.sv-partida-fields .cmi-input{width:100%;min-height:46px}
 .sv-partida-fields textarea.cmi-input{resize:vertical;min-height:76px}
-.sv-partida-error{font-size:12px;color:var(--color-danger,#bf2939);margin:0}
 .sv-partida-footer{display:flex;justify-content:flex-end;gap:10px;align-items:center;padding:14px 22px;border-top:1px solid var(--nv-border,rgba(10,37,64,.1));background:var(--mi-bg,var(--nv-card,#fff))}
 .sv-partida-footer .mit-btn{min-height:40px;display:inline-flex;align-items:center;gap:7px;justify-content:center}
 html[data-theme="oscuro"] .sv-partida-modal{background:var(--mi-bg,#101e2b);color:var(--nv-text,#e5eaf0)}

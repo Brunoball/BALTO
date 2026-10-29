@@ -110,9 +110,25 @@ test('@stock @vencimientos @ui Agregar producto muestra fecha en simple y en var
     await expect(vencimientoModal).toBeVisible();
     await vencimientoModal.getByLabel('Fecha de vencimiento *').fill(fecha(22));
     await vencimientoModal.getByLabel('Cantidad *').fill('3');
+    await vencimientoModal.getByLabel('Referencia (opcional)').fill('lote octubre');
+    await expect(vencimientoModal.getByLabel('Referencia (opcional)')).toHaveValue('LOTE OCTUBRE');
     await vencimientoModal.getByRole('button', { name: 'Agregar vencimiento' }).click();
     await expect(vencimientoModal).toBeHidden();
+    await expect(page.locator('.toast-container.toast-exito')).toContainText('Partida agregada a la carga pendiente.');
     await expect(simple.getByRole('table', { name: 'Partidas con vencimiento' }).locator('.sv-gridDataRow')).toHaveCount(1);
+    await simple.getByRole('button', { name: /Editar partida 1/i }).click();
+    const editarPendiente = page.getByRole('dialog', { name: 'Editar vencimiento' });
+    await editarPendiente.getByLabel('Cantidad *').fill('20');
+    await editarPendiente.getByRole('button', { name: 'Guardar cambios' }).click();
+    await expect(page.locator('.toast-container.toast-error')).toContainText('La cantidad supera el stock disponible');
+    await expect(editarPendiente.locator('.sv-partida-error')).toHaveCount(0);
+    await expect(editarPendiente.getByLabel('Referencia (opcional)')).toHaveValue('LOTE OCTUBRE');
+    await editarPendiente.getByLabel('Referencia (opcional)').fill('nuevo lote');
+    await expect(editarPendiente.getByLabel('Referencia (opcional)')).toHaveValue('NUEVO LOTE');
+    await editarPendiente.getByLabel('Cantidad *').fill('3');
+    await editarPendiente.getByRole('button', { name: 'Guardar cambios' }).click();
+    await expect(editarPendiente).toBeHidden();
+    await expect(page.locator('.toast-container.toast-exito')).toContainText('Partida actualizada en la carga pendiente.');
     // Variantes tienen sus campos propios (sin duplicar las fechas del padre).
     await dialog.getByRole('tab', { name: 'Variantes' }).click();
     await dialog.getByRole('checkbox', { name: 'Tiene variantes' }).check();
@@ -135,6 +151,8 @@ test('@stock @vencimientos @ui Agregar producto muestra fecha en simple y en var
     const body = getData(expectApiSuccess({ status: create.status(), body: await create.json() }));
     creado = true;
     expect(Number(body.vencimientos_registrados)).toBe(1);
-    expect((await vencimientos(page, Number(body.producto?.id_stock_producto))).map(v => Number(v.cantidad_disponible))).toEqual([3]);
+    const partidasGuardadas = await vencimientos(page, Number(body.producto?.id_stock_producto));
+    expect(partidasGuardadas.map(v => Number(v.cantidad_disponible))).toEqual([3]);
+    expect(partidasGuardadas[0].referencia).toBe('NUEVO LOTE');
   } finally { if (creado) await deleteUnusedStockProduct(page, name); }
 });

@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlus, faBoxOpen } from "@fortawesome/free-solid-svg-icons";
 import VencimientosResumen from "./VencimientosResumen";
+import { toUpperCaseValue } from "../utils/stockFormUtils";
 import ModalPartidaVencimiento from "./ModalPartidaVencimiento";
 import ModalEliminar from "../../Global/Modales/ModalEliminar";
 import VencimientosTabla, { fechaVencimientoTexto } from "./VencimientosTabla";
@@ -17,7 +18,7 @@ export const prepararVencimientosAlta = (rows = []) =>
   (Array.isArray(rows) ? rows : []).filter(hasContent).map((row) => ({
     fecha_vencimiento: String(row.fecha_vencimiento || "").trim(),
     cantidad: Number(String(row.cantidad ?? "").replace(",", ".")),
-    referencia: String(row.referencia || "").trim(),
+    referencia: toUpperCaseValue(row.referencia).trim(),
   }));
 
 function esFechaReal(value) {
@@ -52,7 +53,7 @@ export function validarVencimientosAlta(rows = [], stock, permiteDecimales = tru
 
 /** Alta: no guarda hasta que se confirma el producto; cada partida se edita en un modal. */
 export default function VencimientosAltaFields({
-  value = [], onChange, stock = 0, disabled = false, error = "", titulo = "Fechas de vencimiento", permiteDecimales = true,
+  value = [], onChange, onToast, stock = 0, disabled = false, titulo = "Fechas de vencimiento", permiteDecimales = true,
 }) {
   const rows = Array.isArray(value) ? value : [];
   const [editor, setEditor] = useState(null);
@@ -61,11 +62,14 @@ export default function VencimientosAltaFields({
   const stockNum = Number(String(stock ?? "").replace(",", ".")) || 0;
   const editando = editor !== null && editor >= 0;
   const disponibles = Math.max(0, stockNum - total + (editando ? Number(String(rows[editor]?.cantidad || 0).replace(",", ".")) || 0 : 0));
+  // Evita reinicializar el modal cuando el toast provoca un re-render del alta.
+  const partidaInicial = useMemo(() => editando ? { ...rows[editor], __editando: true } : null, [editando, editor, rows]);
   const guardar = (partida) => {
     const siguientes = editando ? rows.map((r, i) => i === editor ? { ...r, ...partida } : r) : [...rows, partida];
     const validacion = validarVencimientosAlta(siguientes, stock, permiteDecimales);
     if (validacion) throw new Error(validacion);
     onChange(siguientes);
+    onToast?.(editando ? "Partida actualizada en la carga pendiente." : "Partida agregada a la carga pendiente.", "exito");
   };
   return (
     <section className="cmi-vencAlta" aria-label={titulo}>
@@ -83,11 +87,14 @@ export default function VencimientosAltaFields({
             onQuitar={(_, index) => setIndiceAQuitar(index)}
           />
         : <div className="sv-empty"><FontAwesomeIcon icon={faBoxOpen}/><strong>Sin vencimientos cargados</strong><span>Podés agregarlos ahora o dejar el stock sin fecha asignada.</span></div>}
-      {error && <p className="sv-inline-error" role="alert">{error}</p>}
       <ModalEliminar
         open={indiceAQuitar !== null && !!rows[indiceAQuitar]}
         loading={disabled}
         onClose={() => setIndiceAQuitar(null)}
+        onToast={(tipo, mensaje, duracion) => onToast?.(mensaje, tipo, duracion)}
+        loadingMessage="Quitando partida de la carga..."
+        successMessage="Partida quitada de la carga pendiente."
+        errorMessage="No se pudo quitar la partida."
         onConfirm={() => {
           if (indiceAQuitar === null || !rows[indiceAQuitar]) return;
           onChange(rows.filter((_, index) => index !== indiceAQuitar));
@@ -104,9 +111,10 @@ export default function VencimientosAltaFields({
         ] : []}
       />
       <ModalPartidaVencimiento
-        open={editor !== null} initialValue={editando ? { ...rows[editor], __editando: true } : null}
+        open={editor !== null} initialValue={partidaInicial}
         onClose={() => setEditor(null)} onSave={guardar} stock={stockNum} maxCantidad={disponibles}
         permiteDecimales={permiteDecimales} subtitulo={titulo}
+        onError={(mensaje) => onToast?.(mensaje, "error", 4200)}
       />
     </section>
   );

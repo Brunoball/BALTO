@@ -22,7 +22,6 @@
 .sv-iconBtn:hover:not(:disabled){background:color-mix(in srgb,var(--sv-action) 9%,var(--sv-surface))}.sv-iconBtn--danger{color:#ca4654}.sv-iconBtn--danger:hover:not(:disabled){background:color-mix(in srgb,#ca4654 8%,var(--sv-surface))}
 .sv-empty{display:flex;flex-direction:column;align-items:center;gap:6px;padding:28px 15px;text-align:center;color:var(--sv-muted);border:1px dashed var(--sv-border);border-radius:14px;background:var(--sv-surface);font-size:12px}
 .sv-empty svg{font-size:22px;opacity:.5;margin-bottom:2px}.sv-empty strong{color:var(--sv-text);font-size:13px;font-weight:600}
-.sv-inline-error,.sv-panel .sv-error{border:1px solid color-mix(in srgb,#c63a4e 24%,transparent);border-radius:10px;color:#bd3b4d;font-size:12px;padding:9px 11px;background:color-mix(in srgb,#c63a4e 7%,var(--sv-surface))}
 .sv-variantPicker{max-width:400px;width:100%;margin-top:7px}
 .sv-variantPicker .cmi-input{min-height:42px}
 .sv-table__buttons{display:flex;align-items:center;gap:6px;justify-content:flex-end}

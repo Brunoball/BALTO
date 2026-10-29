@@ -20,13 +20,6 @@
 }
 .sv-retire-global .sv-retire-fields textarea.cmi-input { min-height: 82px; resize: vertical; }
 .sv-retire-global .sv-retire-help { display: block; margin: 5px 2px 0; color: var(--mi-muted, #64748b); font-size: 11px; }
-.sv-retire-global .sv-retire-error {
-  margin: 0; padding: 10px 12px; border-radius: 10px;
-  border: 1px solid rgba(220, 38, 38, .2);
-  background: rgba(220, 38, 38, .07);
-  color: #b91c1c; font-size: 12px; line-height: 1.4;
-}
-html[data-theme="oscuro"] .sv-retire-global .sv-retire-error { color: #ff9ba5; }
 @media (max-width: 520px) {
   .mvdel-modal.sv-retire-global { max-height: calc(var(--balto-visual-viewport-height, 100dvh) - 24px); padding: 18px 15px 16px; }
   .sv-retire-global .mvdel-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }

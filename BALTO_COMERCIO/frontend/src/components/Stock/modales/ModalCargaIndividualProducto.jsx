@@ -901,7 +901,7 @@ export default function ModalCargaIndividualProducto({
     });
   };
 
-  const mostrarToast = (mensaje, tipo = "error") => onToast?.(errorToText(mensaje), tipo);
+  const mostrarToast = (mensaje, tipo = "error", duracion) => onToast?.(errorToText(mensaje), tipo, duracion);
 
   const irAPanel = (ref) => {
     ref?.current?.scrollIntoView?.({ behavior: "smooth", block: "start" });
@@ -1929,6 +1929,7 @@ export default function ModalCargaIndividualProducto({
                 stock={form.stock} disabled={guardando || !!barcodeProductoGuardado}
                 permiteDecimales={Number(unidadesStock.find((u) => String(u.id_stock_unidad ?? u.id) === String(form.id_stock_unidad))?.permite_decimales ?? 1) === 1}
                 error={errores.vencimientos}
+                onToast={mostrarToast}
               />
             ) : (form.variantes || []).filter(variantHasContent).length ? (
               <div className="cmi-vencimientosVarianteList">
@@ -1942,6 +1943,7 @@ export default function ModalCargaIndividualProducto({
                       stock={variant.stock} disabled={guardando || !!barcodeProductoGuardado}
                       permiteDecimales={Number(unidadesStock.find((u) => String(u.id_stock_unidad ?? u.id) === String(variant.id_stock_unidad || form.id_stock_unidad))?.permite_decimales ?? 1) === 1}
                       error={errores[`variante_${variantIdx}_vencimientos`]}
+                      onToast={mostrarToast}
                     />
                   </div>
                 ) : null)}

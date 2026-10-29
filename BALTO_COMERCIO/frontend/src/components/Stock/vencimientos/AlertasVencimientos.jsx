@@ -34,7 +34,6 @@ export default function AlertasVencimientos() {
   const [abierto, setAbierto] = useState(false);
   const [errores, setErrores] = useState({});
   const [consultado, setConsultado] = useState(false);
-  const [vencimientoSeleccionadoId, setVencimientoSeleccionadoId] = useState(null);
   const overlayRef = useRef(null);
   const dialogRef = useRef(null);
   const closeRef = useRef(null);
@@ -130,12 +129,6 @@ export default function AlertasVencimientos() {
 
   const total = alertas.length + (revision ? 1 : 0);
   const vencidos = useMemo(() => alertas.filter(v => Number(v.dias_restantes) < 0).length, [alertas]);
-  // Si hay varias partidas, el botón del pie gestiona la seleccionada.
-  // Con una sola partida funciona directamente, sin exigir interacción extra.
-  const partidaSeleccionada = useMemo(() =>
-    alertas.find(v => String(v.id_vencimiento) === String(vencimientoSeleccionadoId)) || alertas[0] || null,
-    [alertas, vencimientoSeleccionadoId]
-  );
   const verPartida = (partida) => {
     setAbierto(false);
     navigate("/panel/stock", {state:{baltoStockDestino:{productoId:Number(partida.id_stock_producto),varianteId:Number(partida.id_stock_variante || 0),tab:"vencimientos",ts:Date.now()}}});
@@ -181,7 +174,6 @@ export default function AlertasVencimientos() {
                 <div className="sv-alert-stat__body"><span className="sv-alert-stat__label">Revisión de precios</span><strong className="sv-alert-stat__value">{revision ? 1 : 0}</strong></div>
               </div>
             </div>
-            {alertas.length > 1 && <p className="sv-alert-selection-hint">Seleccioná una partida para gestionar su vencimiento.</p>}
             <div className="sv-alert-list">
               {!consultado && <div className="sv-alert-empty" role="status">Consultando notificaciones…</div>}
               {Object.values(errores).map((mensaje) => <div key={mensaje} className="sv-alert-error" role="alert"><FontAwesomeIcon icon={faTriangleExclamation}/>{mensaje}</div>)}
@@ -211,26 +203,27 @@ export default function AlertasVencimientos() {
               </article>}
               {alertas.map((v) => {
                 const days = Number(v.dias_restantes);
-                const seleccionable = alertas.length > 1;
-                const seleccionada = String(partidaSeleccionada?.id_vencimiento) === String(v.id_vencimiento);
+                const productoConVariante = `${v.producto_nombre}${v.variante_nombre ? `, ${v.variante_nombre}` : ""}`;
                 return <article key={v.id_vencimiento}
-                  className={`sv-alert-entry sv-alert-entry--product ${days < 0 ? "sv-alert-entry--expired" : ""} ${seleccionable ? "sv-alert-entry--selectable" : ""} ${seleccionable && seleccionada ? "sv-alert-entry--selected" : ""}`}
-                  role={seleccionable ? "button" : undefined}
-                  tabIndex={seleccionable ? 0 : undefined}
-                  aria-pressed={seleccionable ? seleccionada : undefined}
-                  aria-label={seleccionable ? `Seleccionar vencimiento de ${v.producto_nombre}${v.variante_nombre ? `, ${v.variante_nombre}` : ""}, ${mostrarFecha(v.fecha_vencimiento)}` : undefined}
-                  onClick={seleccionable ? () => setVencimientoSeleccionadoId(v.id_vencimiento) : undefined}
-                  onKeyDown={seleccionable ? (event) => {
+                  className={`sv-alert-entry sv-alert-entry--product sv-alert-entry--clickable ${days < 0 ? "sv-alert-entry--expired" : ""}`}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Ver producto y gestionar vencimiento de ${productoConVariante}, ${mostrarFecha(v.fecha_vencimiento)}`}
+                  onClick={() => verPartida(v)}
+                  onKeyDown={(event) => {
                     if (event.key === "Enter" || event.key === " ") {
                       event.preventDefault();
-                      setVencimientoSeleccionadoId(v.id_vencimiento);
+                      verPartida(v);
                     }
-                  } : undefined}>
+                  }}>
                   <div className="sv-alert-main sv-alert-product-info">
                     <strong><FontAwesomeIcon icon={faTriangleExclamation}/> {v.producto_nombre}{v.variante_nombre ? ` · ${v.variante_nombre}` : ""}</strong>
                     <div className="sv-alert-meta">Vence: {mostrarFecha(v.fecha_vencimiento)} · Cantidad: {cantidad(v.cantidad_disponible)}{v.referencia ? ` · ${v.referencia}` : ""}</div>
                   </div>
-                  <span className={`sv-alert-days ${days < 0 ? "sv-alert-days--expired" : ""}`}>{days < 0 ? `Vencido hace ${Math.abs(days)} día(s)` : days === 0 ? "Vence hoy" : `Faltan ${days} día(s)`}</span>
+                  <div className="sv-alert-product-actions">
+                    <span className={`sv-alert-days ${days < 0 ? "sv-alert-days--expired" : ""}`}>{days < 0 ? `Vencido hace ${Math.abs(days)} día(s)` : days === 0 ? "Vence hoy" : `Faltan ${days} día(s)`}</span>
+                    <span className="sv-alert-entry__cta" aria-hidden="true">Ver producto <FontAwesomeIcon icon={faArrowRight}/></span>
+                  </div>
                 </article>;
               })}
               {consultado && !total && !Object.keys(errores).length && <div className="sv-alert-empty"><FontAwesomeIcon icon={faCircleCheck}/><strong>Todo al día</strong><span>No hay notificaciones pendientes.</span></div>}
@@ -238,9 +231,6 @@ export default function AlertasVencimientos() {
           </div>
           <footer className="sv-alert-footer">
             <button type="button" className="mit-btn mit-btn--solid" onClick={() => setAbierto(false)}>Cerrar</button>
-            {partidaSeleccionada && <button type="button" className="mit-btn mit-btn--ghost sv-alert-footer__manage" onClick={() => verPartida(partidaSeleccionada)}>
-              Ver producto y gestionar vencimiento <FontAwesomeIcon icon={faArrowRight}/>
-            </button>}
           </footer>
         </section>
       </div>, document.body

@@ -145,13 +145,33 @@ test('@stock @vencimientos @ui @notificaciones-ui popup y pestaña de edición m
     await partida.getByRole('button', { name: /Editar partida del/i }).click();
     const modalEdicion = page.getByRole('dialog', { name: 'Editar vencimiento' });
     await expect(modalEdicion.getByLabel('Cantidad *')).toHaveValue('2');
-    await modalEdicion.getByRole('button', { name: 'Cancelar' }).click();
+    await modalEdicion.getByLabel('Cantidad *').fill('99');
+    await modalEdicion.getByRole('button', { name: 'Guardar cambios' }).click();
+    await expect(modalEdicion).toBeVisible();
+    await expect(page.locator('.toast-container.toast-error')).toContainText('La cantidad supera el stock disponible');
+    await expect(modalEdicion.locator('.sv-partida-error')).toHaveCount(0);
+    await modalEdicion.getByLabel('Cantidad *').fill('2');
+    await modalEdicion.getByLabel('Referencia (opcional)').fill('lote prueba');
+    await modalEdicion.getByLabel('Observación (opcional)').fill('proveedor local');
+    await expect(modalEdicion.getByLabel('Referencia (opcional)')).toHaveValue('LOTE PRUEBA');
+    await expect(modalEdicion.getByLabel('Observación (opcional)')).toHaveValue('PROVEEDOR LOCAL');
+    await modalEdicion.getByRole('button', { name: 'Guardar cambios' }).click();
     await expect(modalEdicion).toBeHidden();
+    await expect(page.locator('.toast-container.toast-exito')).toContainText('Vencimiento actualizado correctamente');
+    const persistida = (await vencimientos(page, id))[0];
+    expect(persistida.referencia).toBe('LOTE PRUEBA');
+    expect(persistida.observaciones).toBe('PROVEEDOR LOCAL');
     await partida.getByRole('button', { name: /Retirar stock de partida del/i }).click();
     // ModalEliminar también se monta en document.body, fuera del editor.
     const retiro = page.getByRole('dialog', { name: 'Retirar unidades del inventario' });
     await expect(retiro.getByLabel('Cantidad a retirar *')).toHaveValue('2');
+    await retiro.getByLabel('Cantidad a retirar *').fill('99');
+    await retiro.getByRole('button', { name: 'Confirmar retiro' }).click();
+    await expect(page.locator('.toast-container.toast-error')).toContainText('Revisá la cantidad a retirar');
+    await expect(retiro.locator('.sv-retire-error')).toHaveCount(0);
     await retiro.getByLabel('Cantidad a retirar *').fill('1');
+    await retiro.getByLabel('Motivo del retiro *').fill('retiro de prueba');
+    await expect(retiro.getByLabel('Motivo del retiro *')).toHaveValue('RETIRO DE PRUEBA');
     const respuestaRetiro = page.waitForResponse((r) =>
       r.request().method() === 'POST' && new URL(r.url()).searchParams.get('action') === 'stock_vencimientos_retirar',
       { timeout: 30_000 });
@@ -159,9 +179,16 @@ test('@stock @vencimientos @ui @notificaciones-ui popup y pestaña de edición m
     const resRetiro = await respuestaRetiro;
     expect(resRetiro.status(), 'El retiro local debe confirmarse por API').toBeLessThan(400);
     await expect(retiro).toBeHidden();
+    await expect(page.locator('.toast-container.toast-exito')).toContainText('Unidades retiradas correctamente.');
     const despues = await vencimientos(page, id);
     expect(despues).toHaveLength(1);
     expect(Number(despues[0].cantidad_disponible)).toBe(1);
+    await partida.getByRole('button', { name: /Quitar partida del/i }).click();
+    const quitar = page.getByRole('dialog', { name: 'Quitar fecha de vencimiento' });
+    await quitar.getByRole('button', { name: 'Quitar fecha' }).click();
+    await expect(quitar).toBeHidden();
+    await expect(page.locator('.toast-container.toast-exito')).toContainText('Fecha de vencimiento quitada correctamente.');
+    expect(await vencimientos(page, id)).toHaveLength(0);
     await edit.getByRole('button',{name:'Cancelar',exact:true}).click();
   } finally {if(created) await deleteUnusedStockProduct(page,name);}
 });

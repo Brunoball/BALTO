@@ -109,30 +109,34 @@ test('@stock @vencimientos @critical retiro de una variante no altera otra', asy
   }
 });
 
-test('@stock @vencimientos @ui @notificaciones-ui notificación abre producto y pestaña de vencimientos', async ({ page }) => {
+test('@stock @vencimientos @ui @notificaciones-ui cada tarjeta abre su producto específico', async ({ page }) => {
   await requireMutations(test, page);
   test.setTimeout(180000);
-  const name = uniqueName('VENC-LINK');
+  const nombreUno = uniqueName('VENC-LINK-UNO');
+  const nombreDos = uniqueName('VENC-LINK-DOS');
   const u = await getStockE2EFixtureUnit(page);
-  let created = false;
+  const idProductos = [];
   try {
-    const product = unwrap(await createStockProductFixture(page, {
-      name, sku: uniqueSku('VLINK'), stock: 5, cost: 10, price: 25, unitId: Number(u.id_stock_unidad),
-    }));
-    const id = Number(product.producto?.id_stock_producto || product.producto?.id);
-    expect(id).toBeGreaterThan(0);
-    created = true;
-    await api(page, 'stock_vencimientos_guardar', {id_stock_producto: id, fecha_vencimiento: localDay(-1), cantidad: 2});
+    // Dos alertas de productos distintos: no debe depender de la primera
+    // fila ni de un botón global para abrir el producto correcto.
+    for (const [nombre, fecha] of [[nombreUno, localDay(3)], [nombreDos, localDay(-1)]]) {
+      const producto = unwrap(await createStockProductFixture(page, {
+        name: nombre, sku: uniqueSku('VLINK'), stock: 5, cost: 10, price: 25,
+        unitId: Number(u.id_stock_unidad),
+      }));
+      const id = Number(producto.producto?.id_stock_producto || producto.producto?.id);
+      expect(id).toBeGreaterThan(0);
+      idProductos.push(id);
+      await api(page, 'stock_vencimientos_guardar', {
+        id_stock_producto: id, fecha_vencimiento: fecha, cantidad: 2,
+      });
+    }
+
     await page.goto('/panel/dashboard');
-    // El bootstrap inicial puede tapar la campanita durante algunos segundos:
-    // esperamos su desaparición real antes de intentar interactuar.
     await expect(page.locator('#balto-bootstrap-loader')).toBeHidden({ timeout: 60_000 });
     await waitForBusyToFinish(page);
     const modal = page.getByRole('dialog', { name: 'Notificaciones de Stock' });
     if (!await modal.isVisible().catch(() => false)) {
-      // La consulta de alertas puede abrir el diálogo automáticamente ENTRE
-      // isVisible() y el click de la campanita. En ese caso la propia capa
-      // intercepta el click: el resultado esperado YA ocurrió.
       await page.getByRole('button', { name: /Notificaciones de Stock/i })
         .click({ timeout: 8_000 })
         .catch(async (error) => {
@@ -140,21 +144,34 @@ test('@stock @vencimientos @ui @notificaciones-ui notificación abre producto y 
         });
     }
     await expect(modal).toBeVisible();
-    const fila = modal.locator('.sv-alert-entry').filter({ hasText: name });
-    await expect(fila).toBeVisible({ timeout: 30_000 });
-    // Cada alerta selecciona una partida; el botón para gestionarla está
-    // en el pie del diálogo (no dentro de .sv-alert-entry).
-    await fila.click();
-    await expect(modal.getByRole('button', { name: /Ver producto y gestionar vencimiento/i })).toBeVisible();
-    await modal.getByRole('button', { name: /Ver producto y gestionar vencimiento/i }).click();
+    const filaUno = modal.locator('.sv-alert-entry--product').filter({ hasText: nombreUno });
+    const filaDos = modal.locator('.sv-alert-entry--product').filter({ hasText: nombreDos });
+    await expect(filaUno).toBeVisible({ timeout: 30_000 });
+    await expect(filaDos).toBeVisible({ timeout: 30_000 });
+    await expect(filaDos).toContainText('Ver producto');
+    await expect(modal.getByRole('button', { name: /Ver producto y gestionar vencimiento$/i })).toHaveCount(0);
+
+    // El segundo producto (no necesariamente la primera alerta) abre el suyo.
+    await filaDos.click();
+    await expect(modal).toBeHidden();
     await expect(page).toHaveURL(/\/panel\/stock/);
     const editor = page.getByRole('dialog').filter({ hasText: 'Editar producto' }).first();
+    await expect(editor.locator('input[name="nombre"]')).toHaveValue(nombreDos);
     await expect(editor.getByRole('tab', { name: /Vencimientos/i })).toHaveAttribute('aria-selected', 'true');
     await expect(editor.getByText('Retirar stock').first()).toBeVisible();
+
+    // También se puede abrir otra partida desde Stock usando el teclado.
+    await editor.getByRole('button', { name: 'Cerrar', exact: true }).click();
+    await page.getByRole('button', { name: /Notificaciones de Stock/i }).click();
+    await expect(modal).toBeVisible();
+    const tarjetaUno = modal.locator('.sv-alert-entry--product').filter({ hasText: nombreUno });
+    await tarjetaUno.focus();
+    await tarjetaUno.press('Enter');
+    await expect(modal).toBeHidden();
+    await expect(editor.locator('input[name="nombre"]')).toHaveValue(nombreUno);
+    await expect(editor.getByRole('tab', { name: /Vencimientos/i })).toHaveAttribute('aria-selected', 'true');
   } finally {
-    // El foco de esta prueba es la navegación entre alertas y edición, no la
-    // eliminación de artículos. Todas sus partidas se limpian mediante el
-    // cleanup por prefijo E2E al terminar el worker.
-    if (created) console.info(`[E2E] ${name}: limpieza diferida al cierre del worker (partidas auditadas).`);
+    // Las fixtures de retiro/vencimiento son auditadas; limpieza diferida.
+    if (idProductos.length) console.info(`[E2E] ${nombreUno} y ${nombreDos}: limpieza diferida al cierre del worker.`);
   }
 });

@@ -5,7 +5,7 @@ import {
   quitarVencimientoStock,
   retirarStockVencido,
 } from "../api/stockApi";
-import { normalizeStockInput, stockToInput } from "../utils/stockFormUtils";
+import { normalizeStockInput, stockToInput, toUpperCaseValue } from "../utils/stockFormUtils";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlus, faBoxOpen } from "@fortawesome/free-solid-svg-icons";
 import VencimientosResumen from "./VencimientosResumen";
@@ -24,16 +24,16 @@ export default function VencimientosPanel({ productoId, initialVarianteId = null
   const [retirar, setRetirar] = useState(null);
   const [quitarPartida, setQuitarPartida] = useState(null);
   const [cantidadRetirar, setCantidadRetirar] = useState("");
-  const [motivoRetirar, setMotivoRetirar] = useState("Mercadería vencida");
+  const [motivoRetirar, setMotivoRetirar] = useState("MERCADERÍA VENCIDA");
   const [editorPartida, setEditorPartida] = useState(null);
   const [cargando, setCargando] = useState(true);
   const [guardando, setGuardando] = useState(false);
-  const [error, setError] = useState("");
   const retiroAvisoRef = useRef("");
+  // ModalEditarStock recibe (mensaje, tipo, duración); ModalEliminar usa (tipo, mensaje, duración).
+  const notificar = (tipo, mensaje, duracion) => onToast?.(mensaje, tipo, duracion);
   const recargar = useCallback(async () => {
     const res = await consultarVencimientosStock(productoId);
     setDatos(res);
-    setError("");
   }, [productoId]);
 
   useEffect(() => {
@@ -41,8 +41,8 @@ export default function VencimientosPanel({ productoId, initialVarianteId = null
     setCargando(true);
     // Si el editor ya inició la consulta, usar esa misma promesa sin otro GET.
     Promise.resolve().then(() => consultarInicial(productoId))
-      .then((res) => { if (vigente) { setDatos(res); setError(""); } })
-      .catch((err) => { if (vigente) setError(err.message || "No se pudieron cargar los vencimientos."); })
+      .then((res) => { if (vigente) setDatos(res); })
+      .catch((err) => { if (vigente) onToast?.(err?.message || "No se pudieron cargar los vencimientos.", "error", 4200); })
       .finally(() => { if (vigente) setCargando(false); });
     return () => { vigente = false; };
   }, [productoId, consultarInicial]);
@@ -70,8 +70,7 @@ export default function VencimientosPanel({ productoId, initialVarianteId = null
     retiroAvisoRef.current = "";
     setRetirar(partida);
     setCantidadRetirar(stockToInput(partida.cantidad_disponible));
-    setMotivoRetirar(Number(partida.dias_restantes) < 0 ? "Mercadería vencida" : "Retiro preventivo por vencimiento");
-    setError("");
+    setMotivoRetirar(Number(partida.dias_restantes) < 0 ? "MERCADERÍA VENCIDA" : "RETIRO PREVENTIVO POR VENCIMIENTO");
   };
   const ejecutarRetiro = async () => {
     if (!retirar || guardando) return;
@@ -79,21 +78,18 @@ export default function VencimientosPanel({ productoId, initialVarianteId = null
     const disponible = Number(retirar.cantidad_disponible);
     if (!/^\d+(?:\.\d{1,3})?$/.test(cantidadRetirar) || !Number.isFinite(cantidad) || cantidad <= 0 || cantidad > disponible) {
       const mensaje = "Revisá la cantidad a retirar: debe ser mayor a cero y no superar la disponible en esta partida.";
-      setError(mensaje);
       throw new Error(mensaje);
     }
     if (motivoRetirar.trim().length < 5) {
       const mensaje = "Indicá el motivo del retiro (al menos 5 caracteres).";
-      setError(mensaje);
       throw new Error(mensaje);
     }
     setGuardando(true);
-    setError("");
     try {
       const resultado = await retirarStockVencido({
         id_vencimiento: retirar.id_vencimiento,
         cantidad: cantidadRetirar,
-        motivo: motivoRetirar.trim(),
+        motivo: toUpperCaseValue(motivoRetirar).trim(),
       });
       setRetirar(null);
       cancel();
@@ -113,8 +109,6 @@ export default function VencimientosPanel({ productoId, initialVarianteId = null
       }
       retiroAvisoRef.current = avisos.length ? `Stock retirado correctamente. ${avisos.join(" ")}` : "";
     } catch (err) {
-      const mensaje = err?.message || "No se pudieron retirar las unidades.";
-      setError(mensaje);
       throw err;
     } finally {
       setGuardando(false);
@@ -124,7 +118,6 @@ export default function VencimientosPanel({ productoId, initialVarianteId = null
   const guardar = async (partida) => {
     if (conVariantes && !varianteId) throw new Error("Elegí una variante antes de registrar la partida.");
     setGuardando(true);
-    setError("");
     try {
       await guardarVencimientoStock({
         ...partida,
@@ -133,10 +126,10 @@ export default function VencimientosPanel({ productoId, initialVarianteId = null
       });
       await recargar();
       cancel();
-      onToast?.("exito", partida.id_vencimiento ? "Vencimiento actualizado correctamente" : "Vencimiento registrado correctamente");
+      notificar("exito", partida.id_vencimiento ? "Vencimiento actualizado correctamente" : "Vencimiento registrado correctamente");
       window.dispatchEvent(new Event("balto:stock-vencimientos-cambio"));
     } catch (err) {
-      // El modal presenta el error al lado de los campos, sin cerrar ni descartar datos.
+      // El modal conserva los datos y notifica el error únicamente mediante toast.
       throw err;
     } finally { setGuardando(false); }
   };
@@ -144,7 +137,6 @@ export default function VencimientosPanel({ productoId, initialVarianteId = null
   const confirmarQuitar = async () => {
     if (!quitarPartida) return;
     setGuardando(true);
-    setError("");
     try {
       await quitarVencimientoStock({ id_vencimiento: quitarPartida.id_vencimiento });
       await recargar();
@@ -163,7 +155,6 @@ export default function VencimientosPanel({ productoId, initialVarianteId = null
         {datos && !cargando && (!conVariantes || !!elegida) && <button type="button" className="sv-primaryBtn" disabled={guardando} onClick={() => setEditorPartida({ id_vencimiento: 0, fecha_vencimiento: "", cantidad: "", referencia: "", observaciones: "" })}><FontAwesomeIcon icon={faPlus}/> Agregar vencimiento</button>}
       </div>
       {cargando && <div className="sv-empty">Cargando partidas...</div>}
-      {error && <div className="sv-inline-error" role="alert">{error}</div>}
       {datos && !cargando && <>
         {conVariantes && <div className="cmi-floatingField sv-variantPicker"><label className="cmi-floatingLabel" htmlFor="sv-variant-select">Variante</label><select id="sv-variant-select" className="cmi-input cmi-select" value={variante} onChange={(e) => { setVariante(e.target.value); cancel(); }} disabled={guardando}>
           <option value="0">Seleccioná una variante</option>
@@ -193,7 +184,7 @@ export default function VencimientosPanel({ productoId, initialVarianteId = null
             loading={guardando}
             onClose={() => setQuitarPartida(null)}
             onConfirm={confirmarQuitar}
-            onToast={onToast}
+            onToast={notificar}
             title="Quitar fecha de vencimiento"
             message="¿Querés quitar la fecha de esta partida?"
             warning="Las unidades NO se descontarán del inventario: quedarán como stock sin fecha. Para descartarlas, usá Retirar stock."
@@ -207,19 +198,19 @@ export default function VencimientosPanel({ productoId, initialVarianteId = null
               { label: "Referencia", value: quitarPartida.referencia || "—" },
             ] : []}
           />
-          <ModalPartidaVencimiento open={editorPartida !== null} initialValue={editorPartida} onClose={cancel} onSave={guardar} busy={guardando} stock={stock} maxCantidad={Math.max(0, stock - asignadas + (editorPartida?.id_vencimiento ? Number(editorPartida.cantidad || 0) : 0))} permitirObservaciones subtitulo={conVariantes ? (elegida?.nombre_variante || "Variante seleccionada") : "Partida del producto"}/>
+          <ModalPartidaVencimiento open={editorPartida !== null} initialValue={editorPartida} onClose={cancel} onSave={guardar} busy={guardando} stock={stock} maxCantidad={Math.max(0, stock - asignadas + (editorPartida?.id_vencimiento ? Number(editorPartida.cantidad || 0) : 0))} permitirObservaciones onError={(mensaje) => notificar("error", mensaje, 4200)} subtitulo={conVariantes ? (elegida?.nombre_variante || "Variante seleccionada") : "Partida del producto"}/>
           <ModalEliminar
             open={retirar !== null}
             loading={guardando}
-            onClose={() => { if (!guardando) { setRetirar(null); setError(""); } }}
+            onClose={() => { if (!guardando) { setRetirar(null); } }}
             onConfirm={ejecutarRetiro}
             onToast={(tipo, mensaje, duracion) => {
               if (tipo === "exito" && retiroAvisoRef.current) {
                 const aviso = retiroAvisoRef.current;
                 retiroAvisoRef.current = "";
-                onToast?.("advertencia", aviso, duracion);
+                notificar("advertencia", aviso, duracion);
               } else {
-                onToast?.(tipo, mensaje, duracion);
+                notificar(tipo, mensaje, duracion);
               }
             }}
             title="Retirar unidades del inventario"
@@ -244,16 +235,15 @@ export default function VencimientosPanel({ productoId, initialVarianteId = null
                 <label className="cmi-floatingLabel" htmlFor="sv-retire-quantity">Cantidad a retirar *</label>
                 <input id="sv-retire-quantity" className="cmi-input" type="text" inputMode="decimal"
                   value={cantidadRetirar} disabled={guardando} autoComplete="off"
-                  onChange={(e) => { setCantidadRetirar(normalizeStockInput(e.target.value)); setError(""); }}
+                  onChange={(e) => { setCantidadRetirar(normalizeStockInput(e.target.value)) }}
                   aria-describedby="sv-retire-quantity-help"/>
                 <small id="sv-retire-quantity-help" className="sv-retire-help">Máximo disponible: {cantidadTexto(retirar.cantidad_disponible)}</small>
               </div>
               <div className="cmi-floatingField">
                 <label className="cmi-floatingLabel" htmlFor="sv-retire-motive">Motivo del retiro *</label>
                 <textarea id="sv-retire-motive" className="cmi-input cmi-textarea" rows={3} minLength={5} maxLength={200}
-                  value={motivoRetirar} disabled={guardando} onChange={(e) => { setMotivoRetirar(e.target.value); setError(""); }}/>
+                  value={motivoRetirar} disabled={guardando} onChange={(e) => { setMotivoRetirar(toUpperCaseValue(e.target.value)) }}/>
               </div>
-              {error && <p className="sv-retire-error" role="alert">{error}</p>}
             </div>}
           />
         </>}

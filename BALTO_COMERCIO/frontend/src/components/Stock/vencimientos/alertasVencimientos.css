@@ -111,8 +111,8 @@
   transition: border-color .18s ease, background-color .18s ease, box-shadow .22s ease;
 }
 .sv-alert-main { flex: 1 1 auto; min-width: 0; }
-/* Tarjetas de producto: información a la izquierda y estado a la derecha.
-   La acción se ubica una sola vez en el pie del modal, junto a Cerrar. */
+/* Cada partida abre directamente su producto, incluso con varias alertas.
+   El acceso visible acompaña el estado para que la tarjeta sea inequívoca. */
 .sv-alert-dialog .sv-alert-entry--product {
   display: grid;
   grid-template-columns: minmax(0, 1fr) max-content;
@@ -120,15 +120,24 @@
   gap: 16px;
 }
 .sv-alert-dialog .sv-alert-product-info { min-width: 0; }
-.sv-alert-dialog .sv-alert-entry--product > .sv-alert-days { justify-self: end; }
-.sv-alert-entry--selectable { cursor: pointer; transition: border-color .18s ease, background-color .18s ease; }
-.sv-alert-entry--selectable:hover {
+.sv-alert-product-actions {
+  display: flex; flex-direction: column; align-items: flex-end; gap: 8px;
+  min-width: 0;
+}
+.sv-alert-entry__cta {
+  display: inline-flex; align-items: center; justify-content: flex-end;
+  gap: 7px; color: var(--mi-primary, #0055bb);
+  font-size: 12px; font-weight: 700; line-height: 1.4; white-space: nowrap;
+}
+.sv-alert-entry__cta svg { font-size: 11px; }
+.sv-alert-entry--clickable:hover .sv-alert-entry__cta { text-decoration: underline; }
+
+.sv-alert-entry--clickable { cursor: pointer; transition: border-color .18s ease, background-color .18s ease; }
+.sv-alert-entry--clickable:hover {
   border-color: var(--mi-primary, #3788e3);
   box-shadow: 0 16px 34px -24px rgba(10, 37, 64, .46);
 }
-.sv-alert-entry--selectable:focus-visible { outline: 2px solid var(--mi-primary, #3788e3); outline-offset: 3px; }
-.sv-alert-entry--selected { border-color: var(--mi-primary, #3788e3); background: color-mix(in srgb, var(--mi-primary, #3788e3) 7%, var(--mi-bg, #fff)); }
-.sv-alert-selection-hint { color: var(--mi-muted, #64748b); font-size: 12px; margin: 0 0 10px; }
+.sv-alert-entry--clickable:focus-visible { outline: 2px solid var(--mi-primary, #3788e3); outline-offset: 3px; }
 .sv-alert-main > strong { display: flex; align-items: baseline; gap: 7px; font-size: 13px; font-weight: 650; line-height: 1.45; overflow-wrap: anywhere; }
 .sv-alert-main > strong svg { flex: 0 0 auto; color: #c59127; }
 .sv-alert-entry--expired .sv-alert-main > strong svg { color: #ca4252; }
@@ -329,20 +338,13 @@ html[data-theme="oscuro"] .sv-alert-dialog .sv-alert-go.mit-btn:hover {
   background: var(--mi-bg, #fff);
 }
 .sv-alert-footer .mit-btn { min-height: 38px; min-width: 100px; }
-.sv-alert-footer__manage.mit-btn { display: inline-flex; align-items: center; justify-content: center; gap: 9px; max-width: 100%; min-width: 0; margin: 0; }
-.sv-alert-footer__manage svg { flex: 0 0 auto; }
-@media (max-width: 480px) {
-  .sv-alert-footer { flex-wrap: wrap; }
-  .sv-alert-footer__manage.mit-btn { flex: 1 1 100%; order: -1; white-space: normal; }
-  .sv-alert-footer > .mit-btn:not(.sv-alert-footer__manage) { margin-left: auto; }
-}
 html[data-theme="oscuro"] .sv-alert-stat,
 html[data-theme="oscuro"] .sv-alert-entry {
   border-color: rgba(255, 255, 255, .10);
   box-shadow: 0 14px 34px rgba(0, 0, 0, .34);
 }
 html[data-theme="oscuro"] .sv-alert-stat:hover,
-html[data-theme="oscuro"] .sv-alert-entry--selectable:hover {
+html[data-theme="oscuro"] .sv-alert-entry--clickable:hover {
   box-shadow: 0 16px 36px rgba(0, 0, 0, .42);
 }
 html[data-theme="oscuro"] .sv-alert-stat__value { color: var(--mi-text, rgba(255, 255, 255, .92)); }
@@ -377,7 +379,18 @@ html[data-theme="oscuro"] .sv-alert-error { color: #ff9ca7; }
 }
 @media (max-width: 650px) {
   .sv-alert-dialog .sv-alert-entry--product { grid-template-columns: minmax(0, 1fr); gap: 10px; }
-  .sv-alert-dialog .sv-alert-entry--product > .sv-alert-days { justify-self: end; }
+  .sv-alert-product-actions {
+  display: flex; flex-direction: column; align-items: flex-end; gap: 8px;
+  min-width: 0;
+}
+.sv-alert-entry__cta {
+  display: inline-flex; align-items: center; justify-content: flex-end;
+  gap: 7px; color: var(--mi-primary, #0055bb);
+  font-size: 12px; font-weight: 700; line-height: 1.4; white-space: nowrap;
+}
+.sv-alert-entry__cta svg { font-size: 11px; }
+.sv-alert-entry--clickable:hover .sv-alert-entry__cta { text-decoration: underline; }
+
 }
 @media (max-width: 480px) {
   .sv-alert-backdrop { padding: 10px; }
