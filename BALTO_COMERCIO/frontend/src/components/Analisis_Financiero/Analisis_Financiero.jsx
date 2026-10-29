@@ -1,7 +1,7 @@
 import React, { useCallback, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faArrowDown, faArrowRightLong, faArrowTrendUp, faArrowUp,
+  faArrowDown, faArrowTrendUp, faArrowUp,
   faBuildingColumns, faCalendarDays, faChevronDown,
   faScaleBalanced,
   faWallet,
@@ -151,9 +151,10 @@ export default function Analisis_Financiero() {
     mainRows: [], totalDisponibilidades: fin.saldo_final || 0, showToast,
   });
   const periodLabel = useMemo(() => {
-    if (!dateRange?.from) return "Seleccionar período";
-    if (!dateRange.to || +dateRange.to === +dateRange.from) return formatDateUI(dateRange.from);
-    return <><span>{formatDateUI(dateRange.from)}</span><FontAwesomeIcon icon={faArrowRightLong}/><span>{formatDateUI(dateRange.to)}</span></>;
+    if (dateRange?.from && dateRange?.to) return `${formatDateUI(dateRange.from)} - ${formatDateUI(dateRange.to)}`;
+    if (dateRange?.from) return `Desde ${formatDateUI(dateRange.from)}`;
+    if (dateRange?.to) return `Hasta ${formatDateUI(dateRange.to)}`;
+    return "Seleccionar período";
   }, [dateRange]);
   const contrib = [
     { label: "Ventas cobradas", value: ventas, tone: "positive", icon: faArrowUp },
@@ -183,39 +184,57 @@ export default function Analisis_Financiero() {
       {toast && <Toast tipo={toast.tipo} mensaje={toast.mensaje} duracion={toast.duracion} onClose={() => setToast(null)} />}
 
       <header className="af-toolbar" aria-label="Navegación y filtros de análisis financiero">
-        <h2 className="af-toolbar__title">{FINANCIAL_TABS.find((tab) => tab.id === activeTab)?.title}</h2>
-        <div className="af-toolbar__bottom">
-        <nav className="af-tabs" role="tablist" aria-label="Secciones del análisis financiero" onKeyDown={handleTabsKeyDown}>
-          {FINANCIAL_TABS.map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              id={`af-tab-${tab.id}`}
-              className={`af-tab ${activeTab === tab.id ? "is-active" : ""}`}
-              role="tab"
-              aria-selected={activeTab === tab.id}
-              aria-controls={`af-panel-${tab.id}`}
-              tabIndex={activeTab === tab.id ? 0 : -1}
-              onClick={() => setActiveTab(tab.id)}
-            >
-              <span className="af-tab__label">{tab.label}</span>
-            </button>
-          ))}
-        </nav>
+        <div className="af-toolbar__main">
+          <h2 className="af-toolbar__title">{FINANCIAL_TABS.find((tab) => tab.id === activeTab)?.title}</h2>
+          <nav className="af-tabs" role="tablist" aria-label="Secciones del análisis financiero" onKeyDown={handleTabsKeyDown}>
+            {FINANCIAL_TABS.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                id={`af-tab-${tab.id}`}
+                className={`af-tab ${activeTab === tab.id ? "is-active" : ""}`}
+                role="tab"
+                aria-selected={activeTab === tab.id}
+                aria-controls={`af-panel-${tab.id}`}
+                tabIndex={activeTab === tab.id ? 0 : -1}
+                onClick={() => setActiveTab(tab.id)}
+              >
+                <span className="af-tab__label">{tab.label}</span>
+              </button>
+            ))}
+          </nav>
+        </div>
         <div className="af-toolbar__actions">
-          <div className="af-dateField">
-            <span><FontAwesomeIcon icon={faCalendarDays}/> Período</span>
-            <button type="button" className="af-dateTrigger" aria-label="Seleccionar período" aria-expanded={showCalendario} onClick={() => setShowCalendario((v) => !v)}>
-              {periodLabel}<FontAwesomeIcon icon={faChevronDown}/>
-            </button>
-            {showCalendario && (
-              <div className="af-calendarDropdown" id="clrRight">
-                <Calendario value={dateRange} onChange={(next) => { setDateRange(next); if (next?.from && next?.to) setShowCalendario(false); }} onClose={() => setShowCalendario(false)}/>
-              </div>
-            )}
+          <div className="af-dateField cc-filter cc-filter--cal">
+            <div className={`cc-floatingField cc-floatingField--calendar is-active ${showCalendario ? "is-open" : ""}`}>
+              <button
+                type="button"
+                className={`cc-calTrigger ${showCalendario ? "is-open" : ""}`}
+                aria-label="Seleccionar período"
+                aria-expanded={showCalendario}
+                title="Seleccionar rango de fechas"
+                onMouseDown={(event) => event.stopPropagation()}
+                onClick={() => setShowCalendario((prev) => !prev)}
+              >
+                {periodLabel}
+                <FontAwesomeIcon className="cc-calTrigger__arrow" icon={faChevronDown} />
+              </button>
+              <span className="cc-floatingLabel cc-floatingLabel--active"><FontAwesomeIcon icon={faCalendarDays} /> Período</span>
+              {showCalendario && (
+                <div className="cc-calDropdown">
+                  <Calendario
+                    value={dateRange}
+                    onChange={(next) => {
+                      setDateRange(next);
+                      if (next?.from && next?.to) setShowCalendario(false);
+                    }}
+                    onClose={() => setShowCalendario(false)}
+                  />
+                </div>
+              )}
+            </div>
           </div>
           <BotonExportar disabled={!canExport} loading={false} label="Exportar" title="Exportar análisis y saldos" opciones={exportOptions} align="right" entityLabel="registros financieros" currentCount={medios.length + 5} scopeEnabled={false}/>
-        </div>
         </div>
       </header>
 

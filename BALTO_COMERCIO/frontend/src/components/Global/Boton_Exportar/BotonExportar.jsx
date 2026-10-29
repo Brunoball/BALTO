@@ -197,9 +197,7 @@ export default function BotonExportar({
       </button>
 
       {open && createPortal(
-        <div className="boton-exportar-modalOverlay" role="presentation" onMouseDown={(e) => {
-          if (e.target === e.currentTarget) closeModal();
-        }}>
+        <div className="boton-exportar-modalOverlay" role="presentation">
           <div className="boton-exportar-modal" role="dialog" aria-modal="true" aria-labelledby="boton-exportar-modal-title">
             <div className="boton-exportar-modal__header">
               <div>

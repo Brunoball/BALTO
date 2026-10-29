@@ -32,7 +32,8 @@
   overscroll-behavior-y: contain;
   scrollbar-width: thin;
   scrollbar-color: var(--af-line) transparent;
-  padding-right: 5px;
+  /* La misma separación interior para todas las pestañas. */
+  padding: 14px var(--af-content-pad, 18px) 18px;
 }
 /* Medios de pago ya tiene un cuerpo de tabla con scroll propio. */
 .pp-content.pp-content--analisis-financiero #af-panel-medios {
@@ -53,7 +54,8 @@
   max-height: none;
 }
 
-.mov-page--analisisFinanciero {
+.mov-page.mov-page--analisisFinanciero {
+  --af-content-pad: 18px;
   --af-ink: var(--color-text, #0a2540);
   --af-muted: var(--color-text-muted, #516173);
   --af-line: var(--color-border, #d9e2ef);
@@ -68,15 +70,25 @@
   --af-hero-bright: #174b73;
   --af-hero-line: rgba(195,226,255,.20);
   color: var(--af-ink);
-  background: transparent;
+  /* Una única superficie enmarca al encabezado y a sus tres vistas.
+     Sin tarjetas separadas ni sombras de isla flotante. */
+  background: var(--af-paper);
+  border: 1px solid var(--af-line);
+  border-radius: 12px;
+  box-shadow: none;
   padding: 0;
   min-height: 100%;
   box-sizing: border-box;
 }
 .mov-page--analisisFinanciero * { box-sizing: border-box; }
-.mov-page--analisisFinanciero button { cursor: pointer; font: inherit; }
-.mov-page--analisisFinanciero button:disabled { opacity: .5; cursor: not-allowed; }
-.mov-page--analisisFinanciero button:focus-visible { outline: 2px solid var(--af-primary); outline-offset: 2px; }
+/* Solo los controles propios heredan los ajustes de tipografía del módulo.
+   Exportar y Calendario conservan sus estilos globales sin ser sobrescritos. */
+.mov-page--analisisFinanciero .af-tab,
+.mov-page--analisisFinanciero .af-detailsBtn { cursor: pointer; font: inherit; }
+.mov-page--analisisFinanciero .af-tab:disabled,
+.mov-page--analisisFinanciero .af-detailsBtn:disabled { opacity: .5; cursor: not-allowed; }
+.mov-page--analisisFinanciero .af-tab:focus-visible,
+.mov-page--analisisFinanciero .af-detailsBtn:focus-visible { outline: 2px solid var(--af-primary); outline-offset: 2px; }
 .mov-page--analisisFinanciero h1,
 .mov-page--analisisFinanciero h2,
 .mov-page--analisisFinanciero h3 { margin: 0; line-height: 1.25; }
@@ -84,43 +96,32 @@
 
 .af-toolbar {
   display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 8px;
-  padding: 12px 18px 11px;
-  margin-bottom: 14px;
-  background: var(--af-paper);
-  border: 1px solid var(--af-line);
-  border-radius: var(--radius-lg, 16px);
-  box-shadow: var(--shadow-xs, 0 1px 2px #0001);
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 18px;
+  /* El borde exterior pertenece al contenedor común; el header
+     solo separa la navegación del contenido. */
+  padding: 8px 18px 10px;
+  margin-bottom: 0;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--af-line);
+  border-radius: 0;
+  box-shadow: none;
 }
+.af-toolbar__main { display: flex; flex: 1 1 auto; flex-direction: column; align-items: flex-start; gap: 8px; min-width: 0; }
 .af-toolbar__title { font-size: 14px; font-weight: 620; letter-spacing: -.01em; color: var(--af-ink); }
-.af-toolbar__bottom { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px 18px; min-width: 0; flex-wrap: wrap; }
-.af-toolbar__actions { display: flex; flex: 0 0 auto; align-items: center; justify-content: flex-end; gap: 10px; min-width: 0; }
+/* Las acciones se centran respecto de la altura COMPLETA del encabezado (título + pestañas). */
+.af-toolbar__actions { display: flex; flex: 0 0 auto; align-self: center; align-items: center; justify-content: flex-end; gap: 10px; min-width: 0; }
 .af-dateField { position: relative; min-width: 220px; z-index: 20; }
-.af-dateField > span {
-  position: absolute; left: 11px; top: -7px; z-index: 1;
-  display: inline-flex; align-items: center; gap: 5px;
-  padding: 0 5px; font-size: 10px; font-weight: 650;
-  color: var(--af-primary); background: var(--af-paper); pointer-events: none;
-}
-.af-dateTrigger {
-  display: flex; align-items: center; justify-content: center; gap: 9px;
-  min-height: 41px; width: 100%; padding: 0 11px;
-  border: 1px solid var(--af-line); border-radius: 10px;
-  background: var(--af-paper); color: var(--af-ink);
-  font-size: 12px !important; font-weight: 600 !important;
-  transition: background var(--transition-base, .16s ease), border-color var(--transition-base, .16s ease), box-shadow var(--transition-base, .16s ease);
-}
-.af-dateTrigger > svg:last-child { font-size: 10px; color: var(--af-muted); margin-left: auto; transition: transform .18s ease; }
-.af-dateTrigger[aria-expanded="true"] > svg:last-child { transform: rotate(180deg); }
-.af-dateTrigger:hover, .af-dateTrigger[aria-expanded="true"] { border-color: var(--af-primary); background: var(--af-soft); }
-.af-dateTrigger:focus-visible { box-shadow: var(--focus-ring, 0 0 0 4px rgba(0,85,187,.12)); }
-.af-calendarDropdown { position: absolute; right: 0; top: calc(100% + 9px); z-index: 100; border-radius: 12px; box-shadow: var(--shadow-md, 0 6px 22px #0a254024); }
+/* El campo utiliza .cc-calTrigger / .cc-floatingLabel / .cc-calDropdown
+   (Global_Section.css) y el Calendario global; aquí solo se alinea el popup. */
+.af-dateField .cc-calDropdown { left: auto; right: 0; }
 
 .af-tabs {
   display: flex;
-  flex: 1 1 350px;
+  flex: 0 1 auto;
   width: fit-content;
   min-width: 0;
   max-width: 100%;
@@ -191,6 +192,10 @@ body.dark .mov-page--analisisFinanciero .af-tab.is-active {
 .af-loading__bar { height: 13px; width: 13px; border: 2px solid currentColor; border-top-color: transparent; border-radius: 50%; animation: af-spin 1s linear infinite; flex: 0 0 auto; }
 @keyframes af-spin { to { transform: rotate(360deg); } }
 .af-warning { background: var(--color-danger-soft, #fff0ef); border: 1px solid var(--af-red); color: var(--af-red); }
+/* Los estados de carga/error también quedan dentro del marco general. */
+.mov-page--analisisFinanciero > .af-loading,
+.mov-page--analisisFinanciero > .af-warning,
+.mov-page--analisisFinanciero > .af-empty { margin: 14px var(--af-content-pad) 0; }
 
 .af-hero {
   position: relative;
@@ -420,21 +425,23 @@ body.dark .mov-page--analisisFinanciero {
   .af-detailGrid { grid-template-columns: repeat(2,minmax(0,1fr)); }
 }
 @media (max-width: 900px) {
-  .af-toolbar__bottom { align-items: stretch; }
-  .af-tabs { flex: 1 1 100%; width: 100%; }
-  .af-toolbar__actions { width: 100%; justify-content: flex-end; }
+  .af-toolbar { flex-direction: column; align-items: stretch; }
+  .af-toolbar__main { width: 100%; align-items: stretch; }
+  .af-tabs { flex: 0 0 auto; width: 100%; }
+  .af-toolbar__actions { width: 100%; align-self: stretch; justify-content: flex-end; }
 }
 @media (max-width: 720px) {
+  .mov-page.mov-page--analisisFinanciero { --af-content-pad: 12px; }
   .pp-content.pp-content--analisis-financiero { display: flex !important; overflow: hidden !important; }
   .pp-content.pp-content--analisis-financiero > .pp-content__inner { display: flex; overflow: hidden !important; }
-  .af-toolbar { padding: 12px; gap: 8px; }
+  .af-toolbar { padding: 8px 12px 10px; gap: 8px; }
   .af-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 3px; width: 100%; overflow: visible; }
   .af-tab { width: 100%; min-width: 0; padding: 9px 4px 10px; font-size: 11px !important; line-height: 1; }
   .af-tab__label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .af-tab.is-active::after { left: 8px; right: 8px; }
 }
 @media (max-width: 640px) {
-  .af-toolbar__actions { flex-wrap: wrap; align-items: stretch; }
+  .af-toolbar__actions { flex-wrap: wrap; align-items: center; }
   .af-dateField { min-width: 0; flex: 1 1 175px; }
   .af-hero { flex-direction: column; gap: 14px; padding: 17px; }
   .af-hero__right { flex-basis: auto; padding: 12px 14px; }
