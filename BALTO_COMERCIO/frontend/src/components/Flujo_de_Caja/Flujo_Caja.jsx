@@ -608,15 +608,7 @@ export default function Flujo_Caja() {
           </div>
         </div>
 
-        {/* Nota al pie */}
-        <div className="fc-footnote">
-          * Ingresos: ventas de contado + ventas en cuenta corriente ya cobradas.
-          Egresos: compras de contado + compras en cuenta corriente ya pagadas.
-          Ajustes: correcciones manuales de saldo (arqueos, conciliaciones); no son ventas, compras, cobros ni pagos.
-          Los saldos históricos respetan la fecha seleccionada; las aperturas, los depósitos/reversiones
-          de cheques y los ajustes afectan el saldo, pero no se registran como ingresos operativos.
-          El saldo disponible hoy se calcula aparte del período seleccionado.
-        </div>
+
 
       </section>
     </div>

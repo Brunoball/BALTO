@@ -10,13 +10,16 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faXmark,
   faScaleBalanced,
-  faCircleInfo,
+  faWallet,
+  faSliders,
+  faCalculator,
   faTriangleExclamation,
   faClockRotateLeft,
   faArrowLeft,
 } from "@fortawesome/free-solid-svg-icons";
 
 import "../../Global/Global_css/Global_Modals.css";
+import "../../Global/Global_css/GlobalsModalsV2.css";
 import "./ajustes_saldo.css";
 
 import {
@@ -253,7 +256,7 @@ export default function ModalAjusteSaldo({ open, onClose, onSaved, onOpenHistori
   return createPortal(
     <div className="mi-mini__overlay fc-aj-overlay" role="presentation">
       <div
-        className="mi-mini__modal fc-aj-modal"
+        className="mi-mini__modal fc-aj-modal fc-aj-editor"
         role="dialog"
         aria-modal="true"
         aria-labelledby="fc-aj-title"
@@ -293,6 +296,28 @@ export default function ModalAjusteSaldo({ open, onClose, onSaved, onOpenHistori
                 handleRevisar();
               }}
             >
+              <div className="gm-view-tabs fc-aj-typeTabs" role="tablist" aria-label="Tipo de ajuste">
+                {TIPOS.map((t, index) => (
+                  <button key={t.codigo} id={`fc-aj-tab-${t.codigo}`} type="button" role="tab"
+                    aria-selected={tipo === t.codigo} aria-controls="fc-aj-type-panel"
+                    tabIndex={tipo === t.codigo ? 0 : -1} disabled={busy}
+                    className={`gm-view-tab ${tipo === t.codigo ? "is-active" : ""}`}
+                    onClick={() => { setTipo(t.codigo); clearError("importe"); }}
+                    onKeyDown={(event) => {
+                      const keys = ["ArrowLeft", "ArrowRight", "Home", "End"];
+                      if (!keys.includes(event.key)) return;
+                      event.preventDefault();
+                      const next = event.key === "Home" ? 0 : event.key === "End" ? TIPOS.length - 1 : (index + (event.key === "ArrowRight" ? 1 : -1) + TIPOS.length) % TIPOS.length;
+                      setTipo(TIPOS[next].codigo); clearError("importe");
+                      document.getElementById(`fc-aj-tab-${TIPOS[next].codigo}`)?.focus();
+                    }}>
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+              <div className="fc-aj-editorGrid" id="fc-aj-type-panel" role="tabpanel" aria-labelledby={`fc-aj-tab-${tipo}`}>
+                <div className="fc-aj-editorFields">
+                  <h5 className="fc-aj-panelTitle"><span className="fc-aj-boxIcon" aria-hidden="true"><FontAwesomeIcon icon={faSliders} /></span><span>Datos del ajuste</span></h5>
               {/* A. Medio de pago */}
               <div className="fl-field">
                 <select
@@ -332,33 +357,6 @@ export default function ModalAjusteSaldo({ open, onClose, onSaved, onOpenHistori
                 </p>
               )}
 
-              {/* B. Saldo actual */}
-              <div className="fc-aj-current" aria-live="polite">
-                <span>Saldo actual{fechaNegocio ? ` al ${fmtDateES(fechaNegocio)}` : ""}</span>
-                <strong className={signClass(Number(medioSel?.saldo_actual || 0)) === "is-negative" ? "is-negative" : ""}>
-                  {loadingMedios ? "Calculando…" : medioSel ? moneyARS(medioSel.saldo_actual) : "—"}
-                </strong>
-              </div>
-
-              {/* C. Tipo de ajuste */}
-              <fieldset className="fc-aj-tipos" disabled={busy}>
-                <legend>Tipo de ajuste</legend>
-                <div className="fc-aj-segmented" role="radiogroup" aria-label="Tipo de ajuste">
-                  {TIPOS.map((t) => (
-                    <label key={t.codigo} className={`fc-aj-segment ${tipo === t.codigo ? "is-active" : ""}`}>
-                      <input
-                        type="radio"
-                        name="fc-aj-tipo"
-                        value={t.codigo}
-                        checked={tipo === t.codigo}
-                        onChange={() => { setTipo(t.codigo); clearError("importe"); }}
-                      />
-                      <span>{t.label}</span>
-                    </label>
-                  ))}
-                </div>
-              </fieldset>
-
               {/* D. Importe */}
               <div className="fl-field">
                 <div className="fc-aj-money">
@@ -379,35 +377,6 @@ export default function ModalAjusteSaldo({ open, onClose, onSaved, onOpenHistori
                 </div>
                 <small id="fc-aj-importe-hint" className="fc-aj-hint">{tipoInfo.hint}</small>
                 {errors.importe && <small className="fc-aj-error">{errors.importe}</small>}
-              </div>
-
-              {/* E. Vista previa automática */}
-              <div className="fc-aj-preview" aria-live="polite" aria-label="Vista previa del ajuste">
-                <div className="fc-aj-preview__row">
-                  <span>Saldo actual</span>
-                  <b>{medioSel ? moneyARS(medioSel.saldo_actual) : "—"}</b>
-                </div>
-                {tipo === "ESTABLECER" && (
-                  <div className="fc-aj-preview__row">
-                    <span>Saldo real ingresado</span>
-                    <b>{importe == null ? "—" : moneyARS(importe)}</b>
-                  </div>
-                )}
-                <div className="fc-aj-preview__row">
-                  <span>Ajuste a registrar</span>
-                  <b className={preview ? signClass(preview.diferencia) : ""} data-testid="fc-aj-diferencia">
-                    {preview ? moneyARSSigned(preview.diferencia) : "—"}
-                  </b>
-                </div>
-                <div className="fc-aj-preview__row fc-aj-preview__row--total">
-                  <span>Nuevo saldo</span>
-                  <b className={preview && preview.saldoNuevo < 0 ? "is-negative" : ""} data-testid="fc-aj-nuevo-saldo">
-                    {preview ? moneyARS(preview.saldoNuevo) : "—"}
-                  </b>
-                </div>
-                {preview && preview.saldoNuevo < 0 && (
-                  <p className="fc-aj-previewWarn"><FontAwesomeIcon icon={faTriangleExclamation} /> El nuevo saldo quedará negativo.</p>
-                )}
               </div>
 
               {/* F. Motivo */}
@@ -448,14 +417,48 @@ export default function ModalAjusteSaldo({ open, onClose, onSaved, onOpenHistori
                 {errors.observaciones && <small className="fc-aj-error">{errors.observaciones}</small>}
               </div>
 
-              <div className="fc-aj-info">
-                <FontAwesomeIcon icon={faCircleInfo} />
-                <span>
-                  El ajuste se registra con fecha de hoy y corrige sólo el saldo de la caja. No crea ventas, compras,
-                  cobros ni pagos, y no modifica cuentas corrientes ni saldos iniciales.
-                </span>
+                </div>
+                <aside className="fc-aj-editorSummary" aria-label="Resumen del ajuste">
+              {/* B. Saldo actual */}
+              <div className="fc-aj-current" aria-live="polite">
+                <span className="fc-aj-balanceHeading"><span className="fc-aj-boxIcon" aria-hidden="true"><FontAwesomeIcon icon={faWallet} /></span><span>Saldo actual{fechaNegocio ? ` al ${fmtDateES(fechaNegocio)}` : ""}</span></span>
+                <strong className={signClass(Number(medioSel?.saldo_actual || 0)) === "is-negative" ? "is-negative" : ""}>
+                  {loadingMedios ? "Calculando…" : medioSel ? moneyARS(medioSel.saldo_actual) : "—"}
+                </strong>
               </div>
 
+              {/* E. Vista previa automática */}
+              <div className="fc-aj-preview" aria-live="polite" aria-label="Vista previa del ajuste">
+                <h5 className="fc-aj-panelTitle"><span className="fc-aj-boxIcon" aria-hidden="true"><FontAwesomeIcon icon={faCalculator} /></span><span>Resumen del ajuste</span></h5>
+                <div className="fc-aj-preview__row">
+                  <span>Saldo actual</span>
+                  <b>{medioSel ? moneyARS(medioSel.saldo_actual) : "—"}</b>
+                </div>
+                {tipo === "ESTABLECER" && (
+                  <div className="fc-aj-preview__row">
+                    <span>Saldo real ingresado</span>
+                    <b>{importe == null ? "—" : moneyARS(importe)}</b>
+                  </div>
+                )}
+                <div className="fc-aj-preview__row">
+                  <span>Ajuste a registrar</span>
+                  <b className={preview ? signClass(preview.diferencia) : ""} data-testid="fc-aj-diferencia">
+                    {preview ? moneyARSSigned(preview.diferencia) : "—"}
+                  </b>
+                </div>
+                <div className="fc-aj-preview__row fc-aj-preview__row--total">
+                  <span>Nuevo saldo</span>
+                  <b className={preview && preview.saldoNuevo < 0 ? "is-negative" : ""} data-testid="fc-aj-nuevo-saldo">
+                    {preview ? moneyARS(preview.saldoNuevo) : "—"}
+                  </b>
+                </div>
+                {preview && preview.saldoNuevo < 0 && (
+                  <p className="fc-aj-previewWarn"><FontAwesomeIcon icon={faTriangleExclamation} /> El nuevo saldo quedará negativo.</p>
+                )}
+              </div>
+
+                </aside>
+              </div>
               <div className="mi-mini__actions fc-aj-actions">
                 {onOpenHistorial && (
                   <button type="button" className="mit-btn mit-btn--ghost fc-aj-actions__left" onClick={onOpenHistorial} disabled={busy}>
