@@ -746,6 +746,8 @@ export default function ModalPagarOrdenesPago({
 
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [pagaTodo, setPagaTodo] = useState(false);
+  // Fecha única de la orden de pago: es la fecha en que egresó el dinero (por defecto hoy).
+  const [fechaOrden, setFechaOrden] = useState(todayISO);
   const [loading, setLoading] = useState(false);
   const [rows, setRows] = useState(() => []);
   const [openDetalleDeuda, setOpenDetalleDeuda] = useState(false);
@@ -835,6 +837,7 @@ export default function ModalPagarOrdenesPago({
 
     setSelectedIds(new Set());
     setPagaTodo(false);
+    setFechaOrden(todayISO());
     setLoading(false);
     setRows(Array.isArray(deudas) ? [...deudas] : []);
     setOpenDetalleDeuda(false);
@@ -992,9 +995,7 @@ export default function ModalPagarOrdenesPago({
         body: JSON.stringify({
           ids_movimiento,
           medios_pago,
-          fecha_cobro: todayISO(),
-          fecha_pago: todayISO(),
-          fecha: todayISO(),
+          fecha: fechaOrden,
           idUsuario,
           idUsuarioMaster: idUsuarioMaster || idUsuario,
         }),
@@ -1033,7 +1034,7 @@ export default function ModalPagarOrdenesPago({
         medioPagoNombre: mpNombre,
         total,
         seleccion: seleccionConImportes,
-        fechaPago: new Date(),
+        fechaPago: fechaOrden,
       });
 
       return {
@@ -1041,7 +1042,7 @@ export default function ModalPagarOrdenesPago({
         title: `Orden de Pago - ${proveedorInfo?.nombre || proveedor?.proveedor || "Proveedor"}`,
       };
     },
-    [proveedor]
+    [proveedor, fechaOrden]
   );
 
   const validate = useCallback(() => {
@@ -1099,12 +1100,28 @@ export default function ModalPagarOrdenesPago({
       };
     }
 
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(fechaOrden || ""))) {
+      return { ok: false, msg: "Ingresá una fecha válida para la orden de pago." };
+    }
+    if (fechaOrden > todayISO()) {
+      return { ok: false, msg: "La fecha de la orden de pago no puede ser posterior a hoy." };
+    }
+    const fechaDeudaMasReciente = seleccion
+      .map((r) => String(r?.fecha || "").slice(0, 10))
+      .filter((f) => /^\d{4}-\d{2}-\d{2}$/.test(f))
+      .sort()
+      .pop();
+    if (fechaDeudaMasReciente && fechaOrden < fechaDeudaMasReciente) {
+      const [y, m, d] = fechaDeudaMasReciente.split("-");
+      return { ok: false, msg: `La fecha de la orden de pago no puede ser anterior a la compra que cancela (${d}/${m}/${y}).` };
+    }
+
     // Permitimos que el importe del medio de pago supere el saldo seleccionado.
     // Ejemplo: cheque/eCheq de $2.000 para cancelar un saldo de $1.500.
     // El backend registra el importe completo y aplica el excedente a la última deuda seleccionada.
 
     return { ok: true };
-  }, [deudasOrdenadas, selectedIds, mediosFilas, mediosPago, sumaMediosPago, totalSeleccionado]);
+  }, [deudasOrdenadas, selectedIds, mediosFilas, mediosPago, sumaMediosPago, totalSeleccionado, fechaOrden]);
 
   const handleConfirm = async () => {
     if (!deudasOrdenadas.length) {
@@ -1149,9 +1166,7 @@ export default function ModalPagarOrdenesPago({
             seleccion,
             totalSeleccionado,
             medios_pago: mediosPagoPayload,
-            fecha_cobro: todayISO(),
-            fecha_pago: todayISO(),
-            fecha: todayISO(),
+            fecha: fechaOrden,
             ids_movimiento: ids,
           })
         );
@@ -1407,6 +1422,24 @@ export default function ModalPagarOrdenesPago({
                         </button>
 
                         <div className="gm-section-divider" />
+
+                        <div className="gm-field" style={{ marginBottom: 12 }}>
+                          <input
+                            id="op-fecha-input"
+                            className="gm-input"
+                            type="date"
+                            aria-label="Fecha"
+                            value={fechaOrden}
+                            max={todayISO()}
+                            onChange={(e) => {
+                              const valor = String(e.target.value || "");
+                              if (!valor || valor > todayISO()) return;
+                              setFechaOrden(valor);
+                            }}
+                            disabled={loading}
+                          />
+                          <label className="gm-label gm-label--up" htmlFor="op-fecha-input">Fecha</label>
+                        </div>
 
                         <PanelMediosPago
                           mediosFilas={mediosFilas}

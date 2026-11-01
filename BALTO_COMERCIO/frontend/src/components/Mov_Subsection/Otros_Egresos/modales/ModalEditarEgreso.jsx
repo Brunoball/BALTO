@@ -336,7 +336,8 @@ function buildMediosPagoFromInitial(data) {
             emisor: safeText(mp?.emisor ?? mp?.cheque_emisor),
             numero_cheque: safeText(mp?.numero_cheque ?? mp?.cheque_numero),
             fecha_emision: normalizeDateISO(mp?.fecha_emision ?? mp?.cheque_fecha_emision),
-            fecha_pago: normalizeDateISO(mp?.fecha_pago ?? mp?.cheque_fecha_pago),
+            // Vencimiento propio del cheque (no la fecha del egreso).
+            fecha_pago: normalizeDateISO(mp?.cheque_fecha_pago),
             importe: importeCheque,
           });
         }

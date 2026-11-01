@@ -152,6 +152,9 @@ export async function createStockProductFixture(page, product) {
     margen_promo_porcentaje: '',
     margen_promo_valor: '',
     stock: stockQuantity(product?.stock, 0),
+    // Misma marca que envía el alta real de Stock. Sin ella, un producto con
+    // variantes puede quedar interpretado como simple por el backend.
+    tiene_variantes: Array.isArray(product?.variants) && product.variants.length > 0 ? '1' : '0',
     ...(Number(product?.unitId || product?.idStockUnidad || 0) > 0
       ? { id_stock_unidad: String(Number(product?.unitId || product?.idStockUnidad)) }
       : {}),

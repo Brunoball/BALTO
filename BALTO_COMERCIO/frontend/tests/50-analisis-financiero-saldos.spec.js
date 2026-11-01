@@ -23,21 +23,24 @@ test('@analisis-financiero @saldos API concilia saldo de inicio, apertura y movi
   expect(medio.length).toBeGreaterThan(0);
   for (const m of medio) {
     expect(m.nombre).not.toMatch(/cheq/i); // documentos separados del dinero líquido
+    // Los ajustes manuales de saldo son un concepto propio: deben venir informados
+    // siempre (aunque sea 0) y explicar la diferencia restante del cierre.
+    expect(m, `${m.nombre} debe informar ajustes_manuales`).toHaveProperty('ajustes_manuales');
     expect(amount(m.saldo_final)).toBeCloseTo(
       amount(m.saldo_inicio) + amount(m.saldo_inicial_aplicado) + amount(m.ingresos)
-        - amount(m.egresos) + amount(m.ajustes_internos), 2,
+        - amount(m.egresos) + amount(m.ajustes_internos) + amount(m.ajustes_manuales), 2,
     );
     expect(amount(m.saldo_inicial_configurado)).toBeCloseTo(
       (m.saldos_iniciales || []).reduce((sum, s) => sum + amount(s.importe), 0), 2,
     );
   }
   const sum = (key) => medio.reduce((total, m) => total + amount(m[key]), 0);
-  for (const key of ['saldo_inicio', 'saldo_inicial_aplicado', 'saldo_inicial_configurado', 'ingresos', 'egresos', 'ajustes_internos', 'saldo_final']) {
+  for (const key of ['saldo_inicio', 'saldo_inicial_aplicado', 'saldo_inicial_configurado', 'ingresos', 'egresos', 'ajustes_internos', 'ajustes_manuales', 'saldo_final']) {
     expect(amount(t[key]), `Total ${key} debe coincidir con el detalle por medio`).toBeCloseTo(sum(key), 2);
   }
   expect(amount(t.saldo_final)).toBeCloseTo(
     amount(t.saldo_inicio) + amount(t.saldo_inicial_aplicado) + amount(t.ingresos)
-      - amount(t.egresos) + amount(t.ajustes_internos), 2,
+      - amount(t.egresos) + amount(t.ajustes_internos) + amount(t.ajustes_manuales), 2,
   );
   expect(amount(json.valores.resultado_neto)).toBeCloseTo(
     amount(json.valores.ventas) + amount(json.valores.otros_ingresos)
@@ -65,29 +68,42 @@ test('@analisis-financiero @saldos cambian las aperturas al cambiar el rango, no
   expect(opening).toBeCloseTo((before.tesoreria.medios || []).reduce((total, m) => total + amount(m.saldo_inicial_aplicado), 0), 2);
 });
 
-test('@analisis-financiero UI muestra solo las 3 secciones sin perder gráfico ni saldos', async ({ page }) => {
+test('@analisis-financiero UI muestra las 3 pestañas actuales sin perder gráfico ni saldos', async ({ page }) => {
   await page.goto('/panel/analisis-financiero');
   await waitForBusyToFinish(page);
-  await expect(page.getByRole('heading', { name: 'Análisis financiero' })).toBeVisible();
-  await expect(page.getByRole('region', { name: 'Resumen financiero' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Cómo se formó tu saldo' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Rendimiento del negocio' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: '¿Dónde está el dinero?' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Evolución del saldo' })).toBeVisible();
-  await expect(page.getByRole('img', { name: /Evolución del saldo:/i })).toBeVisible();
-  await expect(page.locator('.af-metrics .af-metric')).toHaveCount(2);
-  await expect(page.getByText('Cobros recibidos', { exact: true })).toBeVisible();
-  await expect(page.getByText('Pagos realizados', { exact: true })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Saldos iniciales y patrimonio' })).toHaveCount(0);
-  await expect(page.locator('.af-shareGrid')).toHaveCount(0);
-  await expect(page.locator('.af-resultPill')).toHaveCount(0);
-  await expect(page.getByRole('table')).toBeVisible();
-  const graph = page.locator('.af-insightGrid .af-chartPanel');
-  const reconcile = page.locator('.af-insightGrid .af-reconcile');
+
+  // La interfaz actual presenta tres PESTAÑAS, no las secciones antiguas.
+  const tabs = page.getByRole('tablist', { name: 'Secciones del análisis financiero' });
+  await expect(tabs).toBeVisible();
+  const disponibilidad = tabs.getByRole('tab', { name: 'Disponibilidad' });
+  const resultados = tabs.getByRole('tab', { name: 'Resultados' });
+  const medios = tabs.getByRole('tab', { name: 'Medios de pago' });
+  await expect(tabs.getByRole('tab')).toHaveCount(3);
+  await expect(disponibilidad).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('heading', { name: 'Movimientos de dinero' })).toBeVisible();
+
+  const disponibilidadPanel = page.locator('#af-panel-disponibilidad');
+  const resultadosPanel = page.locator('#af-panel-resultados');
+  const mediosPanel = page.locator('#af-panel-medios');
+  await expect(disponibilidadPanel).toBeVisible();
+  await expect(resultadosPanel).toBeHidden();
+  await expect(mediosPanel).toBeHidden();
+
+  await expect(disponibilidadPanel.getByRole('region', { name: 'Resumen de tesorería' })).toBeVisible();
+  await expect(disponibilidadPanel.locator('.af-metrics .af-metric')).toHaveCount(2);
+  await expect(disponibilidadPanel.getByText('Cobros recibidos', { exact: true })).toBeVisible();
+  await expect(disponibilidadPanel.getByText('Pagos realizados', { exact: true })).toBeVisible();
+  await expect(disponibilidadPanel.getByRole('heading', { name: 'Evolución del saldo' })).toBeVisible();
+  await expect(disponibilidadPanel.getByRole('heading', { name: 'Conciliación' })).toBeVisible();
+  await expect(disponibilidadPanel.getByRole('img', { name: /Evolución del saldo:/i })).toBeVisible();
+  const graph = disponibilidadPanel.locator('.af-insightGrid .af-chartPanel');
+  const reconcile = disponibilidadPanel.locator('.af-insightGrid .af-reconcile');
   await expect(graph).toBeVisible();
   await expect(reconcile).toBeVisible();
   await expect(reconcile.getByText('Aperturas del período')).toBeVisible();
-  // En escritorio, gráfico y conciliación deben compartir la misma fila.
+  await expect(reconcile.getByText('Saldo al cierre')).toBeVisible();
+
+  // En escritorio gráfico y conciliación deben compartir la misma fila.
   await page.setViewportSize({ width: 1440, height: 900 });
   const graphBox = await graph.boundingBox();
   const reconcileBox = await reconcile.boundingBox();
@@ -95,4 +111,37 @@ test('@analisis-financiero UI muestra solo las 3 secciones sin perder gráfico n
   expect(reconcileBox, 'Conciliación debe estar renderizada').not.toBeNull();
   expect(Math.abs(graphBox.y - reconcileBox.y)).toBeLessThan(5);
   expect(graphBox.x + graphBox.width).toBeLessThanOrEqual(reconcileBox.x + 5);
+
+  await resultados.click();
+  await expect(resultados).toHaveAttribute('aria-selected', 'true');
+  await expect(disponibilidad).toHaveAttribute('aria-selected', 'false');
+  await expect(resultadosPanel).toBeVisible();
+  await expect(disponibilidadPanel).toBeHidden();
+  await expect(page.getByRole('heading', { name: 'Rendimiento del negocio' })).toBeVisible();
+  await expect(resultadosPanel.getByRole('heading', { name: 'Ingresos y costos' })).toBeVisible();
+  await expect(resultadosPanel.getByText('Resultado operativo')).toBeVisible();
+  await expect(resultadosPanel.getByText('Pendiente de cobrar')).toBeVisible();
+  await expect(resultadosPanel.getByText('Pendiente de pagar')).toBeVisible();
+
+  await medios.click();
+  await expect(medios).toHaveAttribute('aria-selected', 'true');
+  await expect(resultadosPanel).toBeHidden();
+  await expect(mediosPanel).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Saldos por medio de pago' })).toBeVisible();
+  const table = mediosPanel.getByRole('table', { name: 'Saldos por medio de pago' });
+  await expect(table).toBeVisible();
+  for (const header of ['Medio de pago', 'Arranque', 'Aperturas', 'Cobros', 'Pagos', 'Cierre']) {
+    await expect(table.getByRole('columnheader', { name: header })).toBeVisible();
+  }
+  await expect(table.locator('.af-mediumFoot')).toBeVisible();
+
+  // Volver a Disponibilidad debe conservar gráficos y saldos, no recargar una
+  // pantalla desactualizada ni dejar un panel superpuesto.
+  await disponibilidad.click();
+  await expect(disponibilidad).toHaveAttribute('aria-selected', 'true');
+  await expect(disponibilidadPanel).toBeVisible();
+  await expect(resultadosPanel).toBeHidden();
+  await expect(mediosPanel).toBeHidden();
+  await expect(graph).toBeVisible();
+  await expect(reconcile).toBeVisible();
 });

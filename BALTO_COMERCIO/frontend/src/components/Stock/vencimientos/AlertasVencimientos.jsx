@@ -17,6 +17,18 @@ const mostrarFecha = (raw) => {
 };
 const cantidad = (n) => Number(n || 0).toLocaleString("es-AR", {maximumFractionDigits:3});
 const coeficiente = (n) => Number(n || 0).toLocaleString("es-AR", {minimumFractionDigits:4,maximumFractionDigits:4});
+// La carga de alertas es asíncrona: no abrir un modal encima de alguien que
+// ya está escribiendo. La campana conserva las alertas y la apertura automática
+// se puede intentar en la siguiente actualización, cuando no esté editando.
+function usuarioEstaEscribiendo() {
+  const activo = document.activeElement;
+  if (!activo || activo === document.body) return false;
+  if (activo.isContentEditable || activo.matches('[role="textbox"]')) return true;
+  // Stock tiene un input técnico invisible que recibe códigos de barras.
+  // No representa una edición manual y no debe bloquear las alertas.
+  return activo.matches('textarea, select, input:not([type="hidden"]):not(.stock-barcodeCaptureInput)');
+}
+
 function sessionScope() {
   try {
     const u = JSON.parse(localStorage.getItem("usuario") || "null");
@@ -67,7 +79,10 @@ export default function AlertasVencimientos() {
     try {
       const verVenc = rows.length > 0 && venc.status === "fulfilled" && !sessionStorage.getItem(vencKey);
       const verRev = revKey && precios.status === "fulfilled" && !sessionStorage.getItem(revKey);
-      if (verVenc || verRev) {
+      // El backend puede responder después de que la persona empiece a buscar,
+      // cargar un formulario o editar stock. No interrumpir ni robar pulsaciones.
+      // No marcamos la notificación como vista al posponerla.
+      if ((verVenc || verRev) && !usuarioEstaEscribiendo()) {
         if (verVenc) sessionStorage.setItem(vencKey, "1");
         if (verRev) sessionStorage.setItem(revKey, "1");
         setAbierto(true);

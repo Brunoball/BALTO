@@ -225,6 +225,9 @@ test('@crud @critical NC compra: adjunta archivo y lo abre desde el ojo de la co
 });
 
 test('@crud @critical NC compra: backend rechaza IVA manipulado fuera del selector', async ({ page }, testInfo) => {
+  // Se verifica la respuesta 422 y después se eliminan compra y producto por
+  // Hostinger. El límite global de 60s cortaba esa limpieza ya confirmada.
+  test.setTimeout(4 * 60_000);
   await requireMutations(test, page);
   const diagnostics = installDiagnostics(page);
   const productName = uniqueName('COMPRA-NC-IVA');

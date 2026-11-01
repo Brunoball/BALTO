@@ -98,6 +98,89 @@ test('@stock @search @critical el buscador conserva texto y foco ante escritura,
   await expect(search).toHaveValue('');
 });
 
+test('@stock @search @notificaciones-ui una alerta tardía no interrumpe la escritura del buscador', async ({ page }) => {
+  // Reproduce en forma determinista el escenario de la traza original:
+  // vencimientos termina de cargar cuando el usuario ya está escribiendo.
+  // @notificaciones-ui deshabilita el cierre automático de popups del fixture.
+  let liberarAlertas;
+  let confirmarSolicitud;
+  const alertasPendientes = new Promise((resolve) => { liberarAlertas = resolve; });
+  const solicitudIniciada = new Promise((resolve) => { confirmarSolicitud = resolve; });
+  const ruta = '**/api.php?*';
+  await page.route(ruta, async (route) => {
+    const action = new URL(route.request().url()).searchParams.get('action');
+    if (action === 'stock_precios_revision_pendiente') {
+      await route.fulfill({
+        status: 200, contentType: 'application/json',
+        body: JSON.stringify({ exito: true, revision: null }),
+      });
+      return;
+    }
+    if (action === 'stock_vencimientos_alertas') {
+      confirmarSolicitud();
+      await alertasPendientes;
+      await route.fulfill({
+        status: 200, contentType: 'application/json',
+        body: JSON.stringify({
+          exito: true,
+          alertas: [{
+            id_vencimiento: 990001,
+            id_stock_producto: 990001,
+            producto_nombre: 'ALERTA E2E DIFERIDA',
+            fecha_vencimiento: '2026-10-31',
+            dias_restantes: 0,
+            cantidad_disponible: 1,
+          }],
+        }),
+      });
+      return;
+    }
+    await route.continue();
+  });
+
+  try {
+    const respuestaAlertas = page.waitForResponse((response) =>
+      new URL(response.url()).searchParams.get('action') === 'stock_vencimientos_alertas',
+      { timeout: 30_000 },
+    );
+    await page.goto('/panel/stock', { waitUntil: 'domcontentloaded' });
+    await waitForBusyToFinish(page);
+    await solicitudIniciada;
+
+    const search = page.locator('.stock-page .cc-filter--search input').first();
+    await expect(search).toBeVisible();
+    await search.fill('PW-FOCO-STO');
+    await expect(search).toBeFocused();
+    liberarAlertas();
+    await respuestaAlertas;
+
+    // Esperar a que React actualice la campana, sin ocultar el modal con un
+    // locatorHandler: antes del arreglo esta respuesta abría el popup y robaba foco.
+    await expect(page.getByRole('button', { name: /Notificaciones de Stock: 1/i })).toBeVisible();
+    await expect(page.getByRole('dialog', { name: 'Notificaciones de Stock' })).toBeHidden();
+    await expect(search).toHaveValue('PW-FOCO-STO');
+    await expect(search).toBeFocused();
+
+    await search.pressSequentially('CK', { delay: 35 });
+    await expect(search).toHaveValue('PW-FOCO-STOCK');
+    await expect(search).toBeFocused();
+
+    // No se pierde la notificación: cuando termina la edición y se actualiza
+    // el centro de alertas, puede abrirse normalmente por primera vez.
+    await search.press('Tab');
+    const siguienteLectura = page.waitForResponse((response) =>
+      new URL(response.url()).searchParams.get('action') === 'stock_vencimientos_alertas',
+      { timeout: 30_000 },
+    );
+    await page.evaluate(() => window.dispatchEvent(new Event('balto:stock-vencimientos-cambio')));
+    await siguienteLectura;
+    await expect(page.getByRole('dialog', { name: 'Notificaciones de Stock' })).toBeVisible();
+  } finally {
+    liberarAlertas();
+    await page.unroute(ruta);
+  }
+});
+
 test('@stock @sku @critical SKU duplicado identifica producto existente, sin crear otro', async ({ page }) => {
   await requireMutations(test, page);
   test.setTimeout(180_000);

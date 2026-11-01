@@ -1542,6 +1542,7 @@ export default function ModalNuevaVenta({ open, lists, tiendaNubeVenta = null, o
   );
   const clientesOptions = useMemo(() => [ADD_CLIENTE_OPTION, ...clientesList], [clientesList]);
 
+  // Fecha única de la venta: en contado también es la fecha del cobro (la fija el backend).
   const [fecha, setFecha] = useState(todayISO);
   const usuarioBasicoVentas = useMemo(() => usuarioVentaEsBasico(), [open]);
   const [filters, setFilters] = useState({

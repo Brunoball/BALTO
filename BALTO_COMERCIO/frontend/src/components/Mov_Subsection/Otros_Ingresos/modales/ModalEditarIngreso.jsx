@@ -325,7 +325,8 @@ function makeMedioPagoRow(mp = {}) {
             emisor: safeText(mp?.emisor),
             numero_cheque: safeText(mp?.numero_cheque),
             fecha_emision: safeText(mp?.fecha_emision),
-            fecha_pago: safeText(mp?.fecha_pago),
+            // Vencimiento propio del cheque (no la fecha del ingreso).
+            fecha_pago: safeText(mp?.cheque_fecha_pago),
             importe: Number(mp?.cheque_importe ?? mp?.monto ?? 0) || 0,
           }
         : null,

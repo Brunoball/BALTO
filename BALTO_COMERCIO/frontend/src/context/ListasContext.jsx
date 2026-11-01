@@ -94,6 +94,9 @@ function normalizeLists(raw) {
   };
 }
 
+// Tiempo máximo total (encabezados + cuerpo) para global_obtener_listas.
+const LISTS_BODY_TIMEOUT_MS = 30000;
+
 const ListasCtx = createContext(null);
 
 export function ListasProvider({ children }) {
@@ -105,6 +108,8 @@ export function ListasProvider({ children }) {
   const [lastUpdated, setLastUpdated] = useState(0);
 
   const inflightRef = useRef(null);
+  const listsRef = useRef(emptyLists);
+  listsRef.current = lists;
   const requestSeqRef = useRef(0);
 
   const buildHeadersGET = useCallback(() => {
@@ -129,13 +134,35 @@ export function ListasProvider({ children }) {
 
   const fetchLists = useCallback(async () => {
     const url = `${API}?action=global_obtener_listas&_ts=${Date.now()}`;
-    const res = await fetch(url, {
-      method: "GET",
-      headers: buildHeadersGET(),
-    });
-    const data = await parseJsonOrThrow(res);
-    if (!data?.exito) throw new Error(data?.mensaje || "No se pudieron cargar listas.");
-    return normalizeLists(data);
+    // El wrapper global de fetch (index.js) corta por timeout sólo hasta recibir
+    // los encabezados. Si la conexión se traba mientras baja el cuerpo (~300 KB),
+    // res.text() quedaba esperando para siempre, loadingLists nunca volvía a
+    // false y pantallas como Ventas quedaban con búsqueda/acciones deshabilitadas.
+    // Este controlador cubre también la lectura del cuerpo.
+    const ctrl = new AbortController();
+    let timedOut = false;
+    const timeoutId = setTimeout(() => {
+      timedOut = true;
+      try { ctrl.abort("timeout"); } catch { ctrl.abort(); }
+    }, LISTS_BODY_TIMEOUT_MS);
+
+    try {
+      const res = await fetch(url, {
+        method: "GET",
+        headers: buildHeadersGET(),
+        signal: ctrl.signal,
+      });
+      const data = await parseJsonOrThrow(res);
+      if (!data?.exito) throw new Error(data?.mensaje || "No se pudieron cargar listas.");
+      return normalizeLists(data);
+    } catch (e) {
+      if (timedOut) {
+        throw new Error("La carga de listas tardó demasiado. Se mantienen los datos anteriores.");
+      }
+      throw e;
+    } finally {
+      clearTimeout(timeoutId);
+    }
   }, [API, buildHeadersGET, parseJsonOrThrow]);
 
   const writeCache = useCallback((_payload) => {
@@ -197,9 +224,10 @@ export function ListasProvider({ children }) {
           const msg = e?.message || "Error cargando listas.";
           if (requestSeq === requestSeqRef.current) {
             setErrorLists(msg);
-            if (!cached?.lists) setLists(emptyLists);
+            // No vaciar las listas ya cargadas por un fallo puntual de red: los
+            // selectores siguen funcionando con los datos anteriores.
           }
-          return cached?.lists || emptyLists;
+          return cached?.lists || listsRef.current || emptyLists;
         } finally {
           if (requestSeq === requestSeqRef.current) {
             setLoadingLists(false);

@@ -82,48 +82,78 @@ function chequeField(dialog, label) {
 export async function fillIncomingCheque(scope, cheque) {
   const tipo = cheque.tipo || 'CHEQUE';
   const electronic = isEcheq(tipo);
-
   const page = scope.page();
   const modal = page.getByRole('dialog', {
     name: electronic ? /Cargar eCheq/i : /Cargar Cheque/i,
   }).last();
+  const loadedCheque = () => scope.locator('.gm-check-item')
+    .filter({ hasText: String(cheque.numero) }).first();
 
-  // El bloque de medio de pago puede reconstruirse durante la hidratación y
-  // desmontar exactamente el botón que Playwright estaba por pulsar. Repetimos
-  // selección + click como una sola operación hasta que el submodal quede abierto.
+  // Recibos puede refrescar las deudas y reconstruir los medios de pago
+  // mientras se hidrata el modal. Reabrimos/rellenamos SOLO el submodal local,
+  // antes de confirmar ningún movimiento o persistir datos en el backend.
+  // Si el cheque ya quedó cargado no volvemos a añadirlo.
   await expect(async () => {
-    if (await modal.isVisible().catch(() => false)) return;
+    if (await loadedCheque().isVisible().catch(() => false)) return;
 
-    await selectChequePaymentMethod(scope, tipo);
-    const load = scope.getByRole('button', {
-      name: electronic ? /Cargar eCheq/i : /Cargar cheque/i,
-    }).last();
-    await expect(load).toBeVisible({ timeout: 5_000 });
-    await expect(load).toBeEnabled({ timeout: 5_000 });
-    await load.click({ timeout: 5_000 });
-    await expect(modal).toBeVisible({ timeout: 5_000 });
+    if (!(await modal.isVisible().catch(() => false))) {
+      await selectChequePaymentMethod(scope, tipo);
+      const load = scope.getByRole('button', {
+        name: electronic ? /Cargar eCheq/i : /Cargar cheque/i,
+      }).last();
+      await expect(load).toBeVisible({ timeout: 5_000 });
+      await expect(load).toBeEnabled({ timeout: 5_000 });
+      await load.click({ timeout: 5_000 });
+      await expect(modal).toBeVisible({ timeout: 5_000 });
+    }
+
+    const emisor = chequeField(modal, /Emisor \/ Banco/i);
+    const numero = chequeField(modal, /N° de/i);
+    const importe = chequeField(modal, /Importe/i);
+
+    // El formulario es controlado por React. fill() puede finalizar mientras
+    // otro render restablece los valores; comprobarlos antes de Confirmar evita
+    // guardar un cheque con el Emisor en blanco (fallo observado en el trace).
+    await emisor.fill(String(cheque.emisor), { timeout: 5_000 });
+    await expect(emisor).toHaveValue(String(cheque.emisor), { timeout: 3_000 });
+    await numero.fill(String(cheque.numero), { timeout: 5_000 });
+    await expect(numero).toHaveValue(String(cheque.numero), { timeout: 3_000 });
+    await importe.fill(String(cheque.importe), { timeout: 5_000 });
+    // El blur formatea el monto ARS. No usar Tab: en este modal lleva foco
+    // al campo fecha y puede abrir el calendario nativo (showPicker).
+    // Si React desmontó el input, falla rápido y reintentamos el submodal.
+    await importe.evaluate((input) => input.blur(), { timeout: 5_000 });
+
+    const dates = modal.locator('input[type="date"]');
+    if (cheque.fechaEmision) await dates.nth(0).fill(cheque.fechaEmision, { timeout: 5_000 });
+    if (cheque.fechaPago) await dates.nth(1).fill(cheque.fechaPago, { timeout: 5_000 });
+
+    // La última verificación detecta un reset tardío del formulario, incluso
+    // cuando número/importe siguen visibles pero emisor volvió a quedar vacío.
+    await expect(modal).toBeVisible({ timeout: 3_000 });
+    await expect(emisor).toHaveValue(String(cheque.emisor), { timeout: 3_000 });
+    await expect(numero).toHaveValue(String(cheque.numero), { timeout: 3_000 });
+    await expect.poll(async () => {
+      const displayed = String(await importe.inputValue()).replace(/\./g, '').replace(',', '.');
+      return Number(displayed);
+    }, { timeout: 3_000, message: 'El importe del cheque debe conservar el valor solicitado' })
+      .toBeCloseTo(Number(cheque.importe), 2);
+    if (cheque.fechaPago) await expect(dates.nth(1)).toHaveValue(cheque.fechaPago, { timeout: 3_000 });
   }).toPass({
-    timeout: 30_000,
-    intervals: [150, 300, 600, 1_000],
+    timeout: 40_000,
+    intervals: [200, 500, 1_000],
   });
 
-  await chequeField(modal, /Emisor \/ Banco/i).fill(cheque.emisor);
-  await chequeField(modal, /N° de/i).fill(String(cheque.numero));
-  const amount = chequeField(modal, /Importe/i);
-  await amount.fill(String(cheque.importe));
-  await amount.blur();
-
-  const dates = modal.locator('input[type="date"]');
-  if (cheque.fechaEmision) await dates.nth(0).fill(cheque.fechaEmision);
-  if (cheque.fechaPago) await dates.nth(1).fill(cheque.fechaPago);
+  if (await loadedCheque().isVisible().catch(() => false)) return;
 
   const confirm = modal.getByRole('button', {
     name: electronic ? /Confirmar eCheq/i : /Confirmar cheque/i,
   }).last();
-  await expect(confirm).toBeEnabled();
+  await expect(confirm).toBeEnabled({ timeout: 10_000 });
   await confirm.click();
-  await expect(modal).toBeHidden({ timeout: 30_000 });
-  await expect(scope.locator('.gm-check-item').filter({ hasText: String(cheque.numero) }).first())
+  await expect(modal, 'El cheque debe superar las validaciones y cerrar su submodal')
+    .toBeHidden({ timeout: 30_000 });
+  await expect(loadedCheque(), `El cheque ${cheque.numero} debe figurar en el medio de pago`)
     .toBeVisible({ timeout: 20_000 });
 }
 
@@ -200,44 +230,43 @@ export async function payReceivableWithIncomingCheque(page, productName, cheque)
   await row.getByTitle('Cobrar').click();
   const dialog = await waitDialog(page, 'Pagar recibo');
 
-  // Igual que en el cobro normal, no dependemos de capturar requests de
-  // hidratación. Si React reconstruye el modal, reponemos cheque + deuda hasta
-  // que ambos permanezcan visibles y el total quede cubierto de forma estable.
-  await expect(async () => {
-    const debt = dialog.locator(`.gm-receipt-row[data-movement-id="${movementId}"]`).first();
-    await expect(debt).toBeVisible({ timeout: 5_000 });
+  // Seleccionar la deuda ANTES de abrir Cargar Cheque. Seleccionar la deuda
+  // recalcula los medios y puede reinicializar el submodal si se hace al revés.
+  const debt = dialog.locator(`.gm-receipt-row[data-movement-id="${movementId}"]`).first();
+  await expect(debt).toBeVisible({ timeout: 20_000 });
+  const checkbox = debt.locator('input[type="checkbox"]');
+  if (!(await checkbox.isChecked().catch(() => false))) await debt.click();
+  await expect(checkbox).toBeChecked({ timeout: 10_000 });
+  await expect(dialog.locator('.gm-receipt-table-foot-stats').first())
+    .toContainText(/Seleccionadas\s+1/i, { timeout: 10_000 });
 
-    const chequeCard = dialog.locator('.gm-check-item').filter({ hasText: String(cheque.numero) }).first();
-    if (!(await chequeCard.isVisible().catch(() => false))) {
+  // Si la hidratación todavía reconstruye el medio de pago, reconciliar
+  // cheque y deuda sin repetir NUNCA la confirmación real del cobro.
+  await expect(async () => {
+    const freshDebt = dialog.locator(`.gm-receipt-row[data-movement-id="${movementId}"] input[type="checkbox"]`).first();
+    await expect(freshDebt).toBeVisible({ timeout: 5_000 });
+    if (!(await freshDebt.isChecked().catch(() => false))) {
+      await dialog.locator(`.gm-receipt-row[data-movement-id="${movementId}"]`).first().click({ timeout: 5_000 });
+    }
+    await expect(freshDebt).toBeChecked({ timeout: 5_000 });
+
+    if (!(await dialog.locator('.gm-check-item').filter({ hasText: String(cheque.numero) }).first()
+      .isVisible().catch(() => false))) {
       await fillIncomingCheque(dialog, cheque);
     }
 
-    const freshDebt = dialog.locator(`.gm-receipt-row[data-movement-id="${movementId}"]`).first();
-    const checkbox = freshDebt.locator('input[type="checkbox"]');
-    if (!(await checkbox.isChecked().catch(() => false))) {
-      await freshDebt.click({ timeout: 5_000 });
-    }
-    await expect(checkbox).toBeChecked({ timeout: 5_000 });
-
-    await expect(
-      dialog.locator('.gm-check-item').filter({ hasText: String(cheque.numero) }).first(),
-      `El cheque ${cheque.numero} debe seguir cargado en el recibo`,
-    ).toBeVisible({ timeout: 5_000 });
-    await expect(
-      dialog.locator('.gm-payment-totals-ok').first(),
-      `El cheque ${cheque.numero} debe cubrir el recibo seleccionado antes de confirmar`,
-    ).toBeVisible({ timeout: 5_000 });
-    await expect(dialog.getByRole('button', { name: /Confirmar cobro/i })).toBeEnabled({ timeout: 5_000 });
-
-    await page.waitForTimeout(500);
     await expect(dialog.locator(`.gm-receipt-row[data-movement-id="${movementId}"] input[type="checkbox"]`).first())
-      .toBeChecked({ timeout: 2_000 });
+      .toBeChecked({ timeout: 5_000 });
     await expect(dialog.locator('.gm-check-item').filter({ hasText: String(cheque.numero) }).first())
-      .toBeVisible({ timeout: 2_000 });
-    await expect(dialog.locator('.gm-payment-totals-ok').first()).toBeVisible({ timeout: 2_000 });
+      .toBeVisible({ timeout: 5_000 });
+    await expect(dialog.locator('.gm-payment-totals-ok').first(),
+      `El cheque ${cheque.numero} debe cubrir el recibo seleccionado`)
+      .toBeVisible({ timeout: 5_000 });
+    await expect(dialog.getByRole('button', { name: /Confirmar cobro/i }))
+      .toBeEnabled({ timeout: 5_000 });
   }).toPass({
-    timeout: 45_000,
-    intervals: [150, 300, 600, 1_000],
+    timeout: 90_000,
+    intervals: [250, 600, 1_200],
   });
 
   const responsePromise = responseForAction(page, 'recibos_confirmar_pago');

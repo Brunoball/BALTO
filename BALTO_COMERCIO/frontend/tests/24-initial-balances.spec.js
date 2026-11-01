@@ -320,8 +320,24 @@ async function fillInitialChequeForm(page, {
   await field(/N° de/i).locator('input').fill(number);
 
   const amountInput = field(/Importe/i).locator('input').first();
-  await amountInput.fill(String(amount).replace('.', ','));
+  const typedAmount = String(amount).replace('.', ',');
+  const formattedAmount = Number(amount).toLocaleString('es-AR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+  // Al enfocar, ModalNuevoCheque cambia el valor formateado ("10,00") por el
+  // borrador editable ("10") y re-renderiza. Si fill() selecciona el texto antes
+  // de ese re-render, la selección se pierde y el importe nuevo se concatena al
+  // anterior (10 + 785,40 = 10785,40). Enfocamos primero, esperamos al modo
+  // edición y verificamos el valor exacto antes de salir del campo.
+  await amountInput.focus();
+  await expect(amountInput).not.toHaveValue(/,\d{2}$/, { timeout: 5_000 }).catch(() => {});
+  await expect(async () => {
+    await amountInput.fill(typedAmount);
+    await expect(amountInput).toHaveValue(typedAmount, { timeout: 1_000 });
+  }).toPass({ timeout: 10_000 });
   await amountInput.blur();
+  await expect(amountInput).toHaveValue(formattedAmount, { timeout: 5_000 });
 
   if (observation) {
     await dialog.locator('#mnc-observaciones').fill(observation);
@@ -674,11 +690,7 @@ test('@flujo @saldos-iniciales aplica aperturas existentes al saldo pero no las 
     if (!date) continue;
     expectedByDate.set(date, (expectedByDate.get(date) || 0) + Number(row?.saldo || 0));
   }
-  for (const row of Array.isArray(payload?.cheques) ? payload.cheques : []) {
-    const date = String(row?.fecha_saldo || '');
-    if (!date) continue;
-    expectedByDate.set(date, (expectedByDate.get(date) || 0) + Math.abs(Number(row?.importe || 0)));
-  }
+  // Cheques/eCheqs de apertura no son efectivo disponible y no se suman a caja.
 
   if (!expectedByDate.size) {
     testInfo.annotations.push({
@@ -859,12 +871,16 @@ for (const type of ['CHEQUE', 'ECHEQ']) {
       await expect(carteraRow).toBeVisible({ timeout: 30_000 });
       await expectRowToContainNormalized(carteraRow, issuer, 'La fila de cartera');
 
-      // El alta de un cheque inicial incrementa apertura, no "Ingresos".
+      // Un cheque/eCheq inicial es un documento en cartera, NO dinero disponible:
+      // no suma a las aperturas de caja, ni al saldo, ni a ingresos/egresos.
+      // (Misma regla que verifican 51 y 54: "Un cheque en cartera no es dinero
+      // disponible"; el dinero recién entra a Banco cuando se deposita.)
       const afterFlow = await flowDay(page, today);
       closeTo(
         Number(afterFlow.saldo_inicial_aplicado || 0) - Number(beforeFlow.saldo_inicial_aplicado || 0),
-        amount,
+        0,
       );
+      closeTo(afterFlow.saldo, beforeFlow.saldo);
       closeTo(afterFlow.ingresos, beforeFlow.ingresos);
       closeTo(afterFlow.egresos, beforeFlow.egresos);
 

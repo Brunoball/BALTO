@@ -7,7 +7,7 @@ import {
   rechazarRevisionPreciosStock,
 } from "./api/stockApi";
 
-const PRICE_REVIEW_POLL_MS = 10000;
+const PRICE_REVIEW_POLL_MS = 30000; // antes 10000; igual se refresca al volver a la pestaña
 
 function money(value) {
   const number = Number(value);

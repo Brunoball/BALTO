@@ -70,6 +70,46 @@ async function keepStockPriceReviewNoticeNonBlocking(page) {
   });
 }
 
+/**
+ * Navegación previa a una operación E2E (sin escrituras en curso).
+ * El gate global puede quedar en "Iniciando sesión" por una lectura remota
+ * sin respuesta; waitForBusyToFinish no garantiza que termine. Hacemos como
+ * máximo dos recuperaciones, únicamente si vemos el gate de autenticación.
+ * No simulamos sesiones, no repetimos operaciones POST y no ocultamos errores
+ * cuando el módulo está visible pero falla funcionalmente.
+ */
+export async function gotoPanelReady(page, route, readyLocator, options = {}) {
+  const maxAttempts = options.attempts ?? 3;
+  const timeout = options.timeout ?? 20_000;
+  const gateError = page.getByRole('heading', { name: /No se pudo validar la sesión/i });
+  const gateChecking = page.getByRole('status').filter({ hasText: /Iniciando sesión|Cargando BALTO/i }).first();
+  await page.goto(route, { waitUntil: 'domcontentloaded' });
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      await expect(readyLocator.or(gateError).first()).toBeVisible({ timeout });
+    } catch (error) {
+      if (!(await gateChecking.isVisible().catch(() => false))) throw error;
+      if (attempt === maxAttempts) {
+        throw new Error(`La validación de sesión siguió en carga tras ${maxAttempts} intentos al abrir ${route}. Revisar API remota/auth_session_check.`, { cause: error });
+      }
+      await page.reload({ waitUntil: 'domcontentloaded' });
+      continue;
+    }
+
+    if (await readyLocator.isVisible().catch(() => false)) {
+      await waitForBusyToFinish(page);
+      return;
+    }
+    if (attempt === maxAttempts) {
+      throw new Error(`La API de BALTO no pudo validar la sesión al abrir ${route} después de ${maxAttempts} intentos.`);
+    }
+    const retryButton = page.getByRole('button', { name: 'Reintentar', exact: true });
+    await expect(retryButton).toBeVisible({ timeout: 5_000 });
+    await retryButton.click();
+  }
+}
+
 export async function waitForBusyToFinish(scope) {
   // Las notificaciones tardías se resuelven en el fixture global con
   // page.addLocatorHandler. No cerrar aquí: si ambos cierres se ejecutan juntos,
@@ -361,28 +401,62 @@ export async function selectProduct(scope, productName, options = {}) {
     ].join(','))
     .first();
 
-  await expect(productInput).toBeVisible();
-  await productInput.fill(productName);
-
-  const list = scope.page().locator('#psa-portal-list');
-  await expect(list).toBeVisible({ timeout: 12_000 });
-
+  const page = scope.page();
+  const list = page.locator('#psa-portal-list');
+  const popup = page.getByRole('dialog', { name: 'Notificaciones de Stock' });
   const item = list
     .locator('.psa-item, li')
     .filter({ hasText: productName })
     .first();
 
-  await expect(
-    item,
-    `Debe aparecer el producto "${productName}" en el autocompletado`
-  ).toBeVisible({ timeout: 15_000 });
+  // Si el fixture cierra Notificaciones de Stock justo antes de pulsar un
+  // resultado, React desmonta el portal del autocompletado. Volvemos a abrir
+  // la lista sólo en esa carrera, sin usar force:true y sin ocultar errores
+  // de productos inexistentes ni problemas de backend.
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    await expect(productInput).toBeVisible();
+    if (attempt > 0) {
+      // Limpiar + escribir dispara onChange incluso si el input aún tiene el
+      // texto anterior: volver a llenarlo con el mismo valor no siempre abre
+      // el portal si React cerró la lista por un mousedown externo.
+      await productInput.fill('');
+    }
+    await productInput.fill(productName);
+    await expect(list).toBeVisible({ timeout: 12_000 });
+    await expect(
+      item,
+      `Debe aparecer el producto "${productName}" en el autocompletado`,
+    ).toBeVisible({ timeout: 15_000 });
 
-  await item.click();
+    try {
+      await item.click({ timeout: 7_000 });
+      if (options.expectSelected !== false) {
+        await expect(productInput).toHaveValue(new RegExp(productName, 'i'));
+      }
+      return productInput;
+    } catch (error) {
+      const cause = String(error?.message || error);
+      const wasDetached = /detached from the DOM|not attached to the DOM/i.test(cause);
+      const wasBlocked = /intercepts pointer events|TimeoutError: locator\.click/i.test(cause);
+      // Un timeout sin popup ni desaparición del portal no corresponde a la
+      // carrera de notificaciones: conservar ese error funcional.
+      const portalGone = !(await list.isVisible().catch(() => false));
+      const popupVisible = await popup.isVisible().catch(() => false);
+      if (attempt === 2 || !(wasDetached || (wasBlocked && (portalGone || popupVisible)))) {
+        throw error;
+      }
 
-  if (options.expectSelected !== false) {
-    await expect(productInput).toHaveValue(new RegExp(productName, 'i'));
+      if (popupVisible) {
+        // Ejecutamos el control React de cerrar. Nunca se fuerza el clic al
+        // producto cuando hay una capa que lo está tapando.
+        await popup.getByRole('button', { name: 'Cerrar notificaciones' })
+          .evaluate((button) => button.click());
+      }
+      await expect(popup).toBeHidden({ timeout: 5_000 });
+    }
   }
-  return productInput;
+
+  throw new Error(`No se pudo seleccionar el producto "${productName}".`);
 }
 
 function parseDisplayedDecimal(value) {
@@ -544,7 +618,21 @@ export async function searchRow(page, query, placeholderPattern = /Buscar/i) {
       search = page.locator('.stock-page .cc-filter--search input').first();
     }
 
-    await expect(search).toBeVisible({ timeout: 5_000 });
+    if (!(await search.isVisible({ timeout: 5_000 }).catch(() => false))) {
+      const sessionError = page.getByRole('heading', { name: /No se pudo validar la sesión/i });
+      const sessionChecking = page.getByRole('status').filter({ hasText: /Iniciando sesión|Cargando BALTO/i }).first();
+      if (await sessionError.isVisible().catch(() => false)
+        || await sessionChecking.isVisible().catch(() => false)) {
+        // Sólo se recarga ANTES de la búsqueda, no durante una mutación.
+        await gotoPanelReady(page, page.url(), search);
+      }
+    }
+    await expect(search).toBeVisible({ timeout: 10_000 });
+    // Tras guardar, las pantallas de movimientos recargan las listas globales y
+    // deshabilitan el buscador mientras tanto. Con la API remota lenta eso puede
+    // superar los 15 s del fill. Esperamos a que se habilite con un margen mayor
+    // que el timeout de ListasContext (30 s): un bloqueo permanente sigue fallando.
+    await expect(search).toBeEnabled({ timeout: 45_000 });
 
     const inactive = await stockModeIsInactive();
     const currentValue = String(await search.inputValue().catch(() => '')).trim();

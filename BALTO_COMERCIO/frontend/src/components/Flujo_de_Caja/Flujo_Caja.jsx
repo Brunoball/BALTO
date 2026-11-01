@@ -14,6 +14,8 @@ import {
   faChevronLeft,
   faArrowRightLong,
   faWallet,
+  faScaleBalanced,
+  faClockRotateLeft,
 } from "@fortawesome/free-solid-svg-icons";
 
 import Toast from "../Global/Toast.jsx";
@@ -21,6 +23,9 @@ import Calendario from "../Global/Calendario/Calendario.jsx";
 import "../../components/Global/Calendario/calendario.css";
 
 import BotonExportar from "../Global/Boton_Exportar/BotonExportar.jsx";
+import ModalAjusteSaldo from "./modales/ModalAjusteSaldo.jsx";
+import ModalHistorialAjustes from "./modales/ModalHistorialAjustes.jsx";
+import "./modales/ajustes_saldo.css";
 
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
@@ -34,6 +39,8 @@ import {
   formatDateISO,
   formatDateUI,
   moneyARSAbs,
+  moneyARS,
+  moneyARSSigned,
   normalizeRows,
   paymentCardSubtitle,
   pickDefaultSelectedDate,
@@ -59,10 +66,17 @@ export default function Flujo_Caja() {
     overflow: false, canPrevious: false, canNext: false,
   });
 
-  const { data, error, loading, showSkeleton } = useFlujoCajaResumen(
+  const { data, error, loading, showSkeleton, fetchResumen } = useFlujoCajaResumen(
     dateRange,
     showToast
   );
+
+  // Ajustes de saldo: el backend informa si la función está habilitada y si
+  // el usuario puede gestionarla (y lo vuelve a validar en cada endpoint).
+  const [showAjuste, setShowAjuste] = useState(false);
+  const [showHistorial, setShowHistorial] = useState(false);
+  const puedeAjustar = Boolean(data?.ajustes_saldo?.habilitado && data?.ajustes_saldo?.puede_gestionar);
+  const handleAjustesChanged = useCallback(() => { fetchResumen(); }, [fetchResumen]);
 
   const bloque  = data?.tiendas?.[0] || null;
   const rowsRaw = bloque?.rows || [];
@@ -96,6 +110,8 @@ export default function Flujo_Caja() {
 
   const selectedPaymentCards = selectedRow?.medios_pago || [];
   const saldoBase = Number(bloque?.saldo_base ?? 0);
+  const saldoHoy = data?.saldo_actual;
+  const fechaSaldoHoy = data?.fecha_saldo_actual;
   const showing = rows.length;
 
   useEffect(() => {
@@ -184,6 +200,9 @@ export default function Flujo_Caja() {
       FECHA:    fmtDateES(r.fecha),
       INGRESOS: r.ingresos == null ? "" : Number(r.ingresos),
       EGRESOS:  r.egresos  == null ? "" : Number(r.egresos),
+      APERTURAS: Number(r.saldo_inicial_aplicado || 0),
+      DEPOSITOS_NETOS: Number(r.ajustes_internos || 0),
+      AJUSTES_MANUALES: Number(r.ajustes_manuales || 0),
       SALDO:    r.saldo    == null ? "" : Number(r.saldo),
     }));
   }, [rows]);
@@ -191,8 +210,8 @@ export default function Flujo_Caja() {
   const exportToExcel = useCallback(() => {
     const data = buildExportRows();
     const ws   = XLSX.utils.json_to_sheet(data);
-    ws["!cols"] = [{ wch: 12 }, { wch: 16 }, { wch: 16 }, { wch: 16 }];
-    const numCols = ["INGRESOS", "EGRESOS", "SALDO"];
+    ws["!cols"] = [{ wch: 12 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 20 }, { wch: 20 }, { wch: 16 }];
+    const numCols = ["INGRESOS", "EGRESOS", "APERTURAS", "DEPOSITOS_NETOS", "AJUSTES_MANUALES", "SALDO"];
     const headers = Object.keys(data[0] || {});
     numCols.forEach((col) => {
       const ci = headers.findIndex((h) => h === col);
@@ -206,9 +225,19 @@ export default function Flujo_Caja() {
     });
     const wb    = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "FlujoCaja");
+    // Hoja explicativa: cómo se obtiene el saldo a partir de cada columna.
+    const notes = XLSX.utils.aoa_to_sheet([
+      ["CÓMO SE CALCULA EL SALDO"],
+      ["SALDO = saldo del día anterior + APERTURAS + INGRESOS − EGRESOS + DEPOSITOS_NETOS + AJUSTES_MANUALES"],
+      ["AJUSTES_MANUALES: correcciones de saldo registradas desde Flujo de Caja (no son ventas, compras, cobros ni pagos)."],
+      ["DEPOSITOS_NETOS: depósitos y reversiones de cheques/eCheqs hacia el banco."],
+      ["Saldo base al inicio del período", Number(bloque?.saldo_base ?? 0)],
+    ]);
+    notes["!cols"] = [{ wch: 110 }, { wch: 18 }];
+    XLSX.utils.book_append_sheet(wb, notes, "Referencias");
     const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" });
     saveAs(new Blob([wbout], { type: "application/octet-stream" }), `${exportBaseName}.xlsx`);
-  }, [buildExportRows, exportBaseName]);
+  }, [buildExportRows, exportBaseName, bloque]);
 
   const exportToCSV = useCallback(() => {
     const data    = buildExportRows();
@@ -227,10 +256,19 @@ export default function Flujo_Caja() {
       `FECHA: ${row.FECHA}`,
       `INGRESOS: ${row.INGRESOS}`,
       `EGRESOS: ${row.EGRESOS}`,
+      `APERTURAS: ${row.APERTURAS}`,
+      `DEPÓSITOS NETOS: ${row.DEPOSITOS_NETOS}`,
+      `AJUSTES MANUALES: ${row.AJUSTES_MANUALES}`,
       `SALDO: ${row.SALDO}`,
       "----------------------------------------",
     ].join("\n"));
-    downloadBlob(lines.join("\n"), `${exportBaseName}.txt`, "text/plain;charset=utf-8;");
+    const header = [
+      "FLUJO DE CAJA",
+      "SALDO = saldo anterior + APERTURAS + INGRESOS - EGRESOS + DEPÓSITOS NETOS + AJUSTES MANUALES",
+      "AJUSTES MANUALES: correcciones de saldo; no son ventas, compras, cobros ni pagos.",
+      "========================================",
+    ].join("\n");
+    downloadBlob(`${header}\n${lines.join("\n")}`, `${exportBaseName}.txt`, "text/plain;charset=utf-8;");
   }, [buildExportRows, exportBaseName]);
 
   const handleExport = useCallback(
@@ -259,10 +297,11 @@ export default function Flujo_Caja() {
     fecha:    ["34%", "42%", "38%", "46%"],
     ingresos: ["48%", "40%", "52%", "36%"],
     egresos:  ["44%", "56%", "38%", "46%"],
+    ajustes:  ["30%", "42%", "36%", "28%"],
     saldo:    ["52%", "46%", "38%", "56%"],
   }), []);
 
-  const gridCols = "minmax(82px, 0.8fr) repeat(3, minmax(102px, 1fr))";
+  const gridCols = "minmax(82px, 0.8fr) repeat(4, minmax(96px, 1fr))";
 
   const renderSkeletonRow = (idx) => {
     const w = (key) => {
@@ -277,7 +316,7 @@ export default function Flujo_Caja() {
         role="row"
         aria-hidden="true"
       >
-        {["fecha", "ingresos", "egresos", "saldo"].map((key) => (
+        {["fecha", "ingresos", "egresos", "ajustes", "saldo"].map((key) => (
           <div key={key} className="mov-gridCell is-center" role="cell">
             <span className="mov-skeletonBar" style={{ width: w(key) }} />
           </div>
@@ -302,6 +341,20 @@ export default function Flujo_Caja() {
         />
       )}
       {error && <div className="mov-alert" role="alert">{error}</div>}
+
+      <ModalAjusteSaldo
+        open={showAjuste}
+        onClose={() => setShowAjuste(false)}
+        onSaved={handleAjustesChanged}
+        onOpenHistorial={() => { setShowAjuste(false); setShowHistorial(true); }}
+        showToast={showToast}
+      />
+      <ModalHistorialAjustes
+        open={showHistorial}
+        onClose={() => setShowHistorial(false)}
+        onChanged={handleAjustesChanged}
+        showToast={showToast}
+      />
 
       <section className="mov-card mov-card--table">
 
@@ -354,6 +407,30 @@ export default function Flujo_Caja() {
 
           {/* ===== ACCIONES ===== */}
           <div className="mov-card__actions" style={{ display: "flex", gap: 10, alignItems: "center" }}>
+            {puedeAjustar && (
+              <div className="fc-aj-headActions">
+                <button
+                  type="button"
+                  className="mov-btn mov-btn--ghost fc-aj-headBtn fc-aj-headBtn--icon"
+                  onClick={() => setShowHistorial(true)}
+                  title="Historial de ajustes de saldo"
+                  aria-label="Historial de ajustes de saldo"
+                >
+                  <FontAwesomeIcon icon={faClockRotateLeft} />
+                </button>
+                <button
+                  type="button"
+                  className="mov-btn mov-btn--primary fc-aj-headBtn"
+                  onClick={() => setShowAjuste(true)}
+                  disabled={loading && !data}
+                  title="Corregir el saldo de una caja o medio de pago"
+                  aria-label="Ajustar saldo"
+                >
+                  <FontAwesomeIcon icon={faScaleBalanced} />
+                  <span className="fc-aj-headBtn__text">Ajustar saldo</span>
+                </button>
+              </div>
+            )}
             <BotonExportar
               disabled={loading || rows.length === 0}
               loading={false}
@@ -374,7 +451,8 @@ export default function Flujo_Caja() {
             Detalle por caja / medio de pago •
             Caja diaria
             <span className="fc-subhead__meta">
-              &nbsp;•&nbsp;Saldo base: <b className={saldoBase < 0 ? "fc-saldo--neg" : "fc-saldo--pos"}>{moneyARSAbs(saldoBase)}</b>
+              &nbsp;•&nbsp;Saldo base al inicio del período: <b className={saldoBase < 0 ? "fc-saldo--neg" : "fc-saldo--pos"}>{moneyARSAbs(saldoBase)}</b>
+              {saldoHoy != null && <>&nbsp;•&nbsp;Saldo disponible hoy ({fmtDateES(fechaSaldoHoy)}): <b className={Number(saldoHoy) < 0 ? "fc-saldo--neg" : "fc-saldo--pos"}>{moneyARS(saldoHoy)}</b></>}
             </span>
           </div>
         </div>
@@ -424,6 +502,12 @@ export default function Flujo_Caja() {
                         <span>Egresos</span>
                         <b className="fc-eg">{moneyARSAbs(card.egresos)}</b>
                       </div>
+                      {Math.abs(Number(card.ajustes || 0)) >= 0.005 && (
+                        <div className="fc-payCard__row fc-payCard__row--ajustes">
+                          <span>Ajustes de saldo</span>
+                          <b className={Number(card.ajustes) > 0 ? "is-positive" : "is-negative"}>{moneyARSSigned(card.ajustes)}</b>
+                        </div>
+                      )}
                     </div>
                   </div>
                 );
@@ -432,7 +516,7 @@ export default function Flujo_Caja() {
             </div>
           ) : (
             <div className="fc-paymentEmpty">
-              No hay medios de pago activos para mostrar. Las tarjetas se generan automáticamente desde la tabla medios_pago, excluyendo CHEQUE y ECHEQ.
+              No hay medios monetarios configurados. Los cheques y eCheqs se muestran en cartera, no como disponibilidad.
             </div>
           )}
         </div>
@@ -443,7 +527,7 @@ export default function Flujo_Caja() {
           style={{ gridTemplateColumns: gridCols }}
           role="row"
         >
-          {["FECHA", "INGRESOS", "EGRESOS", "SALDO"].map((label) => (
+          {["FECHA", "INGRESOS", "EGRESOS", "AJUSTES", "SALDO"].map((label) => (
             <div key={label} className="mov-gridCell mov-gridCell--head is-center" role="columnheader">
               {label}
             </div>
@@ -470,7 +554,7 @@ export default function Flujo_Caja() {
                       style={{ gridTemplateColumns: gridCols }}
                       role="row"
                       tabIndex={0}
-                      title="Ver detalle del día en las tarjetas superiores"
+                      title={`Ver detalle del día en las tarjetas superiores. Aperturas: ${moneyARSAbs(r.saldo_inicial_aplicado)}. Depósitos/reversiones de cheques: ${moneyARSAbs(r.ajustes_internos)}. Ajustes manuales de saldo: ${moneyARSSigned(r.ajustes_manuales)}`}
                       onClick={() => setSelectedDate(r.fecha)}
                       onKeyDown={(ev) => {
                         if (ev.key === "Enter" || ev.key === " ") {
@@ -492,6 +576,16 @@ export default function Flujo_Caja() {
                       {/* EGRESOS */}
                       <div className="mov-gridCell is-center" role="cell" data-label="EGRESOS">
                         <span className="fc-num fc-eg" title={String((moneyARSAbs(r.egresos)) ?? "")}>{moneyARSAbs(r.egresos)}</span>
+                      </div>
+
+                      {/* AJUSTES manuales de saldo: columna propia, no es ingreso ni egreso */}
+                      <div className="mov-gridCell is-center" role="cell" data-label="AJUSTES">
+                        {(() => {
+                          const aj = Number(r.ajustes_manuales || 0);
+                          const tone = Math.abs(aj) < 0.005 ? "is-neutral" : aj > 0 ? "is-positive" : "is-negative";
+                          const text = r.ingresos == null ? "—" : moneyARSSigned(aj);
+                          return <span className={`fc-num fc-aj-cell ${tone}`} title={text}>{text}</span>;
+                        })()}
                       </div>
 
                       {/* SALDO */}
@@ -518,6 +612,10 @@ export default function Flujo_Caja() {
         <div className="fc-footnote">
           * Ingresos: ventas de contado + ventas en cuenta corriente ya cobradas.
           Egresos: compras de contado + compras en cuenta corriente ya pagadas.
+          Ajustes: correcciones manuales de saldo (arqueos, conciliaciones); no son ventas, compras, cobros ni pagos.
+          Los saldos históricos respetan la fecha seleccionada; las aperturas, los depósitos/reversiones
+          de cheques y los ajustes afectan el saldo, pero no se registran como ingresos operativos.
+          El saldo disponible hoy se calcula aparte del período seleccionado.
         </div>
 
       </section>

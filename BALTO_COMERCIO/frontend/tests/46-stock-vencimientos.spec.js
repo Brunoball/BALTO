@@ -1,4 +1,4 @@
-import { test, expect } from './support/test.js';
+import { test, expect, autoDismissStockNotifications } from './support/test.js';
 import { authenticatedApi, expectApiSuccess } from './support/api.js';
 import { createStockProductFixture } from './support/stock-fixtures.js';
 import { createVariantStockProduct } from './support/barcodes.js';
@@ -178,8 +178,26 @@ test('@stock @vencimientos @ui @notificaciones-ui popup y pestaña de edición m
     await retiro.getByRole('button', { name: 'Confirmar retiro' }).click();
     const resRetiro = await respuestaRetiro;
     expect(resRetiro.status(), 'El retiro local debe confirmarse por API').toBeLessThan(400);
+    const resultadoRetiro = await resRetiro.json();
+    expect(resultadoRetiro.exito, 'La API debe confirmar el retiro, no sólo responder HTTP 200').toBe(true);
+    expect(Number(resultadoRetiro.cantidad_retirada), 'Debe haber retirado exactamente una unidad').toBe(1);
     await expect(retiro).toBeHidden();
-    await expect(page.locator('.toast-container.toast-exito')).toContainText('Unidades retiradas correctamente.');
+    // ModalEliminar muestra éxito normal salvo si el backend advierte un problema
+    // de sincronización. En el entorno E2E Tienda Nube puede estar deshabilitada
+    // (canales_con_errores.tiendanube = "sync_deshabilitada"): el stock SÍ se
+    // retiró, pero el toast correcto es el amarillo de advertencia.
+    // No aceptar cualquier toast: contrastar el tipo y el mensaje con la respuesta.
+    const sync = resultadoRetiro.tiendanube_sync || resultadoRetiro.data?.tiendanube_sync || {};
+    const advertenciaSync = Object.keys(sync.canales_con_errores || {}).length > 0
+      || Number(sync.errores || 0) > 0;
+    if (advertenciaSync) {
+      const aviso = page.locator('.toast-container.toast-advertencia');
+      await expect(aviso).toContainText('Stock retirado correctamente.');
+      await expect(aviso).toContainText('Revisá la sincronización con Tienda Nube.');
+    } else {
+      await expect(page.locator('.toast-container.toast-exito'))
+        .toContainText('Unidades retiradas correctamente.');
+    }
     const despues = await vencimientos(page, id);
     expect(despues).toHaveLength(1);
     expect(Number(despues[0].cantidad_disponible)).toBe(1);
@@ -189,6 +207,38 @@ test('@stock @vencimientos @ui @notificaciones-ui popup y pestaña de edición m
     await expect(quitar).toBeHidden();
     await expect(page.locator('.toast-container.toast-exito')).toContainText('Fecha de vencimiento quitada correctamente.');
     expect(await vencimientos(page, id)).toHaveLength(0);
+
+    // Alta de una partida EN un producto ya existente: validación por toast,
+    // ausencia de errores rojos duplicados, mayúsculas y persistencia real.
+    await edit.getByRole('button', { name: 'Agregar vencimiento', exact: true }).click();
+    const modalAlta = page.getByRole('dialog', { name: 'Agregar vencimiento' });
+    await expect(modalAlta).toBeVisible();
+    await modalAlta.getByLabel('Fecha de vencimiento *').fill(localDay(9));
+    await modalAlta.getByLabel('Cantidad *').fill('5'); // Stock real restante: 4
+    await modalAlta.getByRole('button', { name: 'Agregar vencimiento' }).click();
+    await expect(page.locator('.toast-container.toast-error')).toContainText('La cantidad supera el stock disponible');
+    await expect(modalAlta.locator('.sv-partida-error')).toHaveCount(0);
+    await modalAlta.getByLabel('Cantidad *').fill('1');
+    await modalAlta.getByLabel('Referencia (opcional)').fill('nueva partida');
+    await modalAlta.getByLabel('Observación (opcional)').fill('deposito central');
+    await expect(modalAlta.getByLabel('Referencia (opcional)')).toHaveValue('NUEVA PARTIDA');
+    await expect(modalAlta.getByLabel('Observación (opcional)')).toHaveValue('DEPOSITO CENTRAL');
+    await modalAlta.getByRole('button', { name: 'Agregar vencimiento' }).click();
+    await expect(modalAlta).toBeHidden();
+    await expect(page.locator('.toast-container.toast-exito')).toContainText('Vencimiento registrado correctamente');
+    const partidaNueva = await vencimientos(page, id);
+    expect(partidaNueva).toHaveLength(1);
+    expect(Number(partidaNueva[0].cantidad_disponible)).toBe(1);
+    expect(partidaNueva[0].referencia).toBe('NUEVA PARTIDA');
+    expect(partidaNueva[0].observaciones).toBe('DEPOSITO CENTRAL');
     await edit.getByRole('button',{name:'Cancelar',exact:true}).click();
-  } finally {if(created) await deleteUnusedStockProduct(page,name);}
+  } finally {
+    if (created) {
+      // Este caso prueba el popup real sin el manejador global de la suite.
+      // Activarlo recién en cleanup evita que una apertura tardía del centro
+      // de notificaciones tape la confirmación de eliminación del fixture.
+      await autoDismissStockNotifications(page);
+      await deleteUnusedStockProduct(page, name);
+    }
+  }
 });

@@ -1109,7 +1109,8 @@ function buildMediosFromRowCompra(row, mediosPagoList) {
           emisor: safeText(mp?.emisor ?? mp?.cheque_emisor ?? ""),
           numero_cheque: safeText(mp?.numero_cheque ?? mp?.cheque_numero ?? ""),
           fecha_emision: safeText(mp?.fecha_emision ?? mp?.cheque_fecha_emision ?? ""),
-          fecha_pago: safeText(mp?.fecha_pago ?? mp?.cheque_fecha_pago ?? ""),
+          // Vencimiento propio del cheque (no la fecha de la compra).
+          fecha_pago: safeText(mp?.cheque_fecha_pago ?? ""),
           importe: safeNumber(mp?.cheque_importe || mp?.monto || 0),
         });
         rowMp.monto =
@@ -1819,7 +1820,10 @@ export default function ModalEditarCompra({
               };
             });
           }
-          return [{ id_medio_pago: idMp, monto: Math.round(safeNumber(mp.monto) * 100) / 100 }];
+          return [{
+            id_medio_pago: idMp,
+            monto: Math.round(safeNumber(mp.monto) * 100) / 100,
+          }];
         })
       : [];
 

@@ -73,7 +73,7 @@ import {
 } from "./utils/stockUtils";
 
 const PRECIOS_MASIVOS_LOADING_THRESHOLD = 10;
-const STOCK_CHANGE_CHECK_MS = 2500;
+const STOCK_CHANGE_CHECK_MS = 10000; // antes 2500: cada consulta recorre varias tablas completas de stock
 const OPTIMISTIC_PRODUCT_GRACE_MS = 20000;
 const VARIANT_MUTATION_GRACE_MS = 180000;
 const BARCODE_SCANNER_MAX_GAP_MS = 250;

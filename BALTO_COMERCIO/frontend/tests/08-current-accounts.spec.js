@@ -444,6 +444,10 @@ test('@crud @critical cuenta corriente cliente: venta pendiente y recibo complet
 });
 
 test('@crud @critical cuenta corriente proveedor: compra pendiente y orden de pago completa', async ({ page }, testInfo) => {
+  // Mismo flujo que el de cliente (stock + compra + orden de pago contra la API
+  // remota): necesita el mismo margen; con 60 s el test se cortaba mientras
+  // esperaba el botón Finalizar aunque el backend siguiera respondiendo.
+  testInfo.setTimeout(3 * 60_000);
   await requireMutations(test, page);
   const diagnostics = installDiagnostics(page);
   const productName = uniqueName('CC-PROVEEDOR');

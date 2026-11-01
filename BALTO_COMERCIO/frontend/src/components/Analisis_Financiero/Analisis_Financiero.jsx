@@ -121,6 +121,7 @@ function MediumRow({ item, expanded, toggle }) {
             <div className="af-mobileDetail"><span>Pagos</span><strong className="af-negative">{money(item.egresos)}</strong></div>
             <div><span>Apertura registrada hasta el cierre</span><strong>{money(item.saldo_inicial_configurado)}</strong></div>
             <div><span>Ajustes internos del período</span><strong>{money(item.ajustes_internos)}</strong></div>
+            <div><span>Ajustes manuales de saldo</span><strong className={toNumberOrZero(item.ajustes_manuales) < 0 ? "af-negative" : ""}>{money(item.ajustes_manuales)}</strong></div>
             <div><span>Variación total del período</span><strong className={item.variacion < 0 ? "af-negative" : "af-positive"}>{money(item.variacion)}</strong></div>
             <div><span>Fecha(s) de apertura</span><strong>{(item.saldos_iniciales || []).map((s) => formatISODate(s.fecha)).join(" · ") || "No configurada"}</strong></div>
           </div>
@@ -247,7 +248,10 @@ export default function Analisis_Financiero() {
               <div className="af-hero__main">
                 <span className="af-hero__label">Dinero disponible al cierre</span>
                 <strong className="af-hero__total" title={money(fin.saldo_final)}>{money(fin.saldo_final)}</strong>
-                <span className="af-hero__foot">Al {formatISODate(fin.fecha_corte)}</span>
+                <span className="af-hero__foot">Al {formatISODate(fin.fecha_corte)} · Cierre del período seleccionado</span>
+                {fin.saldo_actual != null && fin.fecha_saldo_actual > fin.fecha_corte && (
+                  <span className="af-hero__foot">Saldo disponible hoy ({formatISODate(fin.fecha_saldo_actual)}): <strong>{money(fin.saldo_actual)}</strong></span>
+                )}
               </div>
               <div className="af-hero__right">
                 <span className="af-hero__miniLabel">Variación en el período</span>
@@ -274,6 +278,7 @@ export default function Analisis_Financiero() {
                   <FlowRow label="Ingresos cobrados" value={fin.ingresos} tone="positive"/>
                   <FlowRow label="Egresos pagados" value={fin.egresos} tone="negative"/>
                   <FlowRow label="Depósitos / reversiones de cheques" value={fin.ajustes_internos} tone="info"/>
+                  <FlowRow label="Ajustes manuales de saldo" value={fin.ajustes_manuales} tone="info"/>
                   <FlowRow label="Saldo al cierre" value={fin.saldo_final} strong/>
                 </article>
               </div>

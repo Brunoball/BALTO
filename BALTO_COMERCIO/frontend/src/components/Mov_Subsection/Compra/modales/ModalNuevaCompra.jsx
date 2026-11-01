@@ -1053,6 +1053,7 @@ export default function ModalNuevaCompra({ open, lists, onClose, onToast, onSave
   );
   const proveedoresOptions = useMemo(() => [ADD_PROVEEDOR_OPTION, ...proveedoresList], [proveedoresList]);
 
+  // Fecha única de la compra: en contado también es la fecha del pago (la fija el backend).
   const [fecha, setFecha] = useState(todayISO);
   const [forma, setForma] = useState(NULL_OPTION);
   const [idProveedor, setIdProveedor] = useState(NULL_OPTION);
@@ -1770,15 +1771,15 @@ export default function ModalNuevaCompra({ open, lists, onClose, onToast, onSave
                 return {
                   id_medio_pago: Number(mp.id_medio_pago),
                   monto: Number(ch?.importe || 0),
-                  id_cheque: Number(idChequeStr),
+                   id_cheque: Number(idChequeStr),
                 };
               });
             }
 
             return [
               {
-                id_medio_pago: Number(mp.id_medio_pago),
-                monto: safeNumber(mp.monto),
+                 id_medio_pago: Number(mp.id_medio_pago),
+                 monto: safeNumber(mp.monto),
               },
             ];
           })

@@ -75,7 +75,7 @@ const MIN_LOADING_MS = 0;
 const FORCE_SHOW_LOADER_DEV = false;
 const PAGE_SIZE = 100;
 const SKELETON_ROWS = 10;
-const LIVE_POLL_MS = 5000;
+const LIVE_POLL_MS = 15000; // antes 5000: cada consulta "en vivo" carga al servidor
 
 /* =========================
    Date helpers

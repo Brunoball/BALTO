@@ -85,7 +85,7 @@ function DocumentosTabs({ activeKey }) {
 const PAGE_SIZE = 100;
 const PROBE_LIMIT = PAGE_SIZE + 1;
 const SKELETON_ROWS = 10;
-const LIVE_POLL_MS = 6000;
+const LIVE_POLL_MS = 15000; // antes 6000
 const PRESUPUESTOS_CACHE_NS = "presupuestos:listar:v5";
 const PRESUPUESTOS_CACHE_OLD_NS = ["presupuestos:listar:v2", "presupuestos:listar:v3", "presupuestos:listar:v4"];
 

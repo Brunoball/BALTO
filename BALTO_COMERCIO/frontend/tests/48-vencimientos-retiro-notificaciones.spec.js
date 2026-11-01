@@ -1,7 +1,6 @@
 import { test, expect } from './support/test.js';
 import { authenticatedApi, expectApiSuccess } from './support/api.js';
 import { createStockProductFixture } from './support/stock-fixtures.js';
-import { createVariantStockProduct } from './support/barcodes.js';
 import { getStockE2EFixtureUnit } from './support/stock-units.js';
 import { uniqueName, uniqueSku } from './support/data.js';
 import { requireMutations, waitForBusyToFinish } from './support/ui.js';
@@ -79,13 +78,35 @@ test('@stock @vencimientos @critical retiro de una variante no altera otra', asy
   const name = uniqueName('VENC-RETVAR');
   let created = false;
   try {
-    const fixture = await createVariantStockProduct(page, {
-      name, sku: uniqueSku('RVVA'), variants: [{ name: 'AZUL', stock: 5, price: 100 }, { name: 'ROJO', stock: 6, price: 100 }],
-    });
+    // Esta prueba valida el aislamiento entre variantes al RETIRAR stock.
+    // No depende del formulario visual de alta, que tiene su propia suite.
+    // El alta por API evita que un fallo transitorio del gate de sesión en
+    // /panel/stock se presente como un supuesto botón «Agregar producto» ausente.
+    const unit = await getStockE2EFixtureUnit(page);
+    const skuAzul = uniqueSku('RVVAZ');
+    const skuRojo = uniqueSku('RVVAR');
+    expect(skuAzul).not.toBe(skuRojo);
+    const fixture = unwrap(await createStockProductFixture(page, {
+      name, sku: uniqueSku('RVVA'), stock: 0, cost: 0, price: 0,
+      unitId: Number(unit.id_stock_unidad),
+      variants: [
+        { nombre_variante: 'AZUL', sku: skuAzul, stock: 5, unitId: Number(unit.id_stock_unidad) },
+        { nombre_variante: 'ROJO', sku: skuRojo, stock: 6, unitId: Number(unit.id_stock_unidad) },
+      ],
+    }));
+    const id = Number(fixture.producto?.id_stock_producto || fixture.producto?.id || 0);
+    expect(id).toBeGreaterThan(0);
     created = true;
-    const id = fixture.productId;
-    const v1 = Number(fixture.variants[0].id_stock_variante || fixture.variants[0].id);
-    const v2 = Number(fixture.variants[1].id_stock_variante || fixture.variants[1].id);
+    const result = await api(page, 'stock_variantes_listar', null, { id_stock_producto: id, activo: 'todos' });
+    const variants = Array.isArray(result.variantes) ? result.variantes : [];
+    expect(variants).toHaveLength(2);
+    const azul = variants.find(v => String(v.sku || '').trim().toUpperCase() === skuAzul);
+    const rojo = variants.find(v => String(v.sku || '').trim().toUpperCase() === skuRojo);
+    const v1 = Number(azul?.id_stock_variante || azul?.id || 0);
+    const v2 = Number(rojo?.id_stock_variante || rojo?.id || 0);
+    expect(v1, 'Debe existir la variante AZUL').toBeGreaterThan(0);
+    expect(v2, 'Debe existir la variante ROJO').toBeGreaterThan(0);
+    expect(v1).not.toBe(v2);
     const p1 = await api(page, 'stock_vencimientos_guardar', {
       id_stock_producto: id, id_stock_variante: v1, fecha_vencimiento: localDay(-1), cantidad: 3,
     });
@@ -114,14 +135,20 @@ test('@stock @vencimientos @ui @notificaciones-ui cada tarjeta abre su producto 
   test.setTimeout(180000);
   const nombreUno = uniqueName('VENC-LINK-UNO');
   const nombreDos = uniqueName('VENC-LINK-DOS');
+  const skuUno = uniqueSku('VLUNO');
+  const skuDos = uniqueSku('VLDOS');
+  expect(skuUno, 'Los productos de prueba deben tener SKU distintos').not.toBe(skuDos);
   const u = await getStockE2EFixtureUnit(page);
   const idProductos = [];
   try {
     // Dos alertas de productos distintos: no debe depender de la primera
     // fila ni de un botón global para abrir el producto correcto.
-    for (const [nombre, fecha] of [[nombreUno, localDay(3)], [nombreDos, localDay(-1)]]) {
+    for (const [nombre, fecha, sku] of [
+      [nombreUno, localDay(3), skuUno],
+      [nombreDos, localDay(-1), skuDos],
+    ]) {
       const producto = unwrap(await createStockProductFixture(page, {
-        name: nombre, sku: uniqueSku('VLINK'), stock: 5, cost: 10, price: 25,
+        name: nombre, sku, stock: 5, cost: 10, price: 25,
         unitId: Number(u.id_stock_unidad),
       }));
       const id = Number(producto.producto?.id_stock_producto || producto.producto?.id);
@@ -134,6 +161,18 @@ test('@stock @vencimientos @ui @notificaciones-ui cada tarjeta abre su producto 
 
     await page.goto('/panel/dashboard');
     await expect(page.locator('#balto-bootstrap-loader')).toBeHidden({ timeout: 60_000 });
+    // La API puede validar la sesión mientras Chromium sufre un corte CORS/red
+    // transitorio en auth_session_check. Reintentar utiliza el botón REAL de
+    // BALTO; no omite el gate ni falsifica la respuesta de autenticación.
+    const bell = page.getByRole('button', { name: /Notificaciones de Stock/i });
+    const retrySession = page.getByRole('button', { name: 'Reintentar', exact: true });
+    await expect(bell.or(retrySession).first(), 'La sesión debe validarse antes de probar las notificaciones')
+      .toBeVisible({ timeout: 45_000 });
+    if (await retrySession.isVisible().catch(() => false)) {
+      await retrySession.click();
+    }
+    await expect(bell, 'No se pudo validar la sesión en el navegador, aun después de reintentar')
+      .toBeVisible({ timeout: 45_000 });
     await waitForBusyToFinish(page);
     const modal = page.getByRole('dialog', { name: 'Notificaciones de Stock' });
     if (!await modal.isVisible().catch(() => false)) {

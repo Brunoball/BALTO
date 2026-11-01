@@ -50,7 +50,7 @@ const FORCE_SHOW_LOADER_DEV = false;
 const PAGE_SIZE = 100;
 const PROBE_LIMIT = PAGE_SIZE + 1;
 const SKELETON_ROWS = 10;
-const LIVE_POLL_MS = 5000;
+const LIVE_POLL_MS = 15000; // antes 5000: cada consulta "en vivo" carga al servidor
 const VENTAS_LIST_CACHE_KEY = "ventas:listar:cc-medios-r2-v12-nc-trazabilidad";
 
 function safeText(v) { const s = String(v ?? "").trim(); return s ? s : "—"; }
@@ -387,7 +387,7 @@ export default function Ventas() {
   const rowsReqIdRef = useRef(0);
   const moreReqIdRef = useRef(0);
   const searchTimerRef = useRef(null);
-  const skipSearchRef = useRef(false);
+  const skipSearchRef = useRef(true); // el efecto de búsqueda no repite la carga inicial (evita un ventas_listar duplicado al entrar)
   const liveTimerRef = useRef(null);
   const liveBusyRef = useRef(false);
   const liveTokenRef = useRef(null);

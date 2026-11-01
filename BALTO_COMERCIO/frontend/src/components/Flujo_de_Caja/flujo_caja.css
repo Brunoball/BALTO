@@ -797,7 +797,8 @@ body.dark .fc-saldo--neg { color: #f87171 !important; }
 
 @media (max-width: 380px) {
   .mov-page--flujoCaja .mov-card__head {
-    grid-template-columns: minmax(0, 1fr) 42px;
+    /* auto: la columna de acciones también aloja Ajustar saldo / Historial. */
+    grid-template-columns: minmax(0, 1fr) auto;
   }
 
   .mov-page--flujoCaja .boton-exportar-trigger {

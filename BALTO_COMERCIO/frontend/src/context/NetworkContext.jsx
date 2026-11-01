@@ -19,8 +19,39 @@ export const useNetwork = () => useContext(NetworkContext);
 
 const PING_INTERVAL_MS = 2500;
 const PING_TIMEOUT_MS = 3500;
+const PING_TIMEOUT_CONFIRM_MS = 6000;
 const FAILS_TO_LOCK = 2;
 const SUCCESSES_TO_UNLOCK = 3;
+// Pausa entre los dos pings de confirmación antes de declarar "Sin conexión".
+const CONFIRM_RETRY_DELAY_MS = 1500;
+// No repetir el aviso de "servidor demorando" más seguido que esto.
+const SLOW_NOTICE_COOLDOWN_MS = 30000;
+
+function apiBase() {
+  return String(BASE_URL || "").trim().replace(/\/+$/, "");
+}
+
+/**
+ * Solo cuentan las fallas de requests a NUESTRA API (no R2, CDNs, etc.) y nunca
+ * las del propio ping (evita bucles de eventos).
+ */
+function isRelevantApiFailure(event) {
+  const url = String(event?.detail?.url || "");
+  if (!url) return true; // sin URL (Request object): por las dudas, verificar
+  if (/[?&]action=ping\b/i.test(url)) return false;
+  if (/^https?:\/\//i.test(url)) {
+    const base = apiBase();
+    if (!base) return true;
+    try {
+      return new URL(url).origin === new URL(base).origin;
+    } catch {
+      return true;
+    }
+  }
+  return true; // URL relativa = mismo origen
+}
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 function buildPingUrl() {
   const base = String(BASE_URL || "").trim().replace(/\/+$/, "");
 
@@ -76,23 +107,59 @@ export default function NetworkProvider({ children }) {
   const [offline, setOffline] = useState(!navigator.onLine);
   const [checking, setChecking] = useState(false);
   const [toastOk, setToastOk] = useState(false);
+  const [toastSlow, setToastSlow] = useState(false);
 
   const retryTimer = useRef(null);
   const failCountRef = useRef(0);
   const successCountRef = useRef(0);
   const prevOfflineRef = useRef(!navigator.onLine);
   const runningCheckRef = useRef(false);
+  const confirmingRef = useRef(false);
+  const lastSlowNoticeRef = useRef(0);
+  const offlineRef = useRef(!navigator.onLine);
 
   const enterOfflineMode = useCallback(() => {
     successCountRef.current = 0;
     setOffline(true);
   }, []);
 
-  const registerFailure = useCallback(() => {
-    failCountRef.current += 1;
+  /**
+   * Una request a la API falló o tardó demasiado. Eso NO alcanza para decir
+   * "Sin conexión": antes pasaba lo mismo cuando el servidor estaba lento y el
+   * cliente creía que era su WiFi. Ahora confirmamos con pings livianos (no
+   * tocan la base): solo si fallan seguidos bloqueamos la pantalla. Si el ping
+   * responde, la red está bien y avisamos que el servidor está demorando.
+   */
+  const confirmFailure = useCallback(async () => {
+    if (offlineRef.current || confirmingRef.current) return;
 
-    if (failCountRef.current >= FAILS_TO_LOCK) {
+    if (!navigator.onLine) {
       enterOfflineMode();
+      return;
+    }
+
+    confirmingRef.current = true;
+    try {
+      let fails = 0;
+      for (let i = 0; i < FAILS_TO_LOCK; i += 1) {
+        const ok = await pingServidor(buildPingUrl(), PING_TIMEOUT_CONFIRM_MS);
+        if (ok) {
+          failCountRef.current = 0;
+          const now = Date.now();
+          if (now - lastSlowNoticeRef.current > SLOW_NOTICE_COOLDOWN_MS) {
+            lastSlowNoticeRef.current = now;
+            setToastSlow(true);
+          }
+          return;
+        }
+        fails += 1;
+        if (i < FAILS_TO_LOCK - 1) await sleep(CONFIRM_RETRY_DELAY_MS);
+      }
+
+      failCountRef.current = fails;
+      if (fails >= FAILS_TO_LOCK) enterOfflineMode();
+    } finally {
+      confirmingRef.current = false;
     }
   }, [enterOfflineMode]);
 
@@ -159,8 +226,13 @@ export default function NetworkProvider({ children }) {
   }, [doHealthCheck, enterOfflineMode]);
 
   useEffect(() => {
-    const onFetchFailed = () => {
-      registerFailure();
+    const onFetchFailed = (event) => {
+      if (!isRelevantApiFailure(event)) return;
+      void confirmFailure();
+    };
+
+    const onForceOffline = () => {
+      void confirmFailure();
     };
 
     const onFetchOk = () => {
@@ -170,15 +242,15 @@ export default function NetworkProvider({ children }) {
     window.addEventListener("net:fetch_failed", onFetchFailed);
     window.addEventListener("net:fetch_timeout", onFetchFailed);
     window.addEventListener("net:fetch_ok", onFetchOk);
-    window.addEventListener("net:force_offline", onFetchFailed);
+    window.addEventListener("net:force_offline", onForceOffline);
 
     return () => {
       window.removeEventListener("net:fetch_failed", onFetchFailed);
       window.removeEventListener("net:fetch_timeout", onFetchFailed);
       window.removeEventListener("net:fetch_ok", onFetchOk);
-      window.removeEventListener("net:force_offline", onFetchFailed);
+      window.removeEventListener("net:force_offline", onForceOffline);
     };
-  }, [registerFailure, registerSuccess]);
+  }, [confirmFailure, registerSuccess]);
 
   useEffect(() => {
     if (!offline) {
@@ -203,6 +275,11 @@ export default function NetworkProvider({ children }) {
       retryTimer.current = null;
     };
   }, [offline, doHealthCheck]);
+
+  useEffect(() => {
+    offlineRef.current = offline;
+    if (offline) setToastSlow(false);
+  }, [offline]);
 
   useEffect(() => {
     const prev = prevOfflineRef.current;
@@ -246,6 +323,15 @@ export default function NetworkProvider({ children }) {
           mensaje="Conexión restablecida"
           duracion={4500}
           onClose={() => setToastOk(false)}
+        />
+      )}
+
+      {toastSlow && !offline && (
+        <Toast
+          tipo="info"
+          mensaje="El servidor está demorando más de lo normal. Tu conexión está bien; reintentá en unos segundos."
+          duracion={5000}
+          onClose={() => setToastSlow(false)}
         />
       )}
 
