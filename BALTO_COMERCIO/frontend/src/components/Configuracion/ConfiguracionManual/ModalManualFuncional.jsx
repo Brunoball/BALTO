@@ -15,47 +15,57 @@ import {
 
 import manualPdfUrl from "../../../utils/manuales/manual_funcional_balto_comercio.pdf";
 import manualDocxUrl from "../../../utils/manuales/manual_funcional_balto_comercio.docx";
+import { acquireBodyScrollLock } from "../../../utils/bodyScrollLock";
 import "../../Global/Global_css/GlobalsModalsV2.css";
 import "./ModalManualFuncional.css";
 
-const TOTAL_PAGES = 85;
+const TOTAL_PAGES = 90;
 
 const MANUAL_SECTIONS = [
   { title: "Ingreso y navegación", page: 3, keywords: "login inicio sesión menu lateral perfil permisos rol plan" },
   { title: "Dashboard", page: 6, keywords: "panel indicadores ingresos egresos resumen stock" },
   { title: "Movimientos", page: 8, keywords: "movimientos vista general filtros exportar" },
-  { title: "Ventas", page: 9, keywords: "venta cliente facturar factura nota crédito cheque echeq stock" },
-  { title: "Compras", page: 15, keywords: "compra proveedor nota crédito cheque echeq stock cuenta corriente" },
-  { title: "Recibos", page: 21, keywords: "recibo cobrar cobro cliente cuenta corriente cheque echeq" },
-  { title: "Órdenes de Pago", page: 25, keywords: "orden pago proveedor pagar cuenta corriente cheque echeq" },
-  { title: "Otros Ingresos", page: 28, keywords: "otros ingresos entrada dinero ingreso manual" },
-  { title: "Otros Egresos", page: 32, keywords: "otros egresos salida dinero gasto costo fijo variable" },
-  { title: "Presupuestos", page: 35, keywords: "presupuesto modelos convertir venta propuesta comercial" },
-  { title: "Flujo de Caja", page: 44, keywords: "flujo caja saldo ingresos egresos medios pago" },
-  { title: "Cuentas Corrientes", page: 47, keywords: "cuentas corrientes deuda saldo clientes proveedores" },
-  { title: "Cuentas Corrientes - Clientes", page: 47, keywords: "clientes saldo deuda cobros recibos historial" },
-  { title: "Cuentas Corrientes - Proveedores", page: 53, keywords: "proveedores saldo deuda pagos ordenes historial" },
-  { title: "Stock", page: 57, keywords: "stock inventario productos existencias precios categorias unidades" },
-  { title: "Stock - Productos", page: 58, keywords: "productos alta editar precio costo venta categoria unidad" },
-  { title: "Stock - Variantes", page: 59, keywords: "variantes atributos producto existencias precios" },
-  { title: "Stock - Códigos de barra", page: 60, keywords: "codigo barra barcode generar asociar imprimir scanner" },
-  { title: "Stock - Reportes", page: 61, keywords: "reportes inventario exportar valorizado listado" },
-  { title: "Contabilidad", page: 64, keywords: "contabilidad iva ventas compras libros" },
-  { title: "IVA Ventas", page: 64, keywords: "iva ventas subtotal impuesto notas crédito" },
-  { title: "IVA Compras", page: 66, keywords: "iva compras subtotal impuesto notas crédito proveedor" },
-  { title: "Cheques y E-Cheqs", page: 68, keywords: "cheques echeqs cartera depósito banco flujo" },
-  { title: "Cheques en Cartera", page: 68, keywords: "cheques cartera depositar banco" },
-  { title: "Flujo de Cheques", page: 69, keywords: "flujo cheques ingreso egreso depósito reactivar" },
-  { title: "E-Cheqs en Cartera", page: 70, keywords: "echeq cartera depositar banco" },
-  { title: "Flujo de E-Cheqs", page: 72, keywords: "flujo echeq ingreso egreso depósito reactivar" },
-  { title: "Análisis Financiero", page: 74, keywords: "analisis financiero ventas costos resultado neto ganancia pérdida" },
-  { title: "Configuración", page: 76, keywords: "configuracion ajustes sistema" },
-  { title: "Configuración - Tienda Nube", page: 77, keywords: "tienda nube integracion sincronizacion catalogo webhooks" },
-  { title: "Configuración - Usuarios", page: 78, keywords: "usuarios roles acceso contraseña tema estado" },
-  { title: "Configuración - Datos legales", page: 79, keywords: "datos legales fiscal cuit razon social iva punto venta" },
-  { title: "Configuración - Saldos iniciales", page: 80, keywords: "saldos iniciales caja banco cheques cuentas corrientes apertura" },
-  { title: "Configuración - Listas y categorías", page: 82, keywords: "listas categorías unidades detalles productos stock" },
-  { title: "Configuración - Calendario global", page: 84, keywords: "calendario fechas periodo mes dias" },
+  { title: "Ventas", page: 9, keywords: "ventas cliente factura nota crédito cheque stock" },
+  { title: "Ventas - Facturación ARCA", page: 13, keywords: "facturar consumidor final sin identificar cuit arca receptor factura fiscal" },
+  { title: "Compras", page: 17, keywords: "compras proveedor nota crédito cheque stock cuenta corriente" },
+  { title: "Recibos", page: 23, keywords: "recibo cobrar cliente cuenta corriente cheque" },
+  { title: "Órdenes de Pago", page: 27, keywords: "orden pago proveedor pagar cuenta corriente cheques" },
+  { title: "Otros Ingresos", page: 30, keywords: "otros ingresos entrada dinero factura" },
+  { title: "Otros Ingresos - Facturación", page: 32, keywords: "factura consumidor final cuit otros ingresos nota crédito" },
+  { title: "Otros Egresos", page: 34, keywords: "egresos salida dinero gasto costo" },
+  { title: "Presupuestos", page: 37, keywords: "presupuesto modelos convertir venta propuesta comercial" },
+  { title: "Flujo de Caja", page: 46, keywords: "flujo caja saldos medios dinero ingresos egresos ajustes" },
+  { title: "Flujo de Caja - Ajustar saldo", page: 48, keywords: "establecer saldo sumar importe restar monto motivo conciliacion arqueo" },
+  { title: "Flujo de Caja - Historial y reversión", page: 48, keywords: "historial ajustes revertir compensatorio auditoria registros" },
+  { title: "Cuentas Corrientes", page: 50, keywords: "cuentas corrientes deuda saldo clientes proveedores" },
+  { title: "Cuentas Corrientes - Clientes", page: 50, keywords: "clientes cobros recibos historial" },
+  { title: "Cuentas Corrientes - Proveedores", page: 57, keywords: "proveedores deuda pagos ordenes historial" },
+  { title: "Stock", page: 61, keywords: "stock inventario productos existencias precios categorias unidades" },
+  { title: "Stock - Productos", page: 62, keywords: "productos alta editar precios costo venta categoria unidad datos generales" },
+  { title: "Stock - Variantes", page: 63, keywords: "variantes atributos existencias precios" },
+  { title: "Stock - Códigos de barra", page: 64, keywords: "codigos barra barcode scanner" },
+  { title: "Stock - Reportes", page: 65, keywords: "reportes inventario exportar" },
+  { title: "Stock - Vencimientos y alertas", page: 67, keywords: "stock vencimiento partidas lotes fecha retiro fefo notificaciones alerta" },
+  { title: "Contabilidad", page: 69, keywords: "contabilidad iva ventas compras libros" },
+  { title: "IVA Ventas", page: 69, keywords: "iva ventas subtotal impuesto notas credito" },
+  { title: "IVA Compras", page: 71, keywords: "iva compras subtotal impuesto proveedor" },
+  { title: "Cheques y E-Cheqs", page: 73, keywords: "cheque echeq cartera deposito banco flujo" },
+  { title: "Cheques en Cartera", page: 73, keywords: "cheques cartera depositar banco" },
+  { title: "Flujo de Cheques", page: 74, keywords: "flujo cheques ingreso egreso deposito" },
+  { title: "E-Cheqs en Cartera", page: 75, keywords: "echeq cartera depositar banco" },
+  { title: "Flujo de E-Cheqs", page: 77, keywords: "flujo echeq ingreso egreso deposito" },
+  { title: "Análisis Financiero", page: 79, keywords: "analisis financiero dinero resultado saldos conciliacion medios" },
+  { title: "Análisis Financiero - Disponibilidad", page: 79, keywords: "disponibilidad dinero disponible cierre variacion cobros pagos conciliacion saldo inicial" },
+  { title: "Análisis Financiero - Resultados", page: 80, keywords: "resultados operativo ingreso costo variable fijo personal retiros pendientes" },
+  { title: "Análisis Financiero - Medios de pago", page: 80, keywords: "medios pago arranque apertura cobros pagos cierre efectivo banco" },
+  { title: "Configuración", page: 82, keywords: "configuracion ajustes sistema" },
+  { title: "Configuración - Tienda Nube", page: 82, keywords: "tienda nube integracion sincronizacion catalogo webhooks" },
+  { title: "Configuración - Usuarios", page: 83, keywords: "usuarios roles acceso contraseña" },
+  { title: "Configuración - Datos legales", page: 84, keywords: "datos legales fiscal cuit razon social iva punto venta" },
+  { title: "Configuración - Saldos iniciales", page: 85, keywords: "saldos iniciales caja banco cheques cuentas corrientes apertura" },
+  { title: "Configuración - Listas y categorías", page: 87, keywords: "listas categorias unidades medios detalles" },
+  { title: "Configuración - Calendario global", page: 89, keywords: "calendario fechas periodo mes dias" },
+  { title: "Configuración - Manual funcional", page: 90, keywords: "manual word pdf busqueda visor ayuda" },
 ];
 
 function normalizeText(value) {
@@ -93,8 +103,7 @@ export default function ModalManualFuncional({ open, onClose }) {
   useEffect(() => {
     if (!open) return undefined;
 
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    const releaseScroll = acquireBodyScrollLock();
 
     const onKeyDown = (event) => {
       if (event.key === "Escape") onCloseRef.current?.();
@@ -108,7 +117,7 @@ export default function ModalManualFuncional({ open, onClose }) {
     const focusTimer = window.setTimeout(() => searchRef.current?.focus(), 50);
 
     return () => {
-      document.body.style.overflow = previousOverflow;
+      releaseScroll();
       window.removeEventListener("keydown", onKeyDown);
       window.clearTimeout(focusTimer);
     };
@@ -146,7 +155,7 @@ export default function ModalManualFuncional({ open, onClose }) {
 
           <div className="gm-modal-head-left">
             <h2 className="gm-modal-title">Manual funcional</h2>
-            <p className="gm-modal-subtitle">BALTO Comercio · Versión 2026 · {TOTAL_PAGES} páginas</p>
+            <p className="gm-modal-subtitle">BALTO Comercio · Versión noviembre 2026 · {TOTAL_PAGES} páginas</p>
           </div>
 
           <div className="manual-modalHeaderActions">

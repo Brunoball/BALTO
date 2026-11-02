@@ -5,6 +5,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBell, faTriangleExclamation, faXmark, faArrowRight, faMoneyBillTrendUp, faCalendarXmark, faClock, faCircleCheck } from "@fortawesome/free-solid-svg-icons";
 import { listarAlertasVencimientoStock, obtenerRevisionPreciosPendienteStock } from "../api/stockApi";
 import { isTopStockModal } from "../modales/modalStackUtils";
+import { acquireBodyScrollLock } from "../../../utils/bodyScrollLock";
 import "./alertasVencimientos.css";
 
 const fechaLocal = () => {
@@ -108,9 +109,8 @@ export default function AlertasVencimientos() {
   }, [refresh]);
   useEffect(() => {
     if (!abierto) return undefined;
-    const previousOverflow = document.body.style.overflow;
     const previousFocus = document.activeElement;
-    document.body.style.overflow = "hidden";
+    const releaseScroll = acquireBodyScrollLock();
     const focusTimer = window.setTimeout(() => closeRef.current?.focus(), 0);
     const handleKeys = (event) => {
       if (!isTopStockModal(overlayRef.current)) return;
@@ -136,7 +136,7 @@ export default function AlertasVencimientos() {
     document.addEventListener("keydown", handleKeys, true);
     return () => {
       window.clearTimeout(focusTimer);
-      document.body.style.overflow = previousOverflow;
+      releaseScroll();
       document.removeEventListener("keydown", handleKeys, true);
       if (previousFocus?.isConnected) previousFocus.focus?.();
     };

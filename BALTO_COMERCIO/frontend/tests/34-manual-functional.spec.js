@@ -11,7 +11,7 @@ async function openManual(page) {
   await expect(card).toContainText('Manual funcional');
   await expect(card).toContainText(/BALTO Comercio/i);
   await expect(card).toContainText(/Versión 2026/i);
-  await expect(card).toContainText(/85 páginas/i);
+  await expect(card).toContainText(/90 páginas/i);
   await expect(card).toContainText(/Disponible/i);
 
   await card.click();
@@ -19,7 +19,7 @@ async function openManual(page) {
   const dialog = page.getByRole('dialog', { name: /Manual funcional de BALTO Comercio/i }).last();
   await expect(dialog).toBeVisible({ timeout: 20_000 });
   await expect(dialog.getByRole('heading', { name: 'Manual funcional', exact: true })).toBeVisible();
-  await expect(dialog).toContainText(/BALTO Comercio · Versión 2026 · 85 páginas/i);
+  await expect(dialog).toContainText(/BALTO Comercio · Versión noviembre 2026 · 90 páginas/i);
 
   return { card, dialog };
 }
@@ -83,25 +83,40 @@ test('@configuracion @manual-funcional buscador replica navegación, normalizaci
 
   // La búsqueda ignora tildes y acepta varios términos igual que BALTO Servicios.
   await search.fill('codigo barra');
-  const barcodeResult = dialog.getByRole('button', { name: /Stock - Códigos de barra.*Página 60/i });
+  const barcodeResult = dialog.getByRole('button', { name: /Stock - Códigos de barra.*Página 64/i });
   await expect(barcodeResult).toBeVisible();
   await barcodeResult.click();
 
   await expect(search).toHaveValue('');
-  await expect(pageInput).toHaveValue('60');
+  await expect(pageInput).toHaveValue('64');
   await expect(dialog.locator('iframe[title="Manual funcional BALTO Comercio"]')).toHaveAttribute(
     'src',
-    /#page=60&zoom=page-width$/,
+    /#page=64&zoom=page-width$/,
   );
 
   // Las secciones propias de Comercio deben estar indexadas.
   await search.fill('tienda nube');
-  await expect(dialog.getByRole('button', { name: /Configuración - Tienda Nube.*Página 77/i })).toBeVisible();
+  await expect(dialog.getByRole('button', { name: /Configuración - Tienda Nube.*Página 82/i })).toBeVisible();
 
   await search.fill('stock');
-  await expect(dialog.getByRole('button', { name: /^Stock\s+Página 57$/i })).toBeVisible();
-  await expect(dialog.getByRole('button', { name: /Stock - Productos.*Página 58/i })).toBeVisible();
-  await expect(dialog.getByRole('button', { name: /Stock - Variantes.*Página 59/i })).toBeVisible();
+  await expect(dialog.getByRole('button', { name: /^Stock\s+Página 61$/i })).toBeVisible();
+  await expect(dialog.getByRole('button', { name: /Stock - Productos.*Página 62/i })).toBeVisible();
+  await expect(dialog.getByRole('button', { name: /Stock - Variantes.*Página 63/i })).toBeVisible();
+
+  // Las nuevas secciones de noviembre de 2026 deben estar disponibles desde el índice.
+  await search.fill('ajustar saldo');
+  await expect(dialog.getByRole('button', { name: /Flujo de Caja - Ajustar saldo.*Página 48/i })).toBeVisible();
+
+  await search.fill('vencimientos');
+  await expect(dialog.getByRole('button', { name: /Stock - Vencimientos y alertas.*Página 67/i })).toBeVisible();
+
+  await search.fill('consumidor final');
+  await expect(dialog.getByRole('button', { name: /Ventas - Facturación ARCA.*Página 13/i })).toBeVisible();
+
+  await search.fill('analisis financiero');
+  await expect(dialog.getByRole('button', { name: /Análisis Financiero - Disponibilidad.*Página 79/i })).toBeVisible();
+  await expect(dialog.getByRole('button', { name: /Análisis Financiero - Resultados.*Página 80/i })).toBeVisible();
+  await expect(dialog.getByRole('button', { name: /Análisis Financiero - Medios de pago.*Página 80/i })).toBeVisible();
 
   // Comercio no debe heredar módulos exclusivos de Servicios.
   await search.fill('servicio');
@@ -118,7 +133,7 @@ test('@configuracion @manual-funcional buscador replica navegación, normalizaci
   });
 });
 
-test('@configuracion @manual-funcional paginador y pantalla completa respetan límites 1-85', async ({ page }, testInfo) => {
+test('@configuracion @manual-funcional paginador y pantalla completa respetan límites 1-90', async ({ page }, testInfo) => {
   const diagnostics = installDiagnostics(page);
   const { dialog } = await openManual(page);
 
@@ -138,11 +153,11 @@ test('@configuracion @manual-funcional paginador y pantalla completa respetan l�
   await expect(pageInput).toHaveValue('1');
 
   await pageInput.fill('999');
-  await expect(pageInput).toHaveValue('85');
+  await expect(pageInput).toHaveValue('90');
   await expect(next).toBeDisabled();
   await expect(dialog.locator('iframe[title="Manual funcional BALTO Comercio"]')).toHaveAttribute(
     'src',
-    /#page=85&zoom=page-width$/,
+    /#page=90&zoom=page-width$/,
   );
 
   await pageInput.fill('0');
@@ -160,6 +175,8 @@ test('@configuracion @manual-funcional paginador y pantalla completa respetan l�
 
   await dialog.getByRole('button', { name: /Cerrar manual/i }).click();
   await expect(dialog).toBeHidden({ timeout: 10_000 });
+  // Al cerrar con el botón también debe liberarse el bloqueo de scroll.
+  await expect.poll(async () => page.locator('body').evaluate((node) => node.style.overflow)).not.toBe('hidden');
 
   await assertNoCriticalErrors(diagnostics, testInfo, {
     allowConsole: [/PDF/i, /imagen/i, /Tienda Nube/i],
