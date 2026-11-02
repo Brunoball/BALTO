@@ -441,7 +441,7 @@ export default function ModalFacturaBaltoResumen({
   // consumidor final. No se guardan ni se reemplazan los datos del cliente.
   const ultimoReceptorConCuitRef = useRef(null);
   const [tabActiva, setTabActiva] = useState("resumen");
-  const firstRef = useRef(null);
+  const dialogRef = useRef(null);
 
   const movimientoIdRef = useRef(0);
   const cbteNoEmitidoRef = useRef(null);
@@ -765,7 +765,12 @@ export default function ModalFacturaBaltoResumen({
     setTabActiva("resumen");
     movimientoIdRef.current = Number(dataFacturacion?.id_movimiento || 0) || 0;
     cbteNoEmitidoRef.current = null;
-    const focoTimer = setTimeout(() => firstRef.current?.focus?.(), 0);
+    // El foco inicial queda en el diálogo sin desplazar el scroll hacia
+    // el checkbox, ubicado al final del resumen. Evita que el navegador
+    // mueva la ventana o los modales apilados para mostrar ese control.
+    const focoTimer = setTimeout(() => {
+      dialogRef.current?.focus?.({ preventScroll: true });
+    }, 0);
     return () => clearTimeout(focoTimer);
     // dataFacturacion se lee al abrir; los cambios posteriores se reflejan
     // en el resumen sin reiniciar la interacción del usuario.
@@ -1700,6 +1705,8 @@ useEffect(() => {
     <div className="mi-modal__overlay mfr-modal__overlay">
       <div
         className="mi-modal__container mfr-modal"
+        ref={dialogRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         onClick={(e) => e.stopPropagation()}
@@ -1901,7 +1908,6 @@ useEffect(() => {
                   <div className="mfr-confirm">
                     <label className="mfr-check">
                       <input
-                        ref={firstRef}
                         type="checkbox"
                         checked={confirm}
                         onChange={(e) => setConfirm(e.target.checked)}

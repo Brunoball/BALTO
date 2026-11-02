@@ -417,6 +417,7 @@ export default function Flujo_Caja() {
                   aria-label="Historial de ajustes de saldo"
                 >
                   <FontAwesomeIcon icon={faClockRotateLeft} />
+                  <span className="fc-aj-headBtn__text">Historial</span>
                 </button>
                 <button
                   type="button"

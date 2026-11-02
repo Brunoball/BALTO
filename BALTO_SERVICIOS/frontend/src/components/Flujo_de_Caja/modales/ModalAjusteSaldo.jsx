@@ -45,7 +45,7 @@ import {
 } from "../utils/flujoCajaUtils";
 
 const TIPOS = [
-  { codigo: "ESTABLECER", label: "Establecer saldo real", hint: "Ingresá el dinero verificado físicamente o en la cuenta." },
+  { codigo: "ESTABLECER", label: "Establecer saldo", hint: "Ingresá el dinero verificado físicamente o en la cuenta." },
   { codigo: "SUMAR", label: "Sumar importe", hint: "Ingresá el importe que falta registrar." },
   { codigo: "RESTAR", label: "Restar importe", hint: "Ingresá el importe a descontar." },
 ];

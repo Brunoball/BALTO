@@ -334,7 +334,10 @@
   margin-top: 2px;
 }
 
+/* Anclar el checkbox nativo a su tarjeta evita que el foco del
+   navegador intente desplazar el overlay completo al marcarlo. */
 .mfr-check{
+  position: relative;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -354,8 +357,15 @@
 
 .mfr-check__input{
   position: absolute;
+  top: 50%;
+  left: 14px;
+  width: 24px;
+  height: 24px;
+  margin: 0;
+  padding: 0;
   opacity: 0;
   pointer-events: none;
+  transform: translateY(-50%);
 }
 
 .mfr-check__box{
