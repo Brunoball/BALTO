@@ -8,6 +8,7 @@ export default function useAnalisisFinanciero({ dateRange, onError }) {
   const [hasFetched, setHasFetched] = useState(false);
   const [showSkeleton, setShowSkeleton] = useState(false);
   const skelTimerRef = useRef(null);
+  const requestIdRef = useRef(0);
 
   const beginSkeleton = useCallback(() => {
     if (skelTimerRef.current) clearTimeout(skelTimerRef.current);
@@ -23,28 +24,34 @@ export default function useAnalisisFinanciero({ dateRange, onError }) {
   useEffect(() => {
     return () => {
       if (skelTimerRef.current) clearTimeout(skelTimerRef.current);
+      requestIdRef.current += 1;
     };
   }, []);
 
   const fetchAnalisis = useCallback(async () => {
     if (!dateRange?.from) return;
 
+    const requestId = ++requestIdRef.current;
     setLoading(true);
+    setData(null); // Evita mostrar importes de un rango anterior con el filtro nuevo.
     setError("");
     beginSkeleton();
 
     try {
       const json = await obtenerResumenAnalisisFinanciero(dateRange);
-      setData(json);
+      if (requestId === requestIdRef.current) setData(json);
     } catch (e) {
+      if (requestId !== requestIdRef.current) return;
       setData(null);
       const msg = e?.message || "Error cargando análisis financiero";
       setError(msg);
       onError(msg);
     } finally {
-      setLoading(false);
-      setHasFetched(true);
-      endSkeleton();
+      if (requestId === requestIdRef.current) {
+        setLoading(false);
+        setHasFetched(true);
+        endSkeleton();
+      }
     }
   }, [dateRange, onError, beginSkeleton, endSkeleton]);
 

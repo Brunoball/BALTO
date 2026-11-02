@@ -46,6 +46,7 @@ export function normalizePaymentCards(rawCards) {
     label: String(card?.label ?? "MEDIO DE PAGO"),
     ingresos: Number(card?.ingresos || 0),
     egresos: Number(card?.egresos || 0),
+    ajustes: Number(card?.ajustes || 0),
     saldo: Number(card?.saldo || 0),
     medios: Array.isArray(card?.medios)
       ? card.medios.map((m) => ({
@@ -63,6 +64,9 @@ export function normalizeRows(rawRows) {
     ingresos: r?.ingresos == null ? null : Number(r.ingresos || 0),
     egresos: r?.egresos == null ? null : Number(r.egresos || 0),
     saldo: r?.saldo == null ? null : Number(r.saldo || 0),
+    saldo_inicial_aplicado: Number(r?.saldo_inicial_aplicado || 0),
+    ajustes_internos: Number(r?.ajustes_internos || 0),
+    ajustes_manuales: Number(r?.ajustes_manuales || 0),
     medios_pago: normalizePaymentCards(r?.medios_pago),
   }));
 }
@@ -82,7 +86,10 @@ export function downloadBlob(content, fileName, mimeType) {
   document.body.appendChild(a);
   a.click();
   a.remove();
-  window.URL.revokeObjectURL(url);
+  // La descarga de un blob se inicia de forma asíncrona en Chromium.
+  // Liberar la URL inmediatamente puede invalidarla antes de que el navegador
+  // procese el clic, especialmente con archivos grandes o bajo carga E2E.
+  window.setTimeout(() => window.URL.revokeObjectURL(url), 60_000);
 }
 
 export function paymentCardSubtitle(card) {
@@ -105,4 +112,72 @@ export function pickDefaultSelectedDate(items) {
   if (latestNotFuture) return latestNotFuture.fecha;
 
   return items[0]?.fecha || "";
+}
+
+/* =========================================================
+   Ajustes de saldos
+========================================================= */
+
+/** Importe firmado: "+ $ 1.000,00" / "− $ 1.000,00" / "$ 0,00". */
+export function moneyARSSigned(v) {
+  if (v == null || v === "") return "—";
+  const n = Number(v || 0);
+  if (!Number.isFinite(n)) return "—";
+  if (Math.abs(n) < 0.005) return moneyARSAbs(0);
+  return `${n > 0 ? "+" : "−"} ${moneyARSAbs(n)}`;
+}
+
+/**
+ * Interpreta lo que tipea el usuario en formato argentino ("145.000,50",
+ * "145000,5", "145000.50"). Devuelve null si no es un importe válido.
+ */
+export function parseMoneyInput(value) {
+  let s = String(value ?? "").trim().replace(/\$/g, "").replace(/\s+/g, "");
+  if (!s) return null;
+  if (!/^[0-9.,]+$/.test(s) || !/[0-9]/.test(s)) return null;
+
+  const commas = (s.match(/,/g) || []).length;
+  const dots = (s.match(/\./g) || []).length;
+  let normalized = s;
+
+  if (commas > 1) return null;
+  if (commas === 1) {
+    const [intPart, decPart = ""] = s.split(",");
+    if (decPart.length > 2 || !/^\d*$/.test(decPart)) return null;
+    if (dots > 0 && !/^\d{1,3}(\.\d{3})+$/.test(intPart)) return null;
+    if (dots === 0 && !/^\d+$/.test(intPart)) return null;
+    normalized = `${intPart.replace(/\./g, "") || "0"}${decPart ? `.${decPart}` : ""}`;
+  } else if (dots > 0) {
+    if (/^\d{1,3}(\.\d{3})+$/.test(s)) normalized = s.replace(/\./g, "");
+    else if (dots === 1 && /^\d+\.\d{1,2}$/.test(s)) normalized = s;
+    else return null;
+  }
+
+  const n = Number(normalized);
+  if (!Number.isFinite(n) || n > 999999999999.99) return null;
+  return Math.round(n * 100) / 100;
+}
+
+/** Texto exacto con 2 decimales para enviar al backend (sin floats ambiguos). */
+export function toApiAmount(n) {
+  return (Math.round(Number(n || 0) * 100) / 100).toFixed(2);
+}
+
+/**
+ * Vista previa local inmediata. El backend vuelve a calcular todo antes de
+ * confirmar; esto sólo da respuesta visual instantánea.
+ */
+export function computeAjustePreview(saldoActual, tipo, importe) {
+  const saldoCents = Math.round(Number(saldoActual || 0) * 100);
+  if (importe == null) return null;
+  const importeCents = Math.round(Number(importe) * 100);
+  let diferencia = 0;
+  if (tipo === "ESTABLECER") diferencia = importeCents - saldoCents;
+  else if (tipo === "SUMAR") diferencia = importeCents;
+  else if (tipo === "RESTAR") diferencia = -importeCents;
+  return {
+    saldoActual: saldoCents / 100,
+    diferencia: diferencia / 100,
+    saldoNuevo: (saldoCents + diferencia) / 100,
+  };
 }

@@ -62,12 +62,9 @@ function formatFechaDMY(v) {
   return s;
 }
 
-function todayDMY() {
-  const d = new Date();
-  const dd = String(d.getDate()).padStart(2, "0");
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const yyyy = String(d.getFullYear());
-  return `${dd}/${mm}/${yyyy}`;
+function formatFechaReciboDMY(iso) {
+  const [y, m, d] = String(iso || "").slice(0, 10).split("-");
+  return y && m && d ? `${d}/${m}/${y}` : String(iso || "");
 }
 
 function todayISO() {
@@ -708,6 +705,8 @@ export default function ModalPagarRecibos({
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [pagaTodo, setPagaTodo] = useState(false);
   const [nota, setNota] = useState("");
+  // Fecha única del recibo: es la fecha en que ingresó el dinero (por defecto hoy).
+  const [fechaRecibo, setFechaRecibo] = useState(todayISO);
   const [loading, setLoading] = useState(false);
   const [rows, setRows] = useState(() => []);
   const [openDetalleDeuda, setOpenDetalleDeuda] = useState(false);
@@ -833,6 +832,7 @@ export default function ModalPagarRecibos({
     setSelectedIds(new Set());
     setPagaTodo(false);
     setNota("");
+    setFechaRecibo(todayISO());
     setLoading(false);
     setRows(Array.isArray(deudas) ? [...deudas] : []);
     setOpenDetalleDeuda(false);
@@ -1131,6 +1131,24 @@ export default function ModalPagarRecibos({
       };
     }
 
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(fechaRecibo || ""))) {
+      return { ok: false, msg: "Ingresá una fecha válida para el recibo." };
+    }
+    if (fechaRecibo > todayISO()) {
+      return { ok: false, msg: "La fecha del recibo no puede ser posterior a hoy." };
+    }
+    const fechaDeudaMasReciente = seleccion
+      .map((r) => String(r?.fecha || "").slice(0, 10))
+      .filter((f) => /^\d{4}-\d{2}-\d{2}$/.test(f))
+      .sort()
+      .pop();
+    if (fechaDeudaMasReciente && fechaRecibo < fechaDeudaMasReciente) {
+      return {
+        ok: false,
+        msg: `La fecha del recibo no puede ser anterior a la venta que cancela (${formatFechaReciboDMY(fechaDeudaMasReciente)}).`,
+      };
+    }
+
     // Permitimos que el importe del medio de pago supere el saldo seleccionado.
     // Ejemplo: cheque/eCheq de $2.000 para cancelar un saldo de $1.500.
     // El backend registra el importe completo y aplica el excedente a la última deuda seleccionada.
@@ -1143,6 +1161,7 @@ export default function ModalPagarRecibos({
     mediosPago,
     sumaMediosPago,
     totalSeleccionado,
+    fechaRecibo,
   ]);
 
   /* =========================
@@ -1202,7 +1221,7 @@ export default function ModalPagarRecibos({
         0
       );
       const payload = {
-        fecha_cobro: todayDMY(),
+        fecha_cobro: formatFechaReciboDMY(fechaRecibo),
         cliente: {
           id_cliente: clienteInfo?.id_cliente ?? null,
           nombre:
@@ -1217,7 +1236,7 @@ export default function ModalPagarRecibos({
         title: `Recibo - ${payload?.cliente?.nombre || "Cliente"}`,
       };
     },
-    [cliente]
+    [cliente, fechaRecibo]
   );
 
   /* =========================
@@ -1324,9 +1343,7 @@ export default function ModalPagarRecibos({
       body: JSON.stringify({
         ids_movimiento,
         medios_pago,
-        fecha_cobro: todayISO(),
-        fecha_pago: todayISO(),
-        fecha: todayISO(),
+        fecha: fechaRecibo,
         id_medio_pago: primaryMedio,
       }),
     });
@@ -1372,9 +1389,7 @@ export default function ModalPagarRecibos({
           totalSeleccionado,
           nota: nota.trim(),
           medios_pago: mediosPagoPayload,
-          fecha_cobro: todayISO(),
-          fecha_pago: todayISO(),
-          fecha: todayISO(),
+          fecha: fechaRecibo,
           id_medio_pago: mediosPagoPayload[0]?.id_medio_pago || 0,
           medio_pago: mpNombre,
           ids_movimiento: ids,
@@ -1601,12 +1616,12 @@ export default function ModalPagarRecibos({
               <div className="gm-movement-layout gm-receipt-pay-layout">
                 <section className="gm-movement-main gm-table gm-receipt-table">
                   <div className={`gm-table-head gm-receipt-table-head ${tbodyHasScroll ? "gm-table-head--body-scroll" : ""}`}>
-                    <div className="gm-table-th gm-receipt-th gm-receipt-th--sel gm-table-cell--center">Sel</div>
+                    <div className="gm-table-th gm-receipt-th gm-receipt-th--sel gm-table-cell--center" title="Sel">Sel</div>
                     <div className="gm-table-th gm-receipt-th">Fecha</div>
                     <div className="gm-table-th gm-receipt-th gm-receipt-th--desc">Descripción</div>
-                    <div className="gm-table-th gm-receipt-th gm-receipt-th--center gm-table-cell--center">Estado</div>
-                    <div className="gm-table-th gm-receipt-th gm-receipt-th--right gm-table-cell--right">Monto</div>
-                    <div className="gm-table-th gm-receipt-th gm-receipt-th--info gm-table-cell--center">Info</div>
+                    <div className="gm-table-th gm-receipt-th gm-receipt-th--center gm-table-cell--center" title="Estado">Estado</div>
+                    <div className="gm-table-th gm-receipt-th gm-receipt-th--right gm-table-cell--right" title="Monto">Monto</div>
+                    <div className="gm-table-th gm-receipt-th gm-receipt-th--info gm-table-cell--center" title="Info">Info</div>
                   </div>
 
                   <div
@@ -1666,7 +1681,7 @@ export default function ModalPagarRecibos({
                               />
                             </label>
                           </div>
-                          <div className="gm-table-cell gm-receipt-td">
+                          <div className="gm-table-cell gm-receipt-td" title={String((safeText(formatFechaDMY(r?.fecha))) ?? "")}>
                             {safeText(formatFechaDMY(r?.fecha))}
                           </div>
                           <div
@@ -1678,7 +1693,7 @@ export default function ModalPagarRecibos({
                           <div className="gm-table-cell gm-receipt-td gm-receipt-td--center gm-table-cell--center">
                             <EstadoChip row={r} pagado={pagado} />
                           </div>
-                          <div className="gm-table-cell gm-receipt-td gm-receipt-td--right gm-table-cell--right gm-table-cell--mono">
+                          <div className="gm-table-cell gm-receipt-td gm-receipt-td--right gm-table-cell--right gm-table-cell--mono" title={String((moneyARS(saldoPendiente)) ?? "")}>
                             {moneyARS(saldoPendiente)}
                           </div>
                           <div className="gm-table-cell gm-receipt-td gm-receipt-td--info gm-table-cell--center" onClick={(e) => e.stopPropagation()}>
@@ -1745,6 +1760,24 @@ export default function ModalPagarRecibos({
                         </button>
 
                         <div className="gm-section-divider" />
+
+                        <div className="gm-field" style={{ marginBottom: 12 }}>
+                          <input
+                            id="recibo-fecha-input"
+                            className="gm-input"
+                            type="date"
+                            aria-label="Fecha"
+                            value={fechaRecibo}
+                            max={todayISO()}
+                            onChange={(e) => {
+                              const valor = String(e.target.value || "");
+                              if (!valor || valor > todayISO()) return;
+                              setFechaRecibo(valor);
+                            }}
+                            disabled={isProcessing}
+                          />
+                          <label className="gm-label gm-label--up" htmlFor="recibo-fecha-input">Fecha</label>
+                        </div>
 
                         <PanelMediosPagoReciboLocal
                           mediosFilas={mediosFilas}

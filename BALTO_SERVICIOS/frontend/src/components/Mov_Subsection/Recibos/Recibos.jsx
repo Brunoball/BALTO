@@ -37,7 +37,7 @@ import { useDateRange } from "../../../context/DateRangeContext.jsx";
 import { getDetalleMovimiento, getResumenProductosMovimiento } from "../_shared/detalleMovimiento.js";
 import { apiGet, apiPostJson, getAuthInfo } from "./api/recibosApi.js";
 import useRecibosToast from "./hooks/useRecibosToast.js";
-import { moneyARS, safeText, formatFechaDMY, dateToAPI, todayISO, formatDateUI, slugifySheetName, escapeCSV, downloadBlob, isAccionNoValidaErrorMessage } from "./utils/recibosUtils.js";
+import { moneyARS, safeText, formatFechaDMY, dateToAPI, formatDateUI, slugifySheetName, escapeCSV, downloadBlob, isAccionNoValidaErrorMessage } from "./utils/recibosUtils.js";
 
 
 /* =========================
@@ -864,9 +864,8 @@ export default function Recibos() {
       const data = await apiPostJson(`${API}?action=recibos_confirmar_pago`, {
         ids_movimiento: ids,
         medios_pago: mediosPagoArr,
-        fecha_cobro: payload?.fecha_cobro || payload?.fecha_pago || payload?.fecha || todayISO(),
-        fecha_pago: payload?.fecha_pago || payload?.fecha_cobro || payload?.fecha || todayISO(),
-        fecha: payload?.fecha || payload?.fecha_cobro || payload?.fecha_pago || todayISO(),
+        // Fecha única elegida en el modal; el backend la exige (no se sustituye por hoy).
+        fecha: payload?.fecha,
         id_medio_pago: primaryMedioId,   // backward compat
         idUsuario,
         idUsuarioMaster: idUsuarioMaster || idUsuario,

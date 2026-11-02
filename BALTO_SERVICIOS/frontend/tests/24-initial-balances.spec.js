@@ -669,11 +669,7 @@ test('@flujo @saldos-iniciales aplica aperturas existentes al saldo pero no las 
     if (!date) continue;
     expectedByDate.set(date, (expectedByDate.get(date) || 0) + Number(row?.saldo || 0));
   }
-  for (const row of Array.isArray(payload?.cheques) ? payload.cheques : []) {
-    const date = String(row?.fecha_saldo || '');
-    if (!date) continue;
-    expectedByDate.set(date, (expectedByDate.get(date) || 0) + Math.abs(Number(row?.importe || 0)));
-  }
+  // Cheques/eCheqs de apertura no son efectivo disponible y no se suman a caja.
 
   if (!expectedByDate.size) {
     testInfo.annotations.push({
@@ -875,12 +871,16 @@ for (const type of ['CHEQUE', 'ECHEQ']) {
       await expect(carteraRow).toBeVisible({ timeout: 30_000 });
       await expect(carteraRow).toContainText(displayedIssuer);
 
-      // El alta de un cheque inicial incrementa apertura, no "Ingresos".
+      // Un cheque/eCheq inicial es un documento en cartera, NO dinero disponible:
+      // no suma a las aperturas de caja, ni al saldo, ni a ingresos/egresos.
+      // (Misma regla que verifica 45: "Un cheque en cartera no es dinero
+      // disponible"; el dinero recién entra a Banco cuando se deposita.)
       const afterFlow = await flowDay(page, today);
       closeTo(
         Number(afterFlow.saldo_inicial_aplicado || 0) - Number(beforeFlow.saldo_inicial_aplicado || 0),
-        amount,
+        0,
       );
+      closeTo(afterFlow.saldo, beforeFlow.saldo);
       closeTo(afterFlow.ingresos, beforeFlow.ingresos);
       closeTo(afterFlow.egresos, beforeFlow.egresos);
 

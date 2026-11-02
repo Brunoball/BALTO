@@ -37,7 +37,7 @@ import { useDateRange } from "../../../context/DateRangeContext.jsx";
 import { getDetalleMovimiento, getResumenProductosMovimiento } from "../_shared/detalleMovimiento.js";
 import { apiGet, apiPostJson, getAuthInfo, buildHeadersGET, ordenesPagoFetch } from "./api/ordenesPagoApi.js";
 import useOrdenesPagoToast from "./hooks/useOrdenesPagoToast.js";
-import { moneyARS, safeText, normalizeSearchText, formatFechaDMY, startOfDay, parseRowFecha, dateToAPI, todayISO, formatDateUI, rowInDateRange, slugifySheetName, escapeCSV, downloadBlob } from "./utils/ordenesPagoUtils.js";
+import { moneyARS, safeText, normalizeSearchText, formatFechaDMY, startOfDay, parseRowFecha, dateToAPI, formatDateUI, rowInDateRange, slugifySheetName, escapeCSV, downloadBlob } from "./utils/ordenesPagoUtils.js";
 
 
 /* =========================
@@ -854,9 +854,8 @@ export default function OrdenesPago() {
         ids_movimiento: ids,
         medios_pago: mediosPagoPayload,
         id_medio_pago: primaryMedioId,
-        fecha_cobro: payload?.fecha_cobro || payload?.fecha_pago || payload?.fecha || todayISO(),
-        fecha_pago: payload?.fecha_pago || payload?.fecha_cobro || payload?.fecha || todayISO(),
-        fecha: payload?.fecha || payload?.fecha_cobro || payload?.fecha_pago || todayISO(),
+        // Fecha única elegida en el modal; el backend la exige (no se sustituye por hoy).
+        fecha: payload?.fecha,
         idUsuario,
         idUsuarioMaster: idUsuarioMaster || idUsuario,
       });

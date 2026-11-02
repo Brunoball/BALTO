@@ -100,7 +100,8 @@ test('@configuracion @crud calendario: guardar, persistir y restaurar', async ({
     expect(selectionStable, 'El modo elegido debe permanecer estable tras hidratar el calendario').toBeTruthy();
 
     if (targetMode === 'dias_atras') {
-      const maxAllowed = Math.max(1, new Date().getDate() - 1);
+      // El modo no cruza al mes anterior: el día 1 el único valor posible es 0 (sólo hoy).
+      const maxAllowed = Math.max(0, new Date().getDate() - 1);
       const daysInput = page.getByLabel('Cantidad de días hacia atrás');
       await expect(daysInput).toBeVisible({ timeout: 15_000 });
       await daysInput.fill(String(Math.min(2, maxAllowed)));

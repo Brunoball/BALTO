@@ -179,22 +179,24 @@ function Invoke-BaltoPlaywright {
   Assert-BaltoTestFilesExist $Files
   Remove-Item Env:PW_ALLOW_ARCA -ErrorAction SilentlyContinue
 
-  $args = @('playwright', 'test')
-  $args += $Files
-  $args += '--project=chromium'
-  $args += "--workers=$Workers"
-  $args += "--reporter=$Reporter"
+  $pwArgs = @('playwright', 'test')
+  $pwArgs += $Files
+  $pwArgs += '--project=chromium'
+  $pwArgs += "--workers=$Workers"
+  $pwArgs += "--reporter=$Reporter"
 
-  if ($Visible) { $args += '--headed' }
-  if ($Ui) { $args += '--ui' }
-  if ($ListOnly) { $args += '--list' }
+  if ($Visible) { $pwArgs += '--headed' }
+  if ($Ui) { $pwArgs += '--ui' }
+  if ($ListOnly) { $pwArgs += '--list' }
 
   Write-Host ''
   Write-Host ('Ejecutando {0} archivo(s):' -f $Files.Count) -ForegroundColor Cyan
   $Files | ForEach-Object { Write-Host "  - $_" }
   Write-Host ''
 
-  & npx @args
+  # Nota: no usar el nombre args (variable automática de PowerShell): el
+  # splatting llegaba vacío y npx abría una consola en lugar de Playwright.
+  & npx @pwArgs
   if ($LASTEXITCODE -ne 0) {
     throw "Playwright terminó con código $LASTEXITCODE."
   }
