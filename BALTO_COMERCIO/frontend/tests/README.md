@@ -34,6 +34,26 @@ mutaciones reales (`@mutations`, sólo con `PW_ALLOW_MUTATIONS=1`, tenant E2E y 
 migración `tesoreria_ajustes_saldo` aplicada). Los ajustes de prueba llevan el
 RUN_PREFIX en observaciones y el limpiador E2E los elimina (reversiones primero).
 
+**Clasificación OTROS EGRESOS (Otros egresos → Análisis Financiero) + regresiones relacionadas:**
+
+Requiere la migración `database/migrations/2026_11_02_otros_egresos_clasificacion.sql`
+aplicada en el tenant E2E. `56` lee los IDs del catálogo (no asume 1/2/3/4); sus
+mutaciones sólo corren con `PW_ALLOW_MUTATIONS=1` y se limpian por ID exacto.
+Nota: el número `56` se reutiliza para esta suite nueva; el antiguo `56` sigue
+consolidado dentro de `54`.
+
+```powershell
+npx playwright test tests/00-preflight.spec.js tests/02-navigation-smoke.spec.js tests/07-other-movements.spec.js tests/24-initial-balances.spec.js tests/39-stock-pricing-margin-coefficient.spec.js tests/50-analisis-financiero-saldos.spec.js tests/51-saldos-historicos-conciliacion.spec.js tests/54-politica-fechas-importes-pagos.spec.js tests/55-ajustes-saldos-caja.spec.js tests/56-otros-egresos-clasificacion.spec.js --project=chromium --workers=1 --reporter=list --max-failures=1
+```
+
+**Revisión de precios sin coeficiente (`57`):** sin compras de mercadería en el mes
+el coeficiente es nulo y no debe aparecer el aviso "Hay cambios pendientes en tus precios".
+Dos casos de UI con respuestas simuladas (no escriben) y uno de API (`@mutations`).
+
+```powershell
+npx playwright test tests/00-preflight.spec.js tests/57-revision-precios-sin-coeficiente.spec.js tests/39-stock-pricing-margin-coefficient.spec.js tests/41-stock-cambios-octubre.spec.js --project=chromium --workers=1 --reporter=list --max-failures=1
+```
+
 **Regresión de movimientos relacionada:**
 
 ```powershell

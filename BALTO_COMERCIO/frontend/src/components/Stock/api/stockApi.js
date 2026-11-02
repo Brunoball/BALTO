@@ -327,6 +327,18 @@ export const guardarConfiguracionPreciosStock = (body = {}, options = {}) =>
   stockPost("stock_precios_configuracion_guardar", body, options);
 export const obtenerRevisionPreciosPendienteStock = (params = {}, options = {}) =>
   stockGet("stock_precios_revision_pendiente", params, options);
+/**
+ * Una revisión de precios sólo se informa si tiene un coeficiente aplicable.
+ * Sin compras de mercadería el coeficiente es nulo (se veía como 0,0000) y
+ * "Aplicar cambios" no puede hacer nada: no tiene sentido avisar.
+ */
+export function revisionPreciosAplicable(revision) {
+  if (!revision || typeof revision !== "object") return false;
+  if (revision.disponible === false) return false;
+  const coef = Number(revision.coeficiente_actual);
+  return revision.coeficiente_actual != null && Number.isFinite(coef) && coef > 0;
+}
+
 export const aplicarRevisionPreciosStock = (body = {}, options = {}) =>
   stockPost("stock_precios_revision_aplicar", body, options);
 export const rechazarRevisionPreciosStock = (body = {}, options = {}) =>

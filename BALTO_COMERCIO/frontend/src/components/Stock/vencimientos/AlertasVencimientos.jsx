@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { createPortal } from "react-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBell, faTriangleExclamation, faXmark, faArrowRight, faMoneyBillTrendUp, faCalendarXmark, faClock, faCircleCheck } from "@fortawesome/free-solid-svg-icons";
-import { listarAlertasVencimientoStock, obtenerRevisionPreciosPendienteStock } from "../api/stockApi";
+import { listarAlertasVencimientoStock, obtenerRevisionPreciosPendienteStock, revisionPreciosAplicable } from "../api/stockApi";
 import { isTopStockModal } from "../modales/modalStackUtils";
 import { acquireBodyScrollLock } from "../../../utils/bodyScrollLock";
 import "./alertasVencimientos.css";
@@ -64,7 +64,9 @@ export default function AlertasVencimientos() {
     } else nuevosErrores.vencimientos = "No se pudieron consultar los vencimientos.";
     if (precios.status === "fulfilled") {
       const respuesta = precios.value;
-      nuevaRevision = respuesta?.revision ?? respuesta?.data?.revision ?? null;
+      const recibida = respuesta?.revision ?? respuesta?.data?.revision ?? null;
+      // Coeficiente nulo (0,0000 → 0,0000): no se puede aplicar, no se notifica.
+      nuevaRevision = revisionPreciosAplicable(recibida) ? recibida : null;
       setRevision(nuevaRevision);
     } else nuevosErrores.precios = "No se pudo consultar la revisión de precios.";
     setErrores(nuevosErrores);

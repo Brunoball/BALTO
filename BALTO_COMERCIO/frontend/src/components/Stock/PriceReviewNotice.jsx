@@ -5,6 +5,7 @@ import {
   aplicarRevisionPreciosStock,
   obtenerRevisionPreciosPendienteStock,
   rechazarRevisionPreciosStock,
+  revisionPreciosAplicable,
 } from "./api/stockApi";
 
 const PRICE_REVIEW_POLL_MS = 30000; // antes 10000; igual se refresca al volver a la pestaña
@@ -63,8 +64,10 @@ export default function PriceReviewNotice({ hidden = false, onApplied, onRejecte
     try {
       const response = await obtenerRevisionPreciosPendienteStock({ _: Date.now() });
       if (!mountedRef.current || requestId !== requestRef.current) return null;
+      const recibida = response?.revision ?? response?.data?.revision ?? null;
       const next = {
-        revision: response?.revision ?? response?.data?.revision ?? null,
+        // Sin coeficiente aplicable no hay nada que decidir: no se muestra el aviso.
+        revision: revisionPreciosAplicable(recibida) ? recibida : null,
         pendientes_total: Number(response?.pendientes_total ?? response?.data?.pendientes_total ?? 0),
       };
       setPayload(next);

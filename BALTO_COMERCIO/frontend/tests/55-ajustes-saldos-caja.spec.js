@@ -149,6 +149,12 @@ async function openFlujo(page) {
   await expect(page.locator('.fc-dayRow').first()).toBeVisible();
 }
 
+async function elegirTipoAjuste(dialog, nombre) {
+  const tab = dialog.getByRole('tab', { name: nombre });
+  await tab.click();
+  await expect(tab).toHaveAttribute('aria-selected', 'true');
+}
+
 async function openAjusteModal(page) {
   await page.getByRole('button', { name: 'Ajustar saldo' }).click();
   const dialog = page.getByRole('dialog', { name: 'Ajustar saldo' });
@@ -173,7 +179,8 @@ test.describe('@flujo @ajustes-saldo interfaz (mocks, sin escrituras)', () => {
     await expect(dialog.locator('#fc-aj-medio optgroup')).toHaveAttribute('label', 'EFECTIVO');
     await expect(dialog.getByText(/agrupa 2 medios/)).toBeVisible();
     await expect(dialog.locator('.fc-aj-current strong')).toHaveText(/\$\s?150\.000,00/);
-    await expect(dialog.getByRole('radio', { name: 'Establecer saldo real' })).toBeChecked();
+    // El tipo de ajuste pasó a pestañas (role=tab); por defecto sigue siendo establecer el saldo real.
+    await expect(dialog.getByRole('tab', { name: 'Establecer saldo' })).toHaveAttribute('aria-selected', 'true');
   });
 
   test('3-6 · vista previa inmediata de suma, resta y saldo real', async ({ page }) => {
@@ -187,12 +194,12 @@ test.describe('@flujo @ajustes-saldo interfaz (mocks, sin escrituras)', () => {
     expect(nbsp(await diferencia.textContent())).toBe('− $ 5.000,00');
     expect(nbsp(await nuevo.textContent())).toBe('$ 145.000,00');
 
-    await dialog.getByRole('radio', { name: 'Sumar importe' }).check();
+    await elegirTipoAjuste(dialog, 'Sumar importe');
     await dialog.locator('#fc-aj-importe').fill('20.000,50');
     expect(nbsp(await diferencia.textContent())).toBe('+ $ 20.000,50');
     expect(nbsp(await nuevo.textContent())).toBe('$ 170.000,50');
 
-    await dialog.getByRole('radio', { name: 'Restar importe' }).check();
+    await elegirTipoAjuste(dialog, 'Restar importe');
     expect(nbsp(await diferencia.textContent())).toBe('− $ 20.000,50');
     expect(nbsp(await nuevo.textContent())).toBe('$ 129.999,50');
 
@@ -223,7 +230,7 @@ test.describe('@flujo @ajustes-saldo interfaz (mocks, sin escrituras)', () => {
     await confirmar.click();
     await expect(dialog.getByText(/no hay diferencia para registrar/)).toBeVisible();
 
-    await dialog.getByRole('radio', { name: 'Sumar importe' }).check();
+    await elegirTipoAjuste(dialog, 'Sumar importe');
     await dialog.locator('#fc-aj-importe').fill('0');
     await confirmar.click();
     await expect(dialog.getByText('El importe debe ser mayor a cero.')).toBeVisible();
@@ -345,7 +352,10 @@ test.describe('@flujo @ajustes-saldo interfaz (mocks, sin escrituras)', () => {
       await expect(hist.locator('[data-ajuste-id="1"]')).toBeVisible();
       const histBox = await hist.boundingBox();
       expect(histBox.x + histBox.width).toBeLessThanOrEqual(viewport.width + 1);
-      await hist.getByRole('button', { name: 'Cerrar' }).click();
+      // El historial tiene dos botones "Cerrar" (la X del encabezado y el del pie):
+      // se usa el del pie y se confirma que el modal se cierra.
+      await hist.getByRole('button', { name: 'Cerrar', exact: true }).last().click();
+      await expect(hist).toBeHidden();
     }
   });
 });
