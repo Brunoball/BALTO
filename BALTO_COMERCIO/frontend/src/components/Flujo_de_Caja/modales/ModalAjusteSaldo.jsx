@@ -16,6 +16,12 @@ import {
   faTriangleExclamation,
   faClockRotateLeft,
   faArrowLeft,
+  faCreditCard,
+  faCoins,
+  faArrowRightArrowLeft,
+  faFileLines,
+  faCalendarDays,
+  faCommentDots,
 } from "@fortawesome/free-solid-svg-icons";
 
 import "../../Global/Global_css/Global_Modals.css";
@@ -39,7 +45,7 @@ import {
 } from "../utils/flujoCajaUtils";
 
 const TIPOS = [
-  { codigo: "ESTABLECER", label: "Establecer saldo real", hint: "Ingresá el dinero verificado físicamente o en la cuenta." },
+  { codigo: "ESTABLECER", label: "Establecer saldo", hint: "Ingresá el dinero verificado físicamente o en la cuenta." },
   { codigo: "SUMAR", label: "Sumar importe", hint: "Ingresá el importe que falta registrar." },
   { codigo: "RESTAR", label: "Restar importe", hint: "Ingresá el importe a descontar." },
 ];
@@ -476,23 +482,46 @@ export default function ModalAjusteSaldo({ open, onClose, onSaved, onOpenHistori
           ) : (
             <div className="fc-aj-confirm">
               <p className="fc-aj-confirm__question">¿Registrar este ajuste de saldo?</p>
-              <dl className="fc-aj-summary">
-                <div><dt>Medio de pago</dt><dd>{confirmData?.medio?.nombre}</dd></div>
-                <div><dt>Tipo</dt><dd>{tipoInfo.label.toUpperCase()}</dd></div>
-                <div><dt>Saldo actual</dt><dd>{moneyARS(confirmData?.saldo_actual)}</dd></div>
-                <div>
-                  <dt>Diferencia</dt>
-                  <dd className={signClass(Number(confirmData?.diferencia || 0))} data-testid="fc-aj-confirm-diferencia">
-                    {moneyARSSigned(confirmData?.diferencia)}
-                  </dd>
+              <dl className="fc-aj-summary fc-aj-summary--cards">
+                <div className="fc-aj-summary__card fc-aj-summary__card--medio">
+                  <span className="fc-aj-summary__icon" aria-hidden="true"><FontAwesomeIcon icon={faCreditCard} /></span>
+                  <div className="fc-aj-summary__content"><dt>Medio de pago</dt><dd>{confirmData?.medio?.nombre}</dd></div>
                 </div>
-                <div className="fc-aj-summary__total">
-                  <dt>Nuevo saldo</dt>
-                  <dd data-testid="fc-aj-confirm-nuevo">{moneyARS(confirmData?.saldo_nuevo)}</dd>
+                <div className="fc-aj-summary__card fc-aj-summary__card--tipo">
+                  <span className="fc-aj-summary__icon" aria-hidden="true"><FontAwesomeIcon icon={faSliders} /></span>
+                  <div className="fc-aj-summary__content"><dt>Tipo</dt><dd>{tipoInfo.label.toUpperCase()}</dd></div>
                 </div>
-                <div><dt>Motivo</dt><dd>{motivoLabel}</dd></div>
-                {observaciones.trim() && <div><dt>Observaciones</dt><dd>{observaciones.trim()}</dd></div>}
-                <div><dt>Fecha</dt><dd>{fmtDateES(confirmData?.fecha_negocio || fechaNegocio)}</dd></div>
+                <div className="fc-aj-summary__card fc-aj-summary__card--actual">
+                  <span className="fc-aj-summary__icon" aria-hidden="true"><FontAwesomeIcon icon={faWallet} /></span>
+                  <div className="fc-aj-summary__content"><dt>Saldo actual</dt><dd className={signClass(Number(confirmData?.saldo_actual || 0))}>{moneyARS(confirmData?.saldo_actual)}</dd></div>
+                </div>
+                <div className={`fc-aj-summary__card fc-aj-summary__card--diferencia ${signClass(Number(confirmData?.diferencia || 0))}`}>
+                  <span className="fc-aj-summary__icon" aria-hidden="true"><FontAwesomeIcon icon={faArrowRightArrowLeft} /></span>
+                  <div className="fc-aj-summary__content">
+                    <dt>Diferencia</dt>
+                    <dd className={signClass(Number(confirmData?.diferencia || 0))} data-testid="fc-aj-confirm-diferencia">
+                      {moneyARSSigned(confirmData?.diferencia)}
+                    </dd>
+                  </div>
+                </div>
+                <div className="fc-aj-summary__card fc-aj-summary__card--nuevo fc-aj-summary__total">
+                  <span className="fc-aj-summary__icon" aria-hidden="true"><FontAwesomeIcon icon={faCoins} /></span>
+                  <div className="fc-aj-summary__content"><dt>Nuevo saldo</dt><dd className={signClass(Number(confirmData?.saldo_nuevo || 0))} data-testid="fc-aj-confirm-nuevo">{moneyARS(confirmData?.saldo_nuevo)}</dd></div>
+                </div>
+                <div className="fc-aj-summary__card fc-aj-summary__card--motivo">
+                  <span className="fc-aj-summary__icon" aria-hidden="true"><FontAwesomeIcon icon={faFileLines} /></span>
+                  <div className="fc-aj-summary__content"><dt>Motivo</dt><dd>{motivoLabel}</dd></div>
+                </div>
+                {observaciones.trim() && (
+                  <div className="fc-aj-summary__card fc-aj-summary__card--observaciones fc-aj-summary__card--wide">
+                    <span className="fc-aj-summary__icon" aria-hidden="true"><FontAwesomeIcon icon={faCommentDots} /></span>
+                    <div className="fc-aj-summary__content"><dt>Observaciones</dt><dd>{observaciones.trim()}</dd></div>
+                  </div>
+                )}
+                <div className="fc-aj-summary__card fc-aj-summary__card--fecha">
+                  <span className="fc-aj-summary__icon" aria-hidden="true"><FontAwesomeIcon icon={faCalendarDays} /></span>
+                  <div className="fc-aj-summary__content"><dt>Fecha</dt><dd>{fmtDateES(confirmData?.fecha_negocio || fechaNegocio)}</dd></div>
+                </div>
               </dl>
               {(confirmData?.advertencias || []).map((a) => (
                 <p key={a} className="fc-aj-previewWarn"><FontAwesomeIcon icon={faTriangleExclamation} /> {a}</p>

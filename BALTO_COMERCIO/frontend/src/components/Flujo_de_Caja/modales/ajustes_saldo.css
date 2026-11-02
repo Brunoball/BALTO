@@ -324,14 +324,53 @@
 }
 .fc-aj-histMeta b { font-variant-numeric: tabular-nums; }
 
-/* La cabecera y el cuerpo comparten ancho; sólo el cuerpo desplaza verticalmente. */
-.fc-aj-history.mi-mini__modal { width: min(1480px, 96vw); }
-.fc-aj-history .fc-aj-body { display: flex; flex-direction: column; gap: 14px; overflow: hidden; }
-.fc-aj-history .mi-mini__head, .fc-aj-historyFooter, .fc-aj-filters { flex-shrink: 0; }
+/* Historial: mismo alto de trabajo que Nueva venta / Nueva compra (94vh).
+   La altura no cambia al filtrar, cargar o quedarse sin registros. */
+.fc-aj-history.mi-mini__modal {
+  width: min(1480px, calc(100vw - 32px));
+  height: min(94vh, calc(100dvh - 32px));
+  max-height: calc(100dvh - 32px);
+  min-height: 0;
+  overflow: hidden;
+}
+/* Sólo se desplaza el listado: encabezado, filtros y pie permanecen visibles. */
+.fc-aj-history .fc-aj-body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 0;
+  overflow: hidden;
+}
+.fc-aj-history .mi-mini__head,
+.fc-aj-historyFooter,
+.fc-aj-history .fc-aj-filters { flex-shrink: 0; }
 .fc-aj-history .fc-aj-filters { margin: 0; }
-.fc-aj-tableViewport { min-height: 0; overflow-x: auto; border: 1px solid var(--color-border); border-radius: 12px; }
-.fc-aj-table { min-width: 1320px; }
-.fc-aj-tableBody { max-height: max(130px, calc(100dvh - 310px)); overflow-y: auto; scrollbar-gutter: stable; overscroll-behavior: contain; }
+.fc-aj-history .fc-aj-tableViewport {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+}
+.fc-aj-history .fc-aj-table {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 1320px;
+  overflow: hidden;
+}
+.fc-aj-history .fc-aj-tableBody {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
+}
 .fc-aj-tr { display: grid; grid-template-columns: 140px 1fr 1fr 122px 122px 122px 1.5fr 100px 166px 106px; align-items: stretch; }
 .fc-aj-history .fc-aj-tr--head { background: var(--color-primary, #0055bb); scrollbar-gutter: stable; overflow-y: auto; }
 .fc-aj-history .fc-aj-th { color: #fff; white-space: normal; }
@@ -353,13 +392,16 @@
 .fc-aj-empty svg { font-size: 26px; opacity: .55; }
 .fc-aj-history .fc-aj-alert { margin: 0; }
 
-.fc-aj-revertBtn {
+.fc-aj-history .fc-aj-revertBtn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 7px 10px;
-  font-size: 12.5px;
-  white-space: nowrap;
+  justify-content: center;
+  flex: 0 0 32px;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  font-size: 13px;
+  line-height: 1;
 }
 
 .fc-aj-badge {
@@ -382,31 +424,136 @@
   color: var(--mi-muted);
 }
 
-/* Confirmación de reversión sobre el historial */
-.fc-aj-revert {
-  position: absolute;
+/* La confirmación se monta en document.body, por encima del historial.
+   No se oculta ni se recorta por la tabla o por el modal principal. */
+.fc-aj-revert.mi-mini__overlay {
+  position: fixed;
   inset: 0;
+  z-index: 10000000010;
   display: grid;
   place-items: center;
-  padding: 16px;
-  background: rgba(15, 23, 42, .32);
-  backdrop-filter: blur(1px);
-  border-radius: inherit;
-  z-index: 2;
-}
-.fc-aj-revert__card {
-  width: min(460px, 100%);
-  display: grid;
-  gap: 12px;
   padding: 18px;
-  border-radius: 14px;
-  background: var(--mi-bg, #fff);
-  box-shadow: 0 24px 54px -20px rgba(0, 0, 0, .45);
+  background: rgba(15, 23, 42, .64);
+  backdrop-filter: blur(3px);
+  border-radius: 0;
 }
-.fc-aj-revert__card h5 { margin: 0; font-size: 15px; color: var(--mi-text); }
-.fc-aj-revert__card p { margin: 0; font-size: 13px; line-height: 1.45; color: var(--mi-muted); }
-.fc-aj-revert__card .is-positive { color: #16a34a; }
-.fc-aj-revert__card .is-negative { color: #dc2626; }
+.fc-aj-history .fc-aj-noAction { color: var(--mi-muted); font-weight: 500; }
+/* El encabezado de reversión comparte los tokens del modal principal global. */
+.fc-aj-revert__card .fc-aj-revert__head.mi-mini__head {
+  border-bottom: 1px solid rgba(255, 255, 255, .06);
+}
+.fc-aj-revert__card.mi-mini__modal {
+  width: min(520px, 100%);
+  max-height: min(90dvh, 720px);
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--mi-border);
+}
+.fc-aj-revert__head { flex: 0 0 auto; }
+.fc-aj-revert__head .fc-aj-title { font-size: 15px; }
+.fc-aj-revert__body.mi-mini__body {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 18px;
+}
+.fc-aj-revert__intro {
+  margin: 0;
+  color: var(--mi-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.fc-aj-revert__summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.fc-aj-revert__detail {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 11px;
+  border: 1px solid var(--mi-border);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--mi-primary) 4%, var(--mi-bg));
+}
+.fc-aj-revert__detailIcon {
+  flex: 0 0 30px;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  color: var(--mi-primary);
+  background: color-mix(in srgb, var(--mi-primary) 10%, var(--mi-bg));
+}
+.fc-aj-revert__detailText { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.fc-aj-revert__detailText > span {
+  color: var(--mi-muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+.fc-aj-revert__detailText strong {
+  color: var(--mi-text);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
+.fc-aj-revert__detailText strong.is-positive { color: #15803d; }
+.fc-aj-revert__detailText strong.is-negative { color: #dc2626; }
+.fc-aj-revert__field { min-width: 0; margin: 0; }
+.fc-aj-revert__field .fc-aj-textarea { width: 100%; min-height: 100px; resize: vertical; }
+.fc-aj-revert__fieldBottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  min-height: 16px;
+  margin-top: 4px;
+}
+.fc-aj-revert__fieldBottom .fc-aj-error { margin: 0; }
+.fc-aj-revert__counter { margin-left: auto; font-size: 11px; color: var(--mi-muted); white-space: nowrap; }
+.fc-aj-revert__info {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  border-left: 3px solid var(--mi-primary);
+  background: color-mix(in srgb, var(--mi-primary) 7%, var(--mi-bg));
+  border-radius: 9px;
+  padding: 11px 12px;
+  font-size: 12px;
+  color: var(--mi-muted);
+  line-height: 1.45;
+}
+.fc-aj-revert__info svg { flex: 0 0 auto; margin-top: 2px; color: var(--mi-primary); }
+.fc-aj-revert__footer {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 12px 18px;
+  background: var(--mi-bg);
+  border-top: 1px solid var(--mi-border);
+}
+.fc-aj-revert__footer .mit-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 38px; }
+@media (max-width: 560px) {
+  .fc-aj-revert { padding: 10px; }
+  .fc-aj-revert__card.mi-mini__modal { max-height: min(88dvh, 660px); border-radius: 14px; }
+  .fc-aj-revert__body.mi-mini__body { padding: 14px; gap: 12px; }
+  .fc-aj-revert__summary { grid-template-columns: minmax(0, 1fr); }
+  .fc-aj-revert__footer { padding: 12px 14px; }
+  .fc-aj-revert__footer .mit-btn { flex: 1 1 auto; }
+}
 
 /* ---------- Tema oscuro ---------- */
 html[data-theme="oscuro"] .fc-aj-segmented { background: rgba(255, 255, 255, .04); border-color: rgba(255, 255, 255, .12); }
@@ -419,7 +566,20 @@ html[data-theme="oscuro"] .fc-aj-summary,
 html[data-theme="oscuro"] .fc-aj-table { border-color: rgba(255, 255, 255, .14); }
 html[data-theme="oscuro"] .fc-aj-tr,
 html[data-theme="oscuro"] .fc-aj-summary > div { border-color: rgba(255, 255, 255, .08); }
-html[data-theme="oscuro"] .fc-aj-revert__card { background: rgba(6, 18, 28, .98); }
+html[data-theme="oscuro"] .fc-aj-revert__detailText strong.is-positive { color: #65d99c; }
+html[data-theme="oscuro"] .fc-aj-revert__detailText strong.is-negative { color: #fca5a5; }
+html[data-theme="oscuro"] .fc-aj-history .fc-aj-revertBtn {
+  background: rgba(255, 255, 255, .06);
+  border-color: rgba(255, 255, 255, .16);
+  color: rgba(255, 255, 255, .88);
+}
+html[data-theme="oscuro"] .fc-aj-history .fc-aj-revertBtn:hover:not(:disabled) {
+  background: rgba(0, 85, 187, .23);
+  color: #8ab4ff;
+  border-color: rgba(138, 180, 255, .35);
+}
+html[data-theme="oscuro"] .fc-aj-revert__detailIcon { color: #8ab4ff; }
+html[data-theme="oscuro"] .fc-aj-revert__info svg { color: #8ab4ff; }
 html[data-theme="oscuro"] .fc-aj-badge--reverted { color: rgba(226, 232, 240, .85); }
 html[data-theme="oscuro"] .fc-aj-badge--reversal { color: #8ab4ff; }
 html[data-theme="oscuro"] .fc-aj-alert--warning { color: #fcd34d; }
@@ -443,15 +603,15 @@ html[data-theme="oscuro"] .mov-page--flujoCaja .fc-payCard__row--ajustes b.is-po
 }
 
 @media (max-width: 560px) {
-  /* En teléfonos el historial se abre desde el modal ("Ver historial"),
-     así el filtro de período conserva su ancho. */
-  .mov-page--flujoCaja .fc-aj-headBtn--icon { display: none; }
-  .fc-aj-overlay { padding: 0; align-items: end; }
+  /* El acceso a Historial permanece visible también en teléfonos.
+     Los modales se centran; no se muestran como paneles inferiores. */
+  .mov-page--flujoCaja .fc-aj-headBtn--icon { display: inline-flex; }
+  .fc-aj-overlay { padding: 12px; align-items: center; }
   .fc-aj-modal,
   .fc-aj-modal--wide {
-    width: 100vw;
-    max-height: 94dvh;
-    border-radius: 18px 18px 0 0;
+    width: 100%;
+    max-height: calc(100dvh - 24px);
+    border-radius: 16px;
   }
   .fc-aj-segment { font-size: 12px; min-height: 42px; }
   .fc-aj-filters { grid-template-columns: 1fr 1fr; }
@@ -465,14 +625,18 @@ html[data-theme="oscuro"] .mov-page--flujoCaja .fc-payCard__row--ajustes b.is-po
 html[data-theme="oscuro"] .fc-aj-history .is-positive { color: #65d99c; }
 html[data-theme="oscuro"] .fc-aj-history .is-negative { color: #fca5a5; }
 html[data-theme="oscuro"] .fc-aj-badge--active { color: #65d99c; }
-.fc-aj-revert__card { max-height: 100%; overflow-y: auto; border: 1px solid var(--mi-border); }
+
 @media (max-width: 560px) {
-  .fc-aj-history.mi-mini__modal { width: 100%; max-height: 96dvh; }
+  .fc-aj-history.mi-mini__modal {
+    width: 100%;
+    height: 94dvh;
+    max-height: 96dvh;
+  }
   .fc-aj-history .fc-aj-body { padding: 12px; gap: 10px; }
   .fc-aj-history .fc-aj-filters { gap: 10px; }
   .fc-aj-history .fc-aj-filters .fl-field:nth-child(3),
   .fc-aj-history .fc-aj-filters__btn { grid-column: auto; }
-  .fc-aj-tableBody { max-height: max(120px, calc(96dvh - 320px)); }
+  .fc-aj-history .fc-aj-tableBody { max-height: none; }
   .fc-aj-historyFooter { gap: 10px; padding: 10px 12px; }
   .fc-aj-historyFooter .fc-aj-histMeta { gap: 5px; flex-direction: column; align-items: flex-start; }
 }
@@ -500,7 +664,7 @@ html[data-theme="oscuro"] .fc-aj-badge--active { color: #65d99c; }
 .fc-aj-history .fc-aj-th { letter-spacing: .025em; }
 .fc-aj-history .fc-aj-num { white-space: normal; overflow-wrap: anywhere; }
 .fc-aj-history .fc-aj-badge { max-width: 100%; white-space: normal; }
-.fc-aj-history .fc-aj-revertBtn { padding: 6px; font-size: 11px; }
+.fc-aj-history .fc-aj-revertBtn { width: 32px; height: 32px; padding: 0; font-size: 13px; }
 
 /* Ajustar saldo: pestañas de modales globales y formulario con resumen lateral. */
 .fc-aj-editor.mi-mini__modal {
@@ -619,3 +783,461 @@ html[data-theme="oscuro"] .fc-aj-editor .is-negative { color: #fca5a5; }
 }
 .fc-aj-editor .fc-aj-current .fc-aj-boxIcon { font-size: 14px; color: var(--mi-primary); }
 html[data-theme="oscuro"] .fc-aj-editor .fc-aj-boxIcon { color: #8ab4ff; background: rgba(71, 143, 255, .12); border-color: rgba(138, 180, 255, .22); }
+
+/* ============================================================== 
+   Flujo de caja · Confirmación y reversión (Servicios)
+   Encabezados alineados a .mi-modal__header de Global_Modals.css.
+   El azul de acción (#0055BB) queda para botones y acentos, no
+   para la franja superior de estos modales.
+   ============================================================== */
+.fc-aj-editor > .mi-mini__head,
+.fc-aj-revert__card > .mi-mini__head {
+  background: var(--blue-midnight, #0A2540) !important;
+  color: #fff !important;
+  border-bottom: 1px solid rgba(255, 255, 255, .06) !important;
+}
+html[data-theme="oscuro"] .fc-aj-editor > .mi-mini__head,
+html[data-theme="oscuro"] .fc-aj-revert__card > .mi-mini__head {
+  background: linear-gradient(180deg, #0a2540, #071a2c) !important;
+  border-bottom-color: rgba(255, 255, 255, .08) !important;
+}
+.fc-aj-editor > .mi-mini__head .fc-aj-title > svg,
+.fc-aj-revert__card .fc-aj-revert__head .fc-aj-title > svg {
+  box-sizing: content-box;
+  flex: 0 0 auto;
+  padding: 9px;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, .17);
+  color: #fff;
+}
+
+/* Tarjetas de Confirmar ajuste: se mantienen todos los datos.
+   Variables por tarjeta para tintar fondo, borde e icono. */
+.fc-aj-editor .fc-aj-summary.fc-aj-summary--cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  overflow: visible;
+  margin: 0;
+}
+.fc-aj-editor .fc-aj-summary--cards > .fc-aj-summary__card {
+  --fc-card-accent: #0055BB;
+  min-width: 0;
+  min-height: 94px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  padding: 15px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--fc-card-accent) 22%, #dbe5ef);
+  border-left: 3px solid var(--fc-card-accent);
+  background: color-mix(in srgb, var(--fc-card-accent) 7%, #fff);
+}
+.fc-aj-editor .fc-aj-summary--cards > .fc-aj-summary__card--medio { --fc-card-accent: #0055BB; }
+.fc-aj-editor .fc-aj-summary--cards > .fc-aj-summary__card--tipo { --fc-card-accent: #7c3aed; }
+.fc-aj-editor .fc-aj-summary--cards > .fc-aj-summary__card--actual { --fc-card-accent: #64748b; }
+.fc-aj-editor .fc-aj-summary--cards > .fc-aj-summary__card--diferencia { --fc-card-accent: #0f766e; }
+.fc-aj-editor .fc-aj-summary--cards > .fc-aj-summary__card--diferencia.is-positive { --fc-card-accent: #15803d; }
+.fc-aj-editor .fc-aj-summary--cards > .fc-aj-summary__card--diferencia.is-negative { --fc-card-accent: #dc2626; }
+.fc-aj-editor .fc-aj-summary--cards > .fc-aj-summary__card--nuevo { --fc-card-accent: #0055BB; }
+.fc-aj-editor .fc-aj-summary--cards > .fc-aj-summary__card--motivo { --fc-card-accent: #b45309; }
+.fc-aj-editor .fc-aj-summary--cards > .fc-aj-summary__card--observaciones { --fc-card-accent: #64748b; }
+.fc-aj-editor .fc-aj-summary--cards > .fc-aj-summary__card--fecha { --fc-card-accent: #0f766e; }
+.fc-aj-editor .fc-aj-summary--cards > .fc-aj-summary__card--wide { grid-column: 1 / -1; }
+
+.fc-aj-editor .fc-aj-summary__icon {
+  flex: 0 0 42px;
+  width: 42px;
+  height: 42px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 11px;
+  background: var(--fc-card-accent);
+  color: #fff;
+  font-size: 17px;
+}
+.fc-aj-editor .fc-aj-summary__content { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.fc-aj-editor .fc-aj-summary__content dt { font-size: 12px; font-weight: 600; line-height: 1.35; color: var(--mi-muted, #536579); }
+.fc-aj-editor .fc-aj-summary__content dd {
+  margin: 0;
+  text-align: left;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--mi-text, #112d45);
+  overflow-wrap: anywhere;
+}
+.fc-aj-editor .fc-aj-summary__content dd.is-positive { color: #15803d; }
+.fc-aj-editor .fc-aj-summary__content dd.is-negative { color: #dc2626; }
+.fc-aj-editor .fc-aj-summary__card--nuevo dd { font-size: 19px; }
+.fc-aj-editor .fc-aj-summary__card--nuevo dd:not(.is-negative) { color: #0055BB; }
+
+/* La reversión también recibe superficies e iconos coloreados. */
+.fc-aj-revert__summary .fc-aj-revert__detail {
+  --fc-card-accent: #0055BB;
+  border: 1px solid color-mix(in srgb, var(--fc-card-accent) 24%, #dbe5ef);
+  border-left: 3px solid var(--fc-card-accent);
+  background: color-mix(in srgb, var(--fc-card-accent) 8%, #fff);
+  box-sizing: border-box;
+  min-height: 64px;
+  padding: 7px 10px;
+  gap: 9px;
+}
+.fc-aj-revert__summary .fc-aj-revert__detail--amount { --fc-card-accent: #0f766e; }
+.fc-aj-revert__summary .fc-aj-revert__detail--amount.is-positive { --fc-card-accent: #15803d; }
+.fc-aj-revert__summary .fc-aj-revert__detail--amount.is-negative { --fc-card-accent: #dc2626; }
+.fc-aj-revert__summary .fc-aj-revert__detailIcon {
+  width: 30px;
+  height: 30px;
+  flex: 0 0 30px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  background: var(--fc-card-accent);
+  color: #fff;
+  font-size: 13px;
+}
+.fc-aj-revert__summary .fc-aj-revert__detailText > span { font-size: 11px; }
+.fc-aj-revert__summary .fc-aj-revert__detailText strong { font-size: 13px; line-height: 1.25; }
+.fc-aj-revert__info { border-left-color: #0055BB; }
+
+/* Legibilidad y colores visibles también en modo oscuro. */
+html[data-theme="oscuro"] .fc-aj-editor .fc-aj-summary--cards > .fc-aj-summary__card,
+html[data-theme="oscuro"] .fc-aj-revert__summary .fc-aj-revert__detail {
+  border-color: color-mix(in srgb, var(--fc-card-accent) 38%, #172c40);
+  border-left: 3px solid var(--fc-card-accent);
+  background: color-mix(in srgb, var(--fc-card-accent) 20%, #0b1927);
+}
+html[data-theme="oscuro"] .fc-aj-editor .fc-aj-summary__content dt,
+html[data-theme="oscuro"] .fc-aj-revert__summary .fc-aj-revert__detailText > span { color: #cbd5e1; }
+html[data-theme="oscuro"] .fc-aj-editor .fc-aj-summary__content dd,
+html[data-theme="oscuro"] .fc-aj-revert__summary .fc-aj-revert__detailText strong { color: #f1f5f9; }
+html[data-theme="oscuro"] .fc-aj-editor .fc-aj-summary__content dd.is-positive,
+html[data-theme="oscuro"] .fc-aj-revert__summary .fc-aj-revert__detailText strong.is-positive { color: #86efac; }
+html[data-theme="oscuro"] .fc-aj-editor .fc-aj-summary__content dd.is-negative,
+html[data-theme="oscuro"] .fc-aj-revert__summary .fc-aj-revert__detailText strong.is-negative { color: #fca5a5; }
+html[data-theme="oscuro"] .fc-aj-editor .fc-aj-summary__card--nuevo dd:not(.is-negative) { color: #93c5fd; }
+html[data-theme="oscuro"] .fc-aj-revert__summary .fc-aj-revert__detailIcon { color: #fff; }
+
+@media (max-width: 640px) {
+  .fc-aj-editor .fc-aj-summary.fc-aj-summary--cards { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .fc-aj-editor .fc-aj-summary--cards > .fc-aj-summary__card { min-height: 78px; padding: 12px; }
+  .fc-aj-editor .fc-aj-summary--cards > .fc-aj-summary__card--wide { grid-column: auto; }
+}
+
+/* =========================================================
+   FLUJO DE CAJA · MODALES CENTRADOS EN RESPONSIVE
+   - Todas las confirmaciones e historial permanecen centrados.
+   - El cuerpo de cada modal gestiona su scroll (nunca el overlay).
+   - Respeta el visualViewport cuando se despliega el teclado móvil.
+   ========================================================= */
+@media (max-width: 720px) {
+  .mi-mini__overlay.fc-aj-overlay,
+  .mi-mini__overlay.fc-aj-revert {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+    place-items: center !important;
+    align-items: center !important;
+    justify-items: center !important;
+    padding: 12px !important;
+    box-sizing: border-box;
+    overflow: hidden !important;
+  }
+
+  .fc-aj-overlay > .fc-aj-modal.mi-mini__modal,
+  .fc-aj-revert > .fc-aj-revert__card.mi-mini__modal {
+    width: 100%;
+    min-height: 0;
+    max-height: 100%;
+    margin: 0;
+    border-radius: 16px;
+    overflow: hidden;
+  }
+
+  /* Conserva el alto fijo del historial sin desplazarlo hacia abajo. */
+  .fc-aj-overlay > .fc-aj-history.mi-mini__modal {
+    height: min(94dvh, 100%);
+    max-height: 100%;
+  }
+
+  .fc-aj-overlay > .fc-aj-editor.mi-mini__modal {
+    height: auto;
+    max-height: 100%;
+  }
+
+  .fc-aj-revert > .fc-aj-revert__card.mi-mini__modal {
+    width: min(520px, 100%);
+  }
+
+  /* La altura del editor se adapta y solo su contenido puede desplazarse. */
+  .fc-aj-editor > .fc-aj-body,
+  .fc-aj-revert__card > .fc-aj-revert__body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+@media (max-width: 560px) {
+  .mov-page--flujoCaja .fc-aj-headActions {
+    flex-wrap: nowrap;
+    flex-shrink: 0;
+  }
+  .mov-page--flujoCaja .fc-aj-headBtn--icon {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 720px) {
+  html.balto-visual-viewport-ready .mi-mini__overlay.fc-aj-overlay,
+  html.balto-visual-viewport-ready .mi-mini__overlay.fc-aj-revert {
+    top: var(--balto-visual-viewport-top, 0px) !important;
+    left: var(--balto-visual-viewport-left, 0px) !important;
+    right: auto !important;
+    bottom: auto !important;
+    width: var(--balto-visual-viewport-width, 100vw) !important;
+    height: var(--balto-visual-viewport-height, 100dvh) !important;
+    padding: max(12px, var(--balto-safe-top, 0px))
+             max(12px, var(--balto-safe-right, 0px))
+             max(12px, var(--balto-safe-bottom, 0px))
+             max(12px, var(--balto-safe-left, 0px)) !important;
+  }
+}
+
+/* =========================================================
+   FLUJO DE CAJA · Historial como tarjetas en tablet/celular
+   - Solo cambia la presentación (conserva las 10 columnas).
+   - Un único scroll dentro del historial; sin scroll horizontal.
+   - Estado y acciones mantienen su lógica y accesibilidad.
+========================================================= */
+@media (max-width: 720px) {
+  .fc-aj-history .fc-aj-tableViewport {
+    border: 0;
+    border-radius: 0;
+    min-width: 0;
+    background: transparent;
+  }
+  .fc-aj-history .fc-aj-table,
+  .fc-aj-history .fc-aj-tableBody {
+    min-width: 0;
+    width: 100%;
+  }
+  .fc-aj-history .fc-aj-tableBody {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    align-content: flex-start;
+    padding: 6px 3px 14px;
+    scrollbar-gutter: auto;
+    overflow-x: hidden;
+  }
+  .fc-aj-history .fc-aj-tr--head { display: none; }
+  .fc-aj-history .fc-aj-tr:not(.fc-aj-tr--head):not([aria-hidden="true"]) {
+    display: grid !important;
+    flex: 0 0 auto;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-areas:
+      "fecha estado"
+      "medio tipo"
+      "ajuste ajuste"
+      "anterior posterior"
+      "motivo motivo"
+      "usuario acciones";
+    gap: 0;
+    align-items: stretch;
+    padding: 0;
+    margin: 0;
+    border: 1px solid var(--mi-border, #d9e2ef);
+    border-left: 3px solid var(--mi-primary, #0055bb);
+    border-radius: 14px;
+    background: var(--mi-bg, #fff);
+    box-shadow: 0 4px 16px rgba(10, 37, 64, .055);
+    overflow: hidden;
+  }
+  .fc-aj-history .fc-aj-tr:not(.fc-aj-tr--head):not([aria-hidden="true"]).is-muted {
+    border-left-color: #94a3b8;
+  }
+  .fc-aj-history .fc-aj-tr:not(.fc-aj-tr--head):not([aria-hidden="true"]) .fc-aj-td {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 3px;
+    padding: 9px 12px;
+    margin: 0;
+    text-align: left;
+    border: 0;
+    overflow-wrap: anywhere;
+    word-break: normal;
+    font-size: 12.5px;
+    line-height: 1.3;
+  }
+  .fc-aj-history .fc-aj-tr:not(.fc-aj-tr--head):not([aria-hidden="true"]) .fc-aj-td::before {
+    display: block;
+    content: attr(data-label);
+    margin: 0;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--mi-muted, #64748b);
+  }
+  .fc-aj-history .fc-aj-tr .fc-aj-td:nth-child(1) { grid-area: fecha; }
+  .fc-aj-history .fc-aj-tr .fc-aj-td:nth-child(2) { grid-area: medio; font-weight: 700; }
+  .fc-aj-history .fc-aj-tr .fc-aj-td:nth-child(3) { grid-area: tipo; }
+  .fc-aj-history .fc-aj-tr .fc-aj-td:nth-child(4) { grid-area: ajuste; }
+  .fc-aj-history .fc-aj-tr .fc-aj-td:nth-child(5) { grid-area: anterior; }
+  .fc-aj-history .fc-aj-tr .fc-aj-td:nth-child(6) { grid-area: posterior; }
+  .fc-aj-history .fc-aj-tr .fc-aj-td:nth-child(7) { grid-area: motivo; }
+  .fc-aj-history .fc-aj-tr .fc-aj-td:nth-child(8) { grid-area: usuario; }
+  .fc-aj-history .fc-aj-tr .fc-aj-td:nth-child(9) { grid-area: estado; }
+  .fc-aj-history .fc-aj-tr .fc-aj-td:nth-child(10) { grid-area: acciones; }
+
+  /* Encabezado de tarjeta: fecha a la izquierda, estado a la derecha. */
+  .fc-aj-history .fc-aj-tr:not(.fc-aj-tr--head) .fc-aj-td:nth-child(1),
+  .fc-aj-history .fc-aj-tr:not(.fc-aj-tr--head) .fc-aj-td:nth-child(9) {
+    background: color-mix(in srgb, var(--mi-primary, #0055bb) 5%, var(--mi-bg, #fff));
+    border-bottom: 1px solid var(--mi-border, #d9e2ef);
+  }
+  .fc-aj-history .fc-aj-tr:not(.fc-aj-tr--head) .fc-aj-td:nth-child(9) {
+    align-items: flex-end;
+    text-align: right;
+  }
+  .fc-aj-history .fc-aj-tr:not(.fc-aj-tr--head) .fc-aj-td:nth-child(2) { font-size: 14px; padding-bottom: 5px; }
+  .fc-aj-history .fc-aj-tr:not(.fc-aj-tr--head) .fc-aj-td:nth-child(3) { padding-top: 5px; color: var(--mi-muted, #64748b); }
+
+  /* El ajuste es el dato principal de la tarjeta. */
+  .fc-aj-history .fc-aj-tr:not(.fc-aj-tr--head) .fc-aj-td:nth-child(4) {
+    margin: 5px 10px 8px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--mi-primary, #0055bb) 7%, var(--mi-bg, #fff));
+    font-size: 18px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    text-align: left;
+    align-items: flex-start;
+  }
+  .fc-aj-history .fc-aj-tr:not(.fc-aj-tr--head) .fc-aj-td:nth-child(4).is-positive {
+    background: color-mix(in srgb, #16a34a 10%, var(--mi-bg, #fff));
+    color: #15803d;
+  }
+  .fc-aj-history .fc-aj-tr:not(.fc-aj-tr--head) .fc-aj-td:nth-child(4).is-negative {
+    background: color-mix(in srgb, #dc2626 9%, var(--mi-bg, #fff));
+    color: #b91c1c;
+  }
+  .fc-aj-history .fc-aj-tr:not(.fc-aj-tr--head) .fc-aj-td:nth-child(5),
+  .fc-aj-history .fc-aj-tr:not(.fc-aj-tr--head) .fc-aj-td:nth-child(6) {
+    background: color-mix(in srgb, var(--mi-primary, #0055bb) 3%, var(--mi-bg, #fff));
+    border-top: 1px solid var(--mi-border, #d9e2ef);
+    border-bottom: 1px solid var(--mi-border, #d9e2ef);
+    font-variant-numeric: tabular-nums;
+    font-size: 12px;
+    align-items: flex-start;
+  }
+  .fc-aj-history .fc-aj-tr:not(.fc-aj-tr--head) .fc-aj-td:nth-child(5) {
+    border-right: 1px solid var(--mi-border, #d9e2ef);
+  }
+  .fc-aj-history .fc-aj-tr:not(.fc-aj-tr--head) .fc-aj-td:nth-child(7) { padding-block: 12px; }
+  .fc-aj-history .fc-aj-tr:not(.fc-aj-tr--head) .fc-aj-td:nth-child(8),
+  .fc-aj-history .fc-aj-tr:not(.fc-aj-tr--head) .fc-aj-td:nth-child(10) {
+    border-top: 1px solid var(--mi-border, #d9e2ef);
+    background: color-mix(in srgb, var(--mi-bg, #fff) 92%, var(--mi-primary, #0055bb));
+  }
+  .fc-aj-history .fc-aj-tr:not(.fc-aj-tr--head) .fc-aj-td:nth-child(10) {
+    align-items: flex-end;
+    text-align: right;
+  }
+  .fc-aj-history .fc-aj-tr .fc-aj-td:nth-child(10) .fc-aj-revertBtn {
+    flex: 0 0 34px;
+    width: 34px;
+    height: 34px;
+  }
+  .fc-aj-history .fc-aj-tr .fc-aj-td:nth-child(10) .fc-aj-noAction {
+    line-height: 34px;
+  }
+  .fc-aj-history .fc-aj-tr[aria-hidden="true"] {
+    flex: 0 0 auto;
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    padding: 12px;
+    margin: 0;
+    border: 1px solid var(--mi-border, #d9e2ef);
+    border-radius: 14px;
+    background: var(--mi-bg, #fff);
+  }
+  .fc-aj-history .fc-aj-tr[aria-hidden="true"] .fc-aj-td {
+    min-width: 0;
+    padding: 5px;
+  }
+  .fc-aj-history .fc-aj-tr[aria-hidden="true"] .fc-aj-td::before { content: none; }
+  .fc-aj-history .fc-aj-empty { width: 100%; }
+}
+
+@media (max-width: 380px) {
+  .fc-aj-history .fc-aj-tr:not(.fc-aj-tr--head) .fc-aj-td:nth-child(1),
+  .fc-aj-history .fc-aj-tr:not(.fc-aj-tr--head) .fc-aj-td:nth-child(9) { padding-inline: 8px; }
+  .fc-aj-history .fc-aj-tr:not(.fc-aj-tr--head) .fc-aj-badge { font-size: 10px; padding: 3px 5px; }
+}
+
+/* Cards también en tema oscuro: los fondos, bordes y textos respetan el tema. */
+@media (max-width: 720px) {
+  html[data-theme="oscuro"] .fc-aj-history .fc-aj-tr:not(.fc-aj-tr--head):not([aria-hidden="true"]),
+  body.dark .fc-aj-history .fc-aj-tr:not(.fc-aj-tr--head):not([aria-hidden="true"]) {
+    background: var(--mi-bg, #0b1927);
+    border-color: var(--mi-border, #253b50);
+    box-shadow: 0 5px 18px rgba(0, 0, 0, .16);
+  }
+  html[data-theme="oscuro"] .fc-aj-history .fc-aj-tr:not(.fc-aj-tr--head) .fc-aj-td:nth-child(4).is-positive,
+  body.dark .fc-aj-history .fc-aj-tr:not(.fc-aj-tr--head) .fc-aj-td:nth-child(4).is-positive { color: #86efac; }
+  html[data-theme="oscuro"] .fc-aj-history .fc-aj-tr:not(.fc-aj-tr--head) .fc-aj-td:nth-child(4).is-negative,
+  body.dark .fc-aj-history .fc-aj-tr:not(.fc-aj-tr--head) .fc-aj-td:nth-child(4).is-negative { color: #fca5a5; }
+}
+
+/* Ajustes responsive adicionales de los modales: controles cómodos,
+   resúmenes compactos y cuerpos con desplazamiento interno. */
+@media (max-width: 640px) {
+  .fc-aj-editor .fc-aj-typeTabs { gap: 4px; }
+  .fc-aj-editor .fc-aj-typeTabs .gm-view-tab {
+    font-size: 11.5px;
+    padding: 8px 9px;
+    min-height: 36px;
+    line-height: 1.2;
+  }
+  .fc-aj-editor .fc-aj-editorFields { padding: 12px; gap: 12px; }
+  .fc-aj-editor .fc-aj-editorGrid { gap: 12px; }
+  .fc-aj-editor .fc-aj-summary.fc-aj-summary--cards { gap: 8px; }
+  .fc-aj-editor .fc-aj-summary--cards > .fc-aj-summary__card {
+    min-height: 64px;
+    padding: 9px 11px;
+    gap: 10px;
+  }
+  .fc-aj-editor .fc-aj-summary__icon {
+    flex: 0 0 34px;
+    width: 34px;
+    height: 34px;
+    font-size: 14px;
+    border-radius: 9px;
+  }
+  .fc-aj-editor .fc-aj-summary__content { gap: 2px; }
+  .fc-aj-editor .fc-aj-summary__content dt { font-size: 11px; }
+  .fc-aj-editor .fc-aj-summary__content dd { font-size: 13px; }
+  .fc-aj-editor .fc-aj-summary__card--nuevo dd { font-size: 16px; }
+  .fc-aj-history .fc-aj-tableBody { -webkit-overflow-scrolling: touch; }
+  .fc-aj-history .fc-aj-filters .fl-field { min-width: 0; }
+  .fc-aj-history .fc-aj-tr:not(.fc-aj-tr--head) .fc-aj-td:nth-child(2),
+  .fc-aj-history .fc-aj-tr:not(.fc-aj-tr--head) .fc-aj-td:nth-child(3) {
+    padding-block: 11px;
+  }
+}

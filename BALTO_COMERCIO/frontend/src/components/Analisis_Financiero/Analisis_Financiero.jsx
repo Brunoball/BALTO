@@ -127,6 +127,37 @@ function MediumRow({ item, expanded, toggle }) {
           </div>
         </div>
       </div>
+      {/* La vista móvil usa una tarjeta propia: la fila de escritorio no se comprime. */}
+      <article className={`af-mediumMobileCard ${isNeg ? "is-negative" : ""}`} role="row" aria-label={`Medio de pago ${item.nombre}`}>
+        <div className="af-mcard__head">
+          <div className="af-methodName">
+            <span className="af-methodIcon" aria-hidden="true"><FontAwesomeIcon icon={/banco|bancaria/i.test(item.nombre) ? faBuildingColumns : faWallet}/></span>
+            <span className="af-methodText"><strong>{item.nombre}</strong>{!item.activo && <small>Medio inactivo</small>}</span>
+          </div>
+          <button type="button" className="mov-iconBtn af-detailsBtn af-mcard__toggle" aria-expanded={expanded}
+            aria-controls={`af-mcard-detail-${item.id}`} aria-label={`${expanded ? "Ocultar" : "Ver"} detalle de ${item.nombre}`}
+            onClick={toggle} title={expanded ? "Ocultar detalle" : "Ver detalle"}>
+            <FontAwesomeIcon icon={faChevronDown}/>
+          </button>
+        </div>
+        <div className="af-mcard__closing">
+          <span>Saldo de cierre</span>
+          <strong title={money(item.saldo_final)}>{money(item.saldo_final)}</strong>
+        </div>
+        <div className="af-mcard__highlights">
+          <div><span><FontAwesomeIcon icon={faArrowDown} aria-hidden="true"/> Cobros</span><strong className="af-positive">{money(item.ingresos)}</strong></div>
+          <div><span><FontAwesomeIcon icon={faArrowUp} aria-hidden="true"/> Pagos</span><strong className="af-negative">{money(item.egresos)}</strong></div>
+        </div>
+        <div className="af-mcard__details" id={`af-mcard-detail-${item.id}`} hidden={!expanded}>
+          <div><span>Arranque</span><strong>{money(item.saldo_inicio)}</strong></div>
+          <div><span>Aperturas</span><strong>{money(item.saldo_inicial_aplicado)}</strong></div>
+          <div><span>Apertura registrada hasta el cierre</span><strong>{money(item.saldo_inicial_configurado)}</strong></div>
+          <div><span>Ajustes internos del período</span><strong>{money(item.ajustes_internos)}</strong></div>
+          <div><span>Ajustes manuales de saldo</span><strong className={toNumberOrZero(item.ajustes_manuales) < 0 ? "af-negative" : ""}>{money(item.ajustes_manuales)}</strong></div>
+          <div><span>Variación total del período</span><strong className={toNumberOrZero(item.variacion) < 0 ? "af-negative" : "af-positive"}>{money(item.variacion)}</strong></div>
+          <div className="af-mcard__dates"><span>Fecha(s) de apertura</span><strong>{(item.saldos_iniciales || []).map((s) => formatISODate(s.fecha)).join(" · ") || "No configurada"}</strong></div>
+        </div>
+      </article>
     </React.Fragment>
   );
 }
@@ -345,6 +376,12 @@ export default function Analisis_Financiero() {
                   <div className="mov-gridCell af-col--actions" role="cell" />
                 </div>
               </div>
+              {medios.length > 0 && (
+                <div className="af-mobileTotals" aria-label="Total de medios de pago">
+                  <span>Total en medios de pago</span>
+                  <strong title={money(fin.saldo_final)}>{money(fin.saldo_final)}</strong>
+                </div>
+              )}
             </div>
         </section>
       </>}

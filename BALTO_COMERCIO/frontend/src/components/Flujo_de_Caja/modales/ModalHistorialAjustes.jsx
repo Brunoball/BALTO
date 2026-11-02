@@ -11,6 +11,9 @@ import {
   faClockRotateLeft,
   faRotateLeft,
   faTriangleExclamation,
+  faWallet,
+  faCircleInfo,
+  faCoins,
 } from "@fortawesome/free-solid-svg-icons";
 
 import "../../Global/Global_css/Global_Section.css";
@@ -156,7 +159,8 @@ export default function ModalHistorialAjustes({ open, onClose, onChanged, showTo
 
   if (!open) return null;
 
-  return createPortal(
+  return (<>
+    {createPortal(
     <div className="mi-mini__overlay fc-aj-overlay" role="presentation">
       <div
         className="mi-mini__modal fc-aj-modal fc-aj-modal--wide fc-aj-history"
@@ -220,7 +224,7 @@ export default function ModalHistorialAjustes({ open, onClose, onChanged, showTo
             ))}
             {!loading && rows.map((r) => (
               <div key={r.id_ajuste} className={`mov-gridTable mov-gridTable--row fc-aj-tr ${r.estado !== "VIGENTE" ? "is-muted" : ""}`} role="row" data-ajuste-id={r.id_ajuste}>
-                <div className="mov-gridCell fc-aj-td" role="cell" data-label="Fecha y hora">{fmtDateTime(r.created_at)}<small>#{r.id_ajuste}</small></div>
+                <div className="mov-gridCell fc-aj-td" role="cell" data-label="Fecha y hora">{fmtDateTime(r.created_at)}</div>
                 <div className="mov-gridCell fc-aj-td" role="cell" data-label="Medio">{r.medio_nombre}</div>
                 <div className="mov-gridCell fc-aj-td" role="cell" data-label="Tipo">{r.tipo_label}</div>
                 <div className={`mov-gridCell fc-aj-td fc-aj-num ${signClass(r.diferencia)}`} role="cell" data-label="Ajuste">{moneyARSSigned(r.diferencia)}</div>
@@ -233,12 +237,12 @@ export default function ModalHistorialAjustes({ open, onClose, onChanged, showTo
                 <div className="mov-gridCell fc-aj-td" role="cell" data-label="Usuario">{r.usuario_nombre || "—"}</div>
                 <div className="mov-gridCell fc-aj-td" role="cell" data-label="Estado"><EstadoBadge row={r} /></div>
                 <div className="mov-gridCell fc-aj-td fc-aj-td--action" role="cell" data-label="Acciones">
-                  {r.puede_revertir && (
-                    <button type="button" className="mit-btn mit-btn--ghost fc-aj-revertBtn" onClick={() => abrirReversion(r)}
-                      disabled={reverting} aria-label={`Revertir ajuste #${r.id_ajuste}`}>
-                      <FontAwesomeIcon icon={faRotateLeft} /> Revertir
+                  {r.puede_revertir === true || r.puede_revertir === 1 || r.puede_revertir === "1" ? (
+                    <button type="button" className="mov-iconBtn fc-aj-revertBtn" onClick={() => abrirReversion(r)}
+                      disabled={reverting} title="Revertir ajuste" aria-label={`Revertir ajuste #${r.id_ajuste}`}>
+                      <FontAwesomeIcon icon={faRotateLeft} aria-hidden="true" />
                     </button>
-                  )}
+                  ) : <span className="fc-aj-noAction" title="Ajuste no reversible" aria-label="Sin acciones disponibles">—</span>}
                 </div>
               </div>
             ))}
@@ -257,33 +261,73 @@ export default function ModalHistorialAjustes({ open, onClose, onChanged, showTo
           <button type="button" className="mit-btn mit-btn--solid" disabled={reverting} onClick={onClose}>Cerrar</button>
         </div>
 
-        {revertTarget && (
-          <div className="fc-aj-revert" role="alertdialog" aria-modal="true" aria-labelledby="fc-aj-revert-title">
-            <div className="fc-aj-revert__card">
-              <h5 id="fc-aj-revert-title">Revertir ajuste #{revertTarget.id_ajuste}</h5>
-              <p>
-                Se registrará un ajuste compensatorio de{" "}
-                <b className={signClass(-revertTarget.diferencia)}>{moneyARSSigned(-revertTarget.diferencia)}</b>{" "}
-                en <b>{revertTarget.medio_nombre}</b> con fecha de hoy. El ajuste original no se borra y ambos quedan en el historial.
-              </p>
-              <div className="fl-field">
-                <textarea id="fc-aj-revert-motivo" className="fl-input fc-aj-textarea" placeholder=" " rows={2} maxLength={500}
-                  value={revertMotivo} onChange={(e) => { setRevertMotivo(e.target.value.toUpperCase()); setRevertError(""); }}
-                  disabled={reverting} autoFocus />
-                <label className="fl-label" htmlFor="fc-aj-revert-motivo">Motivo de la reversión</label>
-                {revertError && <small className="fc-aj-error">{revertError}</small>}
+      </div>
+    </div>,
+    document.body
+  )}
+
+  {revertTarget && createPortal(
+          <div className="mi-mini__overlay fc-aj-revert" role="presentation">
+            <div className="mi-mini__modal fc-aj-revert__card" role="alertdialog" onMouseDown={(e) => e.stopPropagation()} aria-modal="true"
+              aria-labelledby="fc-aj-revert-title" aria-describedby="fc-aj-revert-description">
+              <div className="mi-mini__head fc-aj-revert__head">
+                <h4 id="fc-aj-revert-title" className="mi-mini__title fc-aj-title">
+                  <FontAwesomeIcon icon={faRotateLeft} aria-hidden="true" />
+                  <span>Revertir ajuste #{revertTarget.id_ajuste}</span>
+                </h4>
+                <button type="button" className="mi-mini__close" aria-label="Cerrar"
+                  onClick={() => setRevertTarget(null)} disabled={reverting}>
+                  <FontAwesomeIcon icon={faXmark} aria-hidden="true" />
+                </button>
               </div>
-              <div className="mi-mini__actions fc-aj-actions">
+
+              <div className="mi-mini__body fc-aj-revert__body">
+                <p id="fc-aj-revert-description" className="fc-aj-revert__intro">
+                  Revisá el movimiento que se generará antes de confirmar la reversión.
+                </p>
+                <div className="fc-aj-revert__summary">
+                  <div className="fc-aj-revert__detail">
+                    <span className="fc-aj-revert__detailIcon" aria-hidden="true"><FontAwesomeIcon icon={faWallet} /></span>
+                    <div className="fc-aj-revert__detailText">
+                      <span>Medio de pago</span>
+                      <strong>{revertTarget.medio_nombre}</strong>
+                    </div>
+                  </div>
+                  <div className={`fc-aj-revert__detail fc-aj-revert__detail--amount ${signClass(-revertTarget.diferencia)}`}>
+                    <span className="fc-aj-revert__detailIcon" aria-hidden="true"><FontAwesomeIcon icon={faCoins} /></span>
+                    <div className="fc-aj-revert__detailText">
+                      <span>Ajuste compensatorio</span>
+                      <strong className={signClass(-revertTarget.diferencia)}>{moneyARSSigned(-revertTarget.diferencia)}</strong>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="fl-field fc-aj-revert__field">
+                  <textarea id="fc-aj-revert-motivo" className="fl-input fc-aj-textarea" placeholder=" " rows={3} maxLength={500}
+                    value={revertMotivo} onChange={(e) => { setRevertMotivo(e.target.value.toUpperCase()); setRevertError(""); }}
+                    disabled={reverting} aria-invalid={Boolean(revertError)} aria-describedby={revertError ? "fc-aj-revert-error" : undefined} autoFocus />
+                  <label className="fl-label" htmlFor="fc-aj-revert-motivo">Motivo de la reversión</label>
+                  <div className="fc-aj-revert__fieldBottom">
+                    {revertError ? <small id="fc-aj-revert-error" className="fc-aj-error" role="alert">{revertError}</small> : <span />}
+                    <span className="fc-aj-revert__counter">{revertMotivo.length}/500</span>
+                  </div>
+                </div>
+
+                <div className="fc-aj-revert__info">
+                  <FontAwesomeIcon icon={faCircleInfo} aria-hidden="true" />
+                  <span>Se registrará con fecha de hoy. El ajuste original se conserva y ambos movimientos quedan en el historial.</span>
+                </div>
+              </div>
+
+              <div className="fc-aj-revert__footer">
                 <button type="button" className="mit-btn mit-btn--ghost" onClick={() => setRevertTarget(null)} disabled={reverting}>Cancelar</button>
                 <button type="button" className="mit-btn mit-btn--solid" onClick={confirmarReversion} disabled={reverting}>
+                  <FontAwesomeIcon icon={faRotateLeft} aria-hidden="true" />
                   {reverting ? "Revirtiendo…" : "Confirmar reversión"}
                 </button>
               </div>
             </div>
           </div>
-        )}
-      </div>
-    </div>,
-    document.body
-  );
+  , document.body)}
+</>);
 }

@@ -390,6 +390,8 @@ body.dark .mov-page--analisisFinanciero .af-tab.is-active {
 .af-detailGrid span { font-size: 10px; color: var(--af-muted); }
 .af-detailGrid strong { font-size: 11px; font-weight: 650; white-space: normal; overflow-wrap: anywhere; }
 .af-mobileDetail { display: none !important; }
+/* La tarjeta móvil tiene un marcado independiente para no comprimir la grilla de escritorio. */
+.af-mediumMobileCard, .af-mobileTotals { display: none; }
 .af-mediumEmpty { display: grid; place-items: center; padding: 35px 16px; min-height: 150px; color: var(--af-muted); }
 .af-mediumEmpty > div { display: flex; flex-direction: column; align-items: center; gap: 9px; text-align: center; font-size: 12px; }
 .af-mediumEmpty svg { font-size: 24px; opacity: .6; }
@@ -410,15 +412,138 @@ body.dark .mov-page--analisisFinanciero {
   .af-mediumTable .mov-gridCell--head { font-size: 10px; letter-spacing: .02em; }
 }
 @media (max-width: 760px) {
-  .af-mediumTable { --af-medium-cols: 1.6fr 1fr 52px; }
-  .af-mediumTable .af-col--starting,
-  .af-mediumTable .af-col--opening,
-  .af-mediumTable .af-col--collections,
-  .af-mediumTable .af-col--payments { display: none; }
-  .af-mobileDetail { display: flex !important; }
-  .af-mediumTable .af-tableScroll.mov-tableWrap { max-height: calc(100dvh - 325px); }
-  .af-mediumTable .mov-gridCell { font-size: 12px; }
-  .af-mediumTable .mov-gridCell--head { font-size: 10px; }
+  /* La tabla continúa disponible sin cambios en escritorio; en pantallas
+     pequeñas cada medio es una tarjeta con información clara y alineada. */
+  .mov-page--analisisFinanciero .af-mediumTable {
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    overflow: visible;
+  }
+  .mov-page--analisisFinanciero .af-mediumHead,
+  .mov-page--analisisFinanciero .af-mediumFoot,
+  .mov-page--analisisFinanciero .af-mediumRow,
+  .mov-page--analisisFinanciero .af-mediumDetailRow { display: none !important; }
+  .mov-page--analisisFinanciero .af-mediumTable .af-tableScroll.mov-tableWrap {
+    max-height: none;
+    overflow-x: hidden;
+    overflow-y: auto;
+    scrollbar-gutter: auto;
+    width: 100%;
+  }
+  .mov-page--analisisFinanciero .af-mediumBody {
+    display: flex !important;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 0;
+    padding: 2px 2px 12px;
+  }
+  .mov-page--analisisFinanciero .af-mediumMobileCard {
+    display: block;
+    flex: 0 0 auto;
+    width: 100%;
+    min-width: 0;
+    padding: 12px;
+    border: 1px solid var(--af-line);
+    border-radius: 13px;
+    background: var(--af-paper);
+    box-shadow: 0 1px 3px rgba(12, 37, 64, .045);
+    color: var(--af-ink);
+    font-size: 12px;
+  }
+  .af-mcard__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-width: 0;
+    padding-bottom: 9px;
+  }
+  .af-mcard__head .af-methodName { flex: 1 1 auto; min-width: 0; gap: 9px; }
+  .af-mcard__head .af-methodIcon { width: 32px; height: 32px; border-radius: 9px; font-size: 14px; }
+  .af-mcard__head .af-methodText strong { font-size: 12px; font-weight: 700; color: var(--af-ink); }
+  .af-mcard__head .af-mcard__toggle {
+    display: inline-grid;
+    place-items: center;
+    flex: 0 0 30px;
+    width: 30px;
+    height: 30px;
+    min-width: 30px;
+    padding: 0;
+    margin: 0;
+  }
+  .af-mcard__closing {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 9px;
+    background: var(--af-soft);
+    border: 1px solid var(--af-line);
+    min-width: 0;
+  }
+  .af-mcard__closing span { flex: 0 0 auto; font-size: 11px; font-weight: 550; color: var(--af-muted); }
+  .af-mcard__closing strong {
+    flex: 1 1 auto;
+    min-width: 0;
+    text-align: right;
+    font-size: 14px;
+    font-weight: 750;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+    color: var(--af-ink);
+  }
+  .af-mediumMobileCard.is-negative .af-mcard__closing strong { color: var(--af-red); }
+  .af-mcard__highlights {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    padding-top: 10px;
+  }
+  .af-mcard__highlights > div { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+  .af-mcard__highlights > div + div { padding-left: 10px; border-left: 1px solid var(--af-line); }
+  .af-mcard__highlights span { display: inline-flex; align-items: center; gap: 5px; color: var(--af-muted); font-size: 10px; }
+  .af-mcard__highlights strong {
+    text-align: left;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    font-size: 12px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .af-mcard__details {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px 9px;
+    border-top: 1px solid var(--af-line);
+    margin-top: 10px;
+    padding-top: 12px;
+  }
+  .af-mcard__details[hidden] { display: none !important; }
+  .af-mcard__details > div { display: flex; flex-direction: column; min-width: 0; gap: 4px; }
+  .af-mcard__details span { color: var(--af-muted); font-size: 10px; line-height: 1.35; }
+  .af-mcard__details strong { color: var(--af-ink); font-size: 11px; font-weight: 650; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+  .af-mcard__details strong.af-negative { color: var(--af-red); }
+  .af-mcard__details strong.af-positive { color: var(--af-green); }
+  .af-mcard__details .af-mcard__dates { grid-column: 1 / -1; }
+  .mov-page--analisisFinanciero .af-mobileTotals {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 12px 14px;
+    border: 1px solid var(--af-line);
+    border-radius: 10px;
+    background: var(--color-surface-alt, var(--af-paper));
+    min-width: 0;
+  }
+  .af-mobileTotals span { color: var(--af-muted); font-size: 11px; font-weight: 600; }
+  .af-mobileTotals strong { text-align: right; color: var(--af-ink); font-size: 13px; font-weight: 750; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+  #af-panel-medios { min-width: 0; }
+  #af-panel-medios .af-mediumTable { min-width: 0; }
 }
 @media (max-width: 1050px) {
   .af-insightGrid,.af-profitGrid { grid-template-columns: 1fr; }

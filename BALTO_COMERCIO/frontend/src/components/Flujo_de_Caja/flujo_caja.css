@@ -550,11 +550,12 @@ body.dark .fc-saldo--neg { color: #f87171 !important; }
 
   .mov-page--flujoCaja .mov-card__head {
     display: grid !important;
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr);
     grid-template-areas:
-      "fcTitle fcTitle"
-      "fcFilter fcExport";
-    gap: 10px 8px;
+      "fcTitle"
+      "fcFilter"
+      "fcExport";
+    gap: 10px;
     align-items: center;
   }
 
@@ -590,8 +591,10 @@ body.dark .fc-saldo--neg { color: #f87171 !important; }
 
   .mov-page--flujoCaja .mov-card__actions {
     grid-area: fcExport;
-    justify-self: end;
-    width: auto;
+    justify-self: stretch;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    width: 100%;
     min-width: 0;
   }
 
@@ -797,8 +800,8 @@ body.dark .fc-saldo--neg { color: #f87171 !important; }
 
 @media (max-width: 380px) {
   .mov-page--flujoCaja .mov-card__head {
-    /* auto: la columna de acciones también aloja Ajustar saldo / Historial. */
-    grid-template-columns: minmax(0, 1fr) auto;
+    /* Los tres botones quedan en una fila separada del filtro. */
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .mov-page--flujoCaja .boton-exportar-trigger {
@@ -927,5 +930,181 @@ body.dark .mov-page--flujoCaja .fc-sliderArrow { color: #8ab4ff; }
 
   .mov-page--flujoCaja .fc-payCard__titleWrap {
     min-width: 0;
+  }
+}
+
+/* Flujo de caja: prevalece sobre los estilos responsive genéricos de
+   Movimientos / Ventas, que convierten las acciones en una grilla de 2. */
+@media (max-width: 720px) {
+  .mov-page--flujoCaja .mov-card__head > .mov-card__actions {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    justify-content: flex-end !important;
+    align-items: center !important;
+    gap: 8px !important;
+    margin-top: 0;
+  }
+  .mov-page--flujoCaja .mov-card__actions .fc-aj-headActions {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex: 0 0 auto;
+  }
+  .mov-page--flujoCaja .mov-card__actions .fc-aj-headBtn,
+  .mov-page--flujoCaja .mov-card__actions .boton-exportar-wrap,
+  .mov-page--flujoCaja .mov-card__actions .boton-exportar-trigger {
+    flex: 0 0 44px !important;
+    width: 44px !important;
+    min-width: 44px !important;
+    max-width: 44px;
+    margin: 0 !important;
+  }
+}
+
+/* =========================================================
+   FLUJO DE CAJA · Encabezado legible en dispositivos táctiles
+   Período + Exportar en la misma fila; Historial + Ajustar debajo.
+   Se reutiliza el botón Exportar global, sin crear duplicados.
+========================================================= */
+.mov-page--flujoCaja .fc-aj-headBtn--icon .fc-aj-headBtn__text { display: none; }
+
+@media (max-width: 980px) {
+  .mov-page--flujoCaja .mov-card__head {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) max-content !important;
+    grid-template-areas:
+      "fcTitle fcTitle"
+      "fcFilter fcExport"
+      "fcActions fcActions" !important;
+    column-gap: 8px !important;
+    row-gap: 10px !important;
+    align-items: stretch !important;
+  }
+
+  /* display:contents permite distribuir los hijos sin duplicar controles. */
+  .mov-page--flujoCaja .mov-card__headLeft { display: contents !important; }
+  .mov-page--flujoCaja .mov-card__head .title-mov { grid-area: fcTitle; min-width: 0; }
+
+  .mov-page--flujoCaja .mov-card__head > .mov-card__actions {
+    display: contents !important;
+    margin: 0 !important;
+  }
+
+  .mov-page--flujoCaja .mov-card__head .mov-headFilters {
+    grid-area: fcFilter;
+    display: flex !important;
+    align-items: stretch !important;
+    justify-content: flex-start !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+  }
+
+  .mov-page--flujoCaja .mov-card__head .mov-filter--cal {
+    flex: 1 1 auto;
+    min-width: 0 !important;
+    max-width: none;
+  }
+
+  .mov-page--flujoCaja .mov-card__head .mov-calTrigger,
+  .mov-page--flujoCaja .mov-card__head .cc-calTrigger {
+    display: block;
+    height: 44px;
+    min-width: 0 !important;
+    width: 100% !important;
+    max-width: none;
+    padding-left: 10px;
+    padding-right: 26px;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 12px;
+  }
+
+  .mov-page--flujoCaja .mov-card__head .fc-aj-headActions {
+    grid-area: fcActions;
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    gap: 8px !important;
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+  }
+
+  .mov-page--flujoCaja .mov-card__head .fc-aj-headActions .fc-aj-headBtn {
+    display: inline-flex !important;
+    flex: 1 1 0 !important;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    height: 44px;
+    padding: 0 9px !important;
+    white-space: nowrap;
+    font-size: 12.5px;
+    margin: 0 !important;
+  }
+
+  .mov-page--flujoCaja .mov-card__head .fc-aj-headBtn__text,
+  .mov-page--flujoCaja .mov-card__head .fc-aj-headBtn--icon .fc-aj-headBtn__text {
+    display: inline !important;
+    font-size: inherit;
+    white-space: nowrap;
+  }
+
+  .mov-page--flujoCaja .mov-card__head .mov-card__actions > .boton-exportar-wrap {
+    grid-area: fcExport;
+    display: inline-flex;
+    flex: 0 0 auto !important;
+    align-self: stretch;
+    justify-self: end;
+    min-width: 0 !important;
+    width: auto !important;
+    max-width: none !important;
+    margin: 0 !important;
+  }
+
+  .mov-page--flujoCaja .mov-card__head .boton-exportar-wrap > .boton-exportar-trigger {
+    display: inline-flex !important;
+    flex: 0 0 auto !important;
+    align-items: center;
+    justify-content: center !important;
+    width: auto !important;
+    min-width: 44px !important;
+    max-width: 44px !important;
+    height: 44px !important;
+    padding: 0 !important;
+    gap: 0 !important;
+    margin: 0 !important;
+    border-radius: 12px;
+    font-size: 12.5px;
+  }
+
+  .mov-page--flujoCaja .mov-card__head .boton-exportar-trigger__iconWrap {
+    width: 17px !important;
+    height: 17px !important;
+    font-size: 14px;
+  }
+
+  /* En responsive solo el ícono: se preservan el título y menú globales. */
+  .mov-page--flujoCaja .mov-card__head .boton-exportar-trigger__text,
+  .mov-page--flujoCaja .mov-card__head .boton-exportar-trigger__right {
+    display: none !important;
+  }
+}
+
+@media (max-width: 350px) {
+  .mov-page--flujoCaja .mov-card__head { column-gap: 6px !important; }
+  .mov-page--flujoCaja .mov-card__head .boton-exportar-wrap > .boton-exportar-trigger {
+    min-width: 44px !important;
+    padding-inline: 0 !important;
+  }
+  .mov-page--flujoCaja .mov-card__head .fc-aj-headActions .fc-aj-headBtn {
+    gap: 5px;
+    padding-inline: 6px !important;
+    font-size: 12px;
   }
 }
