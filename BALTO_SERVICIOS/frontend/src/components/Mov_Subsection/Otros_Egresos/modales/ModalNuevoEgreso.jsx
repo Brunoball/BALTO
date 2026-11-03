@@ -25,6 +25,7 @@ import "../../../Global/Global_css/roots.css";
 import "./ModalEgreso.css";
 import "../../../Global/Global_css/GlobalMovementEntryResponsive.css";
 import { otrosEgresosFetch } from "../api/otrosEgresosApi.js";
+import { mensajeClasificacionesFaltantes, resolveClasificacionesEgreso } from "../utils/clasificacionesEgreso.js";
 
 /* ─────────────────────────────────────────
    CONSTANTES Y HELPERS  (idénticos a NuevaCompra)
@@ -129,14 +130,6 @@ function normalizeText(s) {
     .replace(/\s+/g, " ")
     .trim();
 }
-function normalizeName(v) {
-  return String(v ?? "")
-    .toUpperCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
-}
 function normalizeChequeTipoFromMedio(nombre) {
   const s = normalizeText(nombre);
   if (!s) return null;
@@ -163,11 +156,6 @@ function getDetalleId(d) {
 }
 function getMedioPagoId(c) {
   const cand = c?.id ?? c?.id_medio_pago ?? c?.idMedioPago ?? c?.medio_pago_id ?? null;
-  const n = Number(cand);
-  return Number.isFinite(n) && n > 0 ? n : null;
-}
-function getClasificacionId(c) {
-  const cand = c?.id ?? c?.id_clasificacion ?? c?.idClasificacion ?? c?.clasificacion_id ?? null;
   const n = Number(cand);
   return Number.isFinite(n) && n > 0 ? n : null;
 }
@@ -242,25 +230,6 @@ function normalizeLists(lists) {
     clasificaciones: Array.isArray(clasificaciones) ? clasificaciones : [],
   };
 }
-function resolveClasificacionesConfig(arr = []) {
-  const parsed = arr
-    .map((x) => ({ id: getClasificacionId(x), nombre: normalizeName(optionLabel(x)) }))
-    .filter((x) => Number.isFinite(Number(x.id)) && Number(x.id) > 0);
-  const fijo = parsed.find((x) => x.nombre === "COSTO FIJO") || parsed.find((x) => x.nombre.includes("COSTO FIJO")) || null;
-  const noFijo =
-    parsed.find(
-      (x) =>
-        x.id !== fijo?.id &&
-        (x.nombre === "COSTO VARIABLE" || x.nombre.includes("VARIABLE") || x.nombre.includes("NO ES COSTO FIJO"))
-    ) || parsed.find((x) => x.id !== fijo?.id) || null;
-  return {
-    idCostoFijo: String(fijo?.id ?? 1),
-    idNoCostoFijo: String(noFijo?.id ?? 2),
-    labelCostoFijo: "COSTO FIJO",
-    labelNoCostoFijo: "COSTO VARIABLE",
-  };
-}
-
 /* Auth */
 function getAuthInfo() {
   const sessionKey =
@@ -851,15 +820,15 @@ export default function ModalNuevoEgreso({
     () => (Array.isArray(localLists.clasificaciones) ? localLists.clasificaciones : []),
     [localLists.clasificaciones]
   );
-  const clasificacionConfig = useMemo(() => resolveClasificacionesConfig(clasificacionesList), [clasificacionesList]);
+  // IDs reales del catálogo: COSTO FIJO, COSTO VARIABLE y OTROS EGRESOS.
+  const clasificacionConfig = useMemo(() => resolveClasificacionesEgreso(clasificacionesList), [clasificacionesList]);
+  const clasificacionesError = useMemo(() => mensajeClasificacionesFaltantes(clasificacionConfig), [clasificacionConfig]);
 
   const enhancedDetallesList = useMemo(
     () => [{ id: "new_option", __isNewOption: true, nombre: "+ Agregar nueva descripción" }, ...detallesList],
     [detallesList]
   );
 
-  const isCostoFijoChecked = String(filters.id_clasificacion) === String(clasificacionConfig.idCostoFijo);
-  const isNoCostoFijoChecked = String(filters.id_clasificacion) === String(clasificacionConfig.idNoCostoFijo);
 
   useEffect(() => {
     if (!open) return;
@@ -1119,7 +1088,15 @@ export default function ModalNuevoEgreso({
 
   const validate = useCallback(() => {
     const clas = Number(filters.id_clasificacion);
-    if (!Number.isFinite(clas) || clas <= 0) return { ok: false, msg: "Debés indicar si el egreso es costo fijo o costo variable." };
+    if (!Number.isFinite(clas) || clas <= 0) {
+      return {
+        ok: false,
+        msg: clasificacionesError || "Seleccioná la clasificación del egreso: COSTO FIJO, COSTO VARIABLE u OTROS EGRESOS.",
+      };
+    }
+    if (!clasificacionConfig.esValida(clas)) {
+      return { ok: false, msg: "La clasificación seleccionada no existe o está inactiva. Actualizá la pantalla y elegí otra." };
+    }
     if (!safeStr(fecha)) return { ok: false, msg: "Falta la fecha." };
 
     if (fecha > todayISO()) {
@@ -1174,7 +1151,7 @@ export default function ModalNuevoEgreso({
       };
     }
     return { ok: true, usable };
-  }, [filters, fecha, rowsCalc, mediosFilasActivas, mediosPagoList, resumen.total, sumaMediosPago]);
+  }, [filters, fecha, rowsCalc, mediosFilasActivas, mediosPagoList, resumen.total, sumaMediosPago, clasificacionConfig, clasificacionesError]);
 
   const buildPayload = useCallback(() => {
     const usableRows = rowsCalc.filter(
@@ -1215,11 +1192,7 @@ export default function ModalNuevoEgreso({
       medio_pago_nombre: optionLabel(medioLegacy),
       medios_pago: mediosPagoPayload,
       id_clasificacion: Number(filters.id_clasificacion),
-      clasificacion_nombre: isCostoFijoChecked
-        ? clasificacionConfig.labelCostoFijo.toUpperCase()
-        : isNoCostoFijoChecked
-          ? clasificacionConfig.labelNoCostoFijo.toUpperCase()
-          : "",
+      clasificacion_nombre: clasificacionConfig.nombrePorId(filters.id_clasificacion),
       detalle: detalleFinal,
       descripcion: detalleFinal,
       concepto: detalleFinal,
@@ -1245,7 +1218,7 @@ export default function ModalNuevoEgreso({
         total: safeNumber(x.total),
       })),
     };
-  }, [rowsCalc, initialData, fecha, filters, mediosFilasActivas, mediosPagoList, clasificacionConfig, isCostoFijoChecked, isNoCostoFijoChecked]);
+  }, [rowsCalc, initialData, fecha, filters, mediosFilasActivas, mediosPagoList, clasificacionConfig]);
 
   const subirArchivo = useCallback(
     async (idMovimiento, archivo) => {
@@ -1520,18 +1493,24 @@ export default function ModalNuevoEgreso({
                           value={String(filters.id_clasificacion || "")}
                           onChange={(e) => setFilters((p) => ({ ...p, id_clasificacion: e.target.value }))}
                           disabled={saving}
+                          aria-label="Clasificación"
+                          data-testid="oe-clasificacion-select"
                         >
                           <option value="">Seleccionar...</option>
-                          <option value={String(clasificacionConfig.idCostoFijo)}>
-                            {clasificacionConfig.labelCostoFijo}
-                          </option>
-                          <option value={String(clasificacionConfig.idNoCostoFijo)}>
-                            {clasificacionConfig.labelNoCostoFijo}
-                          </option>
+                          {clasificacionConfig.opciones.map((op) => (
+                            <option key={op.key} value={String(op.id)}>
+                              {op.nombre}
+                            </option>
+                          ))}
                         </select>
                         <label className="gm-label" style={{ pointerEvents: "none" }}>
                           Clasificación *
                         </label>
+                        {clasificacionesError && (
+                          <div className="gm-field-error" role="alert" data-testid="oe-clasificacion-error" style={{ color: "var(--color-danger, #c0392b)", fontSize: 12, marginTop: 4 }}>
+                            {clasificacionesError}
+                          </div>
+                        )}
                       </div>
 
                       <PanelMediosPagoInlineCompraGlobal

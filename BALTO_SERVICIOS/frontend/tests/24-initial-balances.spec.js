@@ -295,7 +295,25 @@ async function fillInitialChequeForm(page, {
   await initialChequeField(dialog, /Fecha de pago/i).fill(dueDate);
   await initialChequeField(dialog, /Emisor \/ Banco/i).fill(issuer);
   await initialChequeField(dialog, /N° de (?:eCheq|cheque)/i).fill(number);
-  await initialChequeField(dialog, /Importe/i).fill(String(amount).replace('.', ','));
+  const amountInput = initialChequeField(dialog, /Importe/i);
+  const typedAmount = String(amount).replace('.', ',');
+  const formattedAmount = Number(amount).toLocaleString('es-AR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+  // Al enfocar, ModalNuevoCheque cambia el valor formateado ("10,00") por el
+  // borrador editable ("10") y re-renderiza. Si fill() selecciona el texto antes
+  // de ese re-render, la selección se pierde y el importe nuevo se concatena al
+  // anterior (10 + 684,30 = 10684,30). Mismo arreglo que el test 24 de BALTO
+  // Comercio: enfocar, esperar el modo edición y verificar el valor exacto.
+  await amountInput.focus();
+  await expect(amountInput).not.toHaveValue(/,\d{2}$/, { timeout: 5_000 }).catch(() => {});
+  await expect(async () => {
+    await amountInput.fill(typedAmount);
+    await expect(amountInput).toHaveValue(typedAmount, { timeout: 1_000 });
+  }).toPass({ timeout: 10_000 });
+  await amountInput.blur();
+  await expect(amountInput).toHaveValue(formattedAmount, { timeout: 5_000 });
   if (observation) await dialog.getByLabel('Observación').fill(observation);
   if (attachment) await dialog.locator('input[type="file"]').setInputFiles(attachment);
 

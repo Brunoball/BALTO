@@ -311,7 +311,10 @@ test.describe('@otros-egresos @clasificacion @regression OTROS EGRESOS de punta 
         let dialog = await waitDialog(page, 'Nuevo Egreso');
         const select = selectorClasificacion(dialog);
         await expect(select).toBeVisible();
-        expect(await opcionesSelector(select)).toEqual(CLASES.map((nombre) => ({ id: ids[nombre], nombre })));
+        // El catálogo de clasificaciones llega por la carga global de listas: puede
+        // tardar un instante después de abrir el modal. Se espera a que aparezcan.
+        await expect.poll(() => opcionesSelector(select), { timeout: 20_000 })
+          .toEqual(CLASES.map((nombre) => ({ id: ids[nombre], nombre })));
         await expect(dialog.getByTestId('oe-clasificacion-error')).toHaveCount(0);
         if (dispositivo === 'móvil') {
           const box = await select.boundingBox();
@@ -337,7 +340,7 @@ test.describe('@otros-egresos @clasificacion @regression OTROS EGRESOS de punta 
         let fila = await searchRow(page, description, /Buscar por descripción/i);
         await fila.locator('button[title="Editar"]').click();
         dialog = await waitDialog(page, 'Editar egreso');
-        expect(await textoSeleccionado(selectorClasificacion(dialog))).toBe('OTROS EGRESOS');
+        await expect.poll(() => textoSeleccionado(selectorClasificacion(dialog)), { timeout: 20_000 }).toBe('OTROS EGRESOS');
         await selectorClasificacion(dialog).selectOption(String(ids['COSTO VARIABLE']));
         await clickSaveAndWait(dialog, /Guardar cambios/i, { timeout: 60_000 });
         expect((await leerEgreso(page, id)).idClasificacion).toBe(ids['COSTO VARIABLE']);
@@ -345,7 +348,9 @@ test.describe('@otros-egresos @clasificacion @regression OTROS EGRESOS de punta 
         fila = await searchRow(page, description, /Buscar por descripción/i);
         await fila.locator('button[title="Editar"]').click();
         dialog = await waitDialog(page, 'Editar egreso');
-        expect(await textoSeleccionado(selectorClasificacion(dialog)), 'Al reabrir aparece la clasificación guardada').toBe('COSTO VARIABLE');
+        await expect.poll(() => textoSeleccionado(selectorClasificacion(dialog)), {
+          message: 'Al reabrir aparece la clasificación guardada', timeout: 20_000,
+        }).toBe('COSTO VARIABLE');
         await dialog.getByRole('button', { name: /cancelar/i }).last().click();
         await expect(dialog).toBeHidden();
       } finally {

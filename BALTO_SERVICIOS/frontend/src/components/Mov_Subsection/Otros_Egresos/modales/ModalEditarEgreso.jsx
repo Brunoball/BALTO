@@ -22,6 +22,7 @@ import {
   faCircleNotch,
 } from "@fortawesome/free-solid-svg-icons";
 import { otrosEgresosFetch } from "../api/otrosEgresosApi.js";
+import { mensajeClasificacionesFaltantes, resolveClasificacionesEgreso } from "../utils/clasificacionesEgreso.js";
 
 /* ─── IVA options ─── */
 const IVA_OPTIONS = [
@@ -58,14 +59,6 @@ function upperText(v) {
 }
 function upperSafeText(v) {
   return safeText(v).toUpperCase();
-}
-function normalizeName(v) {
-  return String(v ?? "")
-    .toUpperCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
 }
 function moneyARS(v) {
   try {
@@ -212,39 +205,15 @@ function normalizeMediosPago(lists) {
     nombre: String(x?.nombre ?? x?.descripcion ?? x?.detalle ?? "").trim(),
   }));
 }
-function normalizeClasificaciones(lists) {
-  const raw = Array.isArray(lists?.clasificaciones)
-    ? lists.clasificaciones
-    : Array.isArray(lists?.clasificacion)
-      ? lists.clasificacion
-      : [];
-  return raw.map((x) => ({
-    id: Number(x?.id ?? x?.id_clasificacion ?? 0),
-    nombre: String(x?.nombre ?? x?.descripcion ?? x?.detalle ?? "").trim(),
-  }));
+function getClasificacionesRaw(lists) {
+  if (Array.isArray(lists?.clasificaciones)) return lists.clasificaciones;
+  if (Array.isArray(lists?.clasificacion)) return lists.clasificacion;
+  if (Array.isArray(lists?.listas?.clasificaciones)) return lists.listas.clasificaciones;
+  return [];
 }
-function resolveCostoFijoConfig(clasificaciones = []) {
-  const arr = Array.isArray(clasificaciones) ? clasificaciones : [];
-  const fijo =
-    arr.find((x) => normalizeName(x?.nombre) === "COSTO FIJO") ||
-    arr.find((x) => normalizeName(x?.nombre).includes("COSTO FIJO")) ||
-    null;
-  const noFijo =
-    arr.find(
-      (x) =>
-        x.id !== fijo?.id &&
-        (normalizeName(x?.nombre) === "COSTO VARIABLE" ||
-          normalizeName(x?.nombre).includes("VARIABLE") ||
-          normalizeName(x?.nombre).includes("NO ES COSTO FIJO"))
-    ) ||
-    arr.find((x) => x.id !== fijo?.id) ||
-    null;
-  return {
-    idCostoFijo: String(Number(fijo?.id ?? 1) || 1),
-    idNoCostoFijo: String(Number(noFijo?.id ?? 2) || 2),
-    labelCostoFijo: "COSTO FIJO",
-    labelNoCostoFijo: "COSTO VARIABLE",
-  };
+function getIdClasificacion(src) {
+  const n = Number(src?.id_clasificacion ?? src?.clasificacion_id ?? src?.idClasificacion ?? 0);
+  return Number.isInteger(n) && n > 0 ? n : null;
 }
 function normalizeDateISO(...values) {
   for (const value of values) {
@@ -405,7 +374,7 @@ function makeItem(it = {}) {
     total: round2(it?.total ?? calc.total),
   };
 }
-function buildInitialState(data, clasificaciones = []) {
+function buildInitialState(data) {
   const src = data && typeof data === "object" ? data : {};
   const cheque = normalizeChequeData(src);
   const esMovimientoCheque = cheque.id_cheque > 0;
@@ -413,16 +382,16 @@ function buildInitialState(data, clasificaciones = []) {
   // Preservar todos los renglones originales. Nunca descartar ítems incompletos
   // al abrir el editor: podrían perderse al confirmar otra modificación.
   const items = rawItems.map((it) => makeItem(it));
-  const { idCostoFijo } = resolveCostoFijoConfig(clasificaciones);
-  const idClasifActual = String(Number(src?.id_clasificacion ?? src?.clasificacion_id ?? 0) || "");
-  const esCostoFijoInicial =
-    !!src?.es_costo_fijo || (!!idClasifActual && idClasifActual === String(idCostoFijo));
+  // `id_clasificacion` guardado es la única fuente de verdad del formulario.
+  // Un egreso histórico sin clasificación queda vacío (no se le asigna otra).
+  const idClasifActual = getIdClasificacion(src);
   return {
     id_movimiento: Number(src?.id_movimiento ?? src?.id ?? 0) || 0,
     fecha: String(src?.fecha ?? "").slice(0, 10),
     id_medio_pago: String(Number(src?.id_medio_pago ?? 0) || ""),
-    id_clasificacion: esCostoFijoInicial ? String(idCostoFijo) : "",
-    es_costo_fijo: esCostoFijoInicial,
+    id_clasificacion: idClasifActual ? String(idClasifActual) : "",
+    id_clasificacion_original: idClasifActual ? String(idClasifActual) : "",
+    clasificacion_original_nombre: String(src?.clasificacion_nombre ?? src?.categoria ?? "").trim(),
     es_movimiento_cheque: esMovimientoCheque,
     cheque,
     items: items.length
@@ -1148,8 +1117,9 @@ export default function ModalEditarEgreso({
   const [loadingComprobante, setLoadingComprobante] = useState(false);
   const [loadingViewer, setLoadingViewer] = useState(false);
 
-  const clasificaciones = useMemo(() => normalizeClasificaciones(lists), [lists]);
-  const clasificacionConfig = useMemo(() => resolveCostoFijoConfig(clasificaciones), [clasificaciones]);
+  // IDs reales del catálogo: COSTO FIJO, COSTO VARIABLE y OTROS EGRESOS.
+  const clasificacionConfig = useMemo(() => resolveClasificacionesEgreso(getClasificacionesRaw(lists)), [lists]);
+  const clasificacionesError = useMemo(() => mensajeClasificacionesFaltantes(clasificacionConfig), [clasificacionConfig]);
   const detalles = useMemo(() => normalizeDetalles(lists), [lists]);
   const mediosPago = useMemo(() => filtrarMediosPagoPorPlan(normalizeMediosPago(lists)), [lists]);
 
@@ -1158,7 +1128,7 @@ export default function ModalEditarEgreso({
     [detalles]
   );
 
-  const [form, setForm] = useState(() => buildInitialState(initialData, clasificaciones));
+  const [form, setForm] = useState(() => buildInitialState(initialData));
   const rowsContainerRef = useRef(null);
   const scrollToNewRow = useAutoScrollRows(rowsContainerRef, form.items?.length || 0);
   const [comprobanteActual, setComprobanteActual] = useState(null);
@@ -1192,7 +1162,7 @@ export default function ModalEditarEgreso({
   useEffect(() => {
     if (!open) return;
     setSaving(false);
-    setForm(buildInitialState(initialData, clasificaciones));
+    setForm(buildInitialState(initialData));
     setArchivoNuevo(null);
     setMarcarEliminarComprobante(false);
     setComprobanteActual(null);
@@ -1200,7 +1170,7 @@ export default function ModalEditarEgreso({
     setViewerData({ url: "", mime: "", title: NOMBRE_COMPROBANTE_GENERICO });
     setLoadingViewer(false);
     setTimeout(() => closeBtnRef.current?.focus(), 0);
-  }, [open, initialData, clasificaciones]);
+  }, [open, initialData]);
 
   const cargarInfoComprobante = useCallback(async () => {
     const idMovimiento = Number(initialData?.id_movimiento ?? initialData?.id ?? 0);
@@ -1619,13 +1589,31 @@ export default function ModalEditarEgreso({
           throw new Error(`La suma de los medios de pago (${moneyARS(totalMedios)}) debe cubrir el total del egreso (${moneyARS(totalItems)}).`);
         }
 
+        // La clasificación enviada es exactamente la elegida en el selector.
+        const idClasificacion = Number(form.id_clasificacion || 0);
+        const idClasificacionOriginal = Number(form.id_clasificacion_original || 0);
+        if (!(idClasificacion > 0)) {
+          if (idClasificacionOriginal > 0) {
+            throw new Error("Seleccioná la clasificación del egreso: COSTO FIJO, COSTO VARIABLE u OTROS EGRESOS.");
+          }
+        } else if (idClasificacion !== idClasificacionOriginal && !clasificacionConfig.esValida(idClasificacion)) {
+          throw new Error("La clasificación seleccionada no existe o está inactiva. Actualizá la pantalla y elegí otra.");
+        }
+
         const primerMedio = mediosPagoPayload[0] || null;
         payload = {
           id_movimiento: Number(form.id_movimiento || 0),
           fecha,
           id_medio_pago: primerMedio ? Number(primerMedio.id_medio_pago) : null,
-          id_clasificacion: form.es_costo_fijo ? Number(clasificacionConfig.idCostoFijo) : null,
-          es_costo_fijo: !!form.es_costo_fijo,
+          // Histórico sin clasificación que se deja vacío: no se envía la clave
+          // y el backend conserva el NULL original.
+          ...(idClasificacion > 0
+            ? {
+                id_clasificacion: idClasificacion,
+                clasificacion_nombre:
+                  clasificacionConfig.nombrePorId(idClasificacion) || form.clasificacion_original_nombre || "",
+              }
+            : {}),
           id_detalle: items[0]?.id_detalle ?? null,
           monto_total: totalItems,
           medios_pago: mediosPagoPayload,
@@ -1937,18 +1925,36 @@ export default function ModalEditarEgreso({
                               value={String(form.id_clasificacion || "")}
                               onChange={(e) => setForm((p) => ({ ...p, id_clasificacion: e.target.value }))}
                               disabled={saving}
+                              aria-label="Clasificación"
+                              data-testid="oe-clasificacion-select"
                             >
-                              <option value="">Seleccionar...</option>
-                              <option value={String(clasificacionConfig.idCostoFijo)}>
-                                {clasificacionConfig.labelCostoFijo}
+                              <option value="" disabled={!!form.id_clasificacion_original}>
+                                {form.id_clasificacion_original ? "Seleccionar..." : "Sin clasificación (histórico)"}
                               </option>
-                              <option value={String(clasificacionConfig.idNoCostoFijo)}>
-                                {clasificacionConfig.labelNoCostoFijo}
-                              </option>
+                              {clasificacionConfig.opciones.map((op) => (
+                                <option key={op.key} value={String(op.id)}>
+                                  {op.nombre}
+                                </option>
+                              ))}
+                              {/* Clasificación guardada que no es una de las tres (p. ej. inactiva
+                                  o histórica): se muestra para no perderla al editar otros datos. */}
+                              {form.id_clasificacion_original &&
+                                !clasificacionConfig.esValida(form.id_clasificacion_original) && (
+                                  <option value={String(form.id_clasificacion_original)}>
+                                    {(form.clasificacion_original_nombre ||
+                                      clasificacionConfig.nombrePorId(form.id_clasificacion_original) ||
+                                      `Clasificación #${form.id_clasificacion_original}`) + " (actual)"}
+                                  </option>
+                                )}
                             </select>
                             <label className="gm-label" style={{ pointerEvents: "none" }}>
                               Clasificación *
                             </label>
+                            {clasificacionesError && (
+                              <div className="gm-field-error" role="alert" data-testid="oe-clasificacion-error" style={{ color: "var(--color-danger, #c0392b)", fontSize: 12, marginTop: 4 }}>
+                                {clasificacionesError}
+                              </div>
+                            )}
                           </div>
                         )}
 

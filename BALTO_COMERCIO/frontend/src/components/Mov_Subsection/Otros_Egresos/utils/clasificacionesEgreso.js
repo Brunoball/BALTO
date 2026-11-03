@@ -111,9 +111,10 @@ export function resolveClasificacionesEgreso(raw) {
 
 export function mensajeClasificacionesFaltantes(config) {
   if (!config) return "";
-  if (config.catalogoVacio) {
-    return "No se pudo cargar el catálogo de clasificaciones. Actualizá la pantalla; si persiste, contactá al administrador.";
-  }
+  // Catálogo vacío = las listas globales todavía se están cargando al abrir el
+  // modal. No se muestra un error falso; el guardado igual exige elegir una
+  // clasificación válida.
+  if (config.catalogoVacio) return "";
   if (!config.faltantes.length) return "";
   const lista = config.faltantes.join(", ");
   return config.faltantes.length === 1
