@@ -9,6 +9,11 @@ function normalizeRolLabel(value) {
 }
 
 function planLabelFromBackend(u) {
+  // Denominación comercial propia de BALTO Servicios (resuelta por el backend
+  // sin renombrar los planes compartidos de MASTER).
+  const planComercial = String(u?.plan_comercial ?? "").trim();
+  if (planComercial) return planComercial.toLowerCase().startsWith("plan") ? planComercial : `Plan ${planComercial}`;
+
   const planNombre = String(u?.plan_nombre ?? "").trim();
   if (planNombre) {
     const clean = planNombre

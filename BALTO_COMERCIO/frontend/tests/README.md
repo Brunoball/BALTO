@@ -6,6 +6,36 @@ los casos de los antiguos `52`, `53`, `55` y `56` fueron **trasladados íntegros
 archivo, sin crear tests adicionales. Los números no se renumeraron para evitar
 romper referencias conocidas.
 
+## Nuevo testing del Dashboard — Caja actual / todos los medios
+
+`58-dashboard-caja-medios.spec.js` incorpora:
+
+- API de sólo lectura: el total de Caja actual coincide con la suma de **todos**
+  los medios individuales; el subtotal monetario coincide medio por medio con
+  Tesorería de Análisis Financiero.
+- Cartera real: CHEQUE y ECHEQ corresponden sólo al saldo nominal y la cantidad
+  de documentos en estado `EN_CARTERA`, comprobados contra los listados paginados;
+  no se suman cheques depositados, entregados ni históricos.
+- UI con interceptación de API, sin escribir: muestra efectivo, Mercado Pago,
+  Banco, Personal Pay, un **banco nuevo inactivo**, Cheque y eCheq, con móvil.
+- `15-cheques-lifecycle.spec.js` agrega a los casos de depósito y reversión la
+  conciliación de Dashboard: cambia la distribución cartera/banco, **no** el total.
+
+Desde `BALTO_COMERCIO/frontend`, con frontend y backend **actualizados**:
+
+```powershell
+npx playwright test tests/00-preflight.spec.js tests/58-dashboard-caja-medios.spec.js tests/40-dashboard-stock-valorizado-fraccional.spec.js tests/50-analisis-financiero-saldos.spec.js tests/51-saldos-historicos-conciliacion.spec.js --project=chromium --workers=1 --reporter=list --max-failures=1
+```
+
+Los tres casos de `58` no modifican la base. `15` sí hace mutaciones
+controladas: ejecutarlo sólo en tenant E2E con `PW_ALLOW_MUTATIONS=1`.
+
+**Criterio funcional:** Caja actual = dinero disponible (todos los medios,
+activos e inactivos) + valor nominal de cheques/eCheqs `EN_CARTERA`.
+La disponibilidad de Análisis Financiero y Flujo de Caja **no cambia** y
+sigue excluyendo documentos; las series de cobros/pagos del Dashboard siguen
+siendo de dinero monetario real. No se requiere migración.
+
 ## Reemplazo
 
 Reemplazá la carpeta `BALTO_COMERCIO/frontend/tests` por el directorio `tests/`

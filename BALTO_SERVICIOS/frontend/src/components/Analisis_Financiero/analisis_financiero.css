@@ -585,3 +585,23 @@ body.dark .mov-page--analisisFinanciero {
   .af-loading__bar { animation: none; }
   .mov-page--analisisFinanciero *, .mov-page--analisisFinanciero *::before, .mov-page--analisisFinanciero *::after { transition: none !important; }
 }
+
+/* ===== Rentabilidad por trabajo / por tipo (planes con insumos y con venta) ===== */
+.af-rent-note { display: flex; gap: 6px; align-items: flex-start; margin: 0 0 12px; }
+.af-rent-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; margin-bottom: 12px; }
+.af-rent-grid--three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.af-rent-block h3 { display: flex; align-items: center; gap: 8px; }
+.af-rent-lines { display: grid; gap: 8px; }
+.af-rent-lines > div { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; color: var(--af-muted); }
+.af-rent-lines strong { color: var(--af-ink); font-variant-numeric: tabular-nums; }
+.af-rent-lines .is-positive strong { color: var(--af-green); }
+.af-rent-lines .is-negative strong { color: var(--af-red); }
+.af-rent-tableWrap { overflow-x: auto; }
+.af-rent-table { width: 100%; border-collapse: collapse; font-size: 12.5px; color: var(--af-ink); }
+.af-rent-table th { text-align: left; font-weight: 650; color: var(--af-muted); padding: 8px; border-bottom: 1px solid var(--af-line); white-space: nowrap; }
+.af-rent-table td { padding: 8px; border-bottom: 1px solid var(--af-line); vertical-align: top; font-variant-numeric: tabular-nums; }
+.af-rent-table td small { display: block; color: var(--af-muted); font-size: 11px; max-width: 360px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.af-rent-table .is-right { text-align: right; white-space: nowrap; }
+@media (max-width: 860px) {
+  .af-rent-grid--three { grid-template-columns: minmax(0, 1fr); }
+}

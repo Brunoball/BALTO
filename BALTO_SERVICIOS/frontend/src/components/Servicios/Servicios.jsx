@@ -23,6 +23,7 @@ import ModalAgregarCategoria from "./modales/ModalAgregarCategoria";
 import ModalHistorial from "./modales/ModalHistorial";
 import { money, stock, upper } from "./utils/serviciosFormUtils";
 import { exportServiciosExcel, exportServiciosPdf } from "./utils/serviciosExport";
+import { usePlan } from "../../session/planCapabilities";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBan, faBoxOpen, faClockRotateLeft, faMagnifyingGlass, faPenToSquare, faPlus, faRotateLeft, faSliders, faTimes, faTrashCan } from "@fortawesome/free-solid-svg-icons";
 
@@ -60,7 +61,19 @@ const textMatch = (value, q) => upper(value).includes(q);
 export default function Servicios() {
   const location = useLocation();
   const inventoryMode = useMemo(() => new URLSearchParams(location.search).get("seccion") === "inventario", [location.search]);
-  const tabs = inventoryMode ? ["materiales", "insumos", "stock"] : ["servicios", "trabajadores"];
+  // Capacidades del plan (backend). La ruta de Inventario ya está protegida por
+  // App/Principal; acá se adaptan pestañas, columnas y acciones.
+  const plan = usePlan();
+  const conStock = plan.can("resources.stock");
+  const conTrabajadores = plan.can("workers.manage");
+  const conComposicion = plan.can("services.composition");
+  const conCosteo = plan.can("services.costing");
+  const conProductos = plan.can("products.manage");
+  const tabs = useMemo(() => (inventoryMode
+    ? ["materiales", "insumos", ...(conStock ? ["stock"] : [])]
+    : ["servicios", ...(conTrabajadores ? ["trabajadores"] : [])]), [inventoryMode, conStock, conTrabajadores]);
+  // En Stock, "Agregar producto" sólo con productos comerciales (plan con venta).
+  const addLabel = (key) => (key === "stock" && !conProductos ? null : META[key]?.add);
   const [tab, setTab] = useState(inventoryMode ? "materiales" : "servicios");
   const [data, setData] = useState({
     unidades: [],
@@ -106,6 +119,8 @@ export default function Servicios() {
 
   useEffect(() => { cargar(); }, [cargar]);
   useEffect(() => { setCurrentPage(1); setTab(inventoryMode ? "materiales" : "servicios"); }, [inventoryMode]);
+  // Si el plan cambia durante la sesión y la pestaña actual deja de estar incluida.
+  useEffect(() => { if (!tabs.includes(tab)) { setCurrentPage(1); setTab(tabs[0]); } }, [tabs, tab]);
 
   const execute = async (fn, message) => {
     setSaving(true);
@@ -205,7 +220,7 @@ export default function Servicios() {
     }
   };
 
-  const openNew = () => META[tab].add && setEditModal({ kind: tab === "stock" ? "productos_stock" : tab, item: null });
+  const openNew = () => addLabel(tab) && setEditModal({ kind: tab === "stock" ? "productos_stock" : tab, item: null });
 
   const save = async (payload) => {
     const kind = editModal.kind;
@@ -349,7 +364,11 @@ export default function Servicios() {
 
   const columns = useMemo(() => {
     if (tab === "servicios") return [
-      { k: "nombre", l: "Servicio" }, { k: "categoria", l: "Categoría", center: true }, { k: "unidad", l: "Unidad", center: true }, { k: "composicion", l: "Composición" }, { k: "costo", l: "Costo", right: true }, { k: "precio", l: "Precio", right: true }, { k: "acciones", l: "Acciones", center: true },
+      { k: "nombre", l: "Servicio" }, { k: "categoria", l: "Categoría", center: true }, { k: "unidad", l: "Unidad", center: true },
+      // Plan básico: sin composición ni costo automático; se muestra la duración.
+      ...(conComposicion ? [{ k: "composicion", l: "Composición" }] : [{ k: "duracion", l: "Duración", center: true }]),
+      ...(conCosteo ? [{ k: "costo", l: "Costo", right: true }] : []),
+      { k: "precio", l: "Precio", right: true }, { k: "acciones", l: "Acciones", center: true },
     ];
     if (tab === "trabajadores") return [
       { k: "nombre", l: "Trabajador" }, { k: "rol", l: "Rol", center: true }, { k: "modalidad", l: "Modalidad", center: true }, { k: "tarifa", l: "Tarifa", center: true }, { k: "hora", l: "Costo/h", right: true }, { k: "servicios", l: "Servicios", center: true }, { k: "acciones", l: "Acciones", center: true },
@@ -360,7 +379,7 @@ export default function Servicios() {
     return [
       { k: "nombre", l: tab === "materiales" ? "Material" : "Insumo" }, { k: "categoria", l: "Categoría", center: true }, { k: "unidad", l: "Unidad", center: true }, { k: "stock", l: "Stock", center: true }, { k: "costo", l: "Costo", right: true }, { k: "precio", l: "Precio", right: true }, { k: "acciones", l: "Acciones", center: true },
     ];
-  }, [tab]);
+  }, [tab, conComposicion, conCosteo]);
 
   const gridCols = columns.map((column, index) => {
     if (index === 0) return "minmax(190px,1.35fr)";
@@ -387,6 +406,7 @@ export default function Servicios() {
     categoria: row.categoria_nombre || "SIN CATEGORÍA",
     unidad: row.unidad_simbolo || row.unidad_nombre || "—",
     composicion: `${Number(row.cantidad_articulos || 0)} elem. · ${Number(row.cantidad_trabajadores || 0)} trab.`,
+    duracion: row.duracion_estimada_minutos ? `${Number(row.duracion_estimada_minutos).toLocaleString("es-AR")} min` : "—",
     costo: money(tab === "servicios" ? row.costo_estimado : row.costo_unitario),
     precio: row.precio_venta == null ? "—" : money(row.precio_venta),
     rol: row.rol || "SIN ROL",
@@ -445,7 +465,7 @@ export default function Servicios() {
     const deleteBlocked = Boolean(deleteReason);
     return (
       <div className="mov-actionsInline servicios-actionsInline">
-        {INVENTORY_TABS.has(tab) && controlsStock && <button type="button" className="mov-iconBtn" title="Ajustar stock" onClick={() => setEditModal({ kind: "stock", item: row })} disabled={Number(row.activo) !== 1}><FontAwesomeIcon icon={faSliders} /></button>}
+        {INVENTORY_TABS.has(tab) && conStock && controlsStock && <button type="button" className="mov-iconBtn" title="Ajustar stock" onClick={() => setEditModal({ kind: "stock", item: row })} disabled={Number(row.activo) !== 1}><FontAwesomeIcon icon={faSliders} /></button>}
         <button type="button" className="mov-iconBtn" title={tab === "stock" && controlsStock ? "Ver historial de stock" : "Ver historial"} onClick={() => openHistory(row)}><FontAwesomeIcon icon={faClockRotateLeft} /></button>
         {canManage && <button type="button" className="mov-iconBtn" title="Editar" onClick={() => openEdit(row)}><FontAwesomeIcon icon={faPenToSquare} /></button>}
         {canManage && <button type="button" className="mov-iconBtn" title={Number(row.activo) === 1 ? "Dar de baja" : "Reactivar"} onClick={() => toggle(row, managementKind)}><FontAwesomeIcon icon={Number(row.activo) === 1 ? faBan : faRotateLeft} /></button>}
@@ -468,11 +488,11 @@ export default function Servicios() {
 
   const exportDefinition = useMemo(() => {
     const base = [{ label: "NOMBRE", value: (row) => row.nombre, width: 34 }];
-    if (tab === "servicios") return { title: "BALTO_SERVICIOS", rows, columns: [...base, { label: "CATEGORÍA", value: (r) => r.categoria_nombre || "", width: 22 }, { label: "UNIDAD", value: (r) => r.unidad_simbolo || "", width: 14 }, { label: "DURACIÓN (MIN)", value: (r) => r.duracion_estimada_minutos ?? "", width: 16 }, { label: "OTROS COSTOS", value: (r) => r.costo_base || 0, width: 16 }, { label: "COSTO TOTAL", value: (r) => r.costo_estimado || 0, width: 16 }, { label: "PRECIO", value: (r) => r.precio_venta || 0, width: 16 }, { label: "ESTADO", value: (r) => Number(r.activo) === 1 ? "ACTIVO" : "BAJA", width: 12 }] };
+    if (tab === "servicios") return { title: "BALTO_SERVICIOS", rows, columns: [...base, { label: "CATEGORÍA", value: (r) => r.categoria_nombre || "", width: 22 }, { label: "UNIDAD", value: (r) => r.unidad_simbolo || "", width: 14 }, { label: "DURACIÓN (MIN)", value: (r) => r.duracion_estimada_minutos ?? "", width: 16 }, ...(conCosteo ? [{ label: "OTROS COSTOS", value: (r) => r.costo_base || 0, width: 16 }, { label: "COSTO TOTAL", value: (r) => r.costo_estimado || 0, width: 16 }] : []), { label: "PRECIO", value: (r) => r.precio_venta || 0, width: 16 }, { label: "ESTADO", value: (r) => Number(r.activo) === 1 ? "ACTIVO" : "BAJA", width: 12 }] };
     if (tab === "trabajadores") return { title: "BALTO_TRABAJADORES", rows, columns: [...base, { label: "DOCUMENTO", value: (r) => r.documento || "", width: 18 }, { label: "ROL", value: (r) => r.rol || "", width: 24 }, { label: "TIPO", value: (r) => r.tipo_trabajador || "", width: 16 }, { label: "MODALIDAD", value: (r) => r.modalidad_pago || "", width: 16 }, { label: "TARIFA", value: (r) => r.monto_periodo || 0, width: 16 }, { label: "HORAS EQUIV.", value: (r) => r.horas_periodo || 0, width: 16 }, { label: "COSTO/H", value: (r) => r.costo_hora || 0, width: 16 }, { label: "ESTADO", value: (r) => Number(r.activo) === 1 ? "ACTIVO" : "BAJA", width: 12 }] };
     if (tab === "stock") return { title: "BALTO_STOCK_SERVICIOS", rows, columns: [...base, { label: "TIPO", value: (r) => r.tipo || "", width: 14 }, { label: "CATEGORÍA", value: (r) => r.categoria_nombre || "", width: 22 }, { label: "UNIDAD", value: (r) => r.unidad_simbolo || "", width: 14 }, { label: "STOCK", value: (r) => Number(r.controla_stock ?? 1) === 1 ? Number(Number(r.stock_actual || 0).toFixed(2)) : "NO CONTROLADO", width: 18 }, { label: "COSTO", value: (r) => r.costo_unitario || 0, width: 16 }, { label: "ESTADO", value: (r) => Number(r.activo) === 1 ? "ACTIVO" : "BAJA", width: 12 }] };
     return { title: tab === "materiales" ? "BALTO_MATERIALES" : "BALTO_INSUMOS", rows, columns: [...base, { label: "CATEGORÍA", value: (r) => r.categoria_nombre || "", width: 22 }, { label: "UNIDAD", value: (r) => r.unidad_simbolo || "", width: 14 }, { label: "STOCK", value: (r) => Number(r.controla_stock ?? 1) === 1 ? Number(Number(r.stock_actual || 0).toFixed(2)) : "NO CONTROLADO", width: 18 }, { label: "COSTO", value: (r) => r.costo_unitario || 0, width: 16 }, { label: "PRECIO", value: (r) => r.precio_venta ?? "", width: 16 }, { label: "ESTADO", value: (r) => Number(r.activo) === 1 ? "ACTIVO" : "BAJA", width: 12 }] };
-  }, [tab, rows]);
+  }, [tab, rows, conCosteo]);
   const exportOptions = [
     { key: "excel", label: "Excel (.xlsx)", tipo: "excel", onClick: ({ rows: sourceRows } = {}) => exportServiciosExcel({ ...exportDefinition, rows: Array.isArray(sourceRows) ? sourceRows : rows }) },
     { key: "pdf", label: "PDF (.pdf)", tipo: "pdf", onClick: ({ rows: sourceRows } = {}) => exportServiciosPdf({ ...exportDefinition, rows: Array.isArray(sourceRows) ? sourceRows : rows }) },
@@ -514,7 +534,7 @@ export default function Servicios() {
               {categoryTabs.has(tab) && <div className="cc-filter servicios-filterCompact"><div className="cc-floatingField is-active"><select className="servicios-globalSelect" value={currentFilter.categoria} onChange={(e) => updateFilter("categoria", e.target.value)}><option value="">TODAS LAS CATEGORÍAS</option>{categories.map((c) => <option key={c.id_categoria} value={c.id_categoria}>{c.nombre}{Number(c.activo) === 1 ? "" : " (BAJA)"}</option>)}</select><span className="cc-floatingLabel cc-floatingLabel--active">Categoría</span></div></div>}
               <div className="servicios-statusAddRow">
                 <div className="mov-tabs servicios-statusTabs">{STATUS_TABS.map((status) => <button key={status.value} type="button" className={`mov-tab servicios-statusTab ${currentFilter.estado === status.value ? "is-active" : ""}`} onClick={() => updateFilter("estado", status.value)}>{status.label}</button>)}</div>
-                {META[tab].add && <button type="button" className="mov-btn mov-btn--primary servicios-mobileAddBtn" onClick={openNew}><FontAwesomeIcon icon={faPlus} /> {META[tab].add}</button>}
+                {addLabel(tab) && <button type="button" className="mov-btn mov-btn--primary servicios-mobileAddBtn" onClick={openNew}><FontAwesomeIcon icon={faPlus} /> {addLabel(tab)}</button>}
               </div>
             </div>
           </div>
@@ -526,7 +546,7 @@ export default function Servicios() {
             ) : (
               <BotonExportar label="Exportar" opciones={exportOptions} disabled={loading || rows.length === 0} entityLabel={META[tab].title.toLocaleLowerCase("es-AR")} currentRows={visibleRows} allRows={rows} currentCount={visibleRows.length} allCount={rows.length} hasMore={rows.length > visibleRows.length} />
             )}
-            {META[tab].add && <button type="button" className="mov-btn mov-btn--primary servicios-addBtn" onClick={openNew}><FontAwesomeIcon icon={faPlus} /> {META[tab].add}</button>}
+            {addLabel(tab) && <button type="button" className="mov-btn mov-btn--primary servicios-addBtn" onClick={openNew}><FontAwesomeIcon icon={faPlus} /> {addLabel(tab)}</button>}
           </div>
         </div>
 

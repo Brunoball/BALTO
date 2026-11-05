@@ -1,12 +1,20 @@
 /* Panel contable compacto: gráfico con días útiles, importes legibles y cajas reconciliadas.
    No forzar height:auto en escritorio: el Dashboard debe acompañar el alto del panel. */
 .db-main-grid { min-width: 0; }
-.db-caja-breakdown { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 10px; }
+.db-caja-section { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
+.db-caja-section__header { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 3px 12px; font-size: 12px; }
+.db-caja-section__header strong { color: var(--db-text); font-weight: 750; }
+.db-caja-section__header span, .db-caja-section__note { color: var(--db-text-muted); font-size: 11px; }
+.db-caja-section__note { margin: 0; line-height: 1.35; }
+.db-caja-breakdown { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%, 185px),1fr)); gap: 9px; }
 .db-caja-breakdown > div { display: flex; justify-content: space-between; align-items: center; gap: 8px;
   background: var(--db-surface); border: 1px solid rgba(10,37,64,.1); border-radius: 10px;
   padding: 9px 13px; min-width: 0; font-size: 12px; }
 .db-caja-breakdown span { color: var(--db-text-muted); font-weight: 650; }
 .db-caja-breakdown strong { font-weight: 760; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.db-caja-breakdown > div[data-medio-tipo="documento"] { border-style: dashed; }
+.db-caja-breakdown small { display: block; font-size: 10px; font-weight: 400; margin-top: 2px; }
+
 .db-cash-movements { display: flex; flex-direction: column; gap: 10px; }
 .db-chart-summary { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 7px; }
 .db-chart-summary > div { border: 1px solid rgba(10,37,64,.08); border-radius: 10px;
@@ -80,8 +88,8 @@ html[data-theme="oscuro"] .db-chart-summary > div { border-color: rgba(255,255,2
   }
 
   .pp-content.pp-content--dashboard .db-main-grid {
-    flex: 1 0 355px;
-    min-height: 355px;
+    flex: 1 0 310px;
+    min-height: 310px;
     grid-template-rows: minmax(0, 1fr);
     align-items: stretch;
   }

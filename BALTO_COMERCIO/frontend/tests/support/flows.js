@@ -793,8 +793,11 @@ export async function createCatalogDescription(dialog, description) {
       }
     }
 
-    await expect(add).toBeVisible({ timeout: 12_000 });
     try {
+      // Dentro del try: si el popup de Notificaciones de Stock aparece mientras
+      // esperamos la lista, su cierre automático le quita el foco al input y
+      // la lista nunca llega a verse. Ese caso también debe reintentarse.
+      await expect(add).toBeVisible({ timeout: 12_000 });
       await add.click({ timeout: attempt === 0 ? 8_000 : 15_000 });
       break;
     } catch (error) {
@@ -802,7 +805,7 @@ export async function createCatalogDescription(dialog, description) {
       if (await miniDialog.isVisible().catch(() => false)) break;
 
       const cause = String(error?.message || error);
-      const raced = /detached from the DOM|not attached to the DOM|intercepts pointer events|Timeout .*exceeded/i.test(cause);
+      const raced = /detached from the DOM|not attached to the DOM|intercepts pointer events|Timeout .*exceeded|toBeVisible\(\) failed|element\(s\) not found/i.test(cause);
       if (attempt === 2 || !raced) throw error;
     }
   }

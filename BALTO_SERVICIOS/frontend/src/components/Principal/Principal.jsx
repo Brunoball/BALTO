@@ -38,6 +38,7 @@ import {
 import usePrincipalIdleLogout from "./hooks/usePrincipalIdleLogout";
 import usePrincipalSessionGuard from "./hooks/usePrincipalSessionGuard";
 import { clearClientSession, getSessionKey, redirectToCentralAccess } from "../../session/sessionClient";
+import { canAccessRoute, usePlan } from "../../session/planCapabilities";
 import { prefetchRoute } from "./utils/principalPrefetch";
 import {
   applyTheme,
@@ -463,15 +464,41 @@ const Principal = () => {
 
   const puedeVerConfiguracion = rolUsuario === "admin";
 
+  // Capacidades del plan contratado (calculadas por el backend). Se actualizan
+  // solas si el plan cambia en MASTER, en esta u otra pestaña.
+  const plan = usePlan();
+
+  // Refleja en el perfil el plan refrescado (sin recargar ni cerrar sesión).
+  useEffect(() => {
+    if (!plan.ready) return;
+    try {
+      const u = JSON.parse(localStorage.getItem("usuario") || "null");
+      if (!u) return;
+      setUsuario((prev) => (prev ? {
+        ...prev,
+        idPlan: normalizePlanId(u.idPlan ?? prev.idPlan, u.plan_nombre ?? ""),
+        plan_nombre: u.plan_nombre ?? prev.plan_nombre,
+        plan_nivel: normalizePlanNivel(u.plan_nivel ?? prev.plan_nivel),
+        plan_comercial: u.plan_comercial ?? prev.plan_comercial,
+        plan_codigo: u.plan_codigo ?? prev.plan_codigo,
+        plan_firma: u.plan_firma ?? prev.plan_firma,
+        capacidades: u.capacidades ?? prev.capacidades,
+      } : prev));
+    } catch {}
+  }, [plan.ready, plan.firma]);
+
   useEffect(() => {
     if (!usuario) return;
 
     const moduloActual = getModuleKeyByPath(location.pathname);
 
-    if (!planAllowsNavKey(planIdUsuario, moduloActual)) {
+    if (
+      !planAllowsNavKey(planIdUsuario, moduloActual) ||
+      !canAccessRoute(location.pathname, location.search, plan)
+    ) {
       navigate("/panel/dashboard", { replace: true });
     }
-  }, [usuario, planIdUsuario, location.pathname, navigate]);
+  }, [usuario, planIdUsuario, plan, location.pathname, location.search, navigate]);
 
   useEffect(() => {
     if (!usuario) return;
@@ -532,6 +559,7 @@ const Principal = () => {
           {
             label: "Inventario e insumos",
             ruta: "/panel/servicios?seccion=inventario",
+            capacidad: "resources.manage",
           },
         ],
       },
@@ -562,7 +590,10 @@ const Principal = () => {
       label: x.label,
       icon: pickIcon(x.label),
       ruta: x.ruta || `/panel/${slugify(x.label)}`,
-      children: x.children || null,
+      // Accesos que dependen del plan: no se ofrecen si no están contratados.
+      children: x.children
+        ? x.children.filter((sub) => !sub.capacidad || plan.can(sub.capacidad))
+        : null,
     }));
 
     const basePorPlan = base.filter((item) =>
@@ -597,7 +628,7 @@ const Principal = () => {
     }
 
     return basePorPlan;
-  }, [rolUsuario, planIdUsuario]);
+  }, [rolUsuario, planIdUsuario, plan]);
 
   const activeKey = useMemo(() => {
     if (

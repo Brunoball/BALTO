@@ -21,6 +21,7 @@ import {
   faBasketShopping,
 } from "@fortawesome/free-solid-svg-icons";
 import ModalVerComprobante from "../../../Global/Ver_Comprobantes/ModalVerComprobante.jsx";
+import { usePlan } from "../../../../session/planCapabilities";
 import ProductStockAutocomplete from "../../_shared/ProductStockAutocomplete.jsx";
 
 const NULL_OPTION = "";
@@ -1331,6 +1332,11 @@ export default function ModalEditarCompra({
   onCatalogCreated,
   dark: darkProp,
 }) {
+  // Plan: renglones de catálogo (materiales/insumos con stock) desde el plan con
+  // insumos. Renglones históricos se muestran tal cual; los nuevos son manuales
+  // en el plan profesional. El backend valida igualmente cada renglón.
+  const plan = usePlan();
+  const conRecursos = plan.can("resources.manage");
   const ENDPOINT_BASE = `${BASE_URL}/api.php`;
   const ENDPOINT_UPLOAD_LINK = `${BASE_URL}/api.php?action=compras_comprobantes_vincular_movimientos_lote_upload`;
   const ENDPOINT_DELETE_COMP = `${BASE_URL}/api.php?action=compras_eliminar_comprobante`;
@@ -1833,7 +1839,7 @@ export default function ModalEditarCompra({
 
   const changeTipoExtraItem = useCallback((clientId, type) => {
     updateExtraItem(clientId, {
-      tipo_item: type === "MANUAL" ? "MANUAL" : "ARTICULO",
+      tipo_item: type === "MANUAL" || !conRecursos ? "MANUAL" : "ARTICULO",
       id_articulo: NULL_OPTION,
       id_detalle: NULL_OPTION,
       descripcion: "",
@@ -1841,7 +1847,7 @@ export default function ModalEditarCompra({
       precio: 0,
       iva_pct: 0,
     });
-  }, [updateExtraItem]);
+  }, [updateExtraItem, conRecursos]);
 
   const addExtraItem = useCallback(() => {
     scrollToNewRow();
@@ -1850,7 +1856,7 @@ export default function ModalEditarCompra({
       {
         client_id: `nuevo-${uid()}`,
         id_item: null,
-        tipo_item: "ARTICULO",
+        tipo_item: conRecursos ? "ARTICULO" : "MANUAL",
         id_articulo: NULL_OPTION,
         id_detalle: NULL_OPTION,
         descripcion: "",
@@ -1859,7 +1865,7 @@ export default function ModalEditarCompra({
         iva_pct: 0,
       },
     ]);
-  }, [scrollToNewRow]);
+  }, [scrollToNewRow, conRecursos]);
 
   const removeExtraItem = useCallback((clientId) => {
     const target = extraItems.find((item) => item.client_id === clientId);
@@ -1966,10 +1972,10 @@ export default function ModalEditarCompra({
 
 
   const changeTipoFirstItem = useCallback((type) => {
-    setForm((prev) => ({ ...prev, tipo_item: type === "MANUAL" ? "MANUAL" : "ARTICULO", id_detalle: NULL_OPTION, id_stock_variante: NULL_OPTION }));
+    setForm((prev) => ({ ...prev, tipo_item: type === "MANUAL" || !conRecursos ? "MANUAL" : "ARTICULO", id_detalle: NULL_OPTION, id_stock_variante: NULL_OPTION }));
     setDetalleInput("");
     setDetalleFocus(false);
-  }, []);
+  }, [conRecursos]);
 
   const payload = useMemo(() => {
     const toNullableId = (v) => {
@@ -2452,7 +2458,9 @@ export default function ModalEditarCompra({
                         disabled={saving || addUI.open || openVerComp}
                         style={{ marginBottom: 6 }}
                       >
-                        <option value="ARTICULO">Material / insumo del catálogo</option>
+                        {(conRecursos || form.tipo_item !== "MANUAL") && (
+                          <option value="ARTICULO" disabled={!conRecursos}>Material / insumo del catálogo</option>
+                        )}
                         <option value="MANUAL">Detalle manual</option>
                       </select>
                       <div className="cmp-autocomplete" style={{ width: "100%" }}>
@@ -2558,7 +2566,9 @@ export default function ModalEditarCompra({
                             disabled={saving || addUI.open || openVerComp}
                             style={{ marginBottom: 6 }}
                           >
-                            <option value="ARTICULO">Material / insumo del catálogo</option>
+                            {(conRecursos || item.tipo_item !== "MANUAL") && (
+                              <option value="ARTICULO" disabled={!conRecursos}>Material / insumo del catálogo</option>
+                            )}
                             <option value="MANUAL">Detalle manual</option>
                           </select>
                           {item.tipo_item === "MANUAL" ? (

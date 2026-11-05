@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { clampText, decimalNumber, decimalText, integerText, money, moneyApiValue, moneyDecimalText, moneyInputValue } from "../utils/serviciosFormUtils";
 import useServiciosGlobalModal from "./useServiciosGlobalModal";
 import useAutoScrollRows from "../../Mov_Subsection/_shared/useAutoScrollRows.js";
+import { usePlan } from "../../../session/planCapabilities";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBriefcase, faChevronDown, faCircleInfo, faDollarSign, faLayerGroup } from "@fortawesome/free-solid-svg-icons";
 
@@ -517,6 +518,14 @@ export default function ModalServicio({
   onOpenAgregarCategoria,
   onOpenAgregarUnidad,
 }) {
+  // Un solo modal configurable por capacidades del plan:
+  // - Servicios Profesionales: ficha simple (sin composición ni costos automáticos).
+  // - Con Insumos / Con Venta: composición, trabajadores, costo y ganancia.
+  // Se re-evalúa en vivo: si el plan cambia con el modal abierto, deja de enviar
+  // lo que el nuevo plan no permite (y el backend lo rechazaría igual).
+  const plan = usePlan();
+  const conComposicion = plan.can("services.composition");
+  const conCosteo = plan.can("services.costing");
   const [form, setForm] = useState(EMPTY);
   const [articleRows, setArticleRows] = useState([]);
   const [workerRows, setWorkerRows] = useState([]);
@@ -563,6 +572,10 @@ export default function ModalServicio({
   }, [open, item, unidades]);
 
   const { overlayRef, cerrarDesdeFondo } = useServiciosGlobalModal({ open, busy: saving, onClose });
+
+  useEffect(() => {
+    if (!conComposicion && activeTab !== "main") setActiveTab("main");
+  }, [conComposicion, activeTab]);
 
   const cost = useMemo(() => {
     const articulosCosto = articleRows.reduce((sum, row) => {
@@ -654,21 +667,29 @@ export default function ModalServicio({
 
     if (!form.nombre.trim()) return onToast?.("error", "Completá el nombre del servicio.", 4200);
     if (!form.id_unidad_cobro) return onToast?.("error", "Seleccioná una unidad de cobro.", 4200);
-    if (decimalNumber(form.costo_base) < 0) return onToast?.("error", "Otros costos no puede ser negativo.", 4200);
-    if (pricingSource === "margin" && decimalNumber(marginInput) >= 100) return onToast?.("error", "El margen deseado debe ser menor a 100%.", 4200);
+    if (conCosteo && decimalNumber(form.costo_base) < 0) return onToast?.("error", "Otros costos no puede ser negativo.", 4200);
+    if (conCosteo && pricingSource === "margin" && decimalNumber(marginInput) >= 100) return onToast?.("error", "El margen deseado debe ser menor a 100%.", 4200);
     if (decimalNumber(form.precio_venta) < 0) return onToast?.("error", "Indicá un precio de venta válido.", 4200);
-    if (articleRows.some((r) => decimalNumber(r.cantidad) <= 0) || workerRows.some((r) => decimalNumber(r.horas_estimadas) <= 0)) {
+    if (conComposicion && (articleRows.some((r) => decimalNumber(r.cantidad) <= 0) || workerRows.some((r) => decimalNumber(r.horas_estimadas) <= 0))) {
       return onToast?.("error", "Todas las cantidades y horas deben ser mayores a cero.", 4200);
     }
 
-    await onSave({
-      ...form,
-      costo_base: moneyApiValue(form.costo_base),
+    const { costo_base: costoBaseForm, ...formBase } = form;
+    const payload = {
+      ...formBase,
       precio_venta: moneyApiValue(form.precio_venta),
       id_servicio: item?.id_servicio,
       id_categoria: form.id_categoria || null,
       duracion_estimada_minutos: form.duracion_estimada_minutos || null,
-      composicion: {
+    };
+
+    // Sin costeo: "otros costos" no se envía; el backend conserva el valor histórico.
+    if (conCosteo) payload.costo_base = moneyApiValue(costoBaseForm);
+
+    // Sin composición: NO se envía la clave (el backend conserva la existente
+    // intacta, nunca la borra por guardar la ficha simple).
+    if (conComposicion) {
+      payload.composicion = {
         articulos: articleRows.map((row) => ({
           ...row,
           cantidad: decimalNumber(row.cantidad),
@@ -678,8 +699,10 @@ export default function ModalServicio({
           ...row,
           horas_estimadas: decimalNumber(row.horas_estimadas),
         })),
-      },
-    });
+      };
+    }
+
+    await onSave(payload);
   };
 
   const categoria = (event) => {
@@ -699,12 +722,17 @@ export default function ModalServicio({
           <div className="gm-modal-head-icon"><FontAwesomeIcon icon={faBriefcase} /></div>
           <div className="gm-modal-head-left">
             <h2 className="gm-modal-title">{item ? "Editar servicio" : "Agregar servicio"}</h2>
-            <p className="gm-modal-subtitle">Definí la información, los costos y los recursos desde una sola ficha.</p>
+            <p className="gm-modal-subtitle">
+              {conComposicion
+                ? "Definí la información, los costos y los recursos desde una sola ficha."
+                : "Definí la prestación: nombre, unidad de cobro, duración, precio e IVA."}
+            </p>
           </div>
           <button type="button" className="gm-modal-close" onClick={onClose} disabled={saving} aria-label="Cerrar">✕</button>
         </header>
 
         <div className="gm-modal-content servicios-modal__content servicios-service-content">
+          {conComposicion && (
           <div className="servicios-service-tabs" role="tablist" aria-label="Secciones del servicio">
             <button
               type="button"
@@ -725,6 +753,7 @@ export default function ModalServicio({
               <span>Composición del servicio</span>
             </button>
           </div>
+          )}
 
           {activeTab === "main" && (
           <div className="servicios-service-overview">
@@ -785,18 +814,25 @@ export default function ModalServicio({
             <section className="gm-section servicios-form-section servicios-service-panel servicios-service-panel--pricing">
               <div className="gm-section-head servicios-service-sectionHead">
                 <span className="servicios-service-sectionIcon"><FontAwesomeIcon icon={faDollarSign} /></span>
-                <span className="servicios-service-sectionCopy"><strong>Precio y rentabilidad</strong><small>El costo se recalcula según la composición.</small></span>
+                <span className="servicios-service-sectionCopy">
+                  <strong>{conCosteo ? "Precio y rentabilidad" : "Precio"}</strong>
+                  <small>{conCosteo ? "El costo se recalcula según la composición." : "Importe neto por unidad de cobro e IVA aplicado."}</small>
+                </span>
               </div>
               <div className="gm-section-body servicios-service-panelBody">
                 <div className="servicios-form-grid servicios-service-priceFields">
+                  {conCosteo && (
                   <label className="gm-field servicios-service-priceField">
                     <input className="gm-input" inputMode="decimal" value={form.costo_base} onChange={(e) => set("costo_base", moneyDecimalText(e.target.value))} placeholder="0" />
                     <span className="gm-label gm-label--up">Otros costos</span>
                   </label>
+                  )}
+                  {conCosteo && (
                   <label className="gm-field servicios-service-priceField">
                     <input className="gm-input" inputMode="decimal" value={marginInput} onChange={(e) => changeMargin(e.target.value)} placeholder="0" />
                     <span className="gm-label gm-label--up">Margen deseado (%)</span>
                   </label>
+                  )}
                   <label className="gm-field servicios-service-priceField">
                     <input className="gm-input" inputMode="decimal" value={form.precio_venta} onChange={(e) => changePrice(e.target.value)} placeholder="0" />
                     <span className="gm-label gm-label--up">Precio de venta</span>
@@ -809,6 +845,7 @@ export default function ModalServicio({
                   </label>
                 </div>
 
+                {conCosteo && (
                 <div className="servicios-service-financialSummary">
                   <div><span>Costo calculado</span><strong>{money(cost.total)}</strong></div>
                   <div><span>Precio de venta</span><strong>{money(saleSummary.price)}</strong></div>
@@ -818,12 +855,13 @@ export default function ModalServicio({
                     <small>{saleSummary.margin.toLocaleString("es-AR", { maximumFractionDigits: 1 })}% de margen</small>
                   </div>
                 </div>
+                )}
               </div>
             </section>
           </div>
           )}
 
-          {activeTab === "composition" && (
+          {conComposicion && activeTab === "composition" && (
           <section className="gm-section servicios-composition servicios-service-panel servicios-service-panel--composition">
             <div className="gm-section-head servicios-composition__head servicios-service-sectionHead">
               <div className="servicios-composition__heading">

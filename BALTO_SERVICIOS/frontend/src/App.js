@@ -1,9 +1,10 @@
 import React, { useEffect } from "react";
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { APP_BASENAME } from "./config/config";
 import GlobalSessionGate from "./session/GlobalSessionGate";
 import { getStoredUser, hasSession, redirectToCentralAccess } from "./session/sessionClient";
 import { getBaltoPlanIdFromUsuario } from "./utils/demoMode";
+import { canAccessRoute, usePlan } from "./session/planCapabilities";
 
 /* Layout del panel */
 import Principal from "./components/Principal/Principal";
@@ -121,13 +122,11 @@ function getPlanIdUsuario() {
   return getBaltoPlanIdFromUsuario(u);
 }
 
-function planAllowsModule(modulo) {
-  // Política temporal vigente: BÁSICO, INTERMEDIO, PRO y DEMO pueden
-  // navegar por todos los módulos. Los bloqueos sensibles del DEMO se aplican
-  // en las acciones y en el backend, igual que en Principal.
-  void modulo;
-  return true;
-}
+/*
+ * Los módulos generales están en todos los planes; lo que depende del plan
+ * (p. ej. Inventario de Servicios, también vía ?seccion=inventario) se resuelve
+ * con las capacidades que envía el backend. El rol se controla aparte (RutaAdmin).
+ */
 
 function CentralAccessRedirect() {
   useEffect(() => {
@@ -142,9 +141,13 @@ function CentralAccessRedirect() {
 }
 
 function RutaModulo({ modulo, children }) {
+  const location = useLocation();
+  const plan = usePlan();
+  void modulo;
+
   if (!hasSession()) return <CentralAccessRedirect />;
 
-  return planAllowsModule(modulo) ? (
+  return canAccessRoute(location.pathname, location.search, plan) ? (
     children
   ) : (
     <Navigate to="/panel/dashboard" replace />

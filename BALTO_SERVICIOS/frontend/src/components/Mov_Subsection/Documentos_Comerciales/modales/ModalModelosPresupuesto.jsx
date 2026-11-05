@@ -9,6 +9,7 @@ import "../../../Global/Global_css/Global_responsive.css";
 import "../../../Global/Global_css/roots.css";
 import "./ModalModelosPresupuesto.css";
 import "./ModalPresupuestosChecklist.css";
+import { usePlan } from "../../../../session/planCapabilities";
 import { DOCUMENTOS_API, documentosRequest } from "../api/documentosComercialesApi.js";
 
 const IVA_OPTIONS = [0, 10.5, 21, 27];
@@ -168,6 +169,10 @@ async function parseJson(res) {
 }
 
 export default function ModalModelosPresupuesto({ open, lists, onClose, onToast, onUseModel }) {
+  // Plan: un modelo es una plantilla de venta; artículos como renglón propio
+  // sólo con products.sell (los ya guardados se conservan).
+  const plan = usePlan();
+  const puedeVenderArticulos = plan.can("products.sell");
   const API = DOCUMENTOS_API;
   const stockOptions = useMemo(() => normalizeLists(lists), [lists]);
   const [modelos, setModelos] = useState([]);
@@ -276,9 +281,10 @@ export default function ModalModelosPresupuesto({ open, lists, onClose, onToast,
   }, []);
 
   const changeRowType = useCallback((localId, tipoRaw) => {
-    const tipo = ["SERVICIO", "ARTICULO", "MANUAL"].includes(String(tipoRaw).toUpperCase())
+    let tipo = ["SERVICIO", "ARTICULO", "MANUAL"].includes(String(tipoRaw).toUpperCase())
       ? String(tipoRaw).toUpperCase()
       : "SERVICIO";
+    if (tipo === "ARTICULO" && !puedeVenderArticulos) tipo = "SERVICIO";
     updateRow(localId, {
       tipo_item: tipo,
       id_servicio: null,
@@ -291,7 +297,7 @@ export default function ModalModelosPresupuesto({ open, lists, onClose, onToast,
       cantidad: 1,
       precio: 0,
     });
-  }, [updateRow]);
+  }, [updateRow, puedeVenderArticulos]);
 
   const selectStock = useCallback((localId, option) => {
     const idServicio = getServicioId(option);
@@ -636,7 +642,9 @@ export default function ModalModelosPresupuesto({ open, lists, onClose, onToast,
                             style={{ marginBottom: 6 }}
                           >
                             <option value="SERVICIO">Servicio</option>
-                            <option value="ARTICULO">Material / insumo / producto</option>
+                            {(puedeVenderArticulos || row.tipo_item === "ARTICULO") && (
+                              <option value="ARTICULO" disabled={!puedeVenderArticulos}>Material / insumo / producto</option>
+                            )}
                             <option value="MANUAL">Detalle manual</option>
                           </select>
                           {row.tipo_item === "MANUAL" ? (

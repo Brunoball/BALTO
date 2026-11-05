@@ -18,6 +18,8 @@ import useAnalisisFinanciero from "./hooks/useAnalisisFinanciero";
 import useAnalisisFinancieroDatos from "./hooks/useAnalisisFinancieroDatos";
 import useAnalisisFinancieroExport from "./hooks/useAnalisisFinancieroExport";
 import { formatDateUI, moneyARS, toNumberOrZero } from "./utils/analisisFinancieroUtils";
+import RentabilidadPanel from "./RentabilidadPanel";
+import { usePlan } from "../../session/planCapabilities";
 
 const money = (v) => moneyARS(toNumberOrZero(v));
 
@@ -167,6 +169,15 @@ export default function Analisis_Financiero() {
   const [showCalendario, setShowCalendario] = useState(false);
   const [expandedId, setExpandedId] = useState(null);
   const [activeTab, setActiveTab] = useState("disponibilidad");
+  // Rentabilidad por trabajo (plan con insumos) y por tipo (plan con venta).
+  // El Análisis Financiero general (caja) es igual para todos los planes.
+  const plan = usePlan();
+  const conCosteo = plan.can("services.costing");
+  const porTipo = plan.can("reports.profit_by_type");
+  const tabs = useMemo(() => (conCosteo
+    ? [...FINANCIAL_TABS, { id: "rentabilidad", label: "Rentabilidad", title: porTipo ? "Ganancia por trabajo y por tipo" : "Costo y ganancia por trabajo" }]
+    : FINANCIAL_TABS), [conCosteo, porTipo]);
+  const currentTab = tabs.some((tab) => tab.id === activeTab) ? activeTab : "disponibilidad";
   const [toast, setToast] = useState(null);
   const showToast = useCallback((tipo, mensaje, duracion = 2800) => setToast({ tipo, mensaje, duracion }), []);
   const handleLoadError = useCallback((mensaje) => showToast("error", mensaje, 4200), [showToast]);
@@ -198,15 +209,15 @@ export default function Analisis_Financiero() {
   const maxContribution = Math.max(1, ...contrib.map((c) => Math.abs(c.value)));
 
   const handleTabsKeyDown = (event) => {
-    const index = FINANCIAL_TABS.findIndex((tab) => tab.id === activeTab);
+    const index = tabs.findIndex((tab) => tab.id === currentTab);
     let next = index;
-    if (event.key === "ArrowRight") next = (index + 1) % FINANCIAL_TABS.length;
-    else if (event.key === "ArrowLeft") next = (index - 1 + FINANCIAL_TABS.length) % FINANCIAL_TABS.length;
+    if (event.key === "ArrowRight") next = (index + 1) % tabs.length;
+    else if (event.key === "ArrowLeft") next = (index - 1 + tabs.length) % tabs.length;
     else if (event.key === "Home") next = 0;
-    else if (event.key === "End") next = FINANCIAL_TABS.length - 1;
+    else if (event.key === "End") next = tabs.length - 1;
     else return;
     event.preventDefault();
-    const nextTab = FINANCIAL_TABS[next];
+    const nextTab = tabs[next];
     setActiveTab(nextTab.id);
     event.currentTarget.querySelectorAll('[role="tab"]')[next]?.focus();
   };
@@ -217,18 +228,18 @@ export default function Analisis_Financiero() {
 
       <header className="af-toolbar" aria-label="Navegación y filtros de análisis financiero">
         <div className="af-toolbar__main">
-          <h2 className="af-toolbar__title">{FINANCIAL_TABS.find((tab) => tab.id === activeTab)?.title}</h2>
+          <h2 className="af-toolbar__title">{tabs.find((tab) => tab.id === currentTab)?.title}</h2>
           <nav className="af-tabs" role="tablist" aria-label="Secciones del análisis financiero" onKeyDown={handleTabsKeyDown}>
-            {FINANCIAL_TABS.map((tab) => (
+            {tabs.map((tab) => (
               <button
                 key={tab.id}
                 type="button"
                 id={`af-tab-${tab.id}`}
-                className={`af-tab ${activeTab === tab.id ? "is-active" : ""}`}
+                className={`af-tab ${currentTab === tab.id ? "is-active" : ""}`}
                 role="tab"
-                aria-selected={activeTab === tab.id}
+                aria-selected={currentTab === tab.id}
                 aria-controls={`af-panel-${tab.id}`}
-                tabIndex={activeTab === tab.id ? 0 : -1}
+                tabIndex={currentTab === tab.id ? 0 : -1}
                 onClick={() => setActiveTab(tab.id)}
               >
                 <span className="af-tab__label">{tab.label}</span>
@@ -274,7 +285,7 @@ export default function Analisis_Financiero() {
       {loading && <div className="af-loading" role="status"><span className="af-loading__bar"/>Actualizando datos financieros…</div>}
       {!loading && !data && hasFetched && <div className="af-panel af-empty">No se pudo obtener la información financiera. Revisá la conexión o seleccioná otro período.</div>}
       {data && <>
-        <div className="af-tabPanel" id="af-panel-disponibilidad" role="tabpanel" aria-labelledby="af-tab-disponibilidad" hidden={activeTab !== "disponibilidad"}>
+        <div className="af-tabPanel" id="af-panel-disponibilidad" role="tabpanel" aria-labelledby="af-tab-disponibilidad" hidden={currentTab !== "disponibilidad"}>
             <section className="af-hero" aria-label="Resumen de tesorería">
               <div className="af-hero__main">
                 <span className="af-hero__label">Dinero disponible al cierre</span>
@@ -316,7 +327,7 @@ export default function Analisis_Financiero() {
             </section>
         </div>
 
-        <section className="af-section af-tabPanel" id="af-panel-resultados" role="tabpanel" aria-labelledby="af-tab-resultados" hidden={activeTab !== "resultados"}>
+        <section className="af-section af-tabPanel" id="af-panel-resultados" role="tabpanel" aria-labelledby="af-tab-resultados" hidden={currentTab !== "resultados"}>
             <div className="af-profitGrid">
               <article className="af-panel af-contributionPanel">
                 <div className="af-panel__top"><h3>Ingresos y costos</h3></div>
@@ -349,7 +360,7 @@ export default function Analisis_Financiero() {
             </div>
         </section>
 
-        <section className="af-section af-tabPanel" id="af-panel-medios" role="tabpanel" aria-labelledby="af-tab-medios" hidden={activeTab !== "medios"}>
+        <section className="af-section af-tabPanel" id="af-panel-medios" role="tabpanel" aria-labelledby="af-tab-medios" hidden={currentTab !== "medios"}>
             <div className="af-mediumTable" role="table" aria-label="Saldos por medio de pago">
               <div className="mov-gridTable mov-gridTable--head af-mediumHead" role="rowgroup">
                 <div className="af-mediumHead__row" role="row">
@@ -385,6 +396,14 @@ export default function Analisis_Financiero() {
             </div>
         </section>
       </>}
+      {conCosteo && (
+        <RentabilidadPanel
+          dateRange={dateRange}
+          active={currentTab === "rentabilidad"}
+          porTipoHabilitado={porTipo}
+          onError={handleLoadError}
+        />
+      )}
     </div>
   );
 }

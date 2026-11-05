@@ -452,7 +452,7 @@ export default function Flujo_Caja() {
             Detalle por caja / medio de pago •
             Caja diaria
             <span className="fc-subhead__meta">
-              &nbsp;•&nbsp;Saldo base al inicio del período: <b className={saldoBase < 0 ? "fc-saldo--neg" : "fc-saldo--pos"}>{moneyARSAbs(saldoBase)}</b>
+              &nbsp;•&nbsp;Saldo base al inicio del período: <b className={saldoBase < 0 ? "fc-saldo--neg" : "fc-saldo--pos"}>{moneyARS(saldoBase)}</b>
               {saldoHoy != null && <>&nbsp;•&nbsp;Saldo disponible hoy ({fmtDateES(fechaSaldoHoy)}): <b className={Number(saldoHoy) < 0 ? "fc-saldo--neg" : "fc-saldo--pos"}>{moneyARS(saldoHoy)}</b></>}
             </span>
           </div>
@@ -486,7 +486,7 @@ export default function Flujo_Caja() {
                       <div className="fc-payCard__titleWrap">
                         <div className="fc-payCard__title">{card.label}</div>
                         <div className={`fc-payCard__amount ${saldoNeg ? "is-negative" : "is-positive"}`}>
-                          {moneyARSAbs(card.saldo)}
+                          {moneyARS(card.saldo)}
                         </div>
                         <div className="fc-payCard__subtitle" title={`Saldo acumulado · ${paymentCardSubtitle(card)}`}>
                           Saldo acumulado · {paymentCardSubtitle(card)}
@@ -555,7 +555,7 @@ export default function Flujo_Caja() {
                       style={{ gridTemplateColumns: gridCols }}
                       role="row"
                       tabIndex={0}
-                      title={`Ver detalle del día en las tarjetas superiores. Aperturas: ${moneyARSAbs(r.saldo_inicial_aplicado)}. Depósitos/reversiones de cheques: ${moneyARSAbs(r.ajustes_internos)}. Ajustes manuales de saldo: ${moneyARSSigned(r.ajustes_manuales)}`}
+                      title={`Ver detalle del día en las tarjetas superiores. Aperturas: ${moneyARS(r.saldo_inicial_aplicado)}. Depósitos/reversiones de cheques: ${moneyARS(r.ajustes_internos)}. Ajustes manuales de saldo: ${moneyARSSigned(r.ajustes_manuales)}`}
                       onClick={() => setSelectedDate(r.fecha)}
                       onKeyDown={(ev) => {
                         if (ev.key === "Enter" || ev.key === " ") {
@@ -591,8 +591,8 @@ export default function Flujo_Caja() {
 
                       {/* SALDO */}
                       <div className="mov-gridCell is-center" role="cell" data-label="SALDO">
-                        <span className={`fc-num fc-saldo ${saldoNeg ? "fc-saldo--neg" : "fc-saldo--pos"}`} title={String((moneyARSAbs(r.saldo)) ?? "")}>
-                          {moneyARSAbs(r.saldo)}
+                        <span className={`fc-num fc-saldo ${saldoNeg ? "fc-saldo--neg" : "fc-saldo--pos"}`} title={String((moneyARS(r.saldo)) ?? "")}>
+                          {moneyARS(r.saldo)}
                         </span>
                       </div>
                     </div>

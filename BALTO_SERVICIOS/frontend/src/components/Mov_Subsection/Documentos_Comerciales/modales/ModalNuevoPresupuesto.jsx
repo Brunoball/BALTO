@@ -18,6 +18,7 @@ import {
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 import { savePresupuestoPdf } from "../../../../utils/PresupuestoPdfBuilder";
+import { usePlan } from "../../../../session/planCapabilities";
 import { DOCUMENTOS_API, documentosRequest } from "../api/documentosComercialesApi.js";
 
 const NULL_OPTION = "";
@@ -1019,6 +1020,11 @@ async function apiPostForm(url, formData) {
 }
 
 export default function ModalNuevoPresupuesto({ open, lists, initialModel = null, modelsOpen = false, onOpenModels, onClose, onToast, onSaved }) {
+  // Plan: renglones de artículos/productos como venta propia sólo con
+  // products.sell; consumos de materiales en servicios con services.composition.
+  const plan = usePlan();
+  const puedeVenderArticulos = plan.can("products.sell");
+  const conComposicion = plan.can("services.composition");
   const API = DOCUMENTOS_API;
   const API_PADRON_CUIT = `${API}?action=padron_cuit&op=padron_cuit`;
   const API_SAVE_CLIENTE_DESDE_ARCA = `${API}?action=cliente_fiscal_crear_desde_arca`;
@@ -1128,9 +1134,10 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
   }, []);
 
   const handleTipoItemChange = useCallback((rowId, tipoRaw) => {
-    const tipo = ["SERVICIO", "ARTICULO", "MANUAL"].includes(String(tipoRaw).toUpperCase())
+    let tipo = ["SERVICIO", "ARTICULO", "MANUAL"].includes(String(tipoRaw).toUpperCase())
       ? String(tipoRaw).toUpperCase()
       : "SERVICIO";
+    if (tipo === "ARTICULO" && !puedeVenderArticulos) tipo = "SERVICIO";
     updateRow(rowId, {
       tipo_item: tipo,
       id_servicio: NULL_OPTION,
@@ -1157,7 +1164,7 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
       costo_mano_obra: 0,
       horas_mano_obra: 0,
     });
-  }, [updateRow]);
+  }, [updateRow, puedeVenderArticulos]);
 
   const removeRow = useCallback((rowId) => {
     setRows((prev) => (prev.length <= 1 ? prev : prev.filter((r) => r.id !== rowId)));
@@ -1825,7 +1832,9 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
                           style={{ marginBottom: 6 }}
                         >
                           <option value="SERVICIO">Servicio</option>
-                          <option value="ARTICULO">Material / insumo / producto</option>
+                          {(puedeVenderArticulos || r.tipo_item === "ARTICULO") && (
+                            <option value="ARTICULO" disabled={!puedeVenderArticulos}>Material / insumo / producto</option>
+                          )}
                           <option value="MANUAL">Detalle manual</option>
                         </select>
                         {r.tipo_item === "MANUAL" ? (
@@ -1947,7 +1956,7 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
                         ×
                       </button>
                     </div>
-                    {Number(r.id_servicio || 0) > 0 ? (
+                    {conComposicion && Number(r.id_servicio || 0) > 0 ? (
                       <ServiceStockComposition
                         components={r.consumos_snapshot}
                         stockOptions={componentesStockList}

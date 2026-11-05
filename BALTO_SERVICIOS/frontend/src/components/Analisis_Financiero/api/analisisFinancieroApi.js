@@ -50,3 +50,28 @@ export async function obtenerResumenAnalisisFinanciero(dateRange) {
 
   return json;
 }
+
+/**
+ * Rentabilidad estimada por trabajo (plan con insumos) y separada por servicios
+ * y productos (plan con venta). Base: ventas por fecha operativa, importes netos
+ * sin IVA y costos congelados al registrar cada renglón. No es lo cobrado.
+ */
+export async function obtenerRentabilidadAnalisisFinanciero(dateRange) {
+  const sp = new URLSearchParams();
+  sp.set("action", "analisis_financiero_rentabilidad");
+  sp.set("fecha_desde", formatDateISO(dateRange.from));
+  sp.set("fecha_hasta", formatDateISO(dateRange.to || dateRange.from));
+
+  const res = await singleFlightFetch(`${API}?${sp.toString()}`, {
+    method: "GET",
+    headers: authHeaders(),
+  });
+
+  const json = await parseJsonOrThrow(res);
+
+  if (!res.ok || !json?.exito) {
+    throw new Error(json?.mensaje || `Error desconocido (HTTP ${res.status})`);
+  }
+
+  return json;
+}

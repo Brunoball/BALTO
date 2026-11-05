@@ -23,6 +23,7 @@ import {
 } from "../../../../utils/VentaNoFacturadaPdfBuilder";
 import { saveRemitoPdf } from "../../../../utils/RemitoPdfBuilder";
 import { DEMO_BLOCK_MESSAGE, isBaltoDemoMode } from "../../../../utils/demoMode";
+import { usePlan } from "../../../../session/planCapabilities";
 
 /* ================================================================
    CONSTANTS
@@ -1521,6 +1522,11 @@ export function PanelMediosPagoInlineVenta({
    MODAL PRINCIPAL
 ================================================================ */
 export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved }) {
+  // Plan: venta de artículos/productos (mostrador y mixta) sólo con products.sell;
+  // consumos de materiales en servicios sólo con services.composition.
+  const plan = usePlan();
+  const puedeVenderArticulos = plan.can("products.sell");
+  const conComposicion = plan.can("services.composition");
   const API_BATCH = `${BASE_URL}/api.php?action=ventas_crear_batch`;
   const API_CATALOGO = `${BASE_URL}/api.php?action=catalogo_crear`;
   const API_GET_CLIENTE_FISCAL = `${BASE_URL}/api.php?action=cliente_fiscal_get`;
@@ -2065,9 +2071,10 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
 
   const handleTipoItemChange = useCallback(
     (rowId, nextType) => {
-      const tipo = ["SERVICIO", "ARTICULO", "MANUAL"].includes(String(nextType || "").toUpperCase())
+      let tipo = ["SERVICIO", "ARTICULO", "MANUAL"].includes(String(nextType || "").toUpperCase())
         ? String(nextType).toUpperCase()
         : "SERVICIO";
+      if (tipo === "ARTICULO" && !puedeVenderArticulos) tipo = "SERVICIO";
 
       updateRow(rowId, {
         tipo_item: tipo,
@@ -2089,7 +2096,7 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
         consumos_snapshot: [],
       });
     },
-    [updateRow]
+    [updateRow, puedeVenderArticulos]
   );
 
   const handlePrecioTipoChange = useCallback(
@@ -3794,7 +3801,9 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
                             style={{ marginBottom: 6 }}
                           >
                             <option value="SERVICIO">Servicio del catálogo</option>
-                            <option value="ARTICULO">Stock / material / insumo</option>
+                            {(puedeVenderArticulos || tipoSeleccionado === "ARTICULO") && (
+                              <option value="ARTICULO" disabled={!puedeVenderArticulos}>Stock / material / insumo</option>
+                            )}
                             <option value="MANUAL">Detalle manual</option>
                           </select>
 
@@ -3961,7 +3970,7 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
                             ×
                           </button>
                         </div>
-                        {Number(r.id_servicio || 0) > 0 ? (
+                        {conComposicion && Number(r.id_servicio || 0) > 0 ? (
                           <ServiceStockComposition
                             components={r.consumos_snapshot}
                             stockOptions={componentesStockList}

@@ -27,15 +27,16 @@ import ModalAgregarCategoria from "../../Servicios/modales/ModalAgregarCategoria
 import * as configuracionApi from "../api/configuracionApi";
 import ModalDetalleLista from "./ModalDetalleLista";
 import ModalMedioPago from "./ModalMedioPago";
+import { usePlan } from "../../../session/planCapabilities";
 
 const TABS = [
   { value: "detalles", label: "Detalles" },
   { value: "medios_pago", label: "Medios de pago" },
   { value: "unidades", label: "Unidades" },
   { value: "categorias_servicios", label: "Cat. servicios", grupo: "SERVICIO", singular: "categoría de servicio" },
-  { value: "categorias_materiales", label: "Cat. materiales", grupo: "MATERIAL", singular: "categoría de material" },
-  { value: "categorias_insumos", label: "Cat. insumos", grupo: "INSUMO", singular: "categoría de insumo" },
-  { value: "categorias_productos", label: "Cat. productos", grupo: "PRODUCTO", singular: "categoría de producto" },
+  { value: "categorias_materiales", label: "Cat. materiales", grupo: "MATERIAL", singular: "categoría de material", capacidad: "resources.manage" },
+  { value: "categorias_insumos", label: "Cat. insumos", grupo: "INSUMO", singular: "categoría de insumo", capacidad: "resources.manage" },
+  { value: "categorias_productos", label: "Cat. productos", grupo: "PRODUCTO", singular: "categoría de producto", capacidad: "products.manage" },
 ];
 
 const ESTADOS = [
@@ -60,8 +61,15 @@ function cantidadUsosCategoria(tab, row) {
 
 export default function ConfiguracionListasCategorias() {
   const navigate = useNavigate();
+  // Las categorías de materiales/insumos/productos sólo existen en los planes que los incluyen.
+  const plan = usePlan();
+  const tabsVisibles = TABS.filter((item) => !item.capacidad || plan.can(item.capacidad));
   const [rowsScrollRef, hasRowsScroll] = useTableScrollGutter();
   const [tab, setTab] = useState("detalles");
+  // Si el plan cambia y la pestaña actual deja de estar incluida, volver a Detalles.
+  useEffect(() => {
+    if (!tabsVisibles.some((item) => item.value === tab)) setTab("detalles");
+  }, [tabsVisibles, tab]);
   const [estado, setEstado] = useState("1");
   const [buscar, setBuscar] = useState("");
   const [data, setData] = useState({
@@ -381,7 +389,7 @@ export default function ConfiguracionListasCategorias() {
       <section className="cfg-listas-card">
         <div className="cfg-listas-toolbar">
           <div className="cfg-listas-tabs" role="tablist">
-            {TABS.map((item) => (
+            {tabsVisibles.map((item) => (
               <button
                 key={item.value}
                 type="button"

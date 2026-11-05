@@ -22,6 +22,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import GlobalAutocomplete from "../../../Global/GlobalAutocomplete/GlobalAutocomplete.jsx";
 import ProductStockAutocomplete from "../../_shared/ProductStockAutocomplete.jsx";
+import { usePlan } from "../../../../session/planCapabilities";
 import ModalClienteFiscalArca from "../../../Global/Modales/ModalClienteFiscalArca.jsx";
 
 const NULL_OPTION = "";
@@ -1010,6 +1011,11 @@ function AddCatalogMiniModal({ open, title, value, saving, onChange, onCancel, o
    MODAL PRINCIPAL
 ============================================================ */
 export default function ModalNuevaCompra({ open, lists, onClose, onToast, onSaved }) {
+  // Plan: compras de materiales/insumos (con impacto en stock) desde el plan con
+  // insumos; en el plan profesional la compra es un gasto con detalle manual.
+  const plan = usePlan();
+  const conRecursos = plan.can("resources.manage");
+  const tipoFilaInicial = conRecursos ? "ARTICULO" : "MANUAL";
   const API_BATCH = `${BASE_URL}/api.php?action=compras_crear_batch`;
   const API_UPLOAD_LINK = `${BASE_URL}/api.php?action=compras_comprobantes_vincular_movimientos_lote_upload`;
   const API_PADRON_CUIT = `${BASE_URL}/api.php?action=padron_cuit&op=padron_cuit`;
@@ -1074,7 +1080,7 @@ export default function ModalNuevaCompra({ open, lists, onClose, onToast, onSave
   const [forma, setForma] = useState(NULL_OPTION);
   const [idProveedor, setIdProveedor] = useState(NULL_OPTION);
   const [provInput, setProvInput] = useState("");
-  const [rows, setRows] = useState(() => [buildEmptyRow()]);
+  const [rows, setRows] = useState(() => [buildEmptyRow(tipoFilaInicial)]);
   const [saving, setSaving] = useState(false);
   const [archivoAdjunto, setArchivoAdjunto] = useState(null);
   const [addUI, setAddUI] = useState({
@@ -1112,7 +1118,7 @@ export default function ModalNuevaCompra({ open, lists, onClose, onToast, onSave
       setForma(NULL_OPTION);
       setIdProveedor(NULL_OPTION);
       setProvInput("");
-      setRows([buildEmptyRow()]);
+      setRows([buildEmptyRow(tipoFilaInicial)]);
       setMediosFilas([buildEmptyMedioPago()]);
       setAddUI({
         open: false,
@@ -1129,7 +1135,7 @@ export default function ModalNuevaCompra({ open, lists, onClose, onToast, onSave
       setArchivoAdjunto(null);
       setTimeout(() => closeBtnRef.current?.focus(), 0);
     }
-  }, [open]);
+  }, [open, tipoFilaInicial]);
 
   useEffect(() => {
     const el = rowsContainerRef.current;
@@ -1161,8 +1167,8 @@ export default function ModalNuevaCompra({ open, lists, onClose, onToast, onSave
   // Un detalle libre solo se habilita cuando el usuario elige MANUAL explícitamente.
   const addRow = useCallback(() => {
     scrollToNewRow();
-    setRows((p) => [...p, buildEmptyRow()]);
-  }, [scrollToNewRow]);
+    setRows((p) => [...p, buildEmptyRow(tipoFilaInicial)]);
+  }, [scrollToNewRow, tipoFilaInicial]);
   const removeRow = useCallback((id) => {
     setRows((p) => {
       const n = p.filter((r) => r.id !== id);
@@ -1363,7 +1369,7 @@ export default function ModalNuevaCompra({ open, lists, onClose, onToast, onSave
 
 
   const handleTipoItemChange = useCallback((rowId, nextType) => {
-    const tipo = nextType === "MANUAL" ? "MANUAL" : "ARTICULO";
+    const tipo = nextType === "MANUAL" || !conRecursos ? "MANUAL" : "ARTICULO";
     updateRow(rowId, {
       tipo_item: tipo,
       id_articulo: NULL_OPTION,
@@ -1378,7 +1384,7 @@ export default function ModalNuevaCompra({ open, lists, onClose, onToast, onSave
       stock_disponible: null,
       sinStock: false,
     });
-  }, [updateRow]);
+  }, [updateRow, conRecursos]);
 
   const handleCantidadChange = useCallback(
     (rowId, newCantidad) => {
@@ -1934,7 +1940,9 @@ export default function ModalNuevaCompra({ open, lists, onClose, onToast, onSave
                             disabled={saving || addUI.open}
                             style={{ marginBottom: 6 }}
                           >
-                            <option value="ARTICULO">Material / insumo del catálogo</option>
+                            {(conRecursos || !isManualPurchaseRow(r)) && (
+                              <option value="ARTICULO" disabled={!conRecursos}>Material / insumo del catálogo</option>
+                            )}
                             <option value="MANUAL">Detalle manual</option>
                           </select>
                           {isManualPurchaseRow(r) ? (

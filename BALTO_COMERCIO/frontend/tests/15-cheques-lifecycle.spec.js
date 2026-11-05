@@ -21,7 +21,7 @@ import {
   payReceivableWithIncomingCheque,
   replaceChequeWithNonCheque,
 } from './support/cheques.js';
-import { expectChequeEvents, expectChequeState } from './support/api.js';
+import { authenticatedApi, expectApiSuccess, expectChequeEvents, expectChequeState } from './support/api.js';
 
 function buildCheque(label, importe, tipo = 'CHEQUE') {
   return {
@@ -40,6 +40,12 @@ function buildCheque(label, importe, tipo = 'CHEQUE') {
 
 function paymentIdFrom(body) {
   return extractPaymentId(body?.data || body);
+}
+
+async function dashboardCaja(page) {
+  const body = expectApiSuccess(await authenticatedApi(page, 'dashboard_resumen'),
+    'Dashboard debe devolver Caja actual durante el ciclo de cheques');
+  return body.kpis;
 }
 
 test.beforeEach(async ({}, testInfo) => {
@@ -232,6 +238,7 @@ for (const tipo of ['CHEQUE', 'ECHEQ']) {
 
     await createOtherIncomeWithIncomingCheque(page, { description: source, amount: cheque.importe }, cheque);
     await expectChequeState(page, cheque.numero, 'EN_CARTERA', tipo);
+    const dashboardEnCartera = await dashboardCaja(page);
 
     await page.goto(carteraRoute);
     await waitForBusyToFinish(page);
@@ -267,6 +274,13 @@ for (const tipo of ['CHEQUE', 'ECHEQ']) {
 
     await expectChequeState(page, cheque.numero, 'DEPOSITADO_BANCO', tipo);
     await expectChequeEvents(page, cheque.numero, ['EGRESO_CARTERA', 'DEPOSITADO_BANCO'], tipo);
+    const dashboardDepositado = await dashboardCaja(page);
+    expect(Number(dashboardDepositado.saldo_caja_documentos))
+      .toBeCloseTo(Number(dashboardEnCartera.saldo_caja_documentos) - cheque.importe, 2);
+    expect(Number(dashboardDepositado.saldo_caja_liquido))
+      .toBeCloseTo(Number(dashboardEnCartera.saldo_caja_liquido) + cheque.importe, 2);
+    expect(Number(dashboardDepositado.saldo_caja_actual))
+      .toBeCloseTo(Number(dashboardEnCartera.saldo_caja_actual), 2);
 
     await page.goto('/panel/Otrosegresos');
     const expenseRow = await searchRow(page, cheque.numero, /Buscar por descripción/i);
@@ -324,6 +338,13 @@ for (const tipo of ['CHEQUE', 'ECHEQ']) {
     expect(Number(reactivationBody?.id_historial || 0)).toBeGreaterThan(0);
     await expect(reactivationDialog).toBeHidden({ timeout: 30_000 });
     await expectChequeState(page, cheque.numero, 'EN_CARTERA', tipo);
+    const dashboardReactivado = await dashboardCaja(page);
+    expect(Number(dashboardReactivado.saldo_caja_documentos))
+      .toBeCloseTo(Number(dashboardEnCartera.saldo_caja_documentos), 2);
+    expect(Number(dashboardReactivado.saldo_caja_liquido))
+      .toBeCloseTo(Number(dashboardEnCartera.saldo_caja_liquido), 2);
+    expect(Number(dashboardReactivado.saldo_caja_actual))
+      .toBeCloseTo(Number(dashboardEnCartera.saldo_caja_actual), 2);
 
     await page.goto('/panel/Otrosegresos');
     const expenseSearch = page.getByPlaceholder(/Buscar por descripción/i).first();

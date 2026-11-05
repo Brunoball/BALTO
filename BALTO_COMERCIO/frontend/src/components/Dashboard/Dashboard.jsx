@@ -36,8 +36,12 @@ function AnimatedValue({
   duration = 850,
 }) {
   const animatedValue = useCountUp(value, { duration });
+  // En una pantalla contable los importes deben mostrarse exactos desde el
+  // primer render. La animación hacía que la tarjeta "Caja actual" y los
+  // indicadores mostraran cifras distintas del desglose durante ~850 ms.
+  const valorVisible = formatter === formatMoney ? value : animatedValue;
 
-  return <Tag className={className}>{formatter(animatedValue)}</Tag>;
+  return <Tag className={className}>{formatter(valorVisible)}</Tag>;
 }
 
 function DashboardBarChart({ rows }) {
@@ -142,7 +146,7 @@ function SideIndicators({ kpis }) {
         </div>
 
         <div className="db-ind-resultado__body">
-          <span className="db-ind-label">Resultado del mes</span>
+          <span className="db-ind-label">Flujo neto del mes</span>
           <AnimatedValue
             as="strong"
             className={`db-ind-value ${saldoClass}`}
@@ -289,7 +293,7 @@ export default function Dashboard() {
         label: "Caja actual",
         value: kpis.saldo_caja_actual,
         formatter: formatMoney,
-        detail: "Caja + Banco + Personal Pay · saldo real al día",
+        detail: "Medios monetarios + cheques y eCheqs en cartera",
         icon: faWallet,
         tone: "green",
         valueClass: moneyClass(kpis.saldo_caja_actual),
@@ -359,8 +363,8 @@ export default function Dashboard() {
           <div className="db-header__left">
             <h1 className="db-title">Panel Contable</h1>
             <p className="db-subtitle">
-              Vista general del sistema: caja, movimientos del mes, stock,
-              clientes y proveedores.
+              Vista general: saldos por medio de pago, cheques en cartera,
+              movimientos del mes, stock y cuentas corrientes.
             </p>
           </div>
 
@@ -412,15 +416,33 @@ export default function Dashboard() {
         </section>
 
         {!loadingDashboard && (
-          <div className="db-caja-breakdown" aria-label="Saldos actuales por caja">
-            {[
-              ['Caja', kpis.saldo_caja_medios?.caja],
-              ['Banco', kpis.saldo_caja_medios?.banco],
-              ['Personal Pay', kpis.saldo_caja_medios?.personal_pay],
-            ].map(([label, amount]) => (
-              <div key={label}><span>{label}</span><strong className={moneyClass(amount)}>{formatMoney(amount)}</strong></div>
-            ))}
-          </div>
+          <section className="db-caja-section" aria-label="Detalle de Caja actual">
+            <div className="db-caja-section__header">
+              <strong>Desglose de Caja actual</strong>
+              <span>
+                Dinero disponible: {formatMoney(kpis.saldo_caja_liquido)} · Cheques/eCheqs en cartera: {formatMoney(kpis.saldo_caja_documentos)}
+              </span>
+            </div>
+            <div className="db-caja-breakdown" aria-label="Saldos actuales por medio de pago">
+              {(Array.isArray(kpis.saldo_caja_medios) ? kpis.saldo_caja_medios : []).map((medio) => (
+                <div
+                  key={`${medio.tipo}-${medio.id_medio_pago || medio.nombre}`}
+                  className={medio.tipo === "documento" ? "db-caja-breakdown__documento" : ""}
+                  data-medio-id={medio.id_medio_pago}
+                  data-medio-tipo={medio.tipo}
+                >
+                  <span>
+                    {medio.nombre?.toUpperCase() === "EFECTIVO" ? "Caja (Efectivo)" : medio.nombre}
+                    {medio.tipo === "documento" && <small>En cartera · {medio.cantidad ?? 0} doc.</small>}
+                  </span>
+                  <strong className={moneyClass(medio.saldo)}>{formatMoney(medio.saldo)}</strong>
+                </div>
+              ))}
+            </div>
+            <p className="db-caja-section__note">
+              Los cheques y eCheqs se incluyen solo mientras están en cartera; no son dinero acreditado en banco.
+            </p>
+          </section>
         )}
 
         <section className="db-main-grid">

@@ -12,6 +12,7 @@ import {
   faBoxOpen,
   faDollarSign,
 } from "@fortawesome/free-solid-svg-icons";
+import { usePlan } from "../../../../session/planCapabilities";
 import { recibosFetch } from "../api/recibosApi.js";
 
 
@@ -341,6 +342,9 @@ export default function ModalEditarRecibo({
   onToast,
   dark,
 }) {
+  // Plan: cambiar un renglón a artículo de stock es venta de productos (products.sell).
+  const plan = usePlan();
+  const puedeVenderArticulos = plan.can("products.sell");
   const API_LISTS = `${BASE_URL}/api.php?action=global_obtener_listas`;
   const darkOn = isDarkEnabled(dark);
 
@@ -579,7 +583,7 @@ export default function ModalEditarRecibo({
   };
 
   const handleTipoItemChange = (e) => {
-    const tipo = e.target.value === "SERVICIO" ? "SERVICIO" : "ARTICULO";
+    const tipo = e.target.value === "SERVICIO" || !puedeVenderArticulos ? "SERVICIO" : "ARTICULO";
     setProductoFocus(false);
     setProductoArmed(false);
     setForm((p) => ({
@@ -776,7 +780,9 @@ export default function ModalEditarRecibo({
                       <div className="gm-field" style={{ marginBottom: 12 }}>
                         <select className="gm-input" value={form.tipo_item} onChange={handleTipoItemChange} disabled={saving}>
                           <option value="SERVICIO">Servicio</option>
-                          <option value="ARTICULO">Stock / material / insumo</option>
+                          {(puedeVenderArticulos || form.tipo_item === "ARTICULO") && (
+                            <option value="ARTICULO" disabled={!puedeVenderArticulos}>Stock / material / insumo</option>
+                          )}
                         </select>
                         <label className="gm-label">Tipo de ítem</label>
                       </div>

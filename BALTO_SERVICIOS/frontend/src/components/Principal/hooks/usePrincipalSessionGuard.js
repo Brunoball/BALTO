@@ -3,6 +3,7 @@ import {
   isSessionExpiredResponse,
   looksLikeUnauthorizedPayload,
 } from "../utils/principalUtils";
+import { handlePlanSignature, PLAN_HEADER } from "../../../session/planCapabilities";
 
 export default function usePrincipalSessionGuard(doLogout) {
   useEffect(() => {
@@ -20,6 +21,13 @@ export default function usePrincipalSessionGuard(doLogout) {
 
     window.fetch = async (...args) => {
       const response = await originalFetch(...args);
+
+      // Firma del plan efectivo (MASTER). Si cambió, se refrescan las capacidades
+      // una sola vez, sin logout y sin polling. Un 403 de plan
+      // (FUNCIONALIDAD_NO_INCLUIDA_PLAN) no es un error de sesión: no se toca.
+      try {
+        handlePlanSignature(response.headers.get(PLAN_HEADER));
+      } catch {}
 
       try {
         const clone = response.clone();

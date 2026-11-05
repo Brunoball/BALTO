@@ -1,6 +1,7 @@
 import { test, expect } from './support/test.js';
 import { installDiagnostics, assertNoCriticalErrors } from './support/diagnostics.js';
 import { waitForBusyToFinish } from './support/ui.js';
+import { getSessionPlan } from './support/plan.js';
 
 const routes = [
   { route: '/panel/dashboard', text: /Panel Contable/i },
@@ -20,7 +21,8 @@ const routes = [
   { route: '/panel/cuentas-corrientes/clientes', text: /Clientes/i },
   { route: '/panel/cuentas-corrientes/proveedores', text: /Proveedores/i },
   { route: '/panel/servicios', text: /Servicios/i },
-  { route: '/panel/servicios?seccion=inventario', text: /Inventario de servicios/i },
+  // Sólo planes con materiales/insumos (el plan profesional redirige: ver 47-plan-capabilities).
+  { route: '/panel/servicios?seccion=inventario', text: /Inventario de servicios/i, capability: 'resources.manage' },
   { route: '/panel/contabilidad', text: /IVA Ventas/i },
   { route: '/panel/contabilidad/iva-ventas', text: /IVA Ventas/i },
   { route: '/panel/contabilidad/iva-compras', text: /IVA Compras/i },
@@ -41,8 +43,12 @@ function escapeRegex(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-for (const { route, finalRoute = route, text } of routes) {
+for (const { route, finalRoute = route, text, capability } of routes) {
   test(`@smoke abre ${route}`, async ({ page }, testInfo) => {
+    if (capability) {
+      const plan = await getSessionPlan(page);
+      test.skip(!plan.can(capability), `El plan del tenant no incluye ${capability}.`);
+    }
     const diagnostics = installDiagnostics(page);
     await page.goto(route, { waitUntil: 'domcontentloaded' });
     await expect(page).toHaveURL(new RegExp(escapeRegex(finalRoute), 'i'));
