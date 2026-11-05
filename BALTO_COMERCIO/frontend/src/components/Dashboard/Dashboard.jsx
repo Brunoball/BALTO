@@ -17,6 +17,7 @@ import {
 import Toast from "../Global/Toast.jsx";
 import "./dashboard.css";
 import "./dashboard.responsive.css";
+import "./dashboard.mejoras.css";
 import useCountUp from "./hooks/useCountUp";
 import useDashboardDatos from "./hooks/useDashboardDatos";
 import {
@@ -40,67 +41,53 @@ function AnimatedValue({
 }
 
 function DashboardBarChart({ rows }) {
+  const [fechaSeleccionada, setFechaSeleccionada] = useState(null);
   const safeRows = Array.isArray(rows) ? rows : [];
-  const visibleRows = safeRows.length > 12 ? safeRows.slice(-12) : safeRows;
-
-  const maxValue = Math.max(
-    1,
-    ...visibleRows.map((r) => Number(r.ingresos || 0) + Number(r.egresos || 0))
-  );
-
-  if (visibleRows.length === 0) {
-    return (
-      <div className="db-empty">
-        Todavía no hay movimientos del mes actual para graficar.
-      </div>
-    );
-  }
-
-  const gridTemplateColumns = `repeat(${visibleRows.length}, minmax(30px, 1fr))`;
-  const minWidth = Math.max(420, visibleRows.length * 38);
+  // Solo fechas con cobros/pagos efectivos; los días vacíos no aportan información.
+  const diasActivos = safeRows.filter((r) => Number(r.ingresos || 0) > 0 || Number(r.egresos || 0) > 0);
+  const visibleRows = diasActivos.slice(-9);
+  const diaSeleccionado = visibleRows.find((r) => r.fecha === fechaSeleccionada) || visibleRows[visibleRows.length - 1] || null;
+  const totalIngresos = safeRows.reduce((n, r) => n + Number(r.ingresos || 0), 0);
+  const totalEgresos = safeRows.reduce((n, r) => n + Number(r.egresos || 0), 0);
+  const neto = totalIngresos - totalEgresos;
+  const maxValue = Math.max(1, ...visibleRows.flatMap((r) => [Number(r.ingresos || 0), Number(r.egresos || 0)]));
 
   return (
-    <div className="db-chart" role="img" aria-label="Ingresos y egresos del mes actual">
-      <div className="db-chart__plot" style={{ gridTemplateColumns, minWidth }}>
-        {visibleRows.map((row) => {
-          const ingresos = Math.max(0, Number(row.ingresos || 0));
-          const egresos = Math.max(0, Number(row.egresos || 0));
-          const total = ingresos + egresos;
-          const totalHeight = Math.max(5, Math.round((total / maxValue) * 126));
-          const ingPct = total > 0 ? (ingresos / total) * 100 : 0;
-          const egrPct = total > 0 ? (egresos / total) * 100 : 0;
-
-          return (
-            <div
-              className="db-chart__item"
-              key={row.fecha}
-              title={`${row.label || row.fecha}\nIngresos: ${formatMoney(
-                ingresos
-              )}\nEgresos: ${formatMoney(egresos)}\nMovimientos: ${formatNumber(
-                row.movimientos || 0
-              )}`}
-            >
-              <div className="db-chart__bar" style={{ height: `${totalHeight}px` }}>
-                {egresos > 0 && (
-                  <span
-                    className="db-chart__seg db-chart__seg--egresos"
-                    style={{ height: `${egrPct}%` }}
-                  />
-                )}
-
-                {ingresos > 0 && (
-                  <span
-                    className="db-chart__seg db-chart__seg--ingresos"
-                    style={{ height: `${ingPct}%` }}
-                  />
-                )}
-              </div>
-
-              <span className="db-chart__label">{row.label || "-"}</span>
-            </div>
-          );
-        })}
+    <div className="db-cash-movements">
+      <div className="db-chart-summary" aria-label="Resumen de caja del mes">
+        <div><span>Ingresos cobrados</span><strong className="is-positive">{formatMoney(totalIngresos)}</strong></div>
+        <div><span>Egresos pagados</span><strong className="is-negative">{formatMoney(totalEgresos)}</strong></div>
+        <div><span>Variación operativa</span><strong className={moneyClass(neto)}>{formatMoney(neto)}</strong></div>
       </div>
+      {!visibleRows.length ? (
+        <div className="db-chart-empty">Sin cobros ni pagos registrados en el período. No se contabilizan ventas pendientes ni cheques en cartera.</div>
+      ) : (
+        <>
+          <div className="db-chart-intro">Últimos {visibleRows.length} {visibleRows.length === 1 ? 'día' : 'días'} con movimientos</div>
+          <div className="db-chart" role="img" aria-label="Comparación de ingresos cobrados y egresos pagados por día">
+            <div className="db-chart__plot" style={{ gridTemplateColumns: `repeat(${visibleRows.length}, minmax(46px, 1fr))` }}>
+              {visibleRows.map((r) => {
+                const ingreso = Math.max(0, Number(r.ingresos || 0));
+                const egreso = Math.max(0, Number(r.egresos || 0));
+                return (
+                  <button type="button" key={r.fecha} className={`db-chart__item ${diaSeleccionado?.fecha === r.fecha ? "db-chart__item--active" : ""}`} onClick={() => setFechaSeleccionada(r.fecha)} aria-pressed={diaSeleccionado?.fecha === r.fecha} title={`${r.label || r.fecha} · Ingresos ${formatMoney(ingreso)} · Egresos ${formatMoney(egreso)}`}>
+                    <div className="db-chart__bar-pair">
+                      <span className="db-chart__bar db-chart__bar--ingreso" style={{height: `${ingreso > 0 ? Math.max(5,(ingreso/maxValue)*100) : 0}%`}} />
+                      <span className="db-chart__bar db-chart__bar--egreso" style={{height: `${egreso > 0 ? Math.max(5,(egreso/maxValue)*100) : 0}%`}} />
+                    </div>
+                    <span className="db-chart__label">{r.label || '-'}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          {diaSeleccionado && <div className="db-chart-detail" aria-live="polite">
+            <strong>{diaSeleccionado.label || diaSeleccionado.fecha}</strong>
+            <span>Ingresos: <b>{formatMoney(diaSeleccionado.ingresos)}</b></span>
+            <span>Egresos: <b>{formatMoney(diaSeleccionado.egresos)}</b></span>
+          </div>}
+        </>
+      )}
     </div>
   );
 }
@@ -298,24 +285,24 @@ export default function Dashboard() {
   const topCards = useMemo(
     () => [
       {
-        key: "ventas",
-        label: "Ventas actuales",
-        value: kpis.ventas_periodo,
+        key: "caja",
+        label: "Caja actual",
+        value: kpis.saldo_caja_actual,
         formatter: formatMoney,
-        detail: "Ventas netas del período",
+        detail: "Caja + Banco + Personal Pay · saldo real al día",
         icon: faWallet,
         tone: "green",
-        valueClass: moneyClass(kpis.ventas_periodo),
+        valueClass: moneyClass(kpis.saldo_caja_actual),
       },
       {
         key: "ingresos",
-        label: "Ingresos mes actual",
+        label: "Ingresos cobrados mes",
         value: kpis.ingresos_periodo,
         formatter: formatMoney,
         detail: (
           <>
             <AnimatedValue value={kpis.movimientos_periodo} formatter={formatNumber} />
-            {" movimientos del mes"}
+            {" movimientos cobrados/pagados"}
           </>
         ),
         icon: faMoneyBillTrendUp,
@@ -424,15 +411,24 @@ export default function Dashboard() {
           )}
         </section>
 
+        {!loadingDashboard && (
+          <div className="db-caja-breakdown" aria-label="Saldos actuales por caja">
+            {[
+              ['Caja', kpis.saldo_caja_medios?.caja],
+              ['Banco', kpis.saldo_caja_medios?.banco],
+              ['Personal Pay', kpis.saldo_caja_medios?.personal_pay],
+            ].map(([label, amount]) => (
+              <div key={label}><span>{label}</span><strong className={moneyClass(amount)}>{formatMoney(amount)}</strong></div>
+            ))}
+          </div>
+        )}
+
         <section className="db-main-grid">
           <article className="db-panel db-panel--chart">
             <div className="db-panel__head">
               <div>
-                <h2>Ingresos y egresos del mes actual</h2>
-                <p>
-                  Datos calculados desde ventas, compras, otros ingresos, otros
-                  egresos y cobros.
-                </p>
+                <h2>Movimiento real de dinero del mes</h2>
+                <p>Cobros y pagos efectivos por fecha. Las operaciones a crédito no pagadas no se suman.</p>
               </div>
 
               <div className="db-legend">

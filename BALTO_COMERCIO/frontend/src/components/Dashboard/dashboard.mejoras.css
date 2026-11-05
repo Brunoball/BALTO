@@ -1,0 +1,155 @@
+/* Panel contable compacto: gráfico con días útiles, importes legibles y cajas reconciliadas.
+   No forzar height:auto en escritorio: el Dashboard debe acompañar el alto del panel. */
+.db-main-grid { min-width: 0; }
+.db-caja-breakdown { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 10px; }
+.db-caja-breakdown > div { display: flex; justify-content: space-between; align-items: center; gap: 8px;
+  background: var(--db-surface); border: 1px solid rgba(10,37,64,.1); border-radius: 10px;
+  padding: 9px 13px; min-width: 0; font-size: 12px; }
+.db-caja-breakdown span { color: var(--db-text-muted); font-weight: 650; }
+.db-caja-breakdown strong { font-weight: 760; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.db-cash-movements { display: flex; flex-direction: column; gap: 10px; }
+.db-chart-summary { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 7px; }
+.db-chart-summary > div { border: 1px solid rgba(10,37,64,.08); border-radius: 10px;
+  padding: 10px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.db-chart-summary span { color: var(--db-text-muted); font-size: 11px; font-weight: 650; }
+.db-chart-summary strong { font-size: clamp(12px,1.1vw,16px); font-weight: 780; overflow-wrap: anywhere; }
+.db-chart-intro, .db-chart-note { color: var(--db-text-muted); font-size: 11px; }
+.db-chart-empty { padding: 28px 10px; border: 1px dashed rgba(10,37,64,.16); border-radius: 10px;
+  text-align: center; font-size: 12px; color: var(--db-text-muted); }
+.db-chart { overflow-x: auto; width: 100%; padding: 0 0 3px; }
+.db-chart__plot, .db-panel--chart .db-chart__plot { min-height: 116px; height: 116px; padding: 8px 6px 0;
+  border-bottom: 1px solid rgba(10,37,64,.12); background: none; gap: 8px; }
+.db-chart__item, .db-panel--chart .db-chart__item { height: 106px; min-height: 0; }
+.db-chart__bar-pair { display: flex; align-items: end; justify-content: center; gap: 3px;
+  width: 100%; height: 87px; }
+.db-chart__bar { display: block; width: 14px; max-width: 37%; min-height: 0; border-radius: 4px 4px 0 0;
+  box-shadow: none; background: none; }
+.db-chart__bar--ingreso { background: var(--db-chart-ingresos); }
+.db-chart__bar--egreso { background: var(--db-chart-egresos); }
+.db-chart__bar:hover { transform: none; box-shadow: none; }
+.db-chart__label { font-size: 10px; line-height: 1.2; margin-top: 5px; }
+.db-chart-skeleton { min-height: 125px; max-height: 150px; }
+html[data-theme="oscuro"] .db-caja-breakdown > div,
+html[data-theme="oscuro"] .db-chart-summary > div { border-color: rgba(255,255,255,.14); }
+@media (max-width: 768px) {
+ .db { height: auto !important; max-height: none !important; overflow: visible !important; }
+ .db-caja-breakdown { grid-template-columns: 1fr; gap: 5px; }
+ .db-caja-breakdown > div { padding: 8px 11px; }
+ .db-chart-summary { grid-template-columns: 1fr; }
+ .db-chart-summary > div { flex-direction: row; justify-content: space-between; align-items: baseline; }
+ .db-chart__plot, .db-panel--chart .db-chart__plot { min-width: 290px !important; min-height: 116px !important; height: 116px !important; padding-top: 8px !important; }
+ .db-chart__item, .db-panel--chart .db-chart__item { height: 106px !important; min-height: 0 !important; }
+ .db-chart__bar { width: 13px !important; }
+ .db-chart__label { font-size: 9.5px !important; }
+}
+
+.db-chart__item { background: transparent; border: 0; padding: 0; cursor: pointer; color: inherit; font: inherit; }
+.db-chart__item--active .db-chart__label { color: var(--db-action); }
+.db-chart__item:focus-visible { outline: 2px solid var(--db-action); border-radius: 6px; }
+.db-chart-detail { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-start;
+  gap: 10px 18px; padding: 9px 12px; background: var(--db-midnight-5); border-radius: 9px;
+  font-size: 11px; font-variant-numeric: tabular-nums; }
+.db-chart-detail span { color: var(--db-text-muted); }
+.db-chart-detail b { color: var(--db-text); }
+
+/* =========================================================
+   ALTURA ADAPTATIVA DEL DASHBOARD
+   En escritorio, el contenido ocupa el viewport disponible debajo
+   de la barra superior. En ventanas bajas, el scroll pertenece al
+   propio Dashboard y no se recortan indicadores ni el gráfico.
+   En tablet/móvil se conserva el scroll del .pp-content global.
+========================================================= */
+@media (min-width: 981px) {
+  .pp-content.pp-content--dashboard {
+    height: calc(var(--balto-visual-viewport-height, 100dvh) - var(--balto-topbar-height, var(--mov-topbar-h, 58px)));
+    min-height: 0;
+  }
+
+  .pp-content.pp-content--dashboard > .pp-content__inner {
+    height: 100%;
+    min-height: 0;
+  }
+
+  .pp-content.pp-content--dashboard .db {
+    height: 100%;
+    max-height: 100%;
+    min-height: 0;
+    flex: 1 1 auto;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  .pp-content.pp-content--dashboard .db-main-grid {
+    flex: 1 0 355px;
+    min-height: 355px;
+    grid-template-rows: minmax(0, 1fr);
+    align-items: stretch;
+  }
+
+  .pp-content.pp-content--dashboard .db-panel--chart {
+    height: 100%;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .pp-content.pp-content--dashboard .db-cash-movements {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  .pp-content.pp-content--dashboard .db-chart {
+    display: flex;
+    flex: 1 1 116px;
+    min-height: 116px;
+    align-items: center;
+  }
+
+  .pp-content.pp-content--dashboard .db-chart__plot {
+    width: 100%;
+    flex: 1 0 auto;
+    height: 100%;
+    min-height: 116px;
+    max-height: clamp(116px, 24dvh, 220px);
+  }
+
+  .pp-content.pp-content--dashboard .db-chart__item {
+    height: 100%;
+    min-height: 0;
+  }
+
+  .pp-content.pp-content--dashboard .db-chart__bar-pair {
+    height: auto;
+    min-height: 0;
+    flex: 1 1 auto;
+  }
+
+  .pp-content.pp-content--dashboard .db-panel--side {
+    height: 100%;
+    min-height: 0;
+  }
+
+  .pp-content.pp-content--dashboard .db-ind-wrapper {
+    grid-template-rows: repeat(3, minmax(72px, 1fr));
+    min-height: 0;
+    overflow-y: auto;
+  }
+}
+
+@media (max-width: 980px) {
+  /* El viewport responsive ya está administrado por GlobalViewport.css. */
+  .pp-content.pp-content--dashboard .db {
+    height: auto;
+    min-height: 0;
+    max-height: none;
+    overflow: visible;
+  }
+  .pp-content.pp-content--dashboard .db-main-grid {
+    flex: 0 0 auto;
+    align-items: stretch;
+  }
+  .pp-content.pp-content--dashboard .db-panel--chart {
+    height: auto;
+    min-height: 0;
+  }
+}
