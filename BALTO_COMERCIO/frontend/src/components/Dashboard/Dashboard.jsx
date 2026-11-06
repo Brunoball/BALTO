@@ -1,5 +1,5 @@
 // src/components/Dashboard/Dashboard.jsx
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowDown,
@@ -12,6 +12,8 @@ import {
   faUsers,
   faWallet,
   faArrowTrendUp,
+  faChevronLeft,
+  faChevronRight,
 } from "@fortawesome/free-solid-svg-icons";
 
 import Toast from "../Global/Toast.jsx";
@@ -49,7 +51,8 @@ function DashboardBarChart({ rows }) {
   const safeRows = Array.isArray(rows) ? rows : [];
   // Solo fechas con cobros/pagos efectivos; los días vacíos no aportan información.
   const diasActivos = safeRows.filter((r) => Number(r.ingresos || 0) > 0 || Number(r.egresos || 0) > 0);
-  const visibleRows = diasActivos.slice(-9);
+  // Más días útiles en pantalla grande sin cambiar importes ni la fuente de datos.
+  const visibleRows = diasActivos.slice(-12);
   const diaSeleccionado = visibleRows.find((r) => r.fecha === fechaSeleccionada) || visibleRows[visibleRows.length - 1] || null;
   const totalIngresos = safeRows.reduce((n, r) => n + Number(r.ingresos || 0), 0);
   const totalEgresos = safeRows.reduce((n, r) => n + Number(r.egresos || 0), 0);
@@ -68,8 +71,9 @@ function DashboardBarChart({ rows }) {
       ) : (
         <>
           <div className="db-chart-intro">Últimos {visibleRows.length} {visibleRows.length === 1 ? 'día' : 'días'} con movimientos</div>
-          <div className="db-chart" role="img" aria-label="Comparación de ingresos cobrados y egresos pagados por día">
-            <div className="db-chart__plot" style={{ gridTemplateColumns: `repeat(${visibleRows.length}, minmax(46px, 1fr))` }}>
+          <div className="db-chart" role="group" aria-label="Comparación de ingresos cobrados y egresos pagados por día">
+            {/* Todas las columnas se adaptan al ancho real; no generan scroll horizontal. */}
+            <div className="db-chart__plot" style={{ gridTemplateColumns: `repeat(${visibleRows.length}, minmax(0, 1fr))` }}>
               {visibleRows.map((r) => {
                 const ingreso = Math.max(0, Number(r.ingresos || 0));
                 const egreso = Math.max(0, Number(r.egresos || 0));
@@ -79,7 +83,8 @@ function DashboardBarChart({ rows }) {
                       <span className="db-chart__bar db-chart__bar--ingreso" style={{height: `${ingreso > 0 ? Math.max(5,(ingreso/maxValue)*100) : 0}%`}} />
                       <span className="db-chart__bar db-chart__bar--egreso" style={{height: `${egreso > 0 ? Math.max(5,(egreso/maxValue)*100) : 0}%`}} />
                     </div>
-                    <span className="db-chart__label">{r.label || '-'}</span>
+                    <span className="db-chart__label db-chart__label--full">{r.label || '-'}</span>
+                    <span className="db-chart__label db-chart__label--short" aria-hidden="true">{String(r.fecha || r.label || '-').slice(-2)}</span>
                   </button>
                 );
               })}
@@ -92,6 +97,157 @@ function DashboardBarChart({ rows }) {
           </div>}
         </>
       )}
+    </div>
+  );
+}
+
+
+// Un solo carrusel para los KPI principales y los saldos por medio de pago.
+// Los cuatro indicadores generales se muestran primero; el usuario puede avanzar
+// una tarjeta por vez para consultar el desglose, sin agregar una segunda fila.
+function DashboardCardsCarousel({ tarjetas, medios }) {
+  const scrollerRef = useRef(null);
+  const [navigation, setNavigation] = useState({
+    overflow: false,
+    canPrevious: false,
+    canNext: false,
+  });
+
+  useEffect(() => {
+    const scroller = scrollerRef.current;
+    if (!scroller) return undefined;
+
+    const updateNavigation = () => {
+      const maxScroll = Math.max(0, scroller.scrollWidth - scroller.clientWidth);
+      const next = {
+        overflow: maxScroll > 2,
+        canPrevious: scroller.scrollLeft > 2,
+        canNext: scroller.scrollLeft < maxScroll - 2,
+      };
+      setNavigation((current) =>
+        Object.keys(next).every((key) => next[key] === current[key]) ? current : next
+      );
+    };
+
+    scroller.scrollLeft = 0;
+    updateNavigation();
+    scroller.addEventListener("scroll", updateNavigation, { passive: true });
+    window.addEventListener("resize", updateNavigation);
+
+    const observer = typeof ResizeObserver !== "undefined"
+      ? new ResizeObserver(updateNavigation)
+      : null;
+    observer?.observe(scroller);
+    Array.from(scroller.children).forEach((card) => observer?.observe(card));
+
+    return () => {
+      scroller.removeEventListener("scroll", updateNavigation);
+      window.removeEventListener("resize", updateNavigation);
+      observer?.disconnect();
+    };
+  }, [tarjetas.length, medios.length]);
+
+  const moveCards = useCallback((direction) => {
+    const scroller = scrollerRef.current;
+    const firstCard = scroller?.firstElementChild;
+    if (!scroller || !firstCard) return;
+
+    const gap = parseFloat(window.getComputedStyle(scroller).columnGap) || 0;
+    const step = firstCard.getBoundingClientRect().width + gap;
+    const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ?? false;
+    scroller.scrollBy({ left: direction * step, behavior: reducedMotion ? "auto" : "smooth" });
+  }, []);
+
+  return (
+    <div className={`db-kpi-slider${tarjetas.length + medios.length > 1 ? " db-kpi-slider--multiple" : ""}`}>
+      {navigation.overflow && (
+        <>
+          <button
+            type="button"
+            className="db-kpi-carousel-arrow db-kpi-carousel-arrow--previous"
+            disabled={!navigation.canPrevious}
+            onClick={() => moveCards(-1)}
+            aria-label="Ver tarjeta anterior"
+            aria-controls="db-kpi-cards"
+            title="Tarjeta anterior"
+          >
+            <FontAwesomeIcon icon={faChevronLeft} />
+          </button>
+          <button
+            type="button"
+            className="db-kpi-carousel-arrow db-kpi-carousel-arrow--next"
+            disabled={!navigation.canNext}
+            onClick={() => moveCards(1)}
+            aria-label="Ver tarjeta siguiente"
+            aria-controls="db-kpi-cards"
+            title="Tarjeta siguiente"
+          >
+            <FontAwesomeIcon icon={faChevronRight} />
+          </button>
+        </>
+      )}
+      <div
+        id="db-kpi-cards"
+        ref={scrollerRef}
+        className="db-kpi-carousel-track"
+        tabIndex={0}
+        aria-label="Indicadores principales y saldos por medio de pago. Usá las flechas o deslizá para navegar."
+        onKeyDown={(event) => {
+          if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+            event.preventDefault();
+            moveCards(event.key === "ArrowLeft" ? -1 : 1);
+          }
+        }}
+      >
+        {tarjetas.map((card) => (
+          <article
+            className={`db-kpi db-kpi--${card.tone} db-kpi-carousel-card db-kpi-carousel-card--principal`}
+            key={card.key}
+          >
+            <div className="db-kpi__icon" aria-hidden="true">
+              <FontAwesomeIcon icon={card.icon} />
+            </div>
+            <div className="db-kpi__body">
+              <span className="db-kpi__label">{card.label}</span>
+              <AnimatedValue
+                as="strong"
+                className={`db-kpi__value ${card.valueClass}`}
+                value={card.value}
+                formatter={card.formatter}
+              />
+              <span className="db-kpi__detail">{card.detail}</span>
+            </div>
+          </article>
+        ))}
+        {medios.map((medio, index) => {
+          const isDocument = medio.tipo === "documento";
+          const titulo = medio.nombre?.toUpperCase() === "EFECTIVO" ? "Caja (Efectivo)" : medio.nombre;
+          const tone = Number(medio.saldo) < 0
+            ? "red"
+            : isDocument ? "yellow" : ["green", "blue", "pink", "yellow"][index % 4];
+          return (
+            <article
+              key={`medio-${medio.tipo}-${medio.id_medio_pago || medio.nombre}`}
+              className={`db-kpi db-kpi--${tone} db-kpi-carousel-card db-kpi-carousel-card--medio`}
+              data-medio-id={medio.id_medio_pago}
+              data-medio-tipo={medio.tipo}
+            >
+              <div className="db-kpi__icon" aria-hidden="true">
+                <FontAwesomeIcon icon={isDocument ? faCreditCard : faWallet} />
+              </div>
+              <div className="db-kpi__body">
+                <span className="db-kpi__label" title={titulo}>{titulo}</span>
+                <strong className={`db-kpi__value ${moneyClass(medio.saldo)}`} title={formatMoney(medio.saldo)}>
+                  {formatMoney(medio.saldo)}
+                </strong>
+                <span className="db-kpi__detail">
+                  {isDocument ? `En cartera · ${medio.cantidad ?? 0} doc.` : "Medio de pago"}
+                </span>
+              </div>
+            </article>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -127,7 +283,7 @@ function SideIndicators({ kpis }) {
   const saldoClass = moneyClass(kpis.saldo_periodo);
 
   return (
-    <div className="db-ind-wrapper">
+    <div className="db-ind-wrapper" role="region" aria-label="Tarjetas de indicadores generales, desplazamiento vertical" tabIndex={0}>
       <div
         className={`db-ind-resultado ${
           saldoClass === "is-positive"
@@ -388,62 +544,21 @@ export default function Dashboard() {
           </div>
         </header>
 
-        <section className="db-kpi-grid" aria-busy={loadingDashboard}>
+        {/* Una sola fila de tarjetas: 4 KPI y luego todos los medios de pago. */}
+        <section className="db-kpi-carousel-section" aria-label="Indicadores y desglose de Caja actual" aria-busy={loadingDashboard}>
           {loadingDashboard ? (
-            <TopCardsSkeleton />
+            <div className="db-kpi-carousel-track db-kpi-carousel-track--loading">
+              <TopCardsSkeleton />
+            </div>
           ) : (
-            topCards.map((card) => (
-              <article className={`db-kpi db-kpi--${card.tone}`} key={card.key}>
-                <div className="db-kpi__icon" aria-hidden="true">
-                  <FontAwesomeIcon icon={card.icon} />
-                </div>
-
-                <div className="db-kpi__body">
-                  <span className="db-kpi__label">{card.label}</span>
-
-                  <AnimatedValue
-                    as="strong"
-                    className={`db-kpi__value ${card.valueClass}`}
-                    value={card.value}
-                    formatter={card.formatter}
-                  />
-
-                  <span className="db-kpi__detail">{card.detail}</span>
-                </div>
-              </article>
-            ))
+            <>
+              <DashboardCardsCarousel
+                tarjetas={topCards}
+                medios={Array.isArray(kpis.saldo_caja_medios) ? kpis.saldo_caja_medios : []}
+              />
+            </>
           )}
         </section>
-
-        {!loadingDashboard && (
-          <section className="db-caja-section" aria-label="Detalle de Caja actual">
-            <div className="db-caja-section__header">
-              <strong>Desglose de Caja actual</strong>
-              <span>
-                Dinero disponible: {formatMoney(kpis.saldo_caja_liquido)} · Cheques/eCheqs en cartera: {formatMoney(kpis.saldo_caja_documentos)}
-              </span>
-            </div>
-            <div className="db-caja-breakdown" aria-label="Saldos actuales por medio de pago">
-              {(Array.isArray(kpis.saldo_caja_medios) ? kpis.saldo_caja_medios : []).map((medio) => (
-                <div
-                  key={`${medio.tipo}-${medio.id_medio_pago || medio.nombre}`}
-                  className={medio.tipo === "documento" ? "db-caja-breakdown__documento" : ""}
-                  data-medio-id={medio.id_medio_pago}
-                  data-medio-tipo={medio.tipo}
-                >
-                  <span>
-                    {medio.nombre?.toUpperCase() === "EFECTIVO" ? "Caja (Efectivo)" : medio.nombre}
-                    {medio.tipo === "documento" && <small>En cartera · {medio.cantidad ?? 0} doc.</small>}
-                  </span>
-                  <strong className={moneyClass(medio.saldo)}>{formatMoney(medio.saldo)}</strong>
-                </div>
-              ))}
-            </div>
-            <p className="db-caja-section__note">
-              Los cheques y eCheqs se incluyen solo mientras están en cartera; no son dinero acreditado en banco.
-            </p>
-          </section>
-        )}
 
         <section className="db-main-grid">
           <article className="db-panel db-panel--chart">

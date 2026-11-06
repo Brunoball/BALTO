@@ -84,12 +84,12 @@ html[data-theme="oscuro"] .db-chart-summary > div { border-color: rgba(255,255,2
     min-height: 0;
     flex: 1 1 auto;
     overflow-x: hidden;
-    overflow-y: auto;
+    overflow-y: hidden;
   }
 
   .pp-content.pp-content--dashboard .db-main-grid {
-    flex: 1 0 310px;
-    min-height: 310px;
+    flex: 1 1 0;
+    min-height: 0;
     grid-template-rows: minmax(0, 1fr);
     align-items: stretch;
   }
@@ -159,5 +159,624 @@ html[data-theme="oscuro"] .db-chart-summary > div { border-color: rgba(255,255,2
   .pp-content.pp-content--dashboard .db-panel--chart {
     height: auto;
     min-height: 0;
+  }
+}
+
+
+/* =========================================================
+   DASHBOARD · COMPOSICIÓN PARA PANTALLAS GRANDES (05-11-2026)
+   Mantiene el comportamiento de altura adaptativa y la
+   información contable existente. Ajustes exclusivamente visuales.
+   ========================================================= */
+@media (min-width: 981px) {
+  /* Evita que KPI, gráfico y saldos se alejen entre sí en monitores
+     panorámicos. La caja exterior sigue ocupando el alto disponible. */
+  .pp-content.pp-content--dashboard .db {
+    width: 100%;
+    max-width: 1550px;
+    box-sizing: border-box;
+    margin-inline: auto;
+    padding: 8px clamp(8px, 1.2vw, 18px) 10px;
+    gap: 12px;
+  }
+
+  .pp-content.pp-content--dashboard .db-kpi-grid {
+    gap: 12px;
+  }
+
+  .pp-content.pp-content--dashboard .db-kpi {
+    min-height: 96px;
+    padding: 13px 14px;
+    gap: 11px;
+    align-items: center;
+  }
+
+  .pp-content.pp-content--dashboard .db-kpi__value {
+    font-size: clamp(17px, 1.22vw, 23px);
+  }
+
+  .pp-content.pp-content--dashboard .db-caja-breakdown {
+    gap: 8px;
+  }
+
+  .pp-content.pp-content--dashboard .db-caja-breakdown > div {
+    min-height: 45px;
+    padding: 9px 12px;
+  }
+
+  /* El gráfico pasa a ser el foco de la pantalla; los indicadores
+     tienen espacio suficiente sin acaparar una columna gigante. */
+  .pp-content.pp-content--dashboard .db-main-grid {
+    grid-template-columns: minmax(0, 1.85fr) minmax(310px, .82fr);
+    gap: 12px;
+    flex: 1 1 0;
+    min-height: 0;
+    align-items: stretch;
+  }
+
+  .pp-content.pp-content--dashboard .db-panel {
+    padding: 15px;
+  }
+
+  .pp-content.pp-content--dashboard .db-panel--chart {
+    min-height: 0;
+  }
+
+  .pp-content.pp-content--dashboard .db-cash-movements {
+    gap: 8px;
+  }
+
+  .pp-content.pp-content--dashboard .db-chart-summary > div {
+    padding: 9px 12px;
+    gap: 2px;
+    background: var(--db-midnight-5);
+  }
+
+  .pp-content.pp-content--dashboard .db-chart-summary strong {
+    font-size: clamp(13px, 1.05vw, 17px);
+  }
+
+  /* Antes la serie estaba fijada a 116px; ahora crece con el alto
+     visible, con límites para que las barras no resulten exageradas. */
+  .pp-content.pp-content--dashboard .db-chart {
+    flex: 1 1 auto;
+    min-height: 0;
+    align-items: center;
+  }
+
+  .pp-content.pp-content--dashboard .db-chart__plot {
+    min-height: 0;
+    height: 100%;
+    max-height: none;
+    padding: 14px 8px 0;
+    gap: 8px;
+    background:
+      linear-gradient(to bottom, rgba(10, 37, 64, .055) 1px, transparent 1px)
+      0 12px / 100% 50px;
+  }
+
+  .pp-content.pp-content--dashboard .db-chart__item {
+    height: 100%;
+    min-height: 0;
+    justify-content: flex-end;
+  }
+
+  .pp-content.pp-content--dashboard .db-chart__bar-pair {
+    flex: 1 1 auto;
+    width: 100%;
+    gap: clamp(3px, .45vw, 7px);
+    align-items: flex-end;
+  }
+
+  .pp-content.pp-content--dashboard .db-chart__bar {
+    width: clamp(13px, 1.15vw, 22px);
+    max-width: 42%;
+    border-radius: 5px 5px 0 0;
+  }
+
+  .pp-content.pp-content--dashboard .db-chart__label {
+    margin-top: 6px;
+    font-size: 10.5px;
+  }
+
+  .pp-content.pp-content--dashboard .db-ind-wrapper {
+    grid-template-rows: repeat(3, minmax(78px, 1fr));
+    gap: 9px;
+    overflow: visible;
+  }
+
+  .pp-content.pp-content--dashboard .db-ind-item,
+  .pp-content.pp-content--dashboard .db-ind-resultado {
+    padding: 12px;
+  }
+}
+
+/* En equipos de escritorio compactos mantener las dos columnas,
+   pero sin que los importes deban pelear por el ancho. */
+@media (min-width: 981px) and (max-width: 1199px) {
+  .pp-content.pp-content--dashboard .db {
+    padding-inline: 8px;
+    gap: 9px;
+  }
+
+  .pp-content.pp-content--dashboard .db-main-grid {
+    grid-template-columns: minmax(0, 1.4fr) minmax(285px, .8fr);
+    gap: 9px;
+  }
+
+  .pp-content.pp-content--dashboard .db-panel {
+    padding: 11px;
+  }
+
+  .pp-content.pp-content--dashboard .db-ind-item,
+  .pp-content.pp-content--dashboard .db-ind-resultado {
+    padding: 9px;
+  }
+}
+
+/* Tablet: sin altura rígida, permitiendo scroll en el panel padre. */
+@media (min-width: 769px) and (max-width: 980px) {
+  .db .db-chart__plot,
+  .db .db-panel--chart .db-chart__plot {
+    min-height: 188px;
+    height: 188px;
+  }
+
+  .db .db-chart__item,
+  .db .db-panel--chart .db-chart__item {
+    height: 178px;
+  }
+
+  .db .db-chart__bar-pair {
+    height: 156px;
+  }
+}
+
+/* Móvil: gráfico legible y desplazamiento horizontal dentro de la
+   visualización, conservando el scroll vertical global ya resuelto. */
+@media (max-width: 768px) {
+  .db .db-panel--chart .db-chart__plot {
+    min-height: 162px !important;
+    height: 162px !important;
+    padding-top: 10px !important;
+  }
+
+  .db .db-panel--chart .db-chart__item {
+    height: 150px !important;
+  }
+
+  .db .db-chart__bar-pair {
+    height: 128px;
+    flex: none;
+  }
+}
+
+/* Las cifras y gráficos deben mantenerse legibles en modo oscuro. */
+html[data-theme="oscuro"] .db .db-chart-summary > div {
+  border-color: rgba(255,255,255,.12);
+}
+
+
+.db { box-sizing: border-box; }
+
+/* =========================================================
+   UNA SOLA FILA DE TARJETAS · KPI + MEDIOS DE PAGO
+   Los KPI principales y todos los medios comparten un mismo carrusel.
+   El flex sin wrap evita cualquier segunda fila, aun en móvil.
+========================================================= */
+.db .db-kpi-carousel-section {
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 auto;
+  gap: 5px;
+}
+
+.db .db-kpi-slider {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+.db .db-kpi-slider--multiple { padding-inline: 30px; }
+
+.db .db-kpi-carousel-track {
+  display: flex !important;
+  flex-flow: row nowrap !important;
+  align-items: stretch;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  padding: 2px 0 6px;
+  box-sizing: border-box;
+}
+.db .db-kpi-carousel-track::-webkit-scrollbar { display: none; }
+
+.db .db-kpi-carousel-track > .db-kpi {
+  flex: 0 0 calc((100% - 30px) / 4) !important;
+  width: calc((100% - 30px) / 4);
+  min-width: 0;
+  max-width: none;
+  min-height: 100px;
+  box-sizing: border-box;
+  align-self: stretch;
+  padding: 12px 13px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+  scroll-snap-align: start;
+  scroll-snap-stop: normal;
+}
+.db .db-kpi-carousel-card .db-kpi__icon { flex-shrink: 0; }
+.db .db-kpi-carousel-card .db-kpi__body { min-width: 0; flex: 1 1 auto; }
+.db .db-kpi-carousel-card .db-kpi__label,
+.db .db-kpi-carousel-card .db-kpi__value {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.db .db-kpi-carousel-card .db-kpi__value {
+  font-size: clamp(15px, 1.2vw, 20px);
+}
+.db .db-kpi-carousel-card .db-kpi__detail {
+  display: block;
+  margin-top: 4px;
+  line-height: 1.22;
+  font-size: 10.5px;
+}
+.db .db-kpi-carousel-card.db-kpi--red::after { background: var(--db-danger-15); }
+.db .db-kpi-carousel-card.db-kpi--red .db-kpi__icon {
+  background: var(--db-danger-15);
+  color: var(--db-danger);
+}
+
+.db .db-kpi-carousel-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+  width: 28px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--db-text-muted);
+  font-size: 16px;
+  cursor: pointer;
+  transition: color .15s ease, background-color .15s ease, opacity .15s ease;
+}
+.db .db-kpi-carousel-arrow--previous { left: 0; }
+.db .db-kpi-carousel-arrow--next { right: 0; }
+.db .db-kpi-carousel-arrow:hover:not(:disabled) {
+  color: var(--db-action);
+  background: var(--db-action-10);
+}
+.db .db-kpi-carousel-arrow:disabled { opacity: .25; cursor: default; }
+.db .db-kpi-carousel-arrow:focus-visible,
+.db .db-kpi-carousel-track:focus-visible {
+  outline: 2px solid var(--db-action);
+  outline-offset: -2px;
+}
+html[data-theme="oscuro"] .db .db-kpi-carousel-arrow,
+body.dark .db .db-kpi-carousel-arrow { color: #8ab4ff; }
+
+.db .db-kpi-carousel-meta {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 2px 12px;
+  font-size: 10.5px;
+  line-height: 1.3;
+  color: var(--db-text-muted);
+}
+
+/* Igual cantidad de tarjetas visibles en cada resolución, siempre una fila. */
+@media (min-width: 981px) and (max-width: 1199px) {
+  .db .db-kpi-carousel-track > .db-kpi {
+    flex-basis: calc((100% - 20px) / 3) !important;
+    width: calc((100% - 20px) / 3);
+  }
+}
+@media (min-width: 601px) and (max-width: 980px) {
+  .db .db-kpi-carousel-track > .db-kpi {
+    flex-basis: calc((100% - 10px) / 2) !important;
+    width: calc((100% - 10px) / 2);
+  }
+}
+@media (max-width: 600px) {
+  .db .db-kpi-carousel-track { gap: 8px; }
+  .db .db-kpi-carousel-track > .db-kpi {
+    flex-basis: 100% !important;
+    width: 100%;
+    min-height: 86px !important;
+  }
+  .db .db-kpi-carousel-meta { justify-content: flex-start; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .db .db-kpi-carousel-track { scroll-behavior: auto; }
+}
+
+/* =========================================================
+   DASHBOARD · GRÁFICO FIJO / INDICADORES CON SCROLL PROPIO
+   Las doce columnas del gráfico se distribuyen en el espacio
+   disponible. El scroll vertical queda solo en las tarjetas de
+   "Indicadores generales", sin mover su encabezado.
+========================================================= */
+.db .db-panel--chart .db-chart {
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: hidden !important;
+  overflow-y: hidden !important;
+  scrollbar-width: none;
+}
+.db .db-panel--chart .db-chart__plot {
+  width: 100%;
+  min-width: 0 !important;
+  max-width: 100%;
+  grid-template-columns: repeat(12, minmax(0, 1fr)); /* El JSX ajusta el número si hay menos días. */
+  gap: clamp(2px, .5vw, 8px);
+  overflow: hidden;
+}
+.db .db-panel--chart .db-chart__item { min-width: 0; }
+.db .db-panel--chart .db-chart__bar-pair {
+  min-width: 0;
+  width: 100%;
+  gap: clamp(2px, .4vw, 6px);
+}
+.db .db-panel--chart .db-chart__bar {
+  min-width: 0;
+  flex: 0 1 auto;
+  width: min(17px, 40%);
+  max-width: 40%;
+}
+.db .db-panel--chart .db-chart__label {
+  max-width: 100%;
+  white-space: nowrap;
+  text-align: center;
+}
+.db .db-panel--chart .db-chart__label--short { display: none; }
+
+.db .db-panel--side {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.db .db-panel--side > .db-panel__head { flex: 0 0 auto; }
+.db .db-panel--side .db-ind-wrapper {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: none;
+  grid-auto-rows: minmax(72px, max-content);
+  align-content: start;
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  overscroll-behavior-y: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 85, 187, .35) transparent;
+  padding: 2px 5px 3px 1px;
+}
+.db .db-panel--side .db-ind-wrapper::-webkit-scrollbar { width: 6px; }
+.db .db-panel--side .db-ind-wrapper::-webkit-scrollbar-thumb {
+  background: rgba(0, 85, 187, .35);
+  border-radius: 999px;
+}
+.db .db-panel--side .db-ind-resultado,
+.db .db-panel--side .db-ind-item { min-height: 72px; }
+.db .db-panel--side .db-ind-row { display: contents; }
+
+/* En tablet y teléfono: el panel tiene altura natural, pero
+   la lista interna sí tiene un alto máximo y scroll propio. */
+@media (max-width: 980px) {
+  .db .db-panel--side .db-ind-wrapper {
+    flex: 0 1 auto;
+    max-height: 295px !important;
+  }
+}
+@media (max-width: 768px) {
+  .db .db-panel--chart .db-chart {
+    padding-bottom: 0 !important;
+    touch-action: auto !important;
+  }
+  .db .db-panel--chart .db-chart__plot {
+    width: 100%;
+    min-width: 0 !important;
+    gap: 3px !important;
+    padding-inline: 2px !important;
+  }
+  .db .db-panel--chart .db-chart__bar-pair { gap: 2px !important; }
+  .db .db-panel--chart .db-chart__bar { width: 40% !important; max-width: 40% !important; }
+  .db .db-panel--chart .db-chart__label--full { display: none; }
+  .db .db-panel--chart .db-chart__label--short { display: block; font-size: 9px !important; }
+  .db .db-panel--side .db-ind-wrapper {
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 8px !important;
+    max-height: 285px !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+  }
+}
+
+
+/* =========================================================
+   DASHBOARD · SIN SCROLL GENERAL / GRÁFICO ADAPTATIVO
+   Sólo el listado de indicadores tiene scroll vertical interno.
+   Conserva el carrusel horizontal de los KPI y todos los datos.
+========================================================= */
+@media (min-width: 981px) {
+  .pp-content.pp-content--dashboard {
+    overflow-x: hidden;
+    overflow-y: hidden;
+    box-sizing: border-box;
+    min-height: 0;
+  }
+  .pp-content.pp-content--dashboard > .pp-content__inner {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    max-height: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
+  }
+  .pp-content.pp-content--dashboard .db {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    height: 100%;
+    min-height: 0;
+    max-height: 100%;
+    overflow: hidden !important;
+    gap: clamp(6px, 1.2dvh, 12px);
+  }
+  .pp-content.pp-content--dashboard .db-header,
+  .pp-content.pp-content--dashboard .db-kpi-carousel-section,
+  .pp-content.pp-content--dashboard .db-footer {
+    flex-shrink: 0;
+  }
+  .pp-content.pp-content--dashboard .db-main-grid {
+    flex: 1 1 0;
+    height: auto;
+    min-height: 0 !important;
+    max-height: none;
+    overflow: hidden;
+    grid-template-rows: minmax(0, 1fr);
+  }
+  .pp-content.pp-content--dashboard .db-panel--chart,
+  .pp-content.pp-content--dashboard .db-panel--side {
+    height: 100%;
+    min-height: 0 !important;
+    max-height: 100%;
+    overflow: hidden;
+  }
+  .pp-content.pp-content--dashboard .db-panel--chart > .db-panel__head {
+    flex: 0 0 auto;
+  }
+  .pp-content.pp-content--dashboard .db-cash-movements {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+  }
+  .pp-content.pp-content--dashboard .db-chart {
+    display: flex;
+    align-items: stretch;
+    flex: 1 1 0;
+    min-height: 0 !important;
+    max-height: 100%;
+    overflow: hidden !important;
+    padding-top: 3px;
+  }
+  .pp-content.pp-content--dashboard .db-chart__plot {
+    display: grid;
+    align-items: stretch;
+    flex: 1 1 auto;
+    height: 100% !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    min-width: 0 !important;
+    overflow: hidden;
+  }
+  .pp-content.pp-content--dashboard .db-chart__item {
+    display: flex;
+    flex-direction: column;
+    height: 100% !important;
+    min-height: 0 !important;
+    justify-content: flex-end;
+  }
+  .pp-content.pp-content--dashboard .db-chart__bar-pair {
+    height: auto;
+    min-height: 0;
+    flex: 1 1 auto;
+  }
+  .pp-content.pp-content--dashboard .db-panel--side .db-ind-wrapper {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+  }
+}
+
+/* Alturas de ventana reducidas: las tarjetas se compactan, en lugar
+   de forzar un scroll sobre la sección entera o recortar el gráfico. */
+@media (min-width: 981px) and (max-height: 760px) {
+  .pp-content.pp-content--dashboard .db { gap: 6px; padding-block: 5px; }
+  .pp-content.pp-content--dashboard .db-header--dashboard { padding-block: 2px; }
+  .pp-content.pp-content--dashboard .db-subtitle { line-height: 1.15; }
+  .pp-content.pp-content--dashboard .db .db-kpi-carousel-track > .db-kpi {
+    min-height: 76px; padding-block: 7px;
+  }
+  .pp-content.pp-content--dashboard .db .db-kpi__icon { width: 34px; height: 34px; min-width: 34px; }
+  .pp-content.pp-content--dashboard .db .db-kpi-carousel-meta { font-size: 10px; }
+  .pp-content.pp-content--dashboard .db-panel { padding: 9px; }
+  .pp-content.pp-content--dashboard .db-panel__head { margin-bottom: 6px; }
+  .pp-content.pp-content--dashboard .db-panel__head p { font-size: 11px; line-height: 1.2; }
+  .pp-content.pp-content--dashboard .db-chart-summary > div { padding-block: 6px; }
+  .pp-content.pp-content--dashboard .db-chart-detail { padding: 5px 8px; }
+  .pp-content.pp-content--dashboard .db-cash-movements { gap: 5px; }
+  .pp-content.pp-content--dashboard .db-footer { margin-top: 0; }
+}
+
+/* Responsive: el gráfico se escala al ancho real, nunca genera barras
+   horizontales ni obliga a crear un segundo viewport interno. El
+   desplazamiento de la página en móvil sigue a cargo de .pp-content. */
+@media (max-width: 980px) {
+  .pp-content.pp-content--dashboard .db,
+  .pp-content.pp-content--dashboard .db-main-grid,
+  .pp-content.pp-content--dashboard .db-panel--chart {
+    overflow-x: hidden;
+  }
+  .pp-content.pp-content--dashboard .db-panel--chart .db-chart {
+    display: block;
+    min-width: 0;
+    max-width: 100%;
+    height: auto;
+    min-height: 0;
+    overflow: hidden !important;
+  }
+  .pp-content.pp-content--dashboard .db-panel--chart .db-chart__plot {
+    display: grid;
+    width: 100%;
+    min-width: 0 !important;
+    max-width: 100%;
+    height: clamp(116px, 33vw, 188px) !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    gap: clamp(1px, 0.6vw, 6px);
+    padding-inline: 2px !important;
+  }
+  .pp-content.pp-content--dashboard .db-panel--chart .db-chart__item {
+    height: 100% !important;
+    min-height: 0 !important;
+    max-width: 100%;
+  }
+  .pp-content.pp-content--dashboard .db-panel--chart .db-chart__bar-pair {
+    width: 100%;
+    height: auto;
+    min-height: 0;
+    flex: 1 1 auto;
   }
 }
