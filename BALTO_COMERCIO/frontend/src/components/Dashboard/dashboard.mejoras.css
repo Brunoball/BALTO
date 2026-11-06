@@ -173,9 +173,9 @@ html[data-theme="oscuro"] .db-chart-summary > div { border-color: rgba(255,255,2
      panorámicos. La caja exterior sigue ocupando el alto disponible. */
   .pp-content.pp-content--dashboard .db {
     width: 100%;
-    max-width: 1550px;
+    max-width: none; /* Sin franja vacía en resoluciones anchas. */
     box-sizing: border-box;
-    margin-inline: auto;
+    margin-inline: 0;
     padding: 8px clamp(8px, 1.2vw, 18px) 10px;
     gap: 12px;
   }
@@ -778,5 +778,219 @@ body.dark .db .db-kpi-carousel-arrow { color: #8ab4ff; }
     height: auto;
     min-height: 0;
     flex: 1 1 auto;
+  }
+}
+
+/* =========================================================
+   DASHBOARD · ANCHO FLUIDO E INDICADORES 1 + 2×2 (06-11-2026)
+   El panel ocupa el ancho disponible REAL del layout, sin máximo fijo.
+   El gráfico y las tarjetas nunca imponen ancho al contenedor.
+   Se conserva el scroll únicamente dentro de Indicadores generales.
+   ========================================================= */
+.pp-content.pp-content--dashboard,
+.pp-content.pp-content--dashboard > .pp-content__inner {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+.pp-content.pp-content--dashboard > .pp-content__inner {
+  width: 100%;
+}
+.pp-content.pp-content--dashboard .db {
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  margin-inline: 0;
+}
+.pp-content.pp-content--dashboard .db-kpi-carousel-section,
+.pp-content.pp-content--dashboard .db-main-grid,
+.pp-content.pp-content--dashboard .db-panel {
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* El gráfico aprovecha el espacio sobrante; indicadores tiene un ancho
+   proporcionado para alojar dos tarjetas por fila sin cortar importes. */
+@media (min-width: 981px) {
+  .pp-content.pp-content--dashboard .db-main-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, clamp(385px, 36%, 565px));
+  }
+}
+@media (min-width: 981px) and (max-width: 1150px) {
+  .pp-content.pp-content--dashboard .db-main-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, clamp(340px, 40%, 420px));
+  }
+}
+@media (max-width: 980px) {
+  .pp-content.pp-content--dashboard .db-main-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Estructura: [ flujo neto a ancho completo ] + [ 2 columnas × 2 filas ].
+   Se aplica también al skeleton, evitando saltos durante la carga. */
+.db .db-panel--side .db-ind-wrapper {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: minmax(108px, max-content) repeat(2, minmax(90px, max-content));
+  grid-auto-rows: minmax(90px, max-content);
+  align-content: start;
+  gap: 9px;
+  min-width: 0;
+  max-width: 100%;
+  padding: 2px 4px 3px 1px;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+}
+.db .db-panel--side .db-ind-row { display: contents; }
+.db .db-panel--side .db-ind-resultado {
+  grid-column: 1 / -1;
+  min-height: 108px;
+  padding: 15px;
+  gap: 13px;
+}
+.db .db-panel--side .db-ind-resultado .db-ind-icon {
+  width: 42px;
+  height: 42px;
+  flex-basis: 42px;
+  font-size: 17px;
+  border-radius: 13px;
+}
+.db .db-panel--side .db-ind-resultado .db-ind-value {
+  font-size: clamp(17px, 1.3vw, 22px);
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-overflow: clip;
+}
+.db .db-panel--side .db-ind-item {
+  min-width: 0;
+  min-height: 90px;
+  padding: 10px;
+  gap: 8px;
+  align-items: center;
+}
+.db .db-panel--side .db-ind-item__body { min-width: 0; }
+.db .db-panel--side .db-ind-item .db-ind-value {
+  font-size: clamp(12px, .92vw, 15px);
+  line-height: 1.22;
+  white-space: normal;
+  overflow: visible;
+  overflow-wrap: anywhere;
+  text-overflow: clip;
+}
+
+@media (max-width: 980px) {
+  .db .db-panel--side .db-ind-wrapper {
+    max-height: 350px !important;
+  }
+}
+@media (max-width: 768px) {
+  .db .db-panel--side .db-ind-wrapper {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    grid-template-rows: minmax(98px, max-content) repeat(2, minmax(98px, max-content));
+    max-height: 350px !important;
+    gap: 8px !important;
+  }
+  .db .db-panel--side .db-ind-resultado {
+    min-height: 98px !important;
+    padding: 12px !important;
+  }
+  .db .db-panel--side .db-ind-item {
+    min-height: 98px !important;
+    padding: 10px !important;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 7px;
+  }
+  .db .db-panel--side .db-ind-item .db-ind-value {
+    font-size: clamp(11.5px, 2.75vw, 14px) !important;
+  }
+}
+@media (max-width: 390px) {
+  .db .db-panel--side .db-ind-item {
+    padding: 8px !important;
+  }
+  .db .db-panel--side .db-ind-item .db-ind-icon {
+    width: 27px;
+    height: 27px;
+  }
+  .db .db-panel--side .db-ind-item .db-ind-label { font-size: 10px; }
+}
+
+/* =========================================================
+   INDICADORES GENERALES · ESCALADO REAL EN PANTALLAS GRANDES
+   La columna deja de tener un tope fijo de 565 px: crece con
+   el Dashboard y las cinco tarjetas ocupan el alto disponible.
+   El gráfico mantiene el espacio restante y no gana scroll.
+   ========================================================= */
+@media (min-width: 981px) {
+  /* Sin tope rígido: en monitores anchos los indicadores también
+     crecen proporcionalmente en lugar de quedar angostos. */
+  .pp-content.pp-content--dashboard .db-main-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(340px, 40%);
+  }
+
+  .pp-content.pp-content--dashboard .db-panel--side .db-ind-wrapper {
+    flex: 1 1 0;
+    min-height: 0;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: minmax(108px, 1.25fr) repeat(2, minmax(90px, 1fr));
+    grid-auto-rows: minmax(90px, 1fr);
+    align-content: stretch;
+    gap: clamp(8px, .8vw, 16px);
+    overflow-x: hidden !important;
+    overflow-y: auto !important; /* Solo si la ventana es muy baja. */
+  }
+
+  .pp-content.pp-content--dashboard .db-panel--side .db-panel__head h2 {
+    font-size: clamp(14px, .95vw, 19px);
+  }
+  .pp-content.pp-content--dashboard .db-panel--side .db-panel__head p {
+    font-size: clamp(10.8px, .7vw, 13px);
+  }
+
+  .pp-content.pp-content--dashboard .db-panel--side .db-ind-resultado {
+    min-height: 108px;
+    padding: clamp(12px, 1.1vw, 24px);
+    gap: clamp(10px, 1vw, 20px);
+    align-items: center;
+  }
+  .pp-content.pp-content--dashboard .db-panel--side .db-ind-item {
+    min-height: 90px;
+    padding: clamp(10px, .9vw, 22px);
+    gap: clamp(8px, .8vw, 16px);
+  }
+  .pp-content.pp-content--dashboard .db-panel--side .db-ind-resultado .db-ind-icon {
+    width: clamp(42px, 3.1vw, 64px);
+    height: clamp(42px, 3.1vw, 64px);
+    flex-basis: clamp(42px, 3.1vw, 64px);
+    font-size: clamp(17px, 1.25vw, 24px);
+  }
+  .pp-content.pp-content--dashboard .db-panel--side .db-ind-item .db-ind-icon {
+    width: clamp(30px, 2.2vw, 46px);
+    height: clamp(30px, 2.2vw, 46px);
+    font-size: clamp(12px, .95vw, 18px);
+  }
+  .pp-content.pp-content--dashboard .db-panel--side .db-ind-resultado .db-ind-value {
+    font-size: clamp(18px, 1.65vw, 29px);
+    line-height: 1.15;
+  }
+  .pp-content.pp-content--dashboard .db-panel--side .db-ind-item .db-ind-value {
+    font-size: clamp(12px, 1.05vw, 20px);
+    line-height: 1.2;
+  }
+  .pp-content.pp-content--dashboard .db-panel--side .db-ind-label {
+    font-size: clamp(10.5px, .75vw, 14px);
+  }
+}
+
+/* En escritorios estrechos se prioriza que los importes se lean
+   enteros en cada una de las dos columnas del grid de indicadores. */
+@media (min-width: 981px) and (max-width: 1199px) {
+  .pp-content.pp-content--dashboard .db-panel--side .db-ind-item {
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
   }
 }

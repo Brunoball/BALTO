@@ -283,7 +283,7 @@ function SideIndicators({ kpis }) {
   const saldoClass = moneyClass(kpis.saldo_periodo);
 
   return (
-    <div className="db-ind-wrapper" role="region" aria-label="Tarjetas de indicadores generales, desplazamiento vertical" tabIndex={0}>
+    <div className="db-ind-wrapper" role="region" aria-label="Indicadores generales: flujo neto destacado y cuatro indicadores en cuadrícula de dos columnas" tabIndex={0}>
       <div
         className={`db-ind-resultado ${
           saldoClass === "is-positive"
