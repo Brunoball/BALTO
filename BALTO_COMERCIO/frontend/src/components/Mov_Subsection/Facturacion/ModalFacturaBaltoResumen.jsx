@@ -682,6 +682,29 @@ export default function ModalFacturaBaltoResumen({
   const montoReal = Number(dataFacturacion?.total_ars ?? dataFacturacion?.monto ?? dataFacturacion?.importe ?? 0);
   const monto = forceTestAmount ? Number(testAmount) : montoReal;
 
+  // Los ítems muestran el precio de lista y el total con descuento. Esta información
+  // es solo visual: no recalcula montos ni modifica los datos enviados a ARCA.
+  const descuentoInformativo = useMemo(() => {
+    if (usarModoNC || forceTestAmount) return null;
+    const descuento = Number(dataFacturacion?.descuento_monto);
+    if (!Number.isFinite(descuento) || descuento <= 0 || !Number.isFinite(montoReal)) return null;
+
+    const brutoInformado = Number(dataFacturacion?.total_bruto);
+    const bruto = Number.isFinite(brutoInformado) && brutoInformado > 0 &&
+      Math.abs(brutoInformado - descuento - montoReal) <= 0.02
+      ? brutoInformado
+      : Math.round((montoReal + descuento) * 100) / 100;
+    const porcentaje = Number(dataFacturacion?.descuento_valor);
+    const mostrarPorcentaje = String(dataFacturacion?.descuento_tipo || "").toUpperCase() === "PORCENTAJE" &&
+      Number.isFinite(porcentaje) && porcentaje > 0;
+
+    return {
+      bruto,
+      descuento,
+      porcentajeTexto: mostrarPorcentaje ? ` (${porcentaje.toLocaleString("es-AR", { maximumFractionDigits: 2 })} %)` : "",
+    };
+  }, [dataFacturacion, montoReal, usarModoNC, forceTestAmount]);
+
   const fechaCbteISO = String(dataFacturacion?.fecha_cbte_iso ?? "").slice(0, 10);
   const vtoPagoISO = String(dataFacturacion?.vto_pago_iso ?? "").slice(0, 10);
 
@@ -1877,6 +1900,19 @@ useEffect(() => {
                       <span>{(items || []).length} ítem{(items || []).length === 1 ? "" : "s"}</span>
                     </div>
 
+                    {descuentoInformativo && (
+                      <div className="mfr-discount-explainer" role="note">
+                        <div className="mfr-discount-explainer__text">
+                          <strong>Descuento de la venta{descuentoInformativo.porcentajeTexto}</strong>
+                          <span>El precio unitario es el original. Los totales de los productos ya incluyen el descuento.</span>
+                        </div>
+                        <div className="mfr-discount-explainer__amounts">
+                          <span>Antes del descuento (IVA incl.): <b>{moneyARS(descuentoInformativo.bruto)}</b></span>
+                          <span>Descuento: <b>- {moneyARS(descuentoInformativo.descuento)}</b></span>
+                          <span className="mfr-discount-explainer__final">Total a facturar: <b>{moneyARS(montoReal)}</b></span>
+                        </div>
+                      </div>
+                    )}
                     <div className="mfr-detail__list">
                       {(items || []).map((it, idx) => (
                         <div
@@ -1890,9 +1926,9 @@ useEffect(() => {
 
                           <div className="mfr-item__meta">
                             <span><b>Cant.</b>{it.cantidad}</span>
-                            <span><b>P. Unit.</b>{moneyARS(it.precio_unitario || it.precio || 0)}</span>
+                            <span><b>{descuentoInformativo ? "P. Unit. original" : "P. Unit."}</b>{moneyARS(it.precio_unitario || it.precio || 0)}</span>
                             <span><b>IVA</b>{moneyARS(it.iva_monto || 0)}</span>
-                            <span className="mfr-item__total"><b>Total</b>{moneyARS(it.total || it.ars || it.subtotal || 0)}</span>
+                            <span className="mfr-item__total"><b>{descuentoInformativo ? "Total con descuento" : "Total"}</b>{moneyARS(it.total || it.ars || it.subtotal || 0)}</span>
                           </div>
                         </div>
                       ))}

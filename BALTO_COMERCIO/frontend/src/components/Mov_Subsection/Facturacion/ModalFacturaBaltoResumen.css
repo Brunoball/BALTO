@@ -737,3 +737,74 @@ html.balto-visual-viewport-ready .mfr-modal__overlay > .mfr-modal {
     border-radius: 0;
   }
 }
+
+/* Desglose informativo del descuento comercial: solo aparece cuando la venta
+   informa un descuento. No interviene en el cálculo ni en la emisión fiscal. */
+.mfr-discount-explainer {
+  margin: 12px 12px 0;
+  padding: 12px 14px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  border: 1px solid rgba(180, 83, 9, .24);
+  border-radius: 12px;
+  background: rgba(255, 251, 235, .8);
+  color: #78350f;
+  font-size: .8rem;
+  line-height: 1.45;
+}
+
+.mfr-discount-explainer__text,
+.mfr-discount-explainer__amounts {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.mfr-discount-explainer__text {
+  flex: 1 1 300px;
+}
+
+.mfr-discount-explainer__text strong {
+  font-weight: 700;
+}
+
+.mfr-discount-explainer__amounts {
+  flex: 0 1 340px;
+  font-variant-numeric: tabular-nums;
+}
+
+.mfr-discount-explainer__amounts span {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.mfr-discount-explainer__amounts b {
+  white-space: nowrap;
+}
+
+.mfr-discount-explainer__final {
+  padding-top: 4px;
+  border-top: 1px solid rgba(180, 83, 9, .20);
+  font-weight: 700;
+}
+
+html[data-theme="oscuro"] .mfr-discount-explainer {
+  border-color: rgba(251, 191, 36, .30);
+  background: rgba(251, 191, 36, .09);
+  color: #fde68a;
+}
+
+html[data-theme="oscuro"] .mfr-discount-explainer__final {
+  border-top-color: rgba(251, 191, 36, .22);
+}
+
+@media (max-width: 640px) {
+  .mfr-discount-explainer__amounts {
+    flex: 1 1 100%;
+  }
+}

@@ -4092,16 +4092,16 @@ export default function ModalNuevaVenta({ open, lists, tiendaNubeVenta = null, o
                   </div>
                   <div className="gm-summary-chips">
                     <div className="gm-summary-chip gm-summary-chip--sub">
-                      <span>Subtotal</span>
-                      <b>{moneyARS(resumen.subtotal)}</b>
+                      <span>{resumen.descuento > 0 ? "Subtotal sin descuento (IVA incl.)" : "Subtotal"}</span>
+                      <b>{moneyARS(resumen.descuento > 0 ? resumen.totalBruto : resumen.subtotal)}</b>
                     </div>
-                    <div className="gm-summary-chip gm-summary-chip--iva">
-                      <span>IVA</span>
+                    <div className="gm-summary-chip gm-summary-chip--iva" title={resumen.descuento > 0 ? "IVA efectivo luego del descuento. Ya está incluido en el total; no se suma otra vez." : undefined}>
+                      <span>{resumen.descuento > 0 ? "IVA incluido (informativo)" : "IVA"}</span>
                       <b>{moneyARS(resumen.iva)}</b>
                     </div>
                     {resumen.descuento > 0 && (
                       <div className="gm-summary-chip nv-summary-chip--discount">
-                        <span>Descuento</span>
+                        <span>Descuento{resumen.descuentoTipo === "PORCENTAJE" ? ` (${Number(resumen.descuentoValor || 0).toLocaleString("es-AR")} %)` : ""}</span>
                         <b>- {moneyARS(resumen.descuento)}</b>
                       </div>
                     )}
