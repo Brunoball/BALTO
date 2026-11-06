@@ -18,10 +18,13 @@ import { getSessionPlan, isPlanDenied, PLAN_DENIED_CODE } from './support/plan.j
  * Nunca correr contra producción: usa mutaciones con prefijo E2E y limpieza.
  */
 
+// Matriz aprobada: trabajadores/costos desde 1; materiales e insumos (catálogo
+// económico, venta y composición) desde 2; control de stock, pestaña Stock y
+// productos sólo en 3.
 const MATRIX = {
-  1: { resources: false, products: false, costing: false },
-  2: { resources: true, products: false, costing: true },
-  3: { resources: true, products: true, costing: true },
+  1: { workers: true, costing: true, resources: false, resourcesSell: false, stock: false, stockPanel: false, products: false },
+  2: { workers: true, costing: true, resources: true, resourcesSell: true, stock: false, stockPanel: false, products: false },
+  3: { workers: true, costing: true, resources: true, resourcesSell: true, stock: true, stockPanel: true, products: true },
 };
 
 const today = new Date().toISOString().slice(0, 10);
@@ -32,9 +35,12 @@ const GUARDED_ACTIONS = [
   { action: 'servicios_insumo_crear', method: 'POST', body: {}, cap: 'resources.manage' },
   { action: 'servicios_materiales_listar', method: 'GET', query: {}, cap: 'resources.manage' },
   { action: 'servicios_modulo_cargar', method: 'GET', query: { seccion: 'inventario' }, cap: 'resources.manage' },
-  { action: 'servicios_stock_ajustar', method: 'POST', body: { id_articulo: 0 }, cap: 'resources.stock' },
-  { action: 'servicios_stock_listar', method: 'GET', query: {}, cap: 'resources.stock' },
-  { action: 'servicios_composicion_guardar', method: 'POST', body: { id_servicio: 0 }, cap: 'services.composition' },
+  // Pestaña Stock y ajustes manuales: sólo plan 3.
+  { action: 'servicios_stock_ajustar', method: 'POST', body: { id_articulo: 0 }, cap: 'stock.panel' },
+  { action: 'servicios_stock_listar', method: 'GET', query: {}, cap: 'stock.panel' },
+  { action: 'servicios_stock_historial', method: 'GET', query: { id_articulo: 0 }, cap: 'stock.panel' },
+  // Asignar trabajadores es del plan 1; los materiales se validan por colección.
+  { action: 'servicios_composicion_guardar', method: 'POST', body: { id_servicio: 0 }, cap: 'services.workers' },
   { action: 'servicios_trabajadores_listar', method: 'GET', query: {}, cap: 'workers.manage' },
   { action: 'servicios_stock_producto_crear', method: 'POST', body: {}, cap: 'products.manage' },
   // Payload manipulado: alta de PRODUCTO por la API genérica de artículos.
@@ -60,9 +66,16 @@ test.describe('BALTO Servicios - división de planes', () => {
     if (!plan.esDemo) expect(plan.can('billing.arca')).toBe(true);
     if (plan.can('products.manage')) expect(plan.can('resources.manage')).toBe(true);
     if (plan.nivel && MATRIX[plan.nivel] && !plan.esDemo) {
-      expect(plan.can('resources.manage')).toBe(MATRIX[plan.nivel].resources);
-      expect(plan.can('products.sell')).toBe(MATRIX[plan.nivel].products);
-      expect(plan.can('services.costing')).toBe(MATRIX[plan.nivel].costing);
+      const m = MATRIX[plan.nivel];
+      expect(plan.can('workers.manage')).toBe(m.workers);
+      expect(plan.can('services.workers')).toBe(m.workers);
+      expect(plan.can('services.costing')).toBe(m.costing);
+      expect(plan.can('resources.manage')).toBe(m.resources);
+      expect(plan.can('services.composition')).toBe(m.resources);
+      expect(plan.can('resources.sell')).toBe(m.resourcesSell);
+      expect(plan.can('resources.stock')).toBe(m.stock);
+      expect(plan.can('stock.panel')).toBe(m.stockPanel);
+      expect(plan.can('products.sell')).toBe(m.products);
     }
   });
 
@@ -98,9 +111,17 @@ test.describe('BALTO Servicios - división de planes', () => {
     if (plan.can('resources.manage')) {
       await expect(page).toHaveURL(/seccion=inventario/);
       await expect(page.locator('body')).toContainText(/Inventario de servicios/i);
+      await expect(page.getByRole('button', { name: /^Materiales$/ })).toHaveCount(1);
+      await expect(page.getByRole('button', { name: /^Insumos$/ })).toHaveCount(1);
+      // Plan 2: Materiales/Insumos sin columna Stock; plan 3: con columna Stock.
+      await page.getByRole('button', { name: /^Materiales$/ }).click();
+      await waitForBusyToFinish(page);
+      const stockTexts = await page.getByText('Stock', { exact: true }).count();
+      if (plan.can('resources.stock')) expect(stockTexts).toBeGreaterThan(0);
+      else expect(stockTexts, 'Plan 2: sin columna ni pestaña Stock').toBe(0);
       const stockTab = page.getByRole('button', { name: /^Stock$/ });
-      await expect(stockTab).toHaveCount(plan.can('resources.stock') ? 1 : 0);
-      if (plan.can('resources.stock')) {
+      await expect(stockTab).toHaveCount(plan.can('stock.panel') ? 1 : 0);
+      if (plan.can('stock.panel')) {
         await stockTab.click();
         await waitForBusyToFinish(page);
         // Desktop y mobile pueden renderizar el botón dos veces: basta con su presencia.
@@ -125,14 +146,23 @@ test.describe('BALTO Servicios - división de planes', () => {
     await waitForBusyToFinish(page);
     await page.getByRole('button', { name: /Agregar servicio/i }).first().click();
     const dialog = await waitDialog(page, 'Agregar servicio');
-    await expect(dialog.getByText('Composición del servicio')).toHaveCount(plan.can('services.composition') ? 1 : 0);
+    const conComposicion = plan.can('services.workers') || plan.can('services.composition');
+    await expect(dialog.getByRole('tab', { name: /Composición del servicio/i })).toHaveCount(conComposicion ? 1 : 0);
     await expect(dialog.getByText('Otros costos')).toHaveCount(plan.can('services.costing') ? 1 : 0);
+    await expect(dialog.getByText('Margen deseado (%)')).toHaveCount(plan.can('services.costing') ? 1 : 0);
+    if (conComposicion) {
+      await dialog.getByRole('tab', { name: /Composición del servicio/i }).click();
+      // Trabajadores desde el plan 1; materiales e insumos desde el plan 2.
+      await expect(dialog.getByRole('heading', { name: 'Mano de obra' })).toBeVisible();
+      await expect(dialog.getByRole('heading', { name: 'Materiales e insumos' })).toHaveCount(plan.can('services.composition') ? 1 : 0);
+      await dialog.getByRole('tab', { name: /Información principal/i }).click();
+    }
     await expect(dialog.getByText('Duración estimada (min)')).toHaveCount(1);
     await expect(dialog.getByText('IVA aplicado')).toHaveCount(1);
     await dialog.getByRole('button', { name: /Cancelar/i }).click();
   });
 
-  test('@planes @ui la venta ofrece productos sólo con el plan con venta', async ({ page }) => {
+  test('@planes @ui la venta ofrece materiales desde el plan 2 y productos sólo en el plan 3', async ({ page }) => {
     const plan = await getSessionPlan(page);
     await page.goto('/panel/ventas', { waitUntil: 'domcontentloaded' });
     await waitForBusyToFinish(page);
@@ -140,54 +170,103 @@ test.describe('BALTO Servicios - división de planes', () => {
     const dialog = await waitDialog(page, 'Nueva Venta');
     const typeSelect = dialog.getByRole('combobox', { name: /Tipo de ítem fila 1/i });
     const options = await typeSelect.locator('option').allTextContents();
+    // Plan 1: Servicio + Detalle manual. Plan 2: + "Material / insumo". Plan 3: "Stock / material / insumo".
     expect(options.some((o) => /Stock \/ material \/ insumo/i.test(o))).toBe(plan.can('products.sell'));
+    expect(options.some((o) => /^\s*Material \/ insumo\s*$/i.test(o))).toBe(plan.can('resources.sell') && !plan.can('products.sell'));
     expect(options.some((o) => /Servicio del catálogo/i.test(o))).toBe(true);
     expect(options.some((o) => /Detalle manual/i.test(o))).toBe(true);
+    if (plan.can('resources.sell') && !plan.can('resources.stock')) {
+      // Plan 2: el buscador lista materiales/insumos sin mensajes de stock.
+      await typeSelect.selectOption('ARTICULO');
+      const search = dialog.getByPlaceholder(/Buscá un material o insumo/i);
+      await search.click();
+      await expect(page.locator('.psa-meta').filter({ hasText: /Stock|sin control de stock/i })).toHaveCount(0);
+      await expect(dialog.getByText(/Sin stock|Stock insuficiente|Stock máximo disponible/i)).toHaveCount(0);
+    }
     await page.keyboard.press('Escape');
   });
 
-  test('@planes @crud servicio profesional sin composición: alta, edición sin pérdida y baja', async ({ page }) => {
+  test('@planes @ui el alta de material no ofrece control de stock en el plan 2', async ({ page }) => {
+    const plan = await getSessionPlan(page);
+    test.skip(!plan.can('resources.manage'), 'El plan no incluye materiales.');
+    await page.goto('/panel/servicios?seccion=inventario', { waitUntil: 'domcontentloaded' });
+    await waitForBusyToFinish(page);
+    await page.getByRole('button', { name: /^Materiales$/ }).click();
+    await waitForBusyToFinish(page);
+    await page.getByRole('button', { name: /Agregar material/i }).first().click();
+    const dialog = page.getByRole('dialog').last();
+    await expect(dialog.getByText(/Controlar stock de este material/i)).toHaveCount(plan.can('resources.stock') ? 1 : 0);
+    await expect(dialog.getByText(/^Stock inicial$/)).toHaveCount(0); // sólo aparece al activar el control
+    await expect(dialog.getByText(plan.can('resources.stock') ? 'Stock y valores' : 'Costos y valores', { exact: true })).toHaveCount(1);
+    await dialog.getByRole('button', { name: /Cancelar/i }).click();
+  });
+
+  test('@planes @crud servicio con trabajadores: costos, edición sin pérdida y materiales por plan', async ({ page }) => {
     await requireMutations(test, page);
     const plan = await getSessionPlan(page);
     const unit = await ensureActiveServiceUnit(page);
-    const name = uniqueName('CONSULTA-PROFESIONAL', 120);
+    const name = uniqueName('CONSULTORIA-TECNICA', 120);
+    const workerName = uniqueName('JUAN-PEREZ', 120);
     let idServicio = 0;
+    let idTrabajador = 0;
     try {
+      // Trabajadores: todos los planes.
+      const worker = expectApiSuccess(await serviciosApi(page, 'servicios_trabajador_crear', {
+        method: 'POST',
+        body: { nombre: workerName, rol: 'CONSULTOR E2E', tipo_trabajador: 'CONTRATADO', modalidad_pago: 'HORA', monto_periodo: 10000, horas_periodo: 1 },
+      }), 'Alta de trabajador');
+      idTrabajador = Number(worker.id_trabajador || worker.data?.id_trabajador || 0);
+      expect(idTrabajador).toBeGreaterThan(0);
+
+      // Ejemplo aprobado: $50.000 neto, 2 h × $10.000, otros $5.000 => costo $25.000, ganancia $25.000.
       const created = expectApiSuccess(await serviciosApi(page, 'servicios_servicio_crear', {
         method: 'POST',
         body: {
           nombre: name,
-          descripcion: 'CONSULTA DE 60 MINUTOS',
           id_unidad_cobro: Number(unit.id_unidad),
-          duracion_estimada_minutos: 60,
-          precio_venta: 30000,
+          duracion_estimada_minutos: 120,
+          precio_venta: 50000,
           iva_pct: 21,
+          costo_base: 5000,
+          composicion: { trabajadores: [{ id_trabajador: idTrabajador, horas_estimadas: 2 }] },
         },
-      }), 'Alta de servicio sin composición');
+      }), 'Alta de servicio con trabajador');
       idServicio = Number(created.id_servicio || created.data?.id_servicio || 0);
       expect(idServicio).toBeGreaterThan(0);
-      expect(Number(created.servicio?.precio_venta)).toBe(30000);
+      expect(created.servicio?.trabajadores || []).toHaveLength(1);
       expect(created.servicio?.articulos || []).toHaveLength(0);
+      expect(Number(created.servicio?.costo_mano_obra)).toBeCloseTo(20000, 2);
+      expect(Number(created.servicio?.costo_estimado)).toBeCloseTo(25000, 2);
+      expect(Number(created.servicio?.precio_venta) - Number(created.servicio?.costo_estimado)).toBeCloseTo(25000, 2);
 
+      // Edición sin enviar composición: conserva los trabajadores.
       const edited = expectApiSuccess(await serviciosApi(page, 'servicios_servicio_actualizar', {
         method: 'POST',
-        body: { id_servicio: idServicio, nombre: `${name}-ED`.slice(0, 150), precio_venta: 32000, iva_pct: 10.5 },
+        body: { id_servicio: idServicio, precio_venta: 55000, iva_pct: 10.5 },
       }), 'Edición de servicio');
       expect(Number(edited.servicio?.iva_pct)).toBe(10.5);
+      expect(edited.servicio?.trabajadores || []).toHaveLength(1);
 
-      // Payload manipulado con composición: sólo se acepta si el plan la incluye.
-      const withComposition = await serviciosApi(page, 'servicios_servicio_actualizar', {
+      // Cambiar horas: permitido en todos los planes.
+      const hours = expectApiSuccess(await serviciosApi(page, 'servicios_servicio_actualizar', {
         method: 'POST',
-        body: { id_servicio: idServicio, composicion: { articulos: [], trabajadores: [{ id_trabajador: 999999, horas_estimadas: 1 }] } },
+        body: { id_servicio: idServicio, composicion: { trabajadores: [{ id_trabajador: idTrabajador, horas_estimadas: 3 }] } },
+      }), 'Cambio de horas');
+      expect(Number(hours.servicio?.costo_estimado)).toBeCloseTo(35000, 2);
+
+      // Payload manipulado con materiales: plan 1 => 403 de plan; planes 2/3 => validación propia (artículo inexistente).
+      const withArticles = await serviciosApi(page, 'servicios_servicio_actualizar', {
+        method: 'POST',
+        body: { id_servicio: idServicio, composicion: { articulos: [{ id_articulo: 999999999, cantidad: 1 }] } },
       });
-      if (!plan.can('services.composition')) {
-        expect(isPlanDenied(withComposition)).toBe(true);
-      } else {
-        expect(isPlanDenied(withComposition)).toBe(false);
-      }
+      expect(isPlanDenied(withArticles)).toBe(!plan.can('services.composition'));
+      if (plan.can('services.composition')) expect(withArticles.status).toBe(422);
     } finally {
       if (idServicio) {
         await serviciosApi(page, 'servicios_servicio_eliminar', { method: 'POST', body: { id_servicio: idServicio } }).catch(() => null);
+      }
+      if (idTrabajador) {
+        await serviciosApi(page, 'servicios_trabajador_eliminar', { method: 'POST', body: { id_trabajador: idTrabajador } }).catch(() => null);
       }
     }
   });

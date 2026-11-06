@@ -1,0 +1,11 @@
+import React from 'react';
+import { ArrowUpRight, Clock, Mail, MessageCircle, Phone, ShoppingBag } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { telephoneLink, whatsAppLink } from '../utils/format';
+export default function ContactPage({ config }) {
+  const contact = whatsAppLink(config.whatsapp, `Hola, tengo una consulta sobre ${config.nombre || 'la tienda'}.`);
+  const phone = telephoneLink(config.telefono);
+  return <main className="shell standard-page contact-page"><div className="page-intro"><span className="eyebrow">ESTAMOS PARA AYUDARTE</span><h1>Hablemos<span>.</span></h1><p>¿Querés saber más sobre un producto? Elegí el medio de contacto que prefieras.</p></div>
+    <div className="contact-layout"><div className="contact-panel"><span className="eyebrow">CONTACTO DIRECTO</span><h2>Estamos del otro lado.</h2><p>Consultanos por productos, disponibilidad o alternativas. El equipo del comercio responderá por los canales que tenga configurados.</p><div className="contact-methods">{contact && <a href={contact} target="_blank" rel="noreferrer"><span><MessageCircle size={22}/></span><div><strong>WhatsApp</strong><small>Enviar una consulta</small></div><ArrowUpRight size={18}/></a>}{config.email && <a href={`mailto:${config.email}`}><span><Mail size={22}/></span><div><strong>Correo electrónico</strong><small>{config.email}</small></div><ArrowUpRight size={18}/></a>}{phone && <a href={phone}><span><Phone size={22}/></span><div><strong>Teléfono</strong><small>{config.telefono}</small></div><ArrowUpRight size={18}/></a>}{!contact && !config.email && !phone && <p className="contact-no-channels">Esta tienda todavía no configuró sus datos de contacto.</p>}</div></div><div className="contact-side"><div className="contact-side-card"><ShoppingBag size={33}/><h3>Explorá primero</h3><p>Encontrá el producto que te interesa y consultanos desde su ficha.</p><Link to="/catalogo" className="btn btn-outline">Ver catálogo <ArrowUpRight size={17}/></Link></div><div className="contact-side-note"><Clock size={19}/><span>{config.checkout_habilitado ? 'Podés registrar tu pedido desde el carrito: no se cobra online y la tienda te contacta para coordinar.' : 'La tienda no recibe pedidos ni pagos automáticos desde esta web por el momento.'}</span></div></div></div>
+  </main>;
+}

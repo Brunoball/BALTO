@@ -342,9 +342,12 @@ export default function ModalEditarRecibo({
   onToast,
   dark,
 }) {
-  // Plan: cambiar un renglón a artículo de stock es venta de productos (products.sell).
+  // Plan: materiales/insumos como renglón propio desde el plan 2 (resources.sell);
+  // productos sólo con products.sell. El backend valida por el tipo real.
   const plan = usePlan();
-  const puedeVenderArticulos = plan.can("products.sell");
+  const puedeVenderArticulos = plan.can("resources.sell") || plan.can("products.sell");
+  const vendeProductos = plan.can("products.sell");
+  const etiquetaArticulos = vendeProductos ? "Stock / material / insumo" : "Material / insumo";
   const API_LISTS = `${BASE_URL}/api.php?action=global_obtener_listas`;
   const darkOn = isDarkEnabled(dark);
 
@@ -673,7 +676,7 @@ export default function ModalEditarRecibo({
       }
 
       if (esServicio && !servicioId) throw new Error("Seleccioná un servicio válido del catálogo.");
-      if (!esServicio && !productoId) throw new Error("Seleccioná un artículo válido de stock.");
+      if (!esServicio && !productoId) throw new Error(vendeProductos ? "Seleccioná un artículo válido de stock." : "Seleccioná un material o insumo válido.");
 
       const varianteId = null;
 
@@ -781,7 +784,7 @@ export default function ModalEditarRecibo({
                         <select className="gm-input" value={form.tipo_item} onChange={handleTipoItemChange} disabled={saving}>
                           <option value="SERVICIO">Servicio</option>
                           {(puedeVenderArticulos || form.tipo_item === "ARTICULO") && (
-                            <option value="ARTICULO" disabled={!puedeVenderArticulos}>Stock / material / insumo</option>
+                            <option value="ARTICULO" disabled={!puedeVenderArticulos}>{etiquetaArticulos}</option>
                           )}
                         </select>
                         <label className="gm-label">Tipo de ítem</label>
@@ -798,7 +801,7 @@ export default function ModalEditarRecibo({
                             disabled={saving}
                             autoComplete="off"
                           />
-                          <label className="gm-label">{form.tipo_item === "SERVICIO" ? "Servicio" : "Artículo de stock"}</label>
+                          <label className="gm-label">{form.tipo_item === "SERVICIO" ? "Servicio" : (vendeProductos ? "Artículo de stock" : "Material / insumo")}</label>
                         </div>
 
                         {!!filteredProductos.length && (
@@ -955,7 +958,7 @@ export default function ModalEditarRecibo({
                     <div className="gm-info-box">
                       <div className="rec-edit-summary-row"><FontAwesomeIcon icon={faCalendarDays} /><span><b>Fecha:</b> {form.fecha || "--"}</span></div>
                       <div className="rec-edit-summary-row"><FontAwesomeIcon icon={faUser} /><span><b>Cliente:</b> {resumen.cliente}</span></div>
-                      <div className="rec-edit-summary-row"><FontAwesomeIcon icon={faBoxOpen} /><span><b>{form.tipo_item === "SERVICIO" ? "Servicio" : "Stock"}:</b> {resumen.producto}</span></div>
+                      <div className="rec-edit-summary-row"><FontAwesomeIcon icon={faBoxOpen} /><span><b>{form.tipo_item === "SERVICIO" ? "Servicio" : (vendeProductos ? "Stock" : "Material / insumo")}:</b> {resumen.producto}</span></div>
                       <div className="rec-edit-summary-row"><FontAwesomeIcon icon={faReceipt} /><span><b>Cantidad:</b> {resumen.cantidad || "--"}</span></div>
                       <div className="rec-edit-summary-row"><FontAwesomeIcon icon={faDollarSign} /><span><b>Total:</b> {moneyARS(resumen.total)}</span></div>
                     </div>

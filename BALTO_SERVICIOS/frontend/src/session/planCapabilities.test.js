@@ -8,9 +8,11 @@ import {
   requiredCapabilityForRoute,
 } from "./planCapabilities";
 
-const PLAN_1 = ["accounts.current", "billing.arca", "budgets.manage", "finance.manage", "reports.financial", "services.manage", "services.sell", "settings.sensitive"];
-const PLAN_2 = [...PLAN_1, "resources.manage", "resources.stock", "services.composition", "services.costing", "workers.manage"];
-const PLAN_3 = [...PLAN_2, "products.manage", "products.sell", "reports.profit_by_type", "sales.mixed"];
+// Matriz aprobada (la calcula el backend; acá sólo se simula la sesión).
+const PLAN_1 = ["accounts.current", "billing.arca", "budgets.manage", "finance.manage", "reports.financial", "services.costing", "services.manage", "services.sell", "services.workers", "settings.sensitive", "workers.manage"];
+// Plan 2: materiales/insumos como catálogo económico (sin control de stock).
+const PLAN_2 = [...PLAN_1, "resources.manage", "resources.sell", "services.composition"];
+const PLAN_3 = [...PLAN_2, "products.manage", "products.sell", "reports.profit_by_type", "resources.stock", "sales.mixed", "stock.panel"];
 
 function setUser(capacidades, firma) {
   localStorage.setItem("session_key", "k");
@@ -33,18 +35,33 @@ describe("planCapabilities", () => {
     expect(can("services.manage")).toBe(false);
   });
 
-  test("plan 1: sólo capacidades comunes", () => {
+  test("plan 1: servicios, trabajadores y costos; sin materiales ni Stock", () => {
     setUser(PLAN_1, "f1");
     expect(can("services.sell")).toBe(true);
+    expect(can("workers.manage")).toBe(true);
+    expect(can("services.workers")).toBe(true);
+    expect(can("services.costing")).toBe(true);
     expect(can("services.composition")).toBe(false);
+    expect(can("resources.manage")).toBe(false);
+    expect(can("stock.panel")).toBe(false);
     expect(can("products.sell")).toBe(false);
+    expect(can("resources.sell")).toBe(false);
   });
 
   test("plan 2 y 3 son acumulativos", () => {
     setUser(PLAN_2, "f2");
-    expect(can("resources.stock")).toBe(true);
+    expect(can("resources.manage")).toBe(true);
+    expect(can("services.composition")).toBe(true);
+    expect(can("stock.panel")).toBe(false);
     expect(can("products.manage")).toBe(false);
+    // Plan 2: vende materiales/insumos, sin control de stock ni productos.
+    expect(can("resources.sell")).toBe(true);
+    expect(can("resources.stock")).toBe(false);
+    expect(can("products.sell")).toBe(false);
     setUser(PLAN_3, "f3");
+    expect(can("resources.stock")).toBe(true);
+    expect(can("resources.sell")).toBe(true);
+    expect(can("stock.panel")).toBe(true);
     expect(can("products.manage")).toBe(true);
     expect(can("services.composition")).toBe(true);
   });

@@ -519,12 +519,15 @@ export default function ModalServicio({
   onOpenAgregarUnidad,
 }) {
   // Un solo modal configurable por capacidades del plan:
-  // - Servicios Profesionales: ficha simple (sin composición ni costos automáticos).
-  // - Con Insumos / Con Venta: composición, trabajadores, costo y ganancia.
-  // Se re-evalúa en vivo: si el plan cambia con el modal abierto, deja de enviar
-  // lo que el nuevo plan no permite (y el backend lo rechazaría igual).
+  // - Plan 1: información, trabajadores (mano de obra), otros costos, precio y ganancia.
+  // - Plan 2 y 3: además, materiales e insumos en la composición.
+  // Trabajadores y materiales tienen permisos independientes. Se re-evalúa en vivo:
+  // si el plan cambia con el modal abierto, deja de enviar lo que el nuevo plan no
+  // permite (y el backend lo rechazaría igual).
   const plan = usePlan();
-  const conComposicion = plan.can("services.composition");
+  const conMateriales = plan.can("services.composition");
+  const conTrabajadores = plan.can("services.workers");
+  const conComposicion = conMateriales || conTrabajadores;
   const conCosteo = plan.can("services.costing");
   const [form, setForm] = useState(EMPTY);
   const [articleRows, setArticleRows] = useState([]);
@@ -578,7 +581,9 @@ export default function ModalServicio({
   }, [conComposicion, activeTab]);
 
   const cost = useMemo(() => {
-    const articulosCosto = articleRows.reduce((sum, row) => {
+    // Sin materiales en el plan, los artículos históricos se conservan pero no
+    // forman parte del costo de las operaciones nuevas.
+    const articulosCosto = !conMateriales ? 0 : articleRows.reduce((sum, row) => {
       const found = articulos.find((a) => Number(a.id_articulo) === Number(row.id_articulo));
       return sum + decimalNumber(row.cantidad) * Number(found?.costo_unitario ?? row.costo_unitario ?? 0);
     }, 0);
@@ -596,7 +601,7 @@ export default function ModalServicio({
       otros,
       total: otros + articulosCosto + manoObra,
     };
-  }, [articleRows, workerRows, articulos, trabajadores, form.costo_base]);
+  }, [articleRows, workerRows, articulos, trabajadores, form.costo_base, conMateriales]);
 
   const saleSummary = useMemo(() => {
     const netPrice = decimalNumber(form.precio_venta);
@@ -670,7 +675,7 @@ export default function ModalServicio({
     if (conCosteo && decimalNumber(form.costo_base) < 0) return onToast?.("error", "Otros costos no puede ser negativo.", 4200);
     if (conCosteo && pricingSource === "margin" && decimalNumber(marginInput) >= 100) return onToast?.("error", "El margen deseado debe ser menor a 100%.", 4200);
     if (decimalNumber(form.precio_venta) < 0) return onToast?.("error", "Indicá un precio de venta válido.", 4200);
-    if (conComposicion && (articleRows.some((r) => decimalNumber(r.cantidad) <= 0) || workerRows.some((r) => decimalNumber(r.horas_estimadas) <= 0))) {
+    if ((conMateriales && articleRows.some((r) => decimalNumber(r.cantidad) <= 0)) || (conTrabajadores && workerRows.some((r) => decimalNumber(r.horas_estimadas) <= 0))) {
       return onToast?.("error", "Todas las cantidades y horas deben ser mayores a cero.", 4200);
     }
 
@@ -686,20 +691,20 @@ export default function ModalServicio({
     // Sin costeo: "otros costos" no se envía; el backend conserva el valor histórico.
     if (conCosteo) payload.costo_base = moneyApiValue(costoBaseForm);
 
-    // Sin composición: NO se envía la clave (el backend conserva la existente
-    // intacta, nunca la borra por guardar la ficha simple).
+    // Cada colección se envía sólo si el plan permite editarla. Una colección
+    // omitida se CONSERVA en el backend (nunca se interpreta como borrado): así el
+    // plan 1 edita trabajadores sin tocar materiales históricos.
     if (conComposicion) {
-      payload.composicion = {
-        articulos: articleRows.map((row) => ({
+      payload.composicion = {};
+      if (conMateriales) payload.composicion.articulos = articleRows.map((row) => ({
           ...row,
           cantidad: decimalNumber(row.cantidad),
           iva_pct: decimalNumber(row.iva_pct),
-        })),
-        trabajadores: workerRows.map((row) => ({
+        }));
+      if (conTrabajadores) payload.composicion.trabajadores = workerRows.map((row) => ({
           ...row,
           horas_estimadas: decimalNumber(row.horas_estimadas),
-        })),
-      };
+        }));
     }
 
     await onSave(payload);
@@ -723,9 +728,11 @@ export default function ModalServicio({
           <div className="gm-modal-head-left">
             <h2 className="gm-modal-title">{item ? "Editar servicio" : "Agregar servicio"}</h2>
             <p className="gm-modal-subtitle">
-              {conComposicion
+              {conMateriales
                 ? "Definí la información, los costos y los recursos desde una sola ficha."
-                : "Definí la prestación: nombre, unidad de cobro, duración, precio e IVA."}
+                : conComposicion
+                  ? "Definí la información, la mano de obra y los costos desde una sola ficha."
+                  : "Definí la prestación: nombre, unidad de cobro, duración, precio e IVA."}
             </p>
           </div>
           <button type="button" className="gm-modal-close" onClick={onClose} disabled={saving} aria-label="Cerrar">✕</button>
@@ -866,22 +873,24 @@ export default function ModalServicio({
             <div className="gm-section-head servicios-composition__head servicios-service-sectionHead">
               <div className="servicios-composition__heading">
                 <span className="servicios-service-sectionIcon"><FontAwesomeIcon icon={faLayerGroup} /></span>
-                <span className="servicios-service-sectionCopy"><strong>Composición del servicio</strong><small>Agregá los recursos necesarios y ajustá sus cantidades u horas.</small></span>
+                <span className="servicios-service-sectionCopy"><strong>Composición del servicio</strong><small>{conMateriales ? "Agregá los recursos necesarios y ajustá sus cantidades u horas." : "Asigná los trabajadores y sus horas estimadas."}</small></span>
               </div>
               <div className="servicios-composition__cost"><span>Costo automático</span><strong>{money(cost.total)}</strong></div>
             </div>
 
             <div className="gm-section-body servicios-composition__body">
-              <div className="servicios-composition-grid servicios-composition-grid--two">
-                <ArticulosCard rows={articleRows} setRows={setArticleRows} catalog={articulos} />
-                <TrabajadoresCard rows={workerRows} setRows={setWorkerRows} catalog={trabajadores} />
+              <div className={`servicios-composition-grid ${conMateriales && conTrabajadores ? "servicios-composition-grid--two" : ""}`}>
+                {conMateriales && <ArticulosCard rows={articleRows} setRows={setArticleRows} catalog={articulos} />}
+                {conTrabajadores && <TrabajadoresCard rows={workerRows} setRows={setWorkerRows} catalog={trabajadores} />}
               </div>
 
               <div className="gm-summary-chips">
+                {conMateriales && (
                 <div className="gm-summary-chip gm-summary-chip--sub">
                   <span>Materiales / Insumos</span>
                   <b>{money(cost.articulos)}</b>
                 </div>
+                )}
                 <div className="gm-summary-chip gm-summary-chip--labor">
                   <span>Mano de obra</span>
                   <b>{money(cost.manoObra)}</b>

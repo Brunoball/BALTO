@@ -169,10 +169,14 @@ async function parseJson(res) {
 }
 
 export default function ModalModelosPresupuesto({ open, lists, onClose, onToast, onUseModel }) {
-  // Plan: un modelo es una plantilla de venta; artículos como renglón propio
-  // sólo con products.sell (los ya guardados se conservan).
+  // Plan: un modelo es una plantilla de venta. Materiales/insumos como renglón
+  // propio desde el plan 2 (resources.sell); productos sólo con products.sell.
+  // El backend valida por el tipo real del artículo (los ya guardados se conservan).
   const plan = usePlan();
-  const puedeVenderArticulos = plan.can("products.sell");
+  const puedeVenderArticulos = plan.can("resources.sell") || plan.can("products.sell");
+  const vendeProductos = plan.can("products.sell");
+  const controlaStock = plan.can("resources.stock");
+  const etiquetaArticulos = vendeProductos ? "Material / insumo / producto" : "Material / insumo";
   const API = DOCUMENTOS_API;
   const stockOptions = useMemo(() => normalizeLists(lists), [lists]);
   const [modelos, setModelos] = useState([]);
@@ -643,7 +647,7 @@ export default function ModalModelosPresupuesto({ open, lists, onClose, onToast,
                           >
                             <option value="SERVICIO">Servicio</option>
                             {(puedeVenderArticulos || row.tipo_item === "ARTICULO") && (
-                              <option value="ARTICULO" disabled={!puedeVenderArticulos}>Material / insumo / producto</option>
+                              <option value="ARTICULO" disabled={!puedeVenderArticulos}>{etiquetaArticulos}</option>
                             )}
                             <option value="MANUAL">Detalle manual</option>
                           </select>
@@ -666,7 +670,7 @@ export default function ModalModelosPresupuesto({ open, lists, onClose, onToast,
                               allowOutOfStock
                               allowUntrackedStock={row.tipo_item === "ARTICULO"}
                               showAllOnFocus={true}
-                              placeholder={row.tipo_item === "ARTICULO" ? "Buscar material, insumo o producto…" : "Buscar servicio…"}
+                              placeholder={row.tipo_item === "ARTICULO" ? (vendeProductos ? "Buscar material, insumo o producto…" : "Buscar material o insumo…") : "Buscar servicio…"}
                               emptyMessage="Sin coincidencias en el catálogo."
                               disabled={saving}
                               inputClassName="gm-cell-input"
@@ -833,7 +837,7 @@ export default function ModalModelosPresupuesto({ open, lists, onClose, onToast,
                         <label className="gm-label">Descripción</label>
                       </div>
                       <div className="gm-info-box presupuesto-modelos-info">
-                        Cada fila puede ser un Servicio, un Material / insumo / producto o un Detalle manual. Los artículos sin control de stock también se pueden presupuestar.
+                        {puedeVenderArticulos ? `Cada fila puede ser un Servicio, un ${etiquetaArticulos} o un Detalle manual.` : "Cada fila puede ser un Servicio o un Detalle manual."}{controlaStock ? " Los artículos sin control de stock también se pueden presupuestar." : ""}
                       </div>
                       <div className="gm-info-box presupuesto-modelos-info">
                         El modelo quedará disponible para reutilizar su estructura en nuevos presupuestos.

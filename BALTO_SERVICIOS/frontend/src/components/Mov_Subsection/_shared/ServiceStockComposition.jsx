@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import "./ServiceStockComposition.css";
+import { usePlan } from "../../../session/planCapabilities";
 
 const EPS = 0.0000005;
 
@@ -155,6 +156,10 @@ export default function ServiceStockComposition({
   open: controlledOpen,
   onOpenChange,
 }) {
+  // Plan sin control de stock (plan 2): la composición documenta materiales,
+  // cantidades y costos, pero no muestra existencias, faltantes ni advertencias.
+  const plan = usePlan();
+  const conStock = !(plan.ready && !plan.can("resources.stock"));
   const normalized = useMemo(() => normalizeServiceStockComponents(components), [components]);
   const options = useMemo(
     () => (Array.isArray(stockOptions) ? stockOptions : [])
@@ -167,8 +172,8 @@ export default function ServiceStockComposition({
   );
   const optionsById = useMemo(() => new Map(options.map((x) => [articleId(x), x])), [options]);
   const shortages = useMemo(
-    () => getServiceStockShortages(normalized, serviceQuantity, options),
-    [normalized, serviceQuantity, options]
+    () => (conStock ? getServiceStockShortages(normalized, serviceQuantity, options) : []),
+    [conStock, normalized, serviceQuantity, options]
   );
   const [internalOpen, setInternalOpen] = useState(false);
   const isOpenControlled = typeof controlledOpen === "boolean";
@@ -219,7 +224,7 @@ export default function ServiceStockComposition({
 
   const enriched = normalized.map((component) => {
     const current = optionsById.get(component.id_articulo) || component;
-    const controlaStock = Number(current?.controla_stock ?? component?.controla_stock ?? 1) === 1;
+    const controlaStock = conStock && Number(current?.controla_stock ?? component?.controla_stock ?? 1) === 1;
     const stock = controlaStock ? currentStock(current) : null;
     const required = Math.round(Math.max(0, n(serviceQuantity, 0)) * component.cantidad_por_unidad * 1000000) / 1000000;
     return {
@@ -237,7 +242,7 @@ export default function ServiceStockComposition({
   const canAdd = options.some((x) => !usedIds.has(articleId(x)));
 
   return (
-    <div className={`ssc ${shortages.length ? "ssc--danger" : ""} ${tableLayout ? "ssc--table-layout" : ""}`}>
+    <div className={`ssc ${shortages.length ? "ssc--danger" : ""} ${tableLayout ? "ssc--table-layout" : ""} ${conStock ? "" : "ssc--sin-stock"}`}>
       <button type="button" className="ssc__toggle" onClick={() => setOpen((v) => !v)} disabled={disabled && !normalized.length} aria-expanded={open}>
         <span>{open ? "▾" : "▸"} Materiales / insumos ({normalized.length})</span>
         {shortages.length ? <strong>{shortages.length} con stock insuficiente</strong> : <span>Detalle del servicio</span>}
@@ -254,7 +259,7 @@ export default function ServiceStockComposition({
                 <div className="ssc__excel-th ssc__excel-th--resource">Material / insumo</div>
                 <div className="ssc__excel-th">Cant. por servicio</div>
                 <div className="ssc__excel-th">Necesario total</div>
-                <div className="ssc__excel-th">{stockLabel}</div>
+                {conStock ? <div className="ssc__excel-th">{stockLabel}</div> : null}
                 <div className="ssc__excel-th">Acción</div>
               </div>
 
@@ -292,7 +297,7 @@ export default function ServiceStockComposition({
                     <strong>{formatQty(component.required)}{component.unidad_simbolo ? ` ${component.unidad_simbolo}` : ""}</strong>
                   </div>
 
-                  <div className="ssc__excel-cell ssc__excel-cell--metric">
+                  {conStock ? <div className="ssc__excel-cell ssc__excel-cell--metric">
                     <span className="ssc__excel-mobile-label">{component.controlaStock ? stockLabel : "Stock"}</span>
                     {component.controlaStock ? (
                       <>
@@ -305,7 +310,7 @@ export default function ServiceStockComposition({
                         <small>Sin control de stock</small>
                       </>
                     )}
-                  </div>
+                  </div> : null}
 
                   <div className="ssc__excel-cell ssc__excel-cell--action">
                     <button type="button" className="ssc__remove" onClick={() => removeAt(idx)} disabled={disabled} aria-label="Quitar material o insumo">×</button>
@@ -348,7 +353,7 @@ export default function ServiceStockComposition({
                   <strong>{formatQty(component.required)}{component.unidad_simbolo ? ` ${component.unidad_simbolo}` : ""}</strong>
                 </div>
 
-                <div className="ssc__metric">
+                {conStock ? <div className="ssc__metric">
                   <label>{component.controlaStock ? stockLabel : "Stock"}</label>
                   {component.controlaStock ? (
                     <>
@@ -361,7 +366,7 @@ export default function ServiceStockComposition({
                       <small>Sin control de stock</small>
                     </>
                   )}
-                </div>
+                </div> : null}
 
                 <button type="button" className="ssc__remove" onClick={() => removeAt(idx)} disabled={disabled} aria-label="Quitar material o insumo">×</button>
               </div>

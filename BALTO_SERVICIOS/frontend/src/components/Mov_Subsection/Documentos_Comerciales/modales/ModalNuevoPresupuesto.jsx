@@ -1020,10 +1020,14 @@ async function apiPostForm(url, formData) {
 }
 
 export default function ModalNuevoPresupuesto({ open, lists, initialModel = null, modelsOpen = false, onOpenModels, onClose, onToast, onSaved }) {
-  // Plan: renglones de artículos/productos como venta propia sólo con
-  // products.sell; consumos de materiales en servicios con services.composition.
+  // Plan: materiales/insumos como renglón propio desde el plan 2 (resources.sell);
+  // productos sólo con products.sell (plan 3). Consumos de materiales en servicios
+  // con services.composition. Sin resources.stock no se muestra stock.
   const plan = usePlan();
-  const puedeVenderArticulos = plan.can("products.sell");
+  const puedeVenderArticulos = plan.can("resources.sell") || plan.can("products.sell");
+  const vendeProductos = plan.can("products.sell");
+  const controlaStock = plan.can("resources.stock");
+  const etiquetaArticulos = vendeProductos ? "Material / insumo / producto" : "Material / insumo";
   const conComposicion = plan.can("services.composition");
   const API = DOCUMENTOS_API;
   const API_PADRON_CUIT = `${API}?action=padron_cuit&op=padron_cuit`;
@@ -1784,7 +1788,7 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
           <div className="presupuesto-mode-panel is-active">
             <div className="presupuesto-check-card__copy">
               <b>Presupuesto flexible</b>
-              <small>En cada fila elegí Servicio, Material / insumo / producto o Detalle manual. El presupuesto no reserva stock.</small>
+              <small>{puedeVenderArticulos ? `En cada fila elegí Servicio, ${etiquetaArticulos} o Detalle manual.` : "En cada fila elegí Servicio o Detalle manual."}{controlaStock ? " El presupuesto no reserva stock." : ""}</small>
             </div>
             <div className="presupuesto-mode-actions">
               {tieneModeloCargado && modeloOrigen?.nombre ? (
@@ -1833,7 +1837,7 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
                         >
                           <option value="SERVICIO">Servicio</option>
                           {(puedeVenderArticulos || r.tipo_item === "ARTICULO") && (
-                            <option value="ARTICULO" disabled={!puedeVenderArticulos}>Material / insumo / producto</option>
+                            <option value="ARTICULO" disabled={!puedeVenderArticulos}>{etiquetaArticulos}</option>
                           )}
                           <option value="MANUAL">Detalle manual</option>
                         </select>
@@ -1853,7 +1857,7 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
                             options={detallesList}
                             catalogKind={r.tipo_item === "ARTICULO" ? "stock" : "service"}
                             showKindToggle={false}
-                            placeholder={r.tipo_item === "ARTICULO" ? "Buscá material, insumo o producto…" : "Buscá un servicio…"}
+                            placeholder={r.tipo_item === "ARTICULO" ? (vendeProductos ? "Buscá material, insumo o producto…" : "Buscá un material o insumo…") : "Buscá un servicio…"}
                             emptyMessage="Sin resultados en el catálogo"
                             allowOutOfStock
                             allowUntrackedStock={r.tipo_item === "ARTICULO"}
@@ -1886,7 +1890,7 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
                             opacity: rowSinStock ? 0.9 : 1,
                           }}
                         />
-                        {r.tipo_item === "ARTICULO" && r.controla_stock !== 0 && r.stock_disponible !== null && r.stock_disponible !== undefined && (
+                        {controlaStock && r.tipo_item === "ARTICULO" && r.controla_stock !== 0 && r.stock_disponible !== null && r.stock_disponible !== undefined && (
                           <div
                             style={{
                               fontSize: "10px",

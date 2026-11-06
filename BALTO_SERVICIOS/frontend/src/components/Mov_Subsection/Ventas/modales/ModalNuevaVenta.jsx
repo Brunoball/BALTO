@@ -1522,11 +1522,16 @@ export function PanelMediosPagoInlineVenta({
    MODAL PRINCIPAL
 ================================================================ */
 export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved }) {
-  // Plan: venta de artículos/productos (mostrador y mixta) sólo con products.sell;
-  // consumos de materiales en servicios sólo con services.composition.
+  // Plan: materiales/insumos como renglón propio desde el plan 2 (resources.sell);
+  // productos comerciales sólo con products.sell (plan 3). Consumos de materiales
+  // en servicios con services.composition. Sólo el plan 3 controla existencias
+  // (resources.stock): en el plan 2 no hay validación ni mensajes de stock.
   const plan = usePlan();
-  const puedeVenderArticulos = plan.can("products.sell");
+  const puedeVenderArticulos = plan.can("resources.sell") || plan.can("products.sell");
+  const vendeProductos = plan.can("products.sell");
+  const controlaStock = plan.can("resources.stock");
   const conComposicion = plan.can("services.composition");
+  const etiquetaArticulos = vendeProductos ? "Stock / material / insumo" : "Material / insumo";
   const API_BATCH = `${BASE_URL}/api.php?action=ventas_crear_batch`;
   const API_CATALOGO = `${BASE_URL}/api.php?action=catalogo_crear`;
   const API_GET_CLIENTE_FISCAL = `${BASE_URL}/api.php?action=cliente_fiscal_get`;
@@ -2018,8 +2023,8 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
       const precioInicial = pickDetallePrecioInicial(preciosDisponibles);
       const precio = Number(precioInicial?.monto ?? detalle?.precio ?? 0);
       const esServicio = Boolean(idServicio);
-      const stockDisponible = esServicio ? null : getStockDisponible(detalle);
-      const sinStock = esServicio ? false : isSinStock(stockDisponible);
+      const stockDisponible = esServicio || !controlaStock ? null : getStockDisponible(detalle);
+      const sinStock = esServicio || !controlaStock ? false : isSinStock(stockDisponible);
       const nombreDetalle = getDetalleNombre(detalle);
 
       updateRow(rowId, {
@@ -2044,7 +2049,7 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
         showToast("advertencia", `"${nombreDetalle}" no tiene stock suficiente disponible.`, 2500);
       }
     },
-    [updateRow, showToast]
+    [updateRow, showToast, controlaStock]
   );
 
 
@@ -2124,12 +2129,13 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
       const tipoItem = safeStr(row.tipo_item).toUpperCase();
       const esServicio = Number(row.id_servicio || 0) > 0 || tipoItem === "SERVICIO";
       const esArticulo = Number(row.id_articulo || row.id_stock_producto || 0) > 0 || tipoItem === "ARTICULO";
-      if (esArticulo && (row.sinStock || isSinStock(row.stock_disponible))) {
+      const validaStock = esArticulo && controlaStock;
+      if (validaStock && (row.sinStock || isSinStock(row.stock_disponible))) {
         updateRow(rowId, { cantidad: "" });
         return;
       }
 
-      const stockDisponible = esArticulo ? row.stock_disponible : null;
+      const stockDisponible = validaStock ? row.stock_disponible : null;
       let cantidadFinal = newCantidad === "" ? "" : Number(newCantidad);
 
       if (typeof cantidadFinal === "number" && cantidadFinal < 0) cantidadFinal = 0;
@@ -2150,7 +2156,7 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
 
       updateRow(rowId, { cantidad: cantidadFinal });
     },
-    [rows, updateRow, showToast]
+    [rows, updateRow, showToast, controlaStock]
   );
 
   useEffect(() => {
@@ -2585,7 +2591,7 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
     rowsCalc.forEach((r, i) => {
       const p = describeLineProblem(r, i + 1);
       if (p) problems.push(p);
-      if (Number(r.id_servicio || 0) > 0 && safeNumber(r.cantidad) > 0) {
+      if (controlaStock && Number(r.id_servicio || 0) > 0 && safeNumber(r.cantidad) > 0) {
         const stockMsg = firstServiceStockShortageMessage(r.consumos_snapshot, r.cantidad, componentesStockList);
         if (stockMsg) stockProblems.push(`Fila ${i + 1}: ${stockMsg}`);
       }
@@ -2621,7 +2627,7 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
     }
 
     return { ok: true };
-  }, [cliInput, selectedClienteId, filters, isContado, fecha, usuarioBasicoVentas, rowsCalc, mediosFilas, mediosPagoList, resumen, sumaMediosPago, componentesStockList]);
+  }, [cliInput, selectedClienteId, filters, isContado, fecha, usuarioBasicoVentas, rowsCalc, mediosFilas, mediosPagoList, resumen, sumaMediosPago, componentesStockList, controlaStock]);
 
   const buildResumenFacturaPayload = useCallback(
     (clienteFiscalResuelto, cfg, clienteOverride = null) => {
@@ -3766,7 +3772,7 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
             <div className="gm-movement-layout">
               <section className="gm-table gm-table--movement gm-movement-main nv-table">
                 <div className={`gm-table-head ${hasScroll ? "gm-table-head--body-scroll" : ""}`}>
-                  <div className="gm-table-th" style={{ paddingLeft: 10 }}>Tipo / servicio, stock o detalle</div>
+                  <div className="gm-table-th" style={{ paddingLeft: 10 }}>{vendeProductos ? "Tipo / servicio, stock o detalle" : puedeVenderArticulos ? "Tipo / servicio, material o detalle" : "Tipo / servicio o detalle"}</div>
                   <div className="gm-table-th">Cant.</div>
                   <div className="gm-table-th right">Precio</div>
                   <div className="gm-table-th">IVA %</div>
@@ -3787,7 +3793,7 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
                       ? (tipoDeclarado === "DETALLE" ? "MANUAL" : tipoDeclarado)
                       : (esArticuloSeleccionado ? "ARTICULO" : "SERVICIO");
                     const esDetalleManual = tipoSeleccionado === "MANUAL";
-                    const rowSinStock = tipoSeleccionado === "ARTICULO" && (r.sinStock || isSinStock(stockNum));
+                    const rowSinStock = controlaStock && tipoSeleccionado === "ARTICULO" && (r.sinStock || isSinStock(stockNum));
 
                     return (
                       <div key={r.id} className={`gm-table-row ${rowSinStock ? "nv-row--sin-stock" : ""}`}>
@@ -3802,7 +3808,7 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
                           >
                             <option value="SERVICIO">Servicio del catálogo</option>
                             {(puedeVenderArticulos || tipoSeleccionado === "ARTICULO") && (
-                              <option value="ARTICULO" disabled={!puedeVenderArticulos}>Stock / material / insumo</option>
+                              <option value="ARTICULO" disabled={!puedeVenderArticulos}>{etiquetaArticulos}</option>
                             )}
                             <option value="MANUAL">Detalle manual</option>
                           </select>
@@ -3830,12 +3836,12 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
                               options={detallesList}
                               catalogKind="stock"
                               showKindToggle={false}
-                              placeholder="Buscá stock / material / insumo…"
+                              placeholder={vendeProductos ? "Buscá stock / material / insumo…" : "Buscá un material o insumo…"}
                               disabled={saving || addUI.open}
                               showAllOnFocus={true}
                               maxItems={18}
                               inputClassName="gm-cell-input"
-                              emptyMessage="No hay artículos con stock disponible"
+                              emptyMessage={controlaStock ? "No hay artículos con stock disponible" : "No hay materiales ni insumos activos"}
                             />
                           ) : (
                             <input
@@ -3875,7 +3881,7 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
                               opacity: rowSinStock ? 0.9 : 1,
                             }}
                           />
-                          {tipoSeleccionado === "ARTICULO" && r.stock_disponible !== null && r.stock_disponible !== undefined && (
+                          {controlaStock && tipoSeleccionado === "ARTICULO" && r.stock_disponible !== null && r.stock_disponible !== undefined && (
                             <div className={`gm-stock-hint ${rowSinStock ? "gm-stock-hint--danger" : ""}`}>
                               {rowSinStock ? "Sin stock" : `Stock: ${r.stock_disponible}`}
                             </div>

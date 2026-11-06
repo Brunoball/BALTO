@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { createPortal } from "react-dom";
 import "./ProductStockAutocomplete.css";
 import getDropdownPlacement from "../../Global/GlobalAutocomplete/getDropdownPlacement.js";
+import { usePlan } from "../../../session/planCapabilities";
 
 function normalizeText(v) {
   return String(v ?? "")
@@ -184,8 +185,8 @@ export default function ProductStockAutocomplete({
   className = "",
   inputClassName = "",
   emptyMessage = "Sin resultados",
-  allowOutOfStock = false,
-  allowUntrackedStock = false,
+  allowOutOfStock: allowOutOfStockProp = false,
+  allowUntrackedStock: allowUntrackedStockProp = false,
   catalogKind = "all", // all | service | stock
   defaultKind = "service",
   showKindToggle = true,
@@ -193,6 +194,13 @@ export default function ProductStockAutocomplete({
   name,
   id,
 }) {
+  // Plan sin control de stock (plan 2): materiales e insumos son un catálogo
+  // económico. Se muestran todos los activos, sin filtrar por existencia ni
+  // mostrar stock. El plan 3 conserva exactamente el comportamiento anterior.
+  const plan = usePlan();
+  const sinControlStock = Boolean(plan.ready) && !plan.can("resources.stock");
+  const allowOutOfStock = allowOutOfStockProp || sinControlStock;
+  const allowUntrackedStock = allowUntrackedStockProp || sinControlStock;
   const wrapRef = useRef(null);
   const inputRef = useRef(null);
   const rafRef = useRef(null);
@@ -443,9 +451,11 @@ export default function ProductStockAutocomplete({
                 <span className="psa-meta">
                   {getItemKind(product) === "service"
                     ? `Servicio${Number(product?.cantidad_componentes || 0) > 0 ? ` · ${Number(product.cantidad_componentes)} insumo(s)` : ""}`
-                    : controlsStock(product)
-                      ? `Stock${getStock(product) !== null ? `: ${getStock(product)}` : ""}`
-                      : "Material / insumo · sin control de stock"}
+                    : sinControlStock
+                      ? (safeStr(product?.articulo_tipo || product?.tipo).toUpperCase() === "INSUMO" ? "Insumo" : "Material")
+                      : controlsStock(product)
+                        ? `Stock${getStock(product) !== null ? `: ${getStock(product)}` : ""}`
+                        : "Material / insumo · sin control de stock"}
                 </span>
               </span>
               {variants.length ? <span className="psa-arrow">{isExpanded ? "▾" : "▸"}</span> : null}

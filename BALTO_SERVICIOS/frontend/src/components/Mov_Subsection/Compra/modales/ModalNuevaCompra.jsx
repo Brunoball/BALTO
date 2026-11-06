@@ -1015,6 +1015,9 @@ export default function ModalNuevaCompra({ open, lists, onClose, onToast, onSave
   // insumos; en el plan profesional la compra es un gasto con detalle manual.
   const plan = usePlan();
   const conRecursos = plan.can("resources.manage");
+  // Plan 2: la compra se registra económicamente, sin mover existencias; no se
+  // muestra stock. Plan 3: la compra incrementa stock como siempre.
+  const controlaStock = plan.can("resources.stock");
   const tipoFilaInicial = conRecursos ? "ARTICULO" : "MANUAL";
   const API_BATCH = `${BASE_URL}/api.php?action=compras_crear_batch`;
   const API_UPLOAD_LINK = `${BASE_URL}/api.php?action=compras_comprobantes_vincular_movimientos_lote_upload`;
@@ -1998,10 +2001,10 @@ export default function ModalNuevaCompra({ open, lists, onClose, onToast, onSave
                             }
                             disabled={saving}
                             placeholder=""
-                            title="En compras podés ingresar cualquier cantidad; no se limita por el stock actual."
+                            title={controlaStock ? "En compras podés ingresar cualquier cantidad; no se limita por el stock actual." : ""}
                             style={{ width: "100%" }}
                           />
-                          {r.stock_disponible !== null && r.stock_disponible !== undefined && (
+                          {controlaStock && r.stock_disponible !== null && r.stock_disponible !== undefined && (
                             <div
                               style={{
                                 fontSize: "10px",

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { clampText, decimalNumber, money, moneyApiValue, moneyDecimalText, moneyInputValue, stock, stockApiValue, stockDecimalText, stockInputValue } from "../utils/serviciosFormUtils";
 import useServiciosGlobalModal from "./useServiciosGlobalModal";
+import { usePlan } from "../../../session/planCapabilities";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBoxOpen, faCircleInfo, faDollarSign, faFileLines } from "@fortawesome/free-solid-svg-icons";
 
@@ -34,6 +35,11 @@ export default function ModalArticulo({
 }) {
   const [form, setForm] = useState(EMPTY);
   const esProducto = tipo === "PRODUCTO";
+  // Plan 2: materiales e insumos son un catálogo económico (costo, precio, IVA).
+  // Sin control de existencias no se muestra nada de stock ni se envía al backend;
+  // al editar, el backend conserva el controla_stock/stock histórico (p. ej. Full).
+  const plan = usePlan();
+  const conControlStock = esProducto || plan.can("resources.stock");
 
   useEffect(() => {
     if (!open) return;
@@ -56,7 +62,7 @@ export default function ModalArticulo({
   if (!open) return null;
 
   const set = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
-  const controlaStock = controlaStockFijo || Boolean(form.controla_stock);
+  const controlaStock = conControlStock && (controlaStockFijo || Boolean(form.controla_stock));
 
   const submit = async (event) => {
     event.preventDefault();
@@ -65,7 +71,7 @@ export default function ModalArticulo({
     if (decimalNumber(form.costo_unitario) < 0) return onToast?.("error", "El costo no puede ser negativo.", 4200);
     if (!item && controlaStock && decimalNumber(form.stock_actual) < 0) return onToast?.("error", "El stock inicial no puede ser negativo.", 4200);
 
-    await onSave({
+    const payload = {
       ...form,
       costo_unitario: moneyApiValue(form.costo_unitario),
       tipo,
@@ -76,7 +82,12 @@ export default function ModalArticulo({
       stock_actual: item
         ? item.stock_actual
         : (controlaStock ? stockApiValue(form.stock_actual) : "0.00"),
-    });
+    };
+    if (!conControlStock) {
+      delete payload.controla_stock;
+      delete payload.stock_actual;
+    }
+    await onSave(payload);
   };
 
   const unidad = (event) => {
@@ -93,9 +104,11 @@ export default function ModalArticulo({
   const articleTone = tipo === "MATERIAL" ? "material" : tipo === "PRODUCTO" ? "producto" : "insumo";
   const subtitle = esProducto
     ? "Creá un producto propio de Stock, independiente de Materiales e Insumos."
-    : tipo === "MATERIAL"
-      ? "Definí el material y elegí si querés controlar sus existencias."
-      : "Definí el insumo y elegí si querés controlar sus existencias.";
+    : !conControlStock
+      ? `Definí el ${entidad} con su costo y precio de venta.`
+      : tipo === "MATERIAL"
+        ? "Definí el material y elegí si querés controlar sus existencias."
+        : "Definí el insumo y elegí si querés controlar sus existencias.";
 
   return createPortal(
     <div ref={overlayRef} className="gm-modal-overlay" data-servicios-modal-overlay="true" onMouseDown={cerrarDesdeFondo}>
@@ -128,10 +141,10 @@ export default function ModalArticulo({
             <section className="gm-section servicios-form-section servicios-service-panel servicios-article-panel--values">
               <div className="gm-section-head servicios-service-sectionHead">
                 <span className="servicios-service-sectionIcon"><FontAwesomeIcon icon={faDollarSign} /></span>
-                <span className="servicios-service-sectionCopy"><strong>Stock y valores</strong><small>{esProducto ? "El producto siempre controla existencias." : "El control de stock es opcional para este recurso."}</small></span>
+                <span className="servicios-service-sectionCopy"><strong>{conControlStock ? "Stock y valores" : "Costos y valores"}</strong><small>{esProducto ? "El producto siempre controla existencias." : conControlStock ? "El control de stock es opcional para este recurso." : "Costo, precio de venta e IVA de este recurso."}</small></span>
               </div>
               <div className="gm-section-body servicios-service-panelBody">
-                {!controlaStockFijo && (
+                {conControlStock && !controlaStockFijo && (
                   <label className={`servicios-stock-control ${controlaStock ? "is-active" : ""}`}>
                     <input type="checkbox" checked={controlaStock} onChange={(e) => set("controla_stock", e.target.checked)} />
                     <span className="servicios-stock-control__switch" aria-hidden="true" />
@@ -150,13 +163,13 @@ export default function ModalArticulo({
                 </div>
 
                 <div className="servicios-article-valuePreview">
-                  <div><span>Stock</span><strong>{stockPreview}</strong></div>
+                  {conControlStock && <div><span>Stock</span><strong>{stockPreview}</strong></div>}
                   <div><span>Costo</span><strong>{money(form.costo_unitario)}</strong></div>
                   <div><span>Precio</span><strong>{form.precio_venta === "" ? "—" : money(form.precio_venta)}</strong></div>
                 </div>
 
                 {item && controlaStock && <div className="gm-info-box servicios-article-stockNotice"><FontAwesomeIcon icon={faCircleInfo} /><span>Para modificar existencias usá <strong>Ajustar stock</strong>. Así el cambio queda identificado en Auditoría.</span></div>}
-                {item && !controlaStock && <div className="gm-info-box servicios-article-stockNotice"><FontAwesomeIcon icon={faCircleInfo} /><span>Al activar el control de stock, este {entidad} aparecerá en la pestaña <strong>Stock</strong> con existencia inicial 0.</span></div>}
+                {item && conControlStock && !controlaStock && <div className="gm-info-box servicios-article-stockNotice"><FontAwesomeIcon icon={faCircleInfo} /><span>Al activar el control de stock, este {entidad} aparecerá en la pestaña <strong>Stock</strong> con existencia inicial 0.</span></div>}
               </div>
             </section>
           </div>

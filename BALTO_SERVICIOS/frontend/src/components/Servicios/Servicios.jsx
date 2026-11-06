@@ -64,9 +64,16 @@ export default function Servicios() {
   // Capacidades del plan (backend). La ruta de Inventario ya está protegida por
   // App/Principal; acá se adaptan pestañas, columnas y acciones.
   const plan = usePlan();
-  const conStock = plan.can("resources.stock");
+  // Pestaña Stock y ajustes manuales: herramienta administrativa exclusiva del
+  // plan con venta. Los movimientos internos de stock de materiales (compras y
+  // consumos) siguen funcionando en el plan 2 aunque la pestaña no se muestre.
+  const conStock = plan.can("stock.panel");
+  // Control físico de existencias (plan 3). En el plan 2 materiales e insumos son
+  // un catálogo económico: no se muestra columna de stock ni se exporta.
+  const controlaStock = plan.can("resources.stock");
   const conTrabajadores = plan.can("workers.manage");
   const conComposicion = plan.can("services.composition");
+  const conAsignacion = plan.can("services.workers");
   const conCosteo = plan.can("services.costing");
   const conProductos = plan.can("products.manage");
   const tabs = useMemo(() => (inventoryMode
@@ -366,7 +373,7 @@ export default function Servicios() {
     if (tab === "servicios") return [
       { k: "nombre", l: "Servicio" }, { k: "categoria", l: "Categoría", center: true }, { k: "unidad", l: "Unidad", center: true },
       // Plan básico: sin composición ni costo automático; se muestra la duración.
-      ...(conComposicion ? [{ k: "composicion", l: "Composición" }] : [{ k: "duracion", l: "Duración", center: true }]),
+      ...((conComposicion || conAsignacion) ? [{ k: "composicion", l: "Composición" }] : [{ k: "duracion", l: "Duración", center: true }]),
       ...(conCosteo ? [{ k: "costo", l: "Costo", right: true }] : []),
       { k: "precio", l: "Precio", right: true }, { k: "acciones", l: "Acciones", center: true },
     ];
@@ -377,9 +384,9 @@ export default function Servicios() {
       { k: "nombre", l: "Artículo" }, { k: "tipo", l: "Tipo", center: true }, { k: "categoria", l: "Categoría", center: true }, { k: "unidad", l: "Unidad", center: true }, { k: "stock", l: "Stock", center: true }, { k: "costo", l: "Costo", right: true }, { k: "acciones", l: "Acciones", center: true },
     ];
     return [
-      { k: "nombre", l: tab === "materiales" ? "Material" : "Insumo" }, { k: "categoria", l: "Categoría", center: true }, { k: "unidad", l: "Unidad", center: true }, { k: "stock", l: "Stock", center: true }, { k: "costo", l: "Costo", right: true }, { k: "precio", l: "Precio", right: true }, { k: "acciones", l: "Acciones", center: true },
+      { k: "nombre", l: tab === "materiales" ? "Material" : "Insumo" }, { k: "categoria", l: "Categoría", center: true }, { k: "unidad", l: "Unidad", center: true }, ...(controlaStock ? [{ k: "stock", l: "Stock", center: true }] : []), { k: "costo", l: "Costo", right: true }, { k: "precio", l: "Precio", right: true }, { k: "acciones", l: "Acciones", center: true },
     ];
-  }, [tab, conComposicion, conCosteo]);
+  }, [tab, conComposicion, conAsignacion, conCosteo, controlaStock]);
 
   const gridCols = columns.map((column, index) => {
     if (index === 0) return "minmax(190px,1.35fr)";
@@ -405,7 +412,10 @@ export default function Servicios() {
     tipo: row.tipo === "MATERIAL" ? "MATERIAL" : row.tipo === "INSUMO" ? "INSUMO" : row.tipo === "PRODUCTO" ? "PRODUCTO" : "—",
     categoria: row.categoria_nombre || "SIN CATEGORÍA",
     unidad: row.unidad_simbolo || row.unidad_nombre || "—",
-    composicion: `${Number(row.cantidad_articulos || 0)} elem. · ${Number(row.cantidad_trabajadores || 0)} trab.`,
+    // Sin materiales en el plan sólo se informa la mano de obra asignada.
+    composicion: conComposicion
+      ? `${Number(row.cantidad_articulos || 0)} elem. · ${Number(row.cantidad_trabajadores || 0)} trab.`
+      : `${Number(row.cantidad_trabajadores || 0)} trab.`,
     duracion: row.duracion_estimada_minutos ? `${Number(row.duracion_estimada_minutos).toLocaleString("es-AR")} min` : "—",
     costo: money(tab === "servicios" ? row.costo_estimado : row.costo_unitario),
     precio: row.precio_venta == null ? "—" : money(row.precio_venta),
@@ -491,8 +501,8 @@ export default function Servicios() {
     if (tab === "servicios") return { title: "BALTO_SERVICIOS", rows, columns: [...base, { label: "CATEGORÍA", value: (r) => r.categoria_nombre || "", width: 22 }, { label: "UNIDAD", value: (r) => r.unidad_simbolo || "", width: 14 }, { label: "DURACIÓN (MIN)", value: (r) => r.duracion_estimada_minutos ?? "", width: 16 }, ...(conCosteo ? [{ label: "OTROS COSTOS", value: (r) => r.costo_base || 0, width: 16 }, { label: "COSTO TOTAL", value: (r) => r.costo_estimado || 0, width: 16 }] : []), { label: "PRECIO", value: (r) => r.precio_venta || 0, width: 16 }, { label: "ESTADO", value: (r) => Number(r.activo) === 1 ? "ACTIVO" : "BAJA", width: 12 }] };
     if (tab === "trabajadores") return { title: "BALTO_TRABAJADORES", rows, columns: [...base, { label: "DOCUMENTO", value: (r) => r.documento || "", width: 18 }, { label: "ROL", value: (r) => r.rol || "", width: 24 }, { label: "TIPO", value: (r) => r.tipo_trabajador || "", width: 16 }, { label: "MODALIDAD", value: (r) => r.modalidad_pago || "", width: 16 }, { label: "TARIFA", value: (r) => r.monto_periodo || 0, width: 16 }, { label: "HORAS EQUIV.", value: (r) => r.horas_periodo || 0, width: 16 }, { label: "COSTO/H", value: (r) => r.costo_hora || 0, width: 16 }, { label: "ESTADO", value: (r) => Number(r.activo) === 1 ? "ACTIVO" : "BAJA", width: 12 }] };
     if (tab === "stock") return { title: "BALTO_STOCK_SERVICIOS", rows, columns: [...base, { label: "TIPO", value: (r) => r.tipo || "", width: 14 }, { label: "CATEGORÍA", value: (r) => r.categoria_nombre || "", width: 22 }, { label: "UNIDAD", value: (r) => r.unidad_simbolo || "", width: 14 }, { label: "STOCK", value: (r) => Number(r.controla_stock ?? 1) === 1 ? Number(Number(r.stock_actual || 0).toFixed(2)) : "NO CONTROLADO", width: 18 }, { label: "COSTO", value: (r) => r.costo_unitario || 0, width: 16 }, { label: "ESTADO", value: (r) => Number(r.activo) === 1 ? "ACTIVO" : "BAJA", width: 12 }] };
-    return { title: tab === "materiales" ? "BALTO_MATERIALES" : "BALTO_INSUMOS", rows, columns: [...base, { label: "CATEGORÍA", value: (r) => r.categoria_nombre || "", width: 22 }, { label: "UNIDAD", value: (r) => r.unidad_simbolo || "", width: 14 }, { label: "STOCK", value: (r) => Number(r.controla_stock ?? 1) === 1 ? Number(Number(r.stock_actual || 0).toFixed(2)) : "NO CONTROLADO", width: 18 }, { label: "COSTO", value: (r) => r.costo_unitario || 0, width: 16 }, { label: "PRECIO", value: (r) => r.precio_venta ?? "", width: 16 }, { label: "ESTADO", value: (r) => Number(r.activo) === 1 ? "ACTIVO" : "BAJA", width: 12 }] };
-  }, [tab, rows, conCosteo]);
+    return { title: tab === "materiales" ? "BALTO_MATERIALES" : "BALTO_INSUMOS", rows, columns: [...base, { label: "CATEGORÍA", value: (r) => r.categoria_nombre || "", width: 22 }, { label: "UNIDAD", value: (r) => r.unidad_simbolo || "", width: 14 }, ...(controlaStock ? [{ label: "STOCK", value: (r) => Number(r.controla_stock ?? 1) === 1 ? Number(Number(r.stock_actual || 0).toFixed(2)) : "NO CONTROLADO", width: 18 }] : []), { label: "COSTO", value: (r) => r.costo_unitario || 0, width: 16 }, { label: "PRECIO", value: (r) => r.precio_venta ?? "", width: 16 }, { label: "ESTADO", value: (r) => Number(r.activo) === 1 ? "ACTIVO" : "BAJA", width: 12 }] };
+  }, [tab, rows, conCosteo, controlaStock]);
   const exportOptions = [
     { key: "excel", label: "Excel (.xlsx)", tipo: "excel", onClick: ({ rows: sourceRows } = {}) => exportServiciosExcel({ ...exportDefinition, rows: Array.isArray(sourceRows) ? sourceRows : rows }) },
     { key: "pdf", label: "PDF (.pdf)", tipo: "pdf", onClick: ({ rows: sourceRows } = {}) => exportServiciosPdf({ ...exportDefinition, rows: Array.isArray(sourceRows) ? sourceRows : rows }) },
@@ -510,7 +520,7 @@ export default function Servicios() {
   const statusUsageCount = Number(statusModal.item?.cantidad_servicios || 0);
   const statusWarning = statusIsActive
     ? (RESOURCE_TABS.has(statusModal.kind) && statusUsageCount > 0
-        ? `Este ${statusLabel} forma parte de ${statusUsageCount} ${statusUsageCount === 1 ? "servicio" : "servicios"}. La baja no borra ni modifica esas composiciones ni el historial: dejará de poder elegirse como artículo directo, pero los servicios que ya lo incluyen conservarán su receta y podrán seguir consumiendo su stock existente.`
+        ? `Este ${statusLabel} forma parte de ${statusUsageCount} ${statusUsageCount === 1 ? "servicio" : "servicios"}. La baja no borra ni modifica esas composiciones ni el historial: dejará de poder elegirse como artículo directo, pero los servicios que ya lo incluyen conservarán su receta${controlaStock ? " y podrán seguir consumiendo su stock existente" : ""}.`
         : "El registro dejará de estar disponible para nuevas selecciones, pero conservará sus relaciones e historial.")
     : "El registro volverá a estar disponible para nuevas selecciones.";
 

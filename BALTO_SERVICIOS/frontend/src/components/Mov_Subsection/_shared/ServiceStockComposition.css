@@ -438,3 +438,28 @@ html[data-theme="oscuro"] .ssc--table-layout .ssc__remove {
     text-align: left;
   }
 }
+
+/* Plan sin control de stock: sin columna de existencias (4 columnas). */
+.ssc--sin-stock .ssc__row {
+  grid-template-columns: minmax(180px, 2fr) minmax(115px, .8fr) minmax(110px, .8fr) 32px;
+}
+
+.ssc--sin-stock.ssc--table-layout .ssc__excel-head,
+.ssc--sin-stock.ssc--table-layout .ssc__excel-row {
+  grid-template-columns: minmax(250px, 2.3fr) minmax(120px, .9fr) minmax(130px, .95fr) 52px;
+}
+
+@media (max-width: 900px) {
+  .ssc--sin-stock .ssc__row { grid-template-columns: 1fr 1fr; }
+  .ssc--sin-stock.ssc--table-layout .ssc__excel-head,
+  .ssc--sin-stock.ssc--table-layout .ssc__excel-row {
+    grid-template-columns: minmax(210px, 2fr) minmax(105px, .85fr) minmax(115px, .9fr) 46px;
+  }
+}
+
+@media (max-width: 720px) {
+  .ssc--sin-stock.ssc--table-layout .ssc__excel-row,
+  .ssc--sin-stock.ssc--table-layout .ssc__excel-row:nth-child(odd) {
+    grid-template-columns: 1fr 1fr;
+  }
+}

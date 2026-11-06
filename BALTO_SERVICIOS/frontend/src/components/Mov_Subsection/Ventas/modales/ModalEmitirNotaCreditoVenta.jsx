@@ -256,10 +256,14 @@ export default function ModalEmitirNotaCreditoVenta({
         iva_pct: Number(it.iva_pct || 0),
         cantidad: esEliminacionTotal && Number(it.cantidad_disponible || 0) > 0 ? String(Number(it.cantidad_disponible || 0)) : "",
         // BALTO Servicios: un renglón mueve stock si es un artículo directo o
-        // si es un servicio cuya receta histórica consumió artículos.
+        // si es un servicio cuya receta histórica consumió artículos. Los renglones
+        // registrados sin control de stock (impacta_stock = 0, plan 2) no devuelven
+        // existencias: la NC copia esa marca del original.
         tiene_stock:
-          Number(it.id_articulo || it.id_stock_producto || 0) > 0 ||
-          (Number(it.id_servicio || 0) > 0 && Number(it.mueve_stock || it.servicio_mueve_stock || 0) === 1),
+          (Number(it.id_articulo || it.id_stock_producto || 0) > 0 && Number(it.impacta_stock ?? 1) !== 0) ||
+          (Number(it.id_servicio || 0) > 0 && Number(it.mueve_stock || it.servicio_mueve_stock || 0) === 1 &&
+            (!Array.isArray(it.consumos_snapshot) || it.consumos_snapshot.length === 0 ||
+              it.consumos_snapshot.some((c) => Number(c?.impacta_stock ?? 1) !== 0))),
       }));
       setItems(itemsContexto);
       if (esEliminacionTotal) setMotivo("ANULACION_TOTAL");
