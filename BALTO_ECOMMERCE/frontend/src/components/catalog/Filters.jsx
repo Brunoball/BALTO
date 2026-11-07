@@ -1,8 +1,0 @@
-import React from 'react';
-import { Filter, RotateCcw, Search, SlidersHorizontal } from 'lucide-react';
-export default function Filters({ term, setTerm, order, setOrder, category, setCategory, categories, stockOnly, setStockOnly, onReset }) {
-  return <div className="filters-panel">
-    <div className="filter-main"><label className="filter-search"><Search size={19}/><input value={term} onChange={(e) => setTerm(e.target.value)} placeholder="Buscar entre los productos de esta página" aria-label="Buscar productos de esta página" /></label><label className="filter-select"><SlidersHorizontal size={18}/><span className="sr-only">Ordenar productos</span><select value={order} onChange={(e) => setOrder(e.target.value)}><option value="destacados">Destacados primero</option><option value="precio-asc">Precio: menor a mayor</option><option value="precio-desc">Precio: mayor a menor</option><option value="nombre">Nombre A–Z</option></select></label></div>
-    <div className="filter-secondary"><div className="filter-categories"><Filter size={16}/><button className={category === 'todas' ? 'selected' : ''} type="button" onClick={() => setCategory('todas')}>Todas</button>{categories.map((cat) => <button key={cat} className={category === cat ? 'selected' : ''} type="button" onClick={() => setCategory(cat)}>{cat}</button>)}</div><div className="filter-side"><label className="stock-filter"><input type="checkbox" checked={stockOnly} onChange={(e) => setStockOnly(e.target.checked)}/> Solo disponibles</label><button type="button" className="filter-clear" onClick={onReset} aria-label="Limpiar filtros"><RotateCcw size={15}/> Limpiar</button></div></div>
-  </div>;
-}

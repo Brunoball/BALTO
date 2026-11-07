@@ -1,0 +1,10 @@
+@import './componentes/global/estilos/variables.css';
+@import './componentes/estructura/estructura.css';
+@import './componentes/inicio/inicio.css';
+@import './componentes/catalogo/catalogo.css';
+@import './componentes/producto/producto.css';
+@import './componentes/carrito/carrito.css';
+@import './componentes/checkout/checkout.css';
+@import './componentes/cuenta/cuenta.css';
+@import './componentes/pagos/pagos.css';
+@import './componentes/global/estilos/adaptable.css';

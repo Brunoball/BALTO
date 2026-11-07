@@ -34,6 +34,9 @@ module.exports = function setupProxy(app) {
     console.log('[BALTO_ECOMMERCE] Proxy local con checkout de PRUEBA habilitado (solo este equipo).');
   }
 
+  // eslint-disable-next-line no-console
+  console.log('[BALTO_ECOMMERCE] Proxy /ecom-api v2: envia Origin https://<tienda> (checkout publico habilitado).');
+
   app.use('/ecom-api', createProxyMiddleware({
     target: origin,
     changeOrigin: true,
