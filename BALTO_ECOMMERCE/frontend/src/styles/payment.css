@@ -1,0 +1,90 @@
+/* ---- Medios de pago: selector, transferencia, comprobantes y estado ---- */
+.payment-fieldset legend { margin-bottom:14px; }
+.payment-methods { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; }
+.payment-card { position:relative; display:flex; gap:13px; align-items:flex-start; padding:16px 44px 16px 16px; border:1px solid #dbe3db; border-radius:13px; background:#fff; cursor:pointer; transition:border-color .15s, box-shadow .15s, background .15s; }
+.payment-card:hover { border-color:#b9cbbd; }
+.payment-card input { position:absolute; opacity:0; width:1px; height:1px; }
+.payment-card:focus-within { outline:3px solid #5b8cf4; outline-offset:2px; }
+.payment-card.is-selected { border-color:var(--brand); box-shadow:0 0 0 1px var(--brand) inset; background:#fbfcfa; }
+.payment-card-icon { display:grid; place-items:center; flex:none; width:42px; height:42px; border-radius:11px; background:#eef4ef; color:#3f6e50; }
+.payment-card.is-selected .payment-card-icon { background:var(--brand); color:var(--brand-text); }
+.payment-card-text { display:flex; flex-direction:column; gap:4px; min-width:0; }
+.payment-card-text strong { font:800 14px Manrope,sans-serif; }
+.payment-card-text small { font-size:11px; line-height:1.5; color:#7e8e83; }
+.payment-card-check { position:absolute; top:16px; right:16px; width:18px; height:18px; border-radius:50%; border:2px solid #cfd9d1; }
+.payment-card.is-selected .payment-card-check { border-color:var(--brand); background:radial-gradient(circle,var(--brand) 0 45%,transparent 50%); }
+.payment-card.is-disabled { cursor:not-allowed; background:#f7f8f7; border-style:dashed; opacity:.75; }
+.payment-card.is-disabled:hover { border-color:#dbe3db; }
+.payment-card.is-disabled .payment-card-icon { background:#eceeec; color:#8a958d; }
+.payment-soon { display:inline-block; margin-left:6px; padding:2px 7px; border-radius:999px; background:#e8ecf5; color:#4a5f86; font:700 10px Manrope,sans-serif; letter-spacing:.02em; vertical-align:1px; }
+.payment-methods-soon { margin-top:10px; }
+.payment-empty, .payment-note { margin:0; padding:13px 15px; border-radius:10px; background:#fdf6e8; color:#7a5d1d; font-size:12px; line-height:1.6; }
+.payment-preview { margin-top:14px; display:flex; flex-direction:column; gap:12px; padding:16px; border-radius:13px; background:#f6f8f5; }
+.payment-preview p { margin:0; font-size:12px; line-height:1.65; color:#4d5f53; }
+.payment-note { margin-top:12px; background:#eef3fb; color:#34507a; }
+
+.bank-details { display:flex; flex-direction:column; gap:12px; width:100%; text-align:left; }
+.bank-details dl { margin:0; display:flex; flex-direction:column; border:1px solid #e3e9e3; border-radius:12px; background:#fff; overflow:hidden; }
+.bank-row { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:11px 14px; border-top:1px solid #eef2ee; font-size:13px; }
+.bank-row:first-child { border-top:0; }
+.bank-row dt { color:var(--muted); font-size:12px; flex:none; }
+.bank-row dd { margin:0; display:flex; align-items:center; gap:10px; justify-content:flex-end; font-weight:800; text-align:right; min-width:0; overflow-wrap:anywhere; }
+.bank-row dd small { font-weight:500; color:var(--muted); }
+.bank-row .mono { font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:12px; letter-spacing:.3px; }
+.copy-button { display:inline-flex; align-items:center; gap:5px; flex:none; padding:6px 10px; border:1px solid #d9e2da; border-radius:7px; background:#f6f8f5; color:#2f5a40; font-size:11px; font-weight:800; }
+.copy-button:hover { background:#edf3ee; }
+.bank-amount { display:flex; flex-direction:column; gap:3px; padding:14px 16px; border-radius:12px; background:var(--brand); color:var(--brand-text); }
+.bank-amount span { font-size:11px; font-weight:700; opacity:.85; }
+.bank-amount strong { font:800 24px Manrope,sans-serif; }
+.bank-amount small { font-size:11px; opacity:.85; }
+.bank-note { margin:0; font-size:12px; color:#647469; line-height:1.6; }
+
+.proof-uploader { display:flex; flex-direction:column; gap:12px; width:100%; text-align:left; }
+.proof-drop { position:relative; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; min-height:130px; padding:18px; border:2px dashed #cfdacf; border-radius:13px; background:#fafbf9; color:#5f7a66; cursor:pointer; text-align:center; }
+.proof-drop:hover, .proof-drop:focus-within { border-color:var(--brand); }
+.proof-drop input { position:absolute; inset:0; opacity:0; cursor:pointer; }
+.proof-drop small { color:var(--muted); font-size:11px; }
+.proof-drop.has-file { border-style:solid; align-items:stretch; }
+.proof-file { display:flex; align-items:center; gap:14px; text-align:left; }
+.proof-file img { width:72px; height:72px; object-fit:cover; border-radius:9px; border:1px solid #e3e9e3; background:#fff; }
+.proof-file > span { display:flex; flex-direction:column; gap:3px; min-width:0; overflow-wrap:anywhere; color:var(--ink); }
+.proof-file small { color:var(--muted); }
+.proof-icon { display:grid; place-items:center; width:72px; height:72px; border-radius:9px; background:#eef4ef; color:#3f6e50; flex:none; }
+.proof-progress { position:relative; height:28px; border-radius:8px; background:#eef2ee; overflow:hidden; }
+.proof-progress span { position:absolute; inset:0 auto 0 0; background:var(--brand); opacity:.85; transition:width .2s; }
+.proof-progress small { position:relative; display:flex; align-items:center; height:100%; padding:0 12px; font-size:11px; font-weight:800; color:var(--ink); mix-blend-mode:normal; }
+.proof-actions { display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap; }
+.proof-list { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px; width:100%; }
+.proof-list li { display:flex; align-items:center; gap:10px; padding:10px 12px; border:1px solid #e7eee7; border-radius:10px; background:#fff; font-size:12px; text-align:left; }
+.proof-list li > svg { color:#5f7a66; flex:none; }
+.proof-list li span { display:flex; flex-direction:column; gap:2px; flex:1; min-width:0; overflow-wrap:anywhere; }
+.proof-list li small { color:var(--muted); }
+.proof-list em { font-style:normal; }
+.proof-list .icon-button { width:34px; height:34px; flex:none; }
+
+.payment-status { display:flex; flex-direction:column; gap:14px; width:100%; text-align:left; }
+.payment-status-head { display:flex; align-items:flex-start; gap:12px; padding:14px 16px; border-radius:12px; background:#fdf6e8; color:#7a5d1d; }
+.payment-status-head.is-ok { background:#e7f4e9; color:#2f6a44; }
+.payment-status-head.is-danger { background:#fbe9e4; color:#9c4a40; }
+.payment-status-head h3 { margin:0 0 2px; font:800 14px Manrope,sans-serif; color:var(--ink); }
+.payment-status-head span { font-size:12px; font-weight:800; }
+.payment-status-head svg { flex:none; margin-top:2px; }
+.payment-text { margin:0; font-size:13px; line-height:1.7; color:#4d5f53; }
+.payment-received { display:flex; flex-direction:column; gap:4px; padding:14px 16px; border-radius:12px; background:#eef3fb; color:#34507a; font-size:12px; line-height:1.6; }
+.payment-received strong { font-size:14px; }
+.payment-upload-cta { width:100%; }
+.confirmation-payment { width:100%; margin:10px 0 4px; padding-top:16px; border-top:1px solid #eef2ee; }
+.confirmation-facts { width:100%; margin:4px 0; display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.confirmation-facts div { display:flex; flex-direction:column; gap:3px; padding:11px 13px; border-radius:10px; background:#f6f8f5; text-align:left; }
+.confirmation-facts dt { font-size:10px; font-weight:800; letter-spacing:1.4px; text-transform:uppercase; color:#7e8e83; }
+.confirmation-facts dd { margin:0; font-size:13px; font-weight:800; }
+.order-summary-pending { margin:10px 0 0; padding:10px 12px; border-radius:9px; background:#fdf6e8; color:#7a5d1d; font-size:11px; line-height:1.6; }
+.order-detail .order-payment { grid-column:1 / -1; }
+
+@media (max-width:560px) {
+  .payment-methods { grid-template-columns:1fr; }
+  .bank-row { flex-direction:column; align-items:flex-start; gap:6px; }
+  .bank-row dd { justify-content:space-between; width:100%; text-align:left; }
+  .confirmation-facts { grid-template-columns:1fr; }
+  .proof-actions .btn { flex:1; }
+}

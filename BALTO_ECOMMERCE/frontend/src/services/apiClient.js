@@ -11,7 +11,31 @@ export class EcommerceApiError extends Error {
   }
 }
 
-function buildUrl(action, params = {}) {
+/**
+ * Acciones que usan la cookie de sesión del comprador (HttpOnly, la maneja el
+ * navegador). SOLO estas viajan con `credentials: 'include'`; el catálogo, el
+ * carrito y la geografía siguen siendo públicos y sin cookies.
+ * Debe coincidir con EC_ACCIONES_CON_CREDENCIALES en routes/api.php.
+ */
+export const ACCIONES_CON_SESION = new Set([
+  'checkout_crear', 'auth_nonce', 'auth_google', 'auth_sesion', 'auth_logout',
+  'cliente_perfil', 'cliente_actualizar', 'cliente_direcciones', 'cliente_direccion_guardar',
+  'cliente_direccion_eliminar', 'cliente_direccion_predeterminada', 'cliente_pedidos', 'cliente_pedido_detalle',
+  'pago_detalle_pedido', 'pago_comprobante_estado', 'pago_comprobante_subir', 'pago_comprobante_descargar',
+]);
+
+// Token CSRF de la sesión: SOLO en memoria (nunca localStorage/sessionStorage).
+// Lo entrega el servidor en auth_sesion / auth_google y se reenvía en X-CSRF-Token.
+let csrfToken = null;
+export function setCsrfToken(token) { csrfToken = typeof token === 'string' && /^[a-f0-9]{64}$/.test(token) ? token : null; }
+export function getCsrfToken() { return csrfToken; }
+
+// Aviso global cuando el servidor informa que la sesión ya no es válida.
+const sesionListeners = new Set();
+export function onSesionInvalida(fn) { sesionListeners.add(fn); return () => sesionListeners.delete(fn); }
+const CODIGOS_SESION_INVALIDA = new Set(['SESION_REQUERIDA', 'SESION_EXPIRADA']);
+
+export function buildUrl(action, params = {}) {
   validarConfiguracion();
   const url = new URL(baltoConfig.apiUrl, window.location.href);
   url.searchParams.set('action', action);
@@ -22,10 +46,10 @@ function buildUrl(action, params = {}) {
   return url.toString();
 }
 
-async function request(url, init, signal) {
+async function request(url, init, signal, conSesion) {
   let response;
   try {
-    response = await fetch(url, { ...init, credentials: 'omit', cache: 'no-store', signal });
+    response = await fetch(url, { ...init, credentials: conSesion ? 'include' : 'omit', cache: 'no-store', signal });
   } catch (error) {
     if (error.name === 'AbortError') throw error;
     throw new EcommerceApiError('No se pudo conectar con el servidor de la tienda.', 'SIN_CONEXION');
@@ -37,29 +61,42 @@ async function request(url, init, signal) {
     throw new EcommerceApiError('El servidor no devolvió un JSON válido.', 'RESPUESTA_INVALIDA', response.status);
   }
   if (!response.ok || data?.exito !== true) {
-    throw new EcommerceApiError(
+    const err = new EcommerceApiError(
       data?.mensaje || `Error al consultar la tienda (${response.status}).`,
       data?.codigo || 'ERROR_API',
       response.status,
       data && typeof data === 'object' ? data : null
     );
+    if (process.env.NODE_ENV === 'development') {
+      // Solo en `npm start`: deja el codigo del servidor a la vista en la consola.
+      // eslint-disable-next-line no-console
+      console.warn(`[ecom-api] ${new URL(url).searchParams.get('action')} -> ${response.status} ${err.codigo}: ${err.message}`);
+    }
+    if (conSesion && response.status === 401 && CODIGOS_SESION_INVALIDA.has(err.codigo)) {
+      csrfToken = null;
+      sesionListeners.forEach((fn) => { try { fn(err); } catch (_) {} });
+    }
+    throw err;
   }
   return data;
 }
 
 /**
  * En local /ecom-api se proxya a Hostinger desde CRA (sin CORS, ver setupProxy.js).
- * En producción se consulta la API central; la tienda la resuelve el servidor.
+ * En producción se consulta la API central (o el proxy de mismo origen en dominios propios).
  */
 export function apiGet(action, params = {}, options = {}) {
-  return request(buildUrl(action, params), { method: 'GET', headers: { Accept: 'application/json' } }, options.signal);
+  return request(buildUrl(action, params), { method: 'GET', headers: { Accept: 'application/json', ...(options.headers || {}) } }, options.signal, ACCIONES_CON_SESION.has(action));
 }
 
-/** POST JSON (validación de carrito y checkout). Nunca se envían credenciales ni cookies. */
+/** POST JSON. Las acciones con sesión agregan el token CSRF en memoria. */
 export function apiPost(action, body, options = {}) {
+  const conSesion = ACCIONES_CON_SESION.has(action);
+  const headers = { Accept: 'application/json', 'Content-Type': 'application/json' };
+  if (conSesion && csrfToken) headers['X-CSRF-Token'] = csrfToken;
   return request(buildUrl(action), {
     method: 'POST',
-    headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify(body ?? {}),
-  }, options.signal);
+  }, options.signal, conSesion);
 }

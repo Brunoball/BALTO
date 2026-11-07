@@ -2,6 +2,8 @@ import React, { useEffect, useMemo } from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { baltoConfig } from './config/baltoConfig';
 import { StoreProvider } from './context/StoreContext';
+import { AuthProvider } from './context/AuthContext';
+import RequireAuth from './components/auth/RequireAuth';
 import { useTienda } from './hooks/useTienda';
 import Header from './components/layout/Header';
 import Footer from './components/layout/Footer';
@@ -17,6 +19,11 @@ import NotFoundPage from './pages/NotFoundPage';
 import CartPage from './pages/CartPage';
 import CheckoutPage from './pages/CheckoutPage';
 import OrderConfirmationPage from './pages/OrderConfirmationPage';
+import LoginPage from './pages/LoginPage';
+import ProfilePage from './pages/account/ProfilePage';
+import AddressesPage from './pages/account/AddressesPage';
+import OrdersPage from './pages/account/OrdersPage';
+import OrderDetailPage from './pages/account/OrderDetailPage';
 import './App.css';
 
 function storefrontTheme(config) {
@@ -36,7 +43,24 @@ function Storefront() {
   }, [config]);
   if (loading || cargando) return <div className="app-root loading-root"><LoadingState message="Preparando tu tienda…"/></div>;
   if (error || !config) return <div className="app-root loading-root"><ErrorState error={error} title="La tienda no está disponible" retry={reintentar}/></div>;
-  return <div className="app-root" style={style}><ScrollTop/><Header config={config}/><div className="site-content"><Routes><Route path="/" element={<HomePage config={config}/>}/><Route path="/catalogo" element={<CatalogPage config={config}/>}/><Route path="/producto/:slug" element={<ProductPage config={config}/>}/><Route path="/favoritos" element={<FavoritesPage/>}/><Route path="/contacto" element={<ContactPage config={config}/>}/><Route path="/carrito" element={<CartPage config={config}/>}/><Route path="/checkout" element={<CheckoutPage config={config}/>}/><Route path="/pedido/confirmado" element={<OrderConfirmationPage/>}/><Route path="*" element={<NotFoundPage/>}/></Routes></div><Footer config={config}/><CartDrawer config={config}/></div>;
+  // La sesión del comprador se monta DESPUÉS de cargar la tienda: necesita saber si las cuentas
+  // están habilitadas y el Client ID público de Google de ESTA tienda.
+  return <AuthProvider cuentas={config.cuentas}><div className="app-root" style={style}><ScrollTop/><Header config={config}/><div className="site-content"><Routes>
+    <Route path="/" element={<HomePage config={config}/>}/>
+    <Route path="/catalogo" element={<CatalogPage config={config}/>}/>
+    <Route path="/producto/:slug" element={<ProductPage config={config}/>}/>
+    <Route path="/favoritos" element={<FavoritesPage/>}/>
+    <Route path="/contacto" element={<ContactPage config={config}/>}/>
+    <Route path="/carrito" element={<CartPage config={config}/>}/>
+    <Route path="/checkout" element={<CheckoutPage config={config}/>}/>
+    <Route path="/pedido/confirmado" element={<OrderConfirmationPage/>}/>
+    <Route path="/iniciar-sesion" element={<LoginPage config={config}/>}/>
+    <Route path="/mi-cuenta" element={<RequireAuth><ProfilePage/></RequireAuth>}/>
+    <Route path="/mi-cuenta/direcciones" element={<RequireAuth><AddressesPage/></RequireAuth>}/>
+    <Route path="/mi-cuenta/pedidos" element={<RequireAuth><OrdersPage/></RequireAuth>}/>
+    <Route path="/mi-cuenta/pedidos/:numero" element={<RequireAuth><OrderDetailPage/></RequireAuth>}/>
+    <Route path="*" element={<NotFoundPage/>}/>
+  </Routes></div><Footer config={config}/><CartDrawer config={config}/></div></AuthProvider>;
 }
 export default function App() {
   return <BrowserRouter basename={baltoConfig.routerBasename}><StoreProvider><Storefront/></StoreProvider></BrowserRouter>;

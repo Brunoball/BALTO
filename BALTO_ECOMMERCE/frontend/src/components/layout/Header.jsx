@@ -4,6 +4,7 @@ import { Heart, Menu, Search, ShoppingBag, Store, X, ArrowUpRight } from 'lucide
 import { useStore } from '../../context/StoreContext';
 import { whatsAppLink } from '../../utils/format';
 import AnnouncementBar from './AnnouncementBar';
+import AccountMenu, { MobileAccountLinks } from '../account/AccountMenu';
 
 export default function Header({ config }) {
   const { cartOpen, setCartOpen, itemCount, menuOpen, setMenuOpen, favorites } = useStore();
@@ -24,6 +25,7 @@ export default function Header({ config }) {
         </Link>
         <form className="header-search" role="search" onSubmit={submitSearch}><Search size={19}/><input aria-label="Buscar en la página del catálogo" placeholder="¿Qué estás buscando?" value={search} onChange={(e) => setSearch(e.target.value)}/><button type="submit" aria-label="Ir al catálogo con esta búsqueda"><ArrowUpRight size={18}/></button></form>
         <div className="header-tools">
+          <AccountMenu onNavigate={closeMenu}/>
           <Link className="icon-button header-wishlist" to="/favoritos" aria-label={`Mis favoritos (${favorites.length})`}><Heart size={21}/>{favorites.length > 0 && <span className="tiny-indicator"/>}</Link>
           <button className="cart-trigger" type="button" aria-label={`Abrir carrito, ${itemCount} artículos`} aria-expanded={cartOpen} onClick={() => setCartOpen(true)}><ShoppingBag size={21}/><span className="cart-trigger-label">Carrito</span>{itemCount > 0 && <span className="count-bubble">{itemCount}</span>}</button>
         </div>
@@ -37,6 +39,7 @@ export default function Header({ config }) {
             <NavLink to="/carrito" onClick={closeMenu}>Carrito</NavLink>
             <NavLink to="/contacto" onClick={closeMenu}>Contacto</NavLink>
           </nav>
+          <MobileAccountLinks onNavigate={closeMenu}/>
           {contact ? <a href={contact} target="_blank" rel="noreferrer" className="nav-contact">Hablemos por WhatsApp <ArrowUpRight size={15}/></a> : <span className="nav-contact nav-note">Estamos preparando tu experiencia de compra</span>}
         </div>
       </div>

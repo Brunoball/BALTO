@@ -9,7 +9,7 @@ import { precioARS } from '../../utils/format';
  * no hay costos de envío, impuestos, promociones ni medios de pago configurados,
  * por eso no se presentan como disponibles.
  */
-export default function OrderSummary({ config, title = 'Resumen del pedido', children }) {
+export default function OrderSummary({ config, title = 'Resumen del pedido', modalidad = null, alcancePago = null, children }) {
   const { items, lineState, validacionVigente, validation, subtotal } = useStore();
   const moneda = items[0]?.moneda || config?.moneda || 'ARS';
   const total = validacionVigente && validation.resumen ? Number(validation.resumen.subtotal) : subtotal;
@@ -28,9 +28,14 @@ export default function OrderSummary({ config, title = 'Resumen del pedido', chi
     </ul>
     <dl className="order-summary-totals">
       <div><dt>Subtotal</dt><dd data-testid="summary-subtotal">{precioARS(total, moneda)}</dd></div>
-      <div><dt>Entrega</dt><dd>{modalidades.length === 1 ? modalidades[0].nombre : 'Según la modalidad elegida'}</dd></div>
-      <div className="order-summary-total"><dt>Total</dt><dd data-testid="summary-total">{precioARS(total, moneda)}</dd></div>
+      {modalidad === 'ENVIO' || modalidad === 'A_COORDINAR'
+        ? <div><dt>{modalidad === 'ENVIO' ? 'Costo de envío' : 'Entrega'}</dt><dd data-testid="summary-shipping">A coordinar</dd></div>
+        : modalidad === 'RETIRO'
+          ? <div><dt>Entrega</dt><dd>Retiro en el local</dd></div>
+          : <div><dt>Entrega</dt><dd>{modalidades.length === 1 ? modalidades[0].nombre : 'Según la modalidad elegida'}</dd></div>}
+      <div className="order-summary-total"><dt>{modalidad === 'ENVIO' ? 'Total productos' : 'Total'}</dt><dd data-testid="summary-total">{precioARS(total, moneda)}</dd></div>
     </dl>
+    {modalidad === 'ENVIO' && <p className="order-summary-pending">{alcancePago === 'PRODUCTOS' ? 'El importe a transferir corresponde a los productos. ' : ''}El envío no está incluido: la tienda te informará su costo.</p>}
     <p className="order-summary-note"><ShieldCheck size={16}/> {validacionVigente ? 'Importes verificados con la tienda. ' : 'Verificando importes con la tienda. '}No se realizan cobros online: la tienda coordinará con vos el pago y, si corresponde, el costo de envío.</p>
     {children}
   </section>;
