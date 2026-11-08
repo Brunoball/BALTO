@@ -130,10 +130,14 @@ test('@dashboard @ui todos los medios y futuros bancos se despliegan en desktop 
 
   await page.goto('/panel/dashboard');
   await expect(page.locator('.db[data-balto-dashboard-ready="true"]')).toBeVisible();
-  const breakdown = page.locator('.db-caja-breakdown');
-  await expect(breakdown.locator(':scope > div')).toHaveCount(fakeMedios.length);
+  // Rediseño: cada medio es una tarjeta del carrusel superior de KPI.
+  const breakdown = page.getByRole('region', { name: 'Indicadores y desglose de Caja actual' });
+  await expect(breakdown).toBeVisible();
+  const medioCard = (id) => breakdown.locator(`.db-kpi-carousel-card--medio[data-medio-id="${id}"]`);
+  const medioCards = breakdown.locator('.db-kpi-carousel-card--medio');
+  await expect(medioCards).toHaveCount(fakeMedios.length);
   for (const medio of fakeMedios) {
-    const card = breakdown.locator(`[data-medio-id="${medio.id_medio_pago}"]`);
+    const card = medioCard(medio.id_medio_pago);
     await expect(card).toContainText(medio.nombre === 'EFECTIVO' ? 'Caja (Efectivo)' : medio.nombre);
     // La UI utiliza formatMoney(): moneda ARS, no solamente el número.
     // Por ejemplo: -2000 se representa como "-$ 2.000,00", no "-2.000,00".
@@ -149,13 +153,14 @@ test('@dashboard @ui todos los medios y futuros bancos se despliegan en desktop 
     }
     await expect(card).toHaveAttribute('data-medio-tipo', medio.tipo);
   }
-  await expect(page.getByText('Desglose de Caja actual')).toBeVisible();
-  await expect(breakdown.locator('[data-medio-id="5"]')).toContainText('2 doc.');
-  await expect(breakdown.locator('[data-medio-id="6"]')).toContainText('1 doc.');
-  await expect(page.locator('.db-caja-section__note')).toContainText('solo mientras están en cartera');
+  // Cheques/eCheqs: sólo documentos en cartera, con su cantidad.
+  await expect(medioCard(5)).toContainText('En cartera · 2 doc.');
+  await expect(medioCard(6)).toContainText('En cartera · 1 doc.');
 
   await page.setViewportSize({ width: 390, height: 800 });
-  await expect(breakdown.locator(':scope > div')).toHaveCount(fakeMedios.length);
-  await expect(breakdown.locator('[data-medio-id="99"]')).toBeVisible();
-  await expect(breakdown.locator('[data-medio-id="6"]')).toBeVisible();
+  await expect(medioCards).toHaveCount(fakeMedios.length);
+  for (const id of [99, 6]) {
+    await medioCard(id).scrollIntoViewIfNeeded();
+    await expect(medioCard(id)).toBeVisible();
+  }
 });

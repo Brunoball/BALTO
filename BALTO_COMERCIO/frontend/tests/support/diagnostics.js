@@ -10,8 +10,18 @@ const IGNORED_CONSOLE_PATTERNS = [
   /Failed to load resource: net::ERR_FILE_NOT_FOUND/i,
 ];
 
-function ignoredConsoleMessage(text) {
-  return IGNORED_CONSOLE_PATTERNS.some((pattern) => pattern.test(text));
+// Recursos decorativos servidos por la API (logo/ícono del tenant). Un corte de
+// red transitorio al cargarlos (p. ej. ERR_QUIC_PROTOCOL_ERROR) no es una falla
+// funcional: se ignora igual que las imágenes .png/.jpg. Cualquier otra acción
+// de la API que falle se sigue reportando.
+const DECORATIVE_API_RESOURCE = /[?&]action=tenant_logo_ver(&|$)/i;
+const IMAGE_URL = /\.(png|jpe?g|gif|webp|svg|ico)(\?|$)/i;
+const isDecorativeResource = (url) => IMAGE_URL.test(url) || DECORATIVE_API_RESOURCE.test(url);
+
+function ignoredConsoleMessage(text, location) {
+  if (IGNORED_CONSOLE_PATTERNS.some((pattern) => pattern.test(text))) return true;
+  // "Failed to load resource" no incluye la URL en el texto: se toma de location().
+  return /^Failed to load resource/i.test(text) && isDecorativeResource(String(location?.url || ''));
 }
 
 export function installDiagnostics(page) {
@@ -29,14 +39,14 @@ export function installDiagnostics(page) {
   page.on('console', (message) => {
     if (message.type() !== 'error') return;
     const text = message.text();
-    if (!ignoredConsoleMessage(text)) state.consoleErrors.push(text);
+    if (!ignoredConsoleMessage(text, message.location())) state.consoleErrors.push(text);
   });
 
   page.on('response', (response) => {
     const status = response.status();
     if (status < 500) return;
     const url = response.url();
-    if (/\.(png|jpe?g|gif|webp|svg|ico)(\?|$)/i.test(url)) return;
+    if (isDecorativeResource(url)) return;
     state.serverErrors.push(`${status} ${url}`);
   });
 
@@ -45,7 +55,7 @@ export function installDiagnostics(page) {
     const failure = request.failure()?.errorText || 'request failed';
     if (/ERR_ABORTED/i.test(failure)) return;
     if (/^blob:/i.test(url) && /ERR_FILE_NOT_FOUND/i.test(failure)) return;
-    if (/\.(png|jpe?g|gif|webp|svg|ico)(\?|$)/i.test(url)) return;
+    if (isDecorativeResource(url)) return;
     state.failedRequests.push(`${failure} ${url}`);
   });
 
