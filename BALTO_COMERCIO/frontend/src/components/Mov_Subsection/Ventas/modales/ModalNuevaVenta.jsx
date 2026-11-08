@@ -1,6 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import useAutoScrollRows from "../../_shared/useAutoScrollRows.js";
 import { ventasFetch } from "../api/ventasApi.js";
+import {
+  calcularRenglonesBrutos,
+  calcularDescuentoGeneral,
+  prorratearDescuentoGeneral,
+  calcularResumenVenta,
+} from "../utils/ventaDescuento.js";
 import { filtrarMediosPagoPorPlan } from "../../_shared/planMediosPago";
 import { createPortal } from "react-dom";
 import "../../../Global/Global_css/GlobalsModalsV2.css";
@@ -2189,117 +2195,27 @@ export default function ModalNuevaVenta({ open, lists, tiendaNubeVenta = null, o
     };
   }, [open, onClose, openResumenFactura, addUI.open, fiscalPanelOpen]);
 
+  // Cálculo único del descuento general (ver utils/ventaDescuento.js).
+  // rowsCalc conserva ambas representaciones: la comercial (precioLista,
+  // subtotalBruto, ivaMontoBruto, totalBruto) que se muestra en la grilla, y la
+  // fiscal neta (precio, subtotal, ivaMonto, total) que se envía a ARCA y se guarda.
   const rowsBaseCalc = useMemo(
-    () =>
-      rows.map((r) => {
-        const tieneItemSeleccionado = getSelectedSaleItemId(r) !== null;
-        const cantidad = Math.max(0, safeNumber(r.cantidad));
-        const precioLista = Math.max(0, safeNumber(r.precio));
-        const ivaPct = Math.max(0, safeNumber(r.ivaPct));
-        const subtotalBruto = tieneItemSeleccionado ? roundMoney(cantidad * precioLista) : 0;
-        const ivaMontoBruto = roundMoney(subtotalBruto * (ivaPct / 100));
-        const totalBruto = roundMoney(subtotalBruto + ivaMontoBruto);
-        return {
-          ...r,
-          precioLista,
-          subtotalBruto,
-          ivaMontoBruto,
-          totalBruto,
-        };
-      }),
+    () => calcularRenglonesBrutos(rows, (r) => getSelectedSaleItemId(r) !== null),
     [rows]
   );
 
-  const descuentoResumen = useMemo(() => {
-    const totalBruto = roundMoney(rowsBaseCalc.reduce((acc, r) => acc + safeNumber(r.totalBruto), 0));
-    const tipo = descuentoTipo === "MONTO" ? "MONTO" : "PORCENTAJE";
-    const valorIngresado = Math.max(0, safeNumber(descuentoValor));
-    const valorNormalizado = tipo === "PORCENTAJE"
-      ? roundMoney(Math.min(valorIngresado, 99.99))
-      : roundMoney(valorIngresado);
-    const maximoAplicable = Math.max(0, roundMoney(totalBruto - 0.01));
-    const solicitado = tipo === "PORCENTAJE"
-      ? roundMoney(totalBruto * (valorNormalizado / 100))
-      : valorNormalizado;
-    const monto = Math.min(maximoAplicable, solicitado);
-    const totalFinal = roundMoney(totalBruto - monto);
-    const porcentajeEfectivo = totalBruto > 0 ? (monto / totalBruto) * 100 : 0;
+  const descuentoResumen = useMemo(
+    () => calcularDescuentoGeneral(rowsBaseCalc, descuentoTipo, descuentoValor),
+    [rowsBaseCalc, descuentoTipo, descuentoValor]
+  );
 
-    return {
-      tipo,
-      valor: valorNormalizado,
-      monto,
-      totalBruto,
-      totalFinal,
-      porcentajeEfectivo,
-      factor: totalBruto > 0 ? totalFinal / totalBruto : 1,
-    };
-  }, [rowsBaseCalc, descuentoTipo, descuentoValor]);
-
-  const rowsCalc = useMemo(() => {
-    const validIndexes = rowsBaseCalc
-      .map((r, index) => (safeNumber(r.totalBruto) > 0 ? index : -1))
-      .filter((index) => index >= 0);
-    const lastValidIndex = validIndexes.length ? validIndexes[validIndexes.length - 1] : -1;
-    let totalNetoAcumulado = 0;
-
-    return rowsBaseCalc.map((r, index) => {
-      const cantidad = Math.max(0, safeNumber(r.cantidad));
-      const ivaPct = Math.max(0, safeNumber(r.ivaPct));
-      const totalBruto = roundMoney(r.totalBruto);
-
-      if (totalBruto <= 0 || descuentoResumen.monto <= 0) {
-        return {
-          ...r,
-          precio: r.precioLista,
-          subtotal: r.subtotalBruto,
-          ivaMonto: r.ivaMontoBruto,
-          total: r.totalBruto,
-          descuentoMonto: 0,
-          descuentoSubtotalMonto: 0,
-          bonifPctAplicado: 0,
-        };
-      }
-
-      const totalNeto = index === lastValidIndex
-        ? roundMoney(descuentoResumen.totalFinal - totalNetoAcumulado)
-        : roundMoney(totalBruto * descuentoResumen.factor);
-      totalNetoAcumulado = roundMoney(totalNetoAcumulado + totalNeto);
-
-      const divisorIva = 1 + ivaPct / 100;
-      const subtotal = divisorIva > 0 ? roundMoney(totalNeto / divisorIva) : totalNeto;
-      const ivaMonto = roundMoney(totalNeto - subtotal);
-      const precioNeto = cantidad > 0 ? roundMoney(subtotal / cantidad) : 0;
-      const descuentoMonto = roundMoney(totalBruto - totalNeto);
-      const descuentoSubtotalMonto = roundMoney(r.subtotalBruto - subtotal);
-      const bonifPctAplicado = r.subtotalBruto > 0
-        ? (descuentoSubtotalMonto / r.subtotalBruto) * 100
-        : 0;
-
-      return {
-        ...r,
-        precio: precioNeto,
-        subtotal,
-        ivaMonto,
-        total: totalNeto,
-        descuentoMonto,
-        descuentoSubtotalMonto,
-        bonifPctAplicado,
-      };
-    });
-  }, [rowsBaseCalc, descuentoResumen]);
+  const rowsCalc = useMemo(
+    () => prorratearDescuentoGeneral(rowsBaseCalc, descuentoResumen),
+    [rowsBaseCalc, descuentoResumen]
+  );
 
   const resumen = useMemo(
-    () => ({
-      subtotal: roundMoney(rowsCalc.reduce((a, r) => a + safeNumber(r.subtotal), 0)),
-      iva: roundMoney(rowsCalc.reduce((a, r) => a + safeNumber(r.ivaMonto), 0)),
-      total: roundMoney(rowsCalc.reduce((a, r) => a + safeNumber(r.total), 0)),
-      totalBruto: descuentoResumen.totalBruto,
-      descuento: descuentoResumen.monto,
-      descuentoTipo: descuentoResumen.tipo,
-      descuentoValor: descuentoResumen.valor,
-      descuentoPorcentajeEfectivo: descuentoResumen.porcentajeEfectivo,
-    }),
+    () => calcularResumenVenta(rowsCalc, descuentoResumen),
     [rowsCalc, descuentoResumen]
   );
 
@@ -4026,7 +3942,7 @@ export default function ModalNuevaVenta({ open, lists, tiendaNubeVenta = null, o
                             <input
                               className="gm-cell-input gm-cell-input--right"
                               type="text"
-                              value={moneyARS(r.precio)}
+                              value={moneyARS(r.precioLista ?? r.precio)}
                               readOnly
                               tabIndex={-1}
                               style={{
@@ -4056,11 +3972,13 @@ export default function ModalNuevaVenta({ open, lists, tiendaNubeVenta = null, o
                           </select>
                         </div>
 
-                        <div className="gm-table-cell gm-table-cell--right gm-table-cell--mono gm-table-cell--soft" title={String((moneyARS(r.ivaMonto)) ?? "")}>
-                          {moneyARS(r.ivaMonto)}
+                        {/* Presentación comercial: importes ANTES del descuento general.
+                            El descuento general se informa una sola vez en el resumen. */}
+                        <div className="gm-table-cell gm-table-cell--right gm-table-cell--mono gm-table-cell--soft" data-testid="nv-row-iva" title={String((moneyARS(r.ivaMontoBruto ?? r.ivaMonto)) ?? "")}>
+                          {moneyARS(r.ivaMontoBruto ?? r.ivaMonto)}
                         </div>
-                        <div className="gm-table-cell gm-table-cell--right gm-table-cell--mono gm-table-cell--total" title={String((moneyARS(r.total)) ?? "")}>
-                          {moneyARS(r.total)}
+                        <div className="gm-table-cell gm-table-cell--right gm-table-cell--mono gm-table-cell--total" data-testid="nv-row-total" title={String((moneyARS(r.totalBruto ?? r.total)) ?? "")}>
+                          {moneyARS(r.totalBruto ?? r.total)}
                         </div>
                         <div className="gm-table-cell gm-table-cell--center" id="delete_cell">
                           <button
@@ -4090,23 +4008,39 @@ export default function ModalNuevaVenta({ open, lists, tiendaNubeVenta = null, o
                     </button>
                     <div className="gm-foot-sep" />
                   </div>
-                  <div className="gm-summary-chips">
-                    <div className="gm-summary-chip gm-summary-chip--sub">
-                      <span>{resumen.descuento > 0 ? "Subtotal sin descuento (IVA incl.)" : "Subtotal"}</span>
-                      <b>{moneyARS(resumen.descuento > 0 ? resumen.totalBruto : resumen.subtotal)}</b>
-                    </div>
-                    <div className="gm-summary-chip gm-summary-chip--iva" title={resumen.descuento > 0 ? "IVA efectivo luego del descuento. Ya está incluido en el total; no se suma otra vez." : undefined}>
-                      <span>{resumen.descuento > 0 ? "IVA incluido (informativo)" : "IVA"}</span>
-                      <b>{moneyARS(resumen.iva)}</b>
-                    </div>
-                    {resumen.descuento > 0 && (
-                      <div className="gm-summary-chip nv-summary-chip--discount">
-                        <span>Descuento{resumen.descuentoTipo === "PORCENTAJE" ? ` (${Number(resumen.descuentoValor || 0).toLocaleString("es-AR")} %)` : ""}</span>
-                        <b>- {moneyARS(resumen.descuento)}</b>
-                      </div>
+                  <div className="gm-summary-chips" data-testid="nv-summary">
+                    {resumen.descuento > 0 ? (
+                      <>
+                        {/* Subtotal = suma de los renglones mostrados (precios originales, IVA incl.). */}
+                        <div className="gm-summary-chip gm-summary-chip--sub" data-testid="nv-summary-subtotal">
+                          <span>Subtotal</span>
+                          <b>{moneyARS(resumen.totalBruto)}</b>
+                        </div>
+                        <div className="gm-summary-chip nv-summary-chip--discount" data-testid="nv-summary-descuento">
+                          <span>Descuento general{resumen.descuentoTipo === "PORCENTAJE" ? ` (${Number(resumen.descuentoValor || 0).toLocaleString("es-AR")} %)` : ""}</span>
+                          <b>- {moneyARS(resumen.descuento)}</b>
+                        </div>
+                        {resumen.iva > 0 && (
+                          <div className="gm-summary-chip gm-summary-chip--iva" data-testid="nv-summary-iva" title="IVA contenido en el total final, luego del descuento. Ya está incluido; no se suma otra vez.">
+                            <span>IVA incluido</span>
+                            <b>{moneyARS(resumen.iva)}</b>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <div className="gm-summary-chip gm-summary-chip--sub" data-testid="nv-summary-subtotal">
+                          <span>Subtotal</span>
+                          <b>{moneyARS(resumen.subtotal)}</b>
+                        </div>
+                        <div className="gm-summary-chip gm-summary-chip--iva" data-testid="nv-summary-iva">
+                          <span>IVA</span>
+                          <b>{moneyARS(resumen.iva)}</b>
+                        </div>
+                      </>
                     )}
-                    <div className="gm-summary-chip gm-summary-chip--total">
-                      <span>Total</span>
+                    <div className="gm-summary-chip gm-summary-chip--total" data-testid="nv-summary-total">
+                      <span>{resumen.descuento > 0 ? "Total final" : "Total"}</span>
                       <b>{moneyARS(resumen.total)}</b>
                     </div>
                   </div>
