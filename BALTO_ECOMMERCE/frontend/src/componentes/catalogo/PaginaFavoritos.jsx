@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Heart } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useCarrito } from '../carrito/contexto/CarritoContext';
-import { obtenerProducto } from './api/catalogoApi';
+import { listarPorSlugs } from './api/catalogoApi';
 import GrillaProductos from './GrillaProductos';
 import { EstadoVacio, EstadoError, EstadoCargando } from '../global/Estados';
 
@@ -14,12 +14,14 @@ export default function PaginaFavoritos() {
     if (!favorites.length) { setState({ loading: false, products: [], error: null }); return undefined; }
     const controller = new AbortController();
     setState({ loading: true, products: [], error: null });
-    Promise.allSettled(favorites.slice(0, 40).map((slug) => obtenerProducto(slug, controller.signal)))
-      .then((results) => {
-        if (controller.signal.aborted) return;
-        const found = results.filter((r) => r.status === 'fulfilled' && r.value?.producto).map((r) => r.value.producto);
-        const failed = results.some((r) => r.status === 'rejected' && r.reason?.name !== 'AbortError');
-        setState({ loading: false, products: found, error: failed && !found.length ? new Error('No se pudieron cargar los favoritos. Probá de nuevo más tarde.') : null });
+    // Una sola consulta para todos los favoritos (antes: un pedido por producto).
+    listarPorSlugs(favorites.slice(0, 60), controller.signal)
+      .then((data) => {
+        if (!controller.signal.aborted) setState({ loading: false, products: Array.isArray(data.productos) ? data.productos : [], error: null });
+      })
+      .catch((error) => {
+        if (controller.signal.aborted || error?.name === 'AbortError') return;
+        setState({ loading: false, products: [], error: new Error('No se pudieron cargar los favoritos. Probá de nuevo más tarde.') });
       });
     return () => controller.abort();
   // Recalcular solo cuando cambia la lista de slugs guardados.

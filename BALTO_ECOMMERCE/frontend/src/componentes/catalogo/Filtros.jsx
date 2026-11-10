@@ -1,8 +1,8 @@
 import React, { useId, useState } from 'react';
-import { ArrowDownAZ, ArrowDownWideNarrow, ArrowUpNarrowWide, Check, ChevronDown, RotateCcw, Search, Sparkles, X } from 'lucide-react';
+import { ArrowDownAZ, ArrowDownWideNarrow, ArrowUpNarrowWide, Check, ChevronDown, Clock, RotateCcw, Search, Sparkles, X } from 'lucide-react';
 import { ORDER_OPTIONS, sanitizePriceInput } from './utilidades/catalogo';
 
-const ORDER_ICONS = { destacados: Sparkles, 'precio-asc': ArrowUpNarrowWide, 'precio-desc': ArrowDownWideNarrow, nombre: ArrowDownAZ };
+const ORDER_ICONS = { destacados: Sparkles, 'precio-asc': ArrowUpNarrowWide, 'precio-desc': ArrowDownWideNarrow, nombre: ArrowDownAZ, recientes: Clock };
 
 /** Campo con etiqueta flotante: la etiqueta ocupa el lugar del placeholder y sube con foco o valor. */
 function CampoFlotante({ id, label, value, onChange, icon: Icon, prefix, invalid = false, describedBy, onClear, ...inputProps }) {
@@ -22,7 +22,12 @@ export default function Filtros({
 }) {
   const id = useId();
   const [categoriesOpen, setCategoriesOpen] = useState(true);
-  const categoryOptions = [{ value: 'todas', label: 'Todas' }, ...categories.map((cat) => ({ value: cat, label: cat }))];
+  // Categorías reales del catálogo completo (servidor), con cantidad y sangría para las subcategorías.
+  const categoryOptions = [
+    { value: '', label: 'Todas', nivel: 0, cantidad: null },
+    ...categories.map((c) => ({ value: String(c.id), label: c.nombre, nivel: c.nivel || 0, cantidad: c.cantidad })),
+  ];
+  const selectedCategory = categoryOptions.find((o) => o.value === String(category || ''));
   const priceErrorId = `${id}-precio-error`;
 
   // Navegación con flechas dentro del grupo de orden (patrón radiogroup).
@@ -45,16 +50,21 @@ export default function Filtros({
       <h2 className="filter-accordion-heading">
         <button type="button" className="filter-accordion-toggle" aria-expanded={categoriesOpen} aria-controls={`${id}-categorias`} onClick={() => setCategoriesOpen((open) => !open)}>
           <span className="filter-title">Categorías</span>
-          {!categoriesOpen && category !== 'todas' && <span className="filter-accordion-current" title={category}>{category}</span>}
+          {!categoriesOpen && category && selectedCategory && <span className="filter-accordion-current" title={selectedCategory.label}>{selectedCategory.label}</span>}
           <ChevronDown className="filter-accordion-chevron" size={16} aria-hidden="true"/>
         </button>
       </h2>
       <div className="filter-accordion-panel" id={`${id}-categorias`}>
         <div className="filter-accordion-inner">
           <ul className="filter-categories" aria-label="Categorías">
-            {categoryOptions.map(({ value, label }) => <li key={value}>
-              <button type="button" className={category === value ? 'selected' : ''} aria-pressed={category === value} onClick={() => setCategory(value)} title={label}>{label}</button>
-            </li>)}
+            {categoryOptions.map(({ value, label, nivel, cantidad }) => {
+              const selected = String(category || '') === value;
+              return <li key={value || 'todas'} style={nivel ? { '--nivel': nivel } : undefined} className={nivel ? 'is-sub' : undefined}>
+                <button type="button" className={selected ? 'selected' : ''} aria-pressed={selected} onClick={() => setCategory(value)} title={label}>
+                  <span className="filter-category-label">{label}</span>{cantidad !== null && <span className="filter-category-count" aria-label={`${cantidad} productos`}>{cantidad}</span>}
+                </button>
+              </li>;
+            })}
           </ul>
         </div>
       </div>

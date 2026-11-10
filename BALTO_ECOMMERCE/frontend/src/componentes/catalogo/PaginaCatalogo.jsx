@@ -1,16 +1,16 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, PackageSearch, SlidersHorizontal, X } from 'lucide-react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ChevronLeft, ChevronRight, PackageSearch, RotateCcw, SlidersHorizontal, X } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { useCatalogo } from './hooks/useCatalogo';
-import { filterProducts, getCategories, normalizePriceRange } from './utilidades/catalogo';
+import { arbolCategorias, filtrosAParams, leerFiltrosURL, normalizePriceRange } from './utilidades/catalogo';
 import Filtros from './Filtros';
-import GrillaProductos from './GrillaProductos';
-import { EstadoVacio, EstadoError, EstadoCargando } from '../global/Estados';
+import GrillaProductos, { GrillaEsqueleto } from './GrillaProductos';
+import { EstadoVacio, EstadoError } from '../global/Estados';
 
 /**
  * 20 productos por página: completa filas exactas con 5, 4, 2 y 1 columnas.
- * Solo cambia el valor del parámetro `limite` que la API ya recibe; si lo rechazara,
- * useCatalogo vuelve a pedir con el límite histórico (12).
+ * Búsqueda, categorías, precio, disponibilidad y orden se aplican en el SERVIDOR sobre
+ * todo el catálogo, y quedan en la URL (se pueden compartir y el botón "atrás" funciona).
  */
 const PRODUCTOS_POR_PAGINA = 20;
 const ESCRITORIO = '(min-width: 751px)';
@@ -63,26 +63,90 @@ function useStickySiEntra(ref, habilitado) {
   return sticky;
 }
 
+const ESPERA_BUSQUEDA_MS = 350;
+const ESPERA_PRECIO_MS = 600;
+
+/** Números de página a mostrar: 1 … 4 5 [6] 7 8 … 20 */
+function paginasVisibles(actual, total) {
+  const set = new Set([1, total, actual - 1, actual, actual + 1]);
+  if (actual <= 3) [2, 3, 4].forEach((n) => set.add(n));
+  if (actual >= total - 2) [total - 1, total - 2, total - 3].forEach((n) => set.add(n));
+  const lista = [...set].filter((n) => n >= 1 && n <= total).sort((a, b) => a - b);
+  const out = [];
+  lista.forEach((n, i) => { if (i && n - lista[i - 1] > 1) out.push(`gap-${n}`); out.push(n); });
+  return out;
+}
+
+function Paginacion({ pagina, totalPaginas, onChange }) {
+  if (totalPaginas <= 1) return null;
+  return <nav className="catalog-pagination" aria-label="Paginación del catálogo">
+    <button type="button" disabled={pagina <= 1} onClick={() => onChange(pagina - 1)}><ChevronLeft size={17}/> Anterior</button>
+    <div className="catalog-pages">
+      {paginasVisibles(pagina, totalPaginas).map((n) => typeof n === 'string'
+        ? <span key={n} className="catalog-pages-gap" aria-hidden="true">…</span>
+        : <button key={n} type="button" className="catalog-page" aria-current={n === pagina ? 'page' : undefined} aria-label={`Página ${n}`} onClick={() => n !== pagina && onChange(n)}>{n}</button>)}
+    </div>
+    <span className="catalog-page-status">Página {pagina} de {totalPaginas}</span>
+    <button type="button" disabled={pagina >= totalPaginas} onClick={() => onChange(pagina + 1)}>Siguiente <ChevronRight size={17}/></button>
+  </nav>;
+}
+
 export default function PaginaCatalogo({ config }) {
-  const [params] = useSearchParams();
-  const query = params.get('q') || '';
-  const initialCategory = params.get('categoria') || 'todas';
-  const [page, setPage] = useState(1);
+  const [params, setParams] = useSearchParams();
+  const filtros = useMemo(() => leerFiltrosURL(params), [params]);
   const [refresh, setRefresh] = useState(0);
-  const [term, setTerm] = useState(query);
-  const [category, setCategory] = useState(initialCategory);
-  const [order, setOrder] = useState('destacados');
-  const [stockOnly, setStockOnly] = useState(false);
-  const [minPrice, setMinPrice] = useState('');
-  const [maxPrice, setMaxPrice] = useState('');
+  // Borradores de lo que se escribe: se aplican con una espera corta para no consultar en cada tecla.
+  const [term, setTerm] = useState(filtros.q);
+  const [minPrice, setMinPrice] = useState(filtros.precio_min);
+  const [maxPrice, setMaxPrice] = useState(filtros.precio_max);
+  const escrito = useRef({ q: filtros.q, min: filtros.precio_min, max: filtros.precio_max });
   const [filtersOpen, setFiltersOpen] = useState(false);
   const sidebarRef = useRef(null);
   const toggleRef = useRef(null);
   const closeRef = useRef(null);
   const enabled = Boolean(config.modo_catalogo);
-  const { productos, masPaginas, cargando, error } = useCatalogo(enabled, page, refresh, PRODUCTOS_POR_PAGINA);
+
+  const consulta = useMemo(() => ({
+    pagina: filtros.pagina, limite: PRODUCTOS_POR_PAGINA, q: filtros.q, categoria: filtros.categoria, orden: filtros.orden,
+    precio_min: filtros.precio_min, precio_max: filtros.precio_max, solo_disponibles: filtros.disponibles,
+  }), [filtros]);
+  const { productos, total, totalPaginas, categorias, cargando, actualizando, error } = useCatalogo(enabled, consulta, refresh);
   const sidebarSticky = useStickySiEntra(sidebarRef, enabled);
-  useEffect(() => { setTerm(query); setCategory(initialCategory); setPage(1); }, [query, initialCategory]);
+
+  /** Cambia filtros en la URL. Todo cambio de filtro vuelve a la página 1. */
+  const paramsRef = useRef(params);
+  paramsRef.current = params;
+  const aplicar = useCallback((patch, { push = false } = {}) => {
+    const next = { ...leerFiltrosURL(paramsRef.current), ...patch };
+    if (!('pagina' in patch)) next.pagina = 1;
+    const nuevos = filtrosAParams(next);
+    paramsRef.current = nuevos;
+    setParams(nuevos, { replace: !push });
+  }, [setParams]);
+
+  // La URL cambió desde afuera (buscador del encabezado, atrás/adelante, "limpiar"): actualizar borradores.
+  useEffect(() => {
+    if (filtros.q !== escrito.current.q) { escrito.current.q = filtros.q; setTerm(filtros.q); }
+    if (filtros.precio_min !== escrito.current.min) { escrito.current.min = filtros.precio_min; setMinPrice(filtros.precio_min); }
+    if (filtros.precio_max !== escrito.current.max) { escrito.current.max = filtros.precio_max; setMaxPrice(filtros.precio_max); }
+  }, [filtros.q, filtros.precio_min, filtros.precio_max]);
+
+  useEffect(() => {
+    const q = term.trim();
+    if (q === filtros.q) return undefined;
+    const t = window.setTimeout(() => { escrito.current.q = q; aplicar({ q }); }, ESPERA_BUSQUEDA_MS);
+    return () => window.clearTimeout(t);
+  }, [term, filtros.q, aplicar]);
+
+  const priceRange = useMemo(() => normalizePriceRange(minPrice, maxPrice), [minPrice, maxPrice]);
+  useEffect(() => {
+    if (priceRange.error || (minPrice === filtros.precio_min && maxPrice === filtros.precio_max)) return undefined;
+    const t = window.setTimeout(() => {
+      escrito.current.min = minPrice; escrito.current.max = maxPrice;
+      aplicar({ precio_min: minPrice, precio_max: maxPrice });
+    }, ESPERA_PRECIO_MS);
+    return () => window.clearTimeout(t);
+  }, [minPrice, maxPrice, priceRange.error, filtros.precio_min, filtros.precio_max, aplicar]);
 
   // Panel de filtros en celulares y tablets: Escape lo cierra, el fondo no se desplaza
   // mientras está abierto y el foco entra al panel y vuelve al botón "Filtros" al cerrar.
@@ -106,24 +170,38 @@ export default function PaginaCatalogo({ config }) {
     };
   }, [filtersOpen]);
 
-  const categories = useMemo(() => getCategories(productos), [productos]);
-  const priceRange = useMemo(() => normalizePriceRange(minPrice, maxPrice), [minPrice, maxPrice]);
-  const filtered = useMemo(
-    () => filterProducts(productos, { term, category, order, stockOnly, minPrice: priceRange.min, maxPrice: priceRange.max }),
-    [productos, term, category, order, stockOnly, priceRange.min, priceRange.max]
-  );
-  const reset = () => { setTerm(''); setCategory('todas'); setOrder('destacados'); setStockOnly(false); setMinPrice(''); setMaxPrice(''); };
+  const arbol = useMemo(() => arbolCategorias(categorias), [categorias]);
+  const categoriaActual = useMemo(() => {
+    if (!filtros.categoria) return null;
+    const porId = categorias.find((c) => String(c.id) === filtros.categoria);
+    return porId || categorias.find((c) => c.nombre.toLocaleLowerCase('es-AR') === filtros.categoria.toLocaleLowerCase('es-AR')) || null;
+  }, [categorias, filtros.categoria]);
+
+  const reset = () => {
+    setTerm(''); setMinPrice(''); setMaxPrice('');
+    escrito.current = { q: '', min: '', max: '' };
+    aplicar({ q: '', categoria: '', orden: 'destacados', precio_min: '', precio_max: '', disponibles: false });
+  };
   const priceActive = Boolean(minPrice || maxPrice);
-  const activeFilters = [term.trim(), category !== 'todas', order !== 'destacados', stockOnly, priceActive].filter(Boolean).length;
-  const changePage = (next) => { setPage(next); window.scrollTo({ top: 0, behavior: 'smooth' }); };
-  const searchTerm = term.trim();
-  const title = searchTerm ? <>Resultados para “{searchTerm}”</> : category !== 'todas' ? category : 'Todos los productos';
-  const ready = config.modo_catalogo && !cargando && !error;
-  const countLabel = `${filtered.length} ${filtered.length === 1 ? 'producto' : 'productos'}`;
+  const activeFilters = [term.trim(), filtros.categoria, filtros.orden !== 'destacados', filtros.disponibles, priceActive].filter(Boolean).length;
+  const changePage = (next) => { aplicar({ pagina: next }, { push: true }); window.scrollTo({ top: 0, behavior: 'smooth' }); };
+  const searchTerm = filtros.q;
+  const title = searchTerm ? <>Resultados para “{searchTerm}”</> : categoriaActual ? categoriaActual.nombre : 'Todos los productos';
+  const ready = enabled && !cargando && !error;
+  const countLabel = `${total} ${total === 1 ? 'producto' : 'productos'}`;
+  const hayFiltros = Boolean(filtros.q || filtros.categoria || filtros.disponibles || filtros.precio_min || filtros.precio_max);
+
+  let contenido;
+  if (!enabled) contenido = <EstadoVacio title="Catálogo no disponible" description="La tienda todavía no tiene habilitada la publicación de productos."/>;
+  else if (cargando) contenido = <GrillaEsqueleto cantidad={10}/>;
+  else if (error) contenido = <EstadoError error={error} retry={() => setRefresh((v) => v + 1)}/>;
+  else if (total === 0 && !hayFiltros) contenido = <EstadoVacio/>;
+  else if (productos.length === 0) contenido = <div className={`catalog-results ${actualizando ? 'is-updating' : ''}`}><EstadoVacio title="No encontramos coincidencias" description="Probá con otra búsqueda o cambiá los filtros." icon={PackageSearch}/>{hayFiltros && <div className="standard-page-action"><button type="button" className="btn btn-outline" onClick={reset}><RotateCcw size={16}/> Limpiar filtros</button></div>}</div>;
+  else contenido = <div className={`catalog-results ${actualizando ? 'is-updating' : ''}`} aria-busy={actualizando || undefined}>{actualizando && <span className="catalog-updating-bar" aria-hidden="true"/>}<GrillaProductos products={productos}/></div>;
 
   return <main className="catalog-page">
-    <div className={`shell catalog-layout ${config.modo_catalogo ? '' : 'is-single'}`}>
-      {config.modo_catalogo && <>
+    <div className={`shell catalog-layout ${enabled ? '' : 'is-single'}`}>
+      {enabled && <>
         {filtersOpen && <button type="button" className="catalog-sidebar-backdrop" aria-label="Cerrar filtros" tabIndex={-1} onClick={() => setFiltersOpen(false)}/>}
         <aside id="filtros-catalogo" ref={sidebarRef} className={`catalog-sidebar ${filtersOpen ? 'is-open' : ''} ${sidebarSticky ? 'is-sticky' : ''}`} aria-label="Filtros del catálogo">
           <div className="catalog-sidebar-head">
@@ -133,9 +211,9 @@ export default function PaginaCatalogo({ config }) {
           <div className="catalog-sidebar-body">
             <Filtros
               term={term} setTerm={setTerm}
-              category={category} setCategory={setCategory} categories={categories}
-              order={order} setOrder={setOrder}
-              stockOnly={stockOnly} setStockOnly={setStockOnly}
+              category={categoriaActual ? String(categoriaActual.id) : filtros.categoria} setCategory={(categoria) => aplicar({ categoria })} categories={arbol}
+              order={filtros.orden} setOrder={(orden) => aplicar({ orden })}
+              stockOnly={filtros.disponibles} setStockOnly={(disponibles) => aplicar({ disponibles })}
               minPrice={minPrice} setMinPrice={setMinPrice} maxPrice={maxPrice} setMaxPrice={setMaxPrice} priceError={priceRange.error}
               onReset={reset} activeFilters={activeFilters}
             />
@@ -149,13 +227,12 @@ export default function PaginaCatalogo({ config }) {
         <div className="catalog-toolbar">
           <div className="catalog-heading">
             <h1 id="catalogo-titulo">{title}</h1>
-            {ready && <span className="catalog-count">{countLabel}</span>}
+            {ready && <span className="catalog-count" aria-live="polite">{countLabel}</span>}
           </div>
-          {config.modo_catalogo && <button type="button" ref={toggleRef} className="catalog-filter-toggle" aria-controls="filtros-catalogo" aria-expanded={filtersOpen} onClick={() => setFiltersOpen(true)}><SlidersHorizontal size={16}/> Filtros{activeFilters > 0 && <span className="catalog-filter-badge">{activeFilters}</span>}</button>}
+          {enabled && <button type="button" ref={toggleRef} className="catalog-filter-toggle" aria-controls="filtros-catalogo" aria-expanded={filtersOpen} onClick={() => setFiltersOpen(true)}><SlidersHorizontal size={16}/> Filtros{activeFilters > 0 && <span className="catalog-filter-badge">{activeFilters}</span>}</button>}
         </div>
-        {!config.modo_catalogo ? <EstadoVacio title="Catálogo no disponible" description="La tienda todavía no tiene habilitada la publicación de productos."/> : cargando ? <EstadoCargando message="Buscando productos…"/> : error ? <EstadoError error={error} retry={() => setRefresh((v) => v + 1)}/> : productos.length === 0 && page === 1 ? <EstadoVacio/> : filtered.length ? <GrillaProductos products={filtered}/> : <EstadoVacio title="No encontramos coincidencias" description="Probá cambiar los filtros o pasar a otra página del catálogo." icon={PackageSearch}/>}
-        {ready && (page > 1 || masPaginas) && <div className="catalog-pagination"><button type="button" disabled={page === 1} onClick={() => changePage(Math.max(1, page - 1))}><ChevronLeft size={17}/> Anterior</button><span>Página {page}</span><button type="button" disabled={!masPaginas} onClick={() => changePage(page + 1)}>Siguiente <ChevronRight size={17}/></button></div>}
-        {config.modo_catalogo && <p className="catalog-limit-note">La búsqueda, las categorías, el precio y el orden se aplican a los productos de la página cargada.</p>}
+        {contenido}
+        {ready && <Paginacion pagina={filtros.pagina} totalPaginas={totalPaginas} onChange={changePage}/>}
       </section>
     </div>
   </main>;

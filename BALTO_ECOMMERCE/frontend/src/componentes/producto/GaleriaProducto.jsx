@@ -9,7 +9,7 @@ export default function GaleriaProducto({ product }) {
   const [index, setIndex] = useState(0);
   const current = images[index] || images[0] || null;
   return <div className="product-gallery">
-    <div className="product-gallery-main"><ImagenProducto url={current?.url} alt={current?.alt || product.nombre}/></div>
+    <div className="product-gallery-main"><ImagenProducto url={current?.url} alt={current?.alt || product.nombre} prioridad/></div>
     {images.length > 1 && <div className="gallery-thumbs" role="list" aria-label="Imágenes del producto">
       {images.map((img, i) => <button key={img.url} type="button" role="listitem" className={i === index ? 'is-active' : ''} aria-label={`Ver imagen ${i + 1} de ${images.length}`} aria-pressed={i === index} onClick={() => setIndex(i)}><ImagenProducto url={img.url} alt=""/></button>)}
     </div>}

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { lazy, Suspense, useEffect, useMemo } from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { baltoConfig } from './componentes/global/configuracion/baltoConfig';
 import { CarritoProvider } from './componentes/carrito/contexto/CarritoContext';
@@ -13,18 +13,21 @@ import { EstadoError, EstadoCargando } from './componentes/global/Estados';
 import PaginaInicio from './componentes/inicio/PaginaInicio';
 import PaginaCatalogo from './componentes/catalogo/PaginaCatalogo';
 import PaginaProducto from './componentes/producto/PaginaProducto';
-import PaginaFavoritos from './componentes/catalogo/PaginaFavoritos';
-import PaginaContacto from './componentes/estructura/PaginaContacto';
 import PaginaNoEncontrada from './componentes/global/PaginaNoEncontrada';
-import PaginaCarrito from './componentes/carrito/PaginaCarrito';
-import PaginaCheckout from './componentes/checkout/PaginaCheckout';
-import PaginaPedidoConfirmado from './componentes/checkout/PaginaPedidoConfirmado';
-import PaginaIngreso from './componentes/autenticacion/PaginaIngreso';
-import PaginaPerfil from './componentes/cuenta/PaginaPerfil';
-import PaginaDirecciones from './componentes/cuenta/PaginaDirecciones';
-import PaginaPedidos from './componentes/cuenta/PaginaPedidos';
-import PaginaDetallePedido from './componentes/cuenta/PaginaDetallePedido';
 import './aplicacion.css';
+
+// Inicio, catálogo y ficha (lo que ve casi todo visitante) van en el paquete principal.
+// El resto se descarga recién cuando se visita: la primera carga de la tienda es más liviana.
+const PaginaFavoritos = lazy(() => import('./componentes/catalogo/PaginaFavoritos'));
+const PaginaContacto = lazy(() => import('./componentes/estructura/PaginaContacto'));
+const PaginaCarrito = lazy(() => import('./componentes/carrito/PaginaCarrito'));
+const PaginaCheckout = lazy(() => import('./componentes/checkout/PaginaCheckout'));
+const PaginaPedidoConfirmado = lazy(() => import('./componentes/checkout/PaginaPedidoConfirmado'));
+const PaginaIngreso = lazy(() => import('./componentes/autenticacion/PaginaIngreso'));
+const PaginaPerfil = lazy(() => import('./componentes/cuenta/PaginaPerfil'));
+const PaginaDirecciones = lazy(() => import('./componentes/cuenta/PaginaDirecciones'));
+const PaginaPedidos = lazy(() => import('./componentes/cuenta/PaginaPedidos'));
+const PaginaDetallePedido = lazy(() => import('./componentes/cuenta/PaginaDetallePedido'));
 
 function storefrontTheme(config) {
   const color = String(config?.color_primario || '').trim();
@@ -45,7 +48,7 @@ function Storefront() {
   if (error || !config) return <div className="app-root loading-root"><EstadoError error={error} title="La tienda no está disponible" retry={reintentar}/></div>;
   // La sesión del comprador se monta DESPUÉS de cargar la tienda: necesita saber si las cuentas
   // están habilitadas y el Client ID público de Google de ESTA tienda.
-  return <CuentaProvider cuentas={config.cuentas}><div className="app-root" style={style}><SubirAlInicio/><Encabezado config={config}/><div className="site-content"><Routes>
+  return <CuentaProvider cuentas={config.cuentas}><div className="app-root" style={style}><SubirAlInicio/><Encabezado config={config}/><div className="site-content"><Suspense fallback={<main className="shell standard-page"><EstadoCargando compact message="Cargando…"/></main>}><Routes>
     <Route path="/" element={<PaginaInicio config={config}/>}/>
     <Route path="/catalogo" element={<PaginaCatalogo config={config}/>}/>
     <Route path="/producto/:slug" element={<PaginaProducto config={config}/>}/>
@@ -60,7 +63,7 @@ function Storefront() {
     <Route path="/mi-cuenta/pedidos" element={<RequiereSesion><PaginaPedidos/></RequiereSesion>}/>
     <Route path="/mi-cuenta/pedidos/:numero" element={<RequiereSesion><PaginaDetallePedido/></RequiereSesion>}/>
     <Route path="*" element={<PaginaNoEncontrada/>}/>
-  </Routes></div><PiePagina config={config}/><PanelCarrito config={config}/></div></CuentaProvider>;
+  </Routes></Suspense></div><PiePagina config={config}/><PanelCarrito config={config}/></div></CuentaProvider>;
 }
 export default function Aplicacion() {
   return <BrowserRouter basename={baltoConfig.routerBasename}><CarritoProvider><Storefront/></CarritoProvider></BrowserRouter>;

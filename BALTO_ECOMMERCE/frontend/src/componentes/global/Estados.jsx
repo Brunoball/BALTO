@@ -10,8 +10,14 @@ export function EstadoError({ error, title = 'No pudimos cargar esta sección', 
 export function EstadoVacio({ title = 'Pronto habrá productos para descubrir', description = 'Estamos preparando esta selección. Volvé a visitarnos pronto.', icon: Icon = PackageSearch }) {
   return <div className="state-view state-empty"><span className="state-symbol"><Icon size={29}/></span><h3>{title}</h3><p>{description}</p></div>;
 }
-export function ImagenProducto({ url, alt = '', className = '' }) {
+/**
+ * Imagen de producto. `prioridad` = está visible al cargar (portada, primeras tarjetas, foto principal
+ * de la ficha): se pide enseguida y con prioridad alta. El resto se carga al acercarse a la pantalla.
+ */
+export function ImagenProducto({ url, alt = '', className = '', prioridad = false }) {
   const [broken, setBroken] = React.useState(false);
   React.useEffect(() => setBroken(false), [url]);
-  return url && !broken ? <img className={className} src={url} alt={alt} loading="lazy" onError={() => setBroken(true)} /> : <span className={`image-fallback ${className}`} aria-label={alt || 'Sin imagen'} role="img"><Box size={42} strokeWidth={1.3} /></span>;
+  return url && !broken
+    ? <img className={className} src={url} alt={alt} loading={prioridad ? 'eager' : 'lazy'} decoding="async" fetchpriority={prioridad ? 'high' : undefined} onError={() => setBroken(true)} />
+    : <span className={`image-fallback ${className}`} aria-label={alt || 'Sin imagen'} role="img"><Box size={42} strokeWidth={1.3} /></span>;
 }

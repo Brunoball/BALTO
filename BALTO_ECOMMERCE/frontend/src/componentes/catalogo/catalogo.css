@@ -168,3 +168,36 @@
 .catalog-pagination button:disabled { opacity:.45; cursor:not-allowed; }
 .catalog-pagination span { font-size:12px; font-weight:800; color:#657868; }
 .catalog-limit-note { margin:20px 0 0; text-align:center; line-height:1.6; color:#9aa59d; font-size:11px; }
+
+/* ---- Catálogo con filtros en el servidor ---- */
+.filter-categories li.is-sub button { padding-left:calc(10px + var(--nivel, 1) * 14px); font-weight:500; }
+.filter-categories button { display:flex; align-items:center; gap:8px; }
+.filter-category-label { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; }
+.filter-category-count { flex:none; min-width:20px; padding:1px 6px; border-radius:99px; background:#f0f3f0; color:#7d8a82; font-size:10.5px; font-weight:700; text-align:center; }
+.filter-categories button.selected .filter-category-count { background:var(--brand); color:var(--brand-text); }
+
+/* Mientras llegan nuevos resultados se mantiene la grilla anterior, atenuada (sin saltos). */
+.catalog-results { position:relative; transition:opacity .18s ease; }
+.catalog-results.is-updating { opacity:.55; pointer-events:none; }
+.catalog-updating-bar { position:absolute; top:-10px; left:0; right:0; height:2px; overflow:hidden; border-radius:2px; background:transparent; }
+.catalog-updating-bar::after { content:''; position:absolute; inset:0; width:35%; background:var(--brand); animation:catalog-bar 1s ease-in-out infinite; }
+@keyframes catalog-bar { from { transform:translateX(-100%); } to { transform:translateX(300%); } }
+
+/* Esqueleto de la primera carga: mismo tamaño que las tarjetas reales (no salta el contenido). */
+.product-card.is-skeleton { pointer-events:none; }
+.skeleton-block { background:linear-gradient(90deg,#eef1ee 0%,#f6f8f6 40%,#eef1ee 80%); background-size:200% 100%; animation:skeleton-shine 1.2s linear infinite; border-radius:6px; }
+.product-card.is-skeleton .product-media { background:none; }
+.product-card.is-skeleton .product-media .skeleton-block { width:100%; height:100%; border-radius:0; }
+.skeleton-line { height:11px; margin-bottom:10px; }
+.skeleton-line.is-short { width:45%; }
+.skeleton-line.is-price { width:35%; height:16px; margin:14px 0 0; }
+@keyframes skeleton-shine { from { background-position:200% 0; } to { background-position:-200% 0; } }
+
+.catalog-pagination { flex-wrap:wrap; gap:10px 14px; }
+.catalog-pages { display:flex; align-items:center; gap:4px; }
+.catalog-pagination .catalog-page { min-width:36px; justify-content:center; padding:9px 10px; }
+.catalog-pagination .catalog-page[aria-current="page"] { background:var(--brand); border-color:var(--brand); color:var(--brand-text); }
+.catalog-pages-gap { padding:0 4px; color:#9aa59d; font-size:12px; }
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-block, .catalog-updating-bar::after { animation:none; }
+}

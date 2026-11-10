@@ -1,21 +1,13 @@
-/** Opciones de orden del catálogo (el valor es el que usa filterProducts). */
+/** Opciones de orden del catálogo (el valor viaja al servidor como `orden`). */
 export const ORDER_OPTIONS = [
   { value: 'destacados', label: 'Destacados primero' },
   { value: 'precio-asc', label: 'Precio: menor a mayor' },
   { value: 'precio-desc', label: 'Precio: mayor a menor' },
   { value: 'nombre', label: 'Nombre A–Z' },
+  { value: 'recientes', label: 'Más nuevos' },
 ];
 
 const MAX_PRICE_DIGITS = 10;
-
-export function getCategories(products = []) {
-  const seen = new Set();
-  return products.reduce((list, product) => {
-    const name = String(product.categoria || '').trim();
-    if (name && !seen.has(name)) { seen.add(name); list.push(name); }
-    return list;
-  }, []);
-}
 
 /**
  * Limpia lo que la persona escribe en un campo de precio: solo dígitos
@@ -44,45 +36,59 @@ export function normalizePriceRange(minValue, maxValue) {
   return { min, max, error: null };
 }
 
-function productPrice(product) {
-  const raw = product?.precio;
-  if (raw === undefined || raw === null || raw === '') return null;
-  const amount = Number(raw);
-  return Number.isFinite(amount) && amount >= 0 ? amount : null;
+/** Valores por defecto de los filtros (no se escriben en la URL). */
+export const FILTROS_INICIALES = Object.freeze({ q: '', categoria: '', orden: 'destacados', precio_min: '', precio_max: '', disponibles: false, pagina: 1 });
+
+/** Lee los filtros desde la URL (?q=&categoria=&orden=&precio_min=&precio_max=&disponibles=1&pagina=). */
+export function leerFiltrosURL(params) {
+  const orden = params.get('orden');
+  const pagina = Number.parseInt(params.get('pagina') || '1', 10);
+  return {
+    q: (params.get('q') || '').slice(0, 80),
+    categoria: (params.get('categoria') || '').slice(0, 120),
+    orden: ORDER_OPTIONS.some((o) => o.value === orden) ? orden : 'destacados',
+    precio_min: sanitizePriceInput(params.get('precio_min') || ''),
+    precio_max: sanitizePriceInput(params.get('precio_max') || ''),
+    disponibles: params.get('disponibles') === '1',
+    pagina: Number.isFinite(pagina) && pagina > 0 ? Math.min(pagina, 10000) : 1,
+  };
 }
 
-function comparePrices(a, b, direction) {
-  const pa = productPrice(a);
-  const pb = productPrice(b);
-  if (pa === null || pb === null) return (pa === null) - (pb === null);
-  return (pa - pb) * direction;
+/** Arma los parámetros de URL omitiendo los valores por defecto (URLs cortas y compartibles). */
+export function filtrosAParams(f) {
+  const out = new URLSearchParams();
+  if (f.q?.trim()) out.set('q', f.q.trim());
+  if (f.categoria && f.categoria !== 'todas') out.set('categoria', String(f.categoria));
+  if (f.orden && f.orden !== 'destacados') out.set('orden', f.orden);
+  if (f.precio_min) out.set('precio_min', f.precio_min);
+  if (f.precio_max) out.set('precio_max', f.precio_max);
+  if (f.disponibles) out.set('disponibles', '1');
+  if (f.pagina > 1) out.set('pagina', String(f.pagina));
+  return out;
 }
 
-export function filterProducts(products = [], { term = '', category = 'todas', stockOnly = false, order = 'destacados', minPrice = null, maxPrice = null } = {}) {
-  const normalized = String(term).trim().toLocaleLowerCase('es-AR');
-  const hasMin = typeof minPrice === 'number' && Number.isFinite(minPrice);
-  const hasMax = typeof maxPrice === 'number' && Number.isFinite(maxPrice);
-  const filtered = products.filter((p) => {
-    const terms = `${p.nombre || ''} ${p.categoria || ''} ${p.sku || ''}`.toLocaleLowerCase('es-AR');
-    if (normalized && !terms.includes(normalized)) return false;
-    if (category !== 'todas' && p.categoria !== category) return false;
-    if (stockOnly && !p.disponible) return false;
-    if (hasMin || hasMax) {
-      // Con un rango activo, los productos sin precio publicado ("Consultar precio") no coinciden.
-      const price = productPrice(p);
-      if (price === null) return false;
-      if (hasMin && price < minPrice) return false;
-      if (hasMax && price > maxPrice) return false;
-    }
-    return true;
-  });
-  switch (order) {
-    // Los productos sin precio publicado ("Consultar precio") quedan al final en ambos sentidos.
-    case 'precio-asc': return filtered.sort((a,b) => comparePrices(a, b, 1));
-    case 'precio-desc': return filtered.sort((a,b) => comparePrices(a, b, -1));
-    case 'nombre': return filtered.sort((a,b) => String(a.nombre || '').localeCompare(String(b.nombre || ''), 'es-AR'));
-    default: return filtered.sort((a,b) => Number(Boolean(b.destacado)) - Number(Boolean(a.destacado)));
+/**
+ * Ordena las categorías que devuelve el servidor como árbol (padre y debajo sus hijas)
+ * y agrega `nivel` para la sangría. Las hijas cuyo padre no vino quedan como raíz.
+ */
+export function arbolCategorias(categorias = []) {
+  const ids = new Set(categorias.map((c) => c.id));
+  const hijos = new Map();
+  for (const c of categorias) {
+    const padre = c.id_padre != null && ids.has(c.id_padre) ? c.id_padre : null;
+    if (!hijos.has(padre)) hijos.set(padre, []);
+    hijos.get(padre).push(c);
   }
+  const out = [];
+  const visitar = (padre, nivel) => {
+    for (const c of hijos.get(padre) || []) {
+      if (out.length > 500 || nivel > 8) return;
+      out.push({ ...c, nivel });
+      visitar(c.id, nivel + 1);
+    }
+  };
+  visitar(null, 0);
+  return out;
 }
 
 export function cartKey(product, variant = null) {

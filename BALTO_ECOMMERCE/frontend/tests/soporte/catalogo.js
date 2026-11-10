@@ -17,7 +17,7 @@ const elegir = {
   dosVariantes: (ps) => ps.find((p) => p.tiene_variantes && disponibles(p).length >= 2),
   decimal: (ps) => ps.find((p) => !p.tiene_variantes && p.disponible && Number(p.precio) > 0 && p.unidad?.permite_decimales && Number(p.cantidad_maxima) >= 1.5),
   sinImagen: (ps) => ps.find((p) => !p.imagen_url),
-  conImagen: (ps) => ps.find((p) => typeof p.imagen_url === 'string' && p.imagen_url.includes('producto_imagen')),
+  conImagen: (ps) => ps.find((p) => typeof p.imagen_url === 'string' && /X-Amz-Signature=|action=producto_imagen/.test(p.imagen_url)),
   sinStock: (ps) => ps.find((p) => !p.disponible),
 };
 

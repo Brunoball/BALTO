@@ -64,13 +64,24 @@ test.describe('Producto', () => {
     expectError(sinR2, 404, ['IMAGEN_NO_DISPONIBLE', 'IMAGENES_NO_CONFIGURADAS']);
     expectError(await directa(request, 'producto_imagen', { params: { slug: '../x', archivo: '1' } }), 404, 'IMAGEN_NO_DISPONIBLE');
     const p = elegir.conImagen(await productos(request));
-    test.skip(!p, 'Ningún producto publicado tiene imagen servida por producto_imagen.');
+    test.skip(!p, 'Ningún producto publicado tiene imagen de R2.');
     const u = new URL(p.imagen_url);
-    expect(u.searchParams.get('action')).toBe('producto_imagen');
-    const res = await request.fetch(p.imagen_url, { maxRedirects: 0, failOnStatusCode: false, headers: { Origin: ENV.origenTienda } });
-    expect([301, 302, 303, 307]).toContain(res.status());
-    expect(res.headers().location).toMatch(/^https:\/\//);
-    expect(res.headers().location).not.toContain('r2://');
+    expect(u.protocol).toBe('https:');
+    expect(p.imagen_url).not.toContain('r2://');
+    if (u.searchParams.get('action') === 'producto_imagen') {
+      // ECOMMERCE_IMAGENES_MODO=proxy: la API valida y redirige.
+      const res = await request.fetch(p.imagen_url, { maxRedirects: 0, failOnStatusCode: false, headers: { Origin: ENV.origenTienda } });
+      expect([301, 302, 303, 307]).toContain(res.status());
+      expect(res.headers().location).toMatch(/^https:\/\//);
+    } else {
+      // Modo por defecto: URL prefirmada directa y ESTABLE (la misma en listado y ficha -> cache del navegador).
+      expect(u.searchParams.get('X-Amz-Signature')).toBeTruthy();
+      expect(Number(u.searchParams.get('X-Amz-Expires'))).toBeGreaterThanOrEqual(600);
+      const ficha = expectExito(await apiGet(request, 'catalogo_producto', { slug: p.slug }));
+      expect(ficha.producto.imagen_url).toBe(p.imagen_url);
+      const res = await request.fetch(p.imagen_url, { failOnStatusCode: false });
+      expect(res.status(), 'R2 acepta la URL firmada').toBe(200);
+    }
   });
 });
 

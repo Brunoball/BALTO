@@ -1,40 +1,57 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { listarProductos } from '../api/catalogoApi';
 
-/** Cantidad histórica por página: es la que usa el inicio y la de respaldo si la API rechaza otra. */
 export const LIMITE_PREDETERMINADO = 12;
 
-// Si la API rechazara un `limite` mayor (validación del parámetro), se vuelve a pedir
-// con el límite histórico para que el catálogo nunca quede vacío por este cambio.
-const esRechazoDeLimite = (error) => error && (error.status === 400 || error.status === 422);
+const VACIO = { productos: [], total: 0, totalPaginas: 1, masPaginas: false, categorias: [], precioRango: null };
 
-export function useCatalogo(habilitado, pagina, revision = 0, limite = LIMITE_PREDETERMINADO) {
-  const [state, setState] = useState({ cargando: !!habilitado, error: null, productos: [], masPaginas: false });
+/**
+ * Catálogo con filtros aplicados en el servidor sobre TODOS los productos publicados.
+ *
+ * Fluidez: mientras llega una nueva página o un nuevo filtro se siguen mostrando los
+ * resultados anteriores (`actualizando`), sin vaciar la grilla ni mostrar el cargador
+ * de pantalla completa. `cargando` solo es true en la primera carga.
+ *
+ * @param {boolean} habilitado
+ * @param {{pagina?:number, limite?:number, q?:string, categoria?:string, orden?:string,
+ *          precio_min?:string, precio_max?:string, solo_disponibles?:boolean}} consulta
+ */
+export function useCatalogo(habilitado, consulta = {}, revision = 0) {
+  const clave = JSON.stringify(consulta);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const params = useMemo(() => consulta, [clave]);
+  const [state, setState] = useState({ ...VACIO, cargando: !!habilitado, actualizando: false, error: null, listo: false });
+
   useEffect(() => {
     if (!habilitado) {
-      setState({ cargando: false, error: null, productos: [], masPaginas: false });
-      return;
+      setState({ ...VACIO, cargando: false, actualizando: false, error: null, listo: true });
+      return undefined;
     }
     const controller = new AbortController();
-    const signal = controller.signal;
-    setState((old) => ({ ...old, cargando: true, error: null }));
-    listarProductos({ pagina, limite, signal })
-      .catch((error) => {
-        if (signal.aborted || limite === LIMITE_PREDETERMINADO || !esRechazoDeLimite(error)) throw error;
-        return listarProductos({ pagina, limite: LIMITE_PREDETERMINADO, signal });
-      })
+    const claveActual = `${clave}|${revision}`;
+    setState((old) => ({ ...old, cargando: !old.listo, actualizando: old.listo, error: null }));
+    listarProductos({ limite: LIMITE_PREDETERMINADO, ...params, signal: controller.signal })
       .then((data) => {
-        if (!signal.aborted) setState({
-          cargando: false,
-          error: null,
+        if (controller.signal.aborted) return;
+        setState({
           productos: Array.isArray(data.productos) ? data.productos : [],
+          total: Number.isFinite(data.total) ? data.total : (data.productos || []).length,
+          totalPaginas: Number.isFinite(data.total_paginas) ? data.total_paginas : 1,
           masPaginas: Boolean(data.siguiente_pagina_posible),
+          categorias: Array.isArray(data.categorias) ? data.categorias : [],
+          precioRango: data.precio_rango || null,
+          cargando: false, actualizando: false, error: null, listo: true, clave: claveActual,
         });
       })
       .catch((error) => {
-        if (!signal.aborted) setState({ cargando: false, error, productos: [], masPaginas: false });
+        if (controller.signal.aborted || error?.name === 'AbortError') return;
+        setState({ ...VACIO, cargando: false, actualizando: false, error, listo: false });
       });
     return () => controller.abort();
-  }, [habilitado, pagina, revision, limite]);
-  return state;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [habilitado, params, revision]);
+
+  // Se atenúa la grilla en el MISMO instante en que cambia el filtro (sin esperar al efecto).
+  const pendiente = habilitado && state.listo && state.clave !== undefined && state.clave !== `${clave}|${revision}`;
+  return pendiente && !state.actualizando ? { ...state, actualizando: true } : state;
 }

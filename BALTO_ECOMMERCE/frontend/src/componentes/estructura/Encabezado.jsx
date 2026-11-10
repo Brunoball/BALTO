@@ -19,7 +19,7 @@ export default function Encabezado({ config }) {
   const closeMenu = () => setMenuOpen(false);
   const searchField = (id) => <form className="header-search" role="search" onSubmit={submitSearch}>
     <Search size={18} aria-hidden="true"/>
-    <input id={id} type="search" aria-label="Buscar en la página del catálogo" placeholder="¿Qué estás buscando?" value={search} onChange={(e) => setSearch(e.target.value)}/>
+    <input id={id} type="search" aria-label="Buscar en el catálogo" placeholder="¿Qué estás buscando?" value={search} onChange={(e) => setSearch(e.target.value)}/>
     <button type="submit" aria-label="Ir al catálogo con esta búsqueda"><ArrowUpRight size={17}/></button>
   </form>;
   return <>

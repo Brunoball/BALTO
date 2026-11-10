@@ -3,7 +3,7 @@ const { test, expect } = require('./soporte/test');
 
 const RUTAS = [
   ['/', /Todo lo que buscás/],
-  ['/catalogo', /Nuestro catálogo/],
+  ['/catalogo', /Todos los productos/],
   ['/favoritos', /Mis favoritos/],
   ['/contacto', /Hablemos/],
   ['/carrito', /Carrito/],
@@ -47,11 +47,12 @@ test.describe('Navegación', () => {
 
   test('el buscador del encabezado lleva al catálogo con el término', async ({ page }) => {
     await page.goto('/');
-    const buscar = page.getByRole('search').getByRole('textbox');
+    const buscar = page.getByRole('search').first().getByRole('searchbox');
     await buscar.fill('remera azul');
     await buscar.press('Enter');
     await expect(page).toHaveURL(/\/catalogo\?q=remera(%20|\+)azul$/);
-    await expect(page.getByRole('textbox', { name: 'Buscar productos de esta página' })).toHaveValue('remera azul');
+    await expect(page.getByRole('searchbox', { name: 'Buscar productos' })).toHaveValue('remera azul');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Resultados para “remera azul”');
   });
 
   test('el logo vuelve al inicio y el pie tiene los enlaces de la tienda', async ({ page }) => {
