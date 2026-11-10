@@ -2,6 +2,10 @@ import React from 'react';
 import { ArrowUpRight, Mail, MessageCircle, Phone, Store } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { telephoneLink, whatsAppLink } from '../global/utilidades/formato';
+
+// Sitio oficial del desarrollador. Si se completa, "3devs Solutions" se muestra como enlace.
+const SITIO_DESARROLLADOR = '';
+
 export default function PiePagina({ config }) {
   const chat = whatsAppLink(config.whatsapp, `Hola, tengo una consulta sobre ${config.nombre || 'la tienda'}.`);
   const phone = telephoneLink(config.telefono);
@@ -12,6 +16,6 @@ export default function PiePagina({ config }) {
       <div className="footer-col"><h3>Información</h3><Link to="/contacto">Contacto</Link><span>Precios y stock según el sistema de la tienda</span><span>Disponibilidad según stock actual</span></div>
       <div className="footer-col footer-contact"><h3>Estamos cerca</h3>{chat && <a href={chat} target="_blank" rel="noreferrer"><MessageCircle size={17}/> Consultar por WhatsApp <ArrowUpRight size={14}/></a>}{config.email && <a href={`mailto:${config.email}`}><Mail size={17}/> {config.email}</a>}{phone && <a href={phone}><Phone size={17}/> {config.telefono}</a>}{!chat && !config.email && !phone && <p>Los datos de contacto se publicarán próximamente.</p>}</div>
     </div>
-    <div className="shell footer-bottom"><span>© {new Date().getFullYear()} {config.nombre || 'Tienda online'}.</span><span>Una tienda impulsada por <strong>BALTO</strong></span></div>
+    <div className="shell footer-bottom"><span>© {new Date().getFullYear()} {config.nombre || 'Tienda online'}.</span><span className="footer-credits">Desarrollado por {SITIO_DESARROLLADOR ? <a href={SITIO_DESARROLLADOR} target="_blank" rel="noopener noreferrer">3devs Solutions</a> : <span>3devs Solutions</span>} · Tecnología BALTO</span></div>
   </footer>;
 }

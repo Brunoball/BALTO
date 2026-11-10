@@ -32,18 +32,9 @@
 .benefit-icon { width:42px; height:42px; flex:none; display:grid; place-items:center; background:#f0f5f0; color:#416c4f; border-radius:11px; }
 .benefit strong { font:800 12px Manrope,sans-serif; display:block; }
 .benefit p { font-size:10px; margin:5px 0 0; color:#8b968e; }
-.category-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:16px; }
-.category-tile { position:relative; display:flex; flex-direction:column; align-items:flex-start; justify-content:flex-end; overflow:hidden; text-decoration:none; min-height:225px; padding:22px; color:#18362c; background:#dce9de; border-radius:15px; transition:transform .2s,box-shadow .2s; }
-.category-tile:hover { transform:translateY(-3px); box-shadow:var(--shadow); }
-.category-tile-1 { background:#e9e6d9; }
-.category-tile-2 { background:#dfe6eb; }
-.category-tile-3 { background:#f0e1d8; }
-.category-tile-ornament { position:absolute; right:16px; top:25px; width:115px; height:115px; display:grid; place-items:center; border-radius:100%; color:rgba(30,68,51,.24); background:rgba(255,255,255,.2); }
-.category-count-label { font-size:9px; font-weight:800; letter-spacing:1.8px; opacity:.64; }
-.category-tile strong { font:800 22px Manrope,sans-serif; margin:6px 0 18px; line-height:1.25; word-break:break-word; z-index:1; }
-.category-cta { display:flex; align-items:center; gap:7px; font-size:11px; font-weight:800; z-index:1; }
-.home-products { padding-bottom:92px; }
-.home-all-products { margin:38px auto 0; display:flex; justify-content:center; }
+.home-page { padding-bottom:72px; }
+.home-products { padding-top:60px; padding-bottom:64px; }
+.home-all-products { margin:32px auto 0; display:flex; justify-content:center; }
 .discovery-section { margin-top:8px; background:linear-gradient(113deg,#1b4134,#244d3d); border-radius:18px; min-height:310px; position:relative; overflow:hidden; display:flex; justify-content:space-between; align-items:center; color:#fff; }
 .discovery-copy { position:relative; z-index:1; padding:55px 70px; max-width:710px; }
 .discovery-copy h2 { margin:16px 0; font:800 clamp(28px,3.4vw,45px)/1.18 Manrope,sans-serif; letter-spacing:-1.6px; }
