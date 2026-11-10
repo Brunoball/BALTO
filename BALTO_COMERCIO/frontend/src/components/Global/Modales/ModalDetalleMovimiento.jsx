@@ -650,7 +650,7 @@ export default function ModalDetalleMovimiento({
                       <FontAwesomeIcon icon={faFileInvoiceDollar} aria-hidden="true" />
                       <div>
                         <strong>Descuento comercial aplicado a la venta</strong>
-                        <span>El precio de lista del producto no fue modificado.</span>
+                        <span>El precio de lista del producto no fue modificado. Los importes por producto se registran con el descuento general ya prorrateado, tal como se facturan.</span>
                       </div>
                     </div>
                     <div className="mdm-commercial-discount__chips" aria-label="Resumen del descuento comercial">
@@ -827,10 +827,10 @@ export default function ModalDetalleMovimiento({
                     <div className="mdm-table__row mdm-table__row--head">
                       <span>Producto / detalle</span>
                       <span>Cant.</span>
-                      <span>Precio</span>
+                      <span>{hasCommercialDiscount ? "Precio neto" : "Precio"}</span>
                       <span>IVA %</span>
                       <span>IVA</span>
-                      <span>Total</span>
+                      <span>{hasCommercialDiscount ? "Total neto" : "Total"}</span>
                     </div>
 
                     {items.map((item, index) => (

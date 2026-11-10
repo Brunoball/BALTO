@@ -121,10 +121,13 @@ test('@smoke @performance Dashboard: textos actuales y carga sin requests duplic
   });
 
   try {
-    await expect(page.getByText('Ventas actuales', { exact: true })).toBeVisible();
-    await expect(page.getByText('Ingresos mes actual', { exact: true })).toBeVisible();
+    // Textos del Dashboard rediseñado (tarjetas KPI + movimiento real de dinero).
+    await expect(page.getByText('Ingresos cobrados mes', { exact: true })).toBeVisible();
     await expect(
-      page.getByRole('heading', { name: 'Ingresos y egresos del mes actual', exact: true }),
+      page.getByRole('heading', { name: 'Movimiento real de dinero del mes', exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: 'Indicadores generales', exact: true }),
     ).toBeVisible();
     await expect(page.getByText(/Ventas y egresos/i)).toHaveCount(0);
 

@@ -92,7 +92,7 @@ test('@dashboard @ui @critical cifras monetarias exactas desde el primer render,
   expect(await stock.textContent(), 'El stock tampoco debe mostrar importes intermedios').toContain('7.655.974,00');
   expect(await resultado.textContent(), 'El flujo neto no debe mostrar valores parciales').toContain('50.000,00');
   expect(hasNegativeSign(await resultado.textContent()), 'Flujo neto negativo debe conservar el signo').toBe(true);
-  const banco = page.locator('.db-caja-breakdown [data-medio-id="4"]');
+  const banco = page.locator('.db-kpi-carousel-card--medio[data-medio-id="4"]');
   await expect(banco).toContainText('28.558,68');
   expect(hasNegativeSign(await banco.textContent())).toBe(true);
 });
