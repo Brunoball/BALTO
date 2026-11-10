@@ -29,3 +29,15 @@ export async function getSessionPlan(page) {
 export function isPlanDenied(result) {
   return result?.status === 403 && String(result?.body?.codigo || '') === PLAN_DENIED_CODE;
 }
+
+const planCache = new WeakMap();
+
+/**
+ * Capacidad del plan del tenant de la sesión, cacheada por página.
+ * Permite que los fixtures se adapten al plan real del staging
+ * (p. ej. "Servicios con Insumos" no incluye control de stock).
+ */
+export async function planCan(page, capability) {
+  if (!planCache.has(page)) planCache.set(page, await getSessionPlan(page));
+  return planCache.get(page).can(capability);
+}

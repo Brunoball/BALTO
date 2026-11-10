@@ -791,7 +791,7 @@ const ADD_PROVEEDOR_OPTION = {
   __action: "add_proveedor",
   id: "__add_proveedor__",
   id_proveedor: "__add_proveedor__",
-  nombre: "➕ Agregar proveedor por CUIT",
+  nombre: "➕ Agregar proveedor",
 };
 
 function isAddProveedorOption(option) {
@@ -1421,6 +1421,42 @@ export default function ModalNuevaCompra({ open, lists, onClose, onToast, onSave
     if (addUI.saving || addUI.lookupLoading) return;
     resetAddUIState();
   }, [addUI.saving, addUI.lookupLoading, resetAddUIState]);
+
+  // El proveedor se inserta en la tabla real de proveedores; el CUIT es opcional.
+  const guardarProveedorSimple = useCallback(async () => {
+    if (addUI.saving || addUI.lookupLoading) return;
+    const nombre = upperInput(addUI.text).trim().replace(/\s+/g, " ");
+    if (!nombre || nombre.length > 180) {
+      setAddUI((prev) => ({ ...prev, fiscalError: "Ingresá un nombre válido (máximo 180 caracteres)." }));
+      return;
+    }
+
+    const existente = proveedoresList.find((p) => normalizeText(p?.nombre) === normalizeText(nombre) && Number(getProveedorId(p)) > 0);
+    if (existente) {
+      registrarProveedorLocal(existente);
+      resetAddUIState();
+      showToast("exito", `El proveedor ya existía. Se seleccionó "${existente.nombre}".`, 3000);
+      return;
+    }
+
+    setAddUI((prev) => ({ ...prev, saving: true, fiscalError: "" }));
+    try {
+      const { idUsuario } = getAuthInfo();
+      const saved = await apiPostJson(`${BASE_URL}/api.php?action=catalogo_crear`, {
+        catalogo: "proveedores", nombre, idUsuario,
+      });
+      const item = saved?.item || saved?.data?.item || {};
+      const id = Number(getProveedorId(item) || item.id || 0);
+      if (!saved?.exito || id <= 0) throw new Error(saved?.mensaje || "No se pudo guardar el proveedor.");
+      const result = registrarProveedorLocal({ ...item, id_proveedor: id, nombre: item.nombre || nombre, activo: 1 });
+      resetAddUIState();
+      showToast("exito", `Proveedor "${result.proveedor.nombre}" guardado y seleccionado.`, 3200);
+    } catch (error) {
+      const mensaje = error?.message || "No se pudo crear el proveedor.";
+      setAddUI((prev) => ({ ...prev, saving: false, fiscalError: mensaje }));
+      showToast("error", mensaje, 4200);
+    }
+  }, [addUI, proveedoresList, registrarProveedorLocal, resetAddUIState, showToast]);
 
   const guardarNuevoCatalogo = useCallback(async () => {
     const kind = addUI.kind;
@@ -2172,7 +2208,7 @@ export default function ModalNuevaCompra({ open, lists, onClose, onToast, onSave
                           onChange={handleProveedorInputChange}
                           onSelect={handleSelectProveedor}
                           options={proveedoresOptions}
-                          getOptionLabel={(p) => isAddProveedorOption(p) ? "➕ Agregar proveedor por CUIT" : String(p?.nombre ?? "").trim()}
+                          getOptionLabel={(p) => isAddProveedorOption(p) ? "➕ Agregar proveedor" : String(p?.nombre ?? "").trim()}
                           getOptionValue={(p) => isAddProveedorOption(p) ? "__add_proveedor__" : String(getProveedorId(p) ?? p?.nombre ?? "")}
                           label="Proveedor *"
                           placeholder=" "
@@ -2338,8 +2374,13 @@ export default function ModalNuevaCompra({ open, lists, onClose, onToast, onSave
 
           <ModalClienteFiscalArca
             open={addUI.open && addUI.kind === "proveedores"}
-            title="Agregar proveedor por CUIT"
-            infoTitle="Alta rápida de proveedor"
+            title="Agregar proveedor"
+            permitirAltaSimple
+            entidad="proveedor"
+            nombreSimple={addUI.text}
+            onNombreSimpleChange={(value) => setAddUI((prev) => ({ ...prev, text: upperInput(value), fiscalError: "" }))}
+            onConfirmarAltaSimple={guardarProveedorSimple}
+            infoTitle="Alta con CUIT"
             description={
               <>
                 Ingresá el CUIT, consultamos ARCA, guardamos la razón social en <b>Proveedores</b> y los datos completos en <b>Clientes fiscales</b>.

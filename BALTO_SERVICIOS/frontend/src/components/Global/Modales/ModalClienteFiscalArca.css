@@ -563,3 +563,10 @@ html[data-theme="oscuro"] .gcf-client-card__eyebrow,
   background: rgba(148, 163, 184, .14);
   border-color: rgba(186, 208, 240, .23);
 }
+
+/* Alta rápida opcional para Ventas, Compras y Presupuestos. */
+.gcf-simple-label { display:block; margin-bottom:8px; font-weight:700; font-size:13px; }
+.gcf-simple-input { width:100%; min-height:43px; padding:9px 12px; }
+.gcf-simple-hint { font-size:12px; line-height:1.5; margin:9px 0 0; opacity:.76; }
+.gcf-modal--simple { max-width: 760px; }
+.gcf-modal--simple .gcf-client-card { min-height: 280px; }

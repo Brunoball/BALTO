@@ -4,6 +4,7 @@ import "../../../Global/Global_css/GlobalsModalsV2.css";
 import "../../../Global/Global_css/Global_responsive.css";
 import "../../../Global/Global_css/roots.css";
 import "./ModalPresupuesto.css";
+import "../../../Global/DescuentoGeneral/DescuentoGeneralControl.css";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faCheckCircle,
@@ -13,6 +14,13 @@ import {
 import ModalFacturaBaltoResumen from "../../Facturacion/ModalFacturaBaltoResumen.jsx";
 import { PanelMediosPagoInlineVenta } from "../../Ventas/modales/ModalNuevaVenta.jsx";
 import { saveVentaNoFacturadaPdf } from "../../../../utils/VentaNoFacturadaPdfBuilder";
+import {
+  DESCUENTO_PORCENTAJE,
+  descuentoDesdeMovimiento,
+  formatPorcentaje,
+  itemsConBonificacion,
+  roundMoney as roundMoneyDesc,
+} from "../../../../utils/descuentoGeneral.js";
 import { saveRemitoPdf } from "../../../../utils/RemitoPdfBuilder";
 import { DEMO_BLOCK_MESSAGE, isBaltoDemoMode } from "../../../../utils/demoMode";
 import { DOCUMENTOS_API, documentosRequest } from "../api/documentosComercialesApi.js";
@@ -293,6 +301,9 @@ function normalizeItem(it, i = 0) {
     iva_pct: ivaPct,
     iva_monto: ivaMonto,
     total,
+    // Precio original cuando el presupuesto tiene descuento general (los importes
+    // de arriba ya son netos y son los que se facturan / cobran).
+    precio_lista: it?.precio_lista ?? null,
   };
 }
 
@@ -798,7 +809,9 @@ export default function ModalAsignarPresupuestoVenta({
 
   const items = useMemo(() => {
     const arr = Array.isArray(detalle?.items) ? detalle.items : [];
-    return arr.map(normalizeItem);
+    // Con descuento general: precio unitario original + bonificación por renglón
+    // para el comprobante; subtotal / IVA / total siguen siendo los netos guardados.
+    return itemsConBonificacion(arr.map(normalizeItem));
   }, [detalle]);
 
   const total = useMemo(() => {
@@ -809,6 +822,24 @@ export default function ModalAsignarPresupuestoVenta({
 
   const subtotal = useMemo(() => items.reduce((acc, it) => acc + safeNumber(it.subtotal), 0), [items]);
   const ivaTotal = useMemo(() => items.reduce((acc, it) => acc + safeNumber(it.iva_monto), 0), [items]);
+
+  // Descuento general del presupuesto. El total de la venta es el total final
+  // presupuestado (suma de renglones netos); el descuento NO se resta otra vez.
+  const descuento = useMemo(
+    () => descuentoDesdeMovimiento(detalle?.presupuesto || detalle?.movimiento || row || {}, total),
+    [detalle, row, total]
+  );
+  const descuentoCampos = useMemo(() => (descuento ? {
+    descuento_tipo: descuento.tipo,
+    descuento_valor: descuento.valor,
+    descuento_monto: descuento.monto,
+    total_bruto: descuento.totalBruto,
+  } : { descuento_tipo: null, descuento_valor: 0, descuento_monto: 0, total_bruto: total }), [descuento, total]);
+  const observacionDescuento = descuento
+    ? `Descuento general del presupuesto: ${descuento.tipo === DESCUENTO_PORCENTAJE
+        ? `${formatPorcentaje(descuento.valor)} %`
+        : `${moneyARS(descuento.monto)} (≈ ${formatPorcentaje(descuento.porcentajeEfectivo)} %)`} sobre ${moneyARS(descuento.totalBruto)}. Total final ${moneyARS(total)}.`
+    : "";
 
   const ventaGeneradaConvertida = useMemo(() => {
     const conv = detalle?.conversion && typeof detalle.conversion === "object" ? detalle.conversion : {};
@@ -1148,16 +1179,17 @@ export default function ModalAsignarPresupuestoVenta({
       total_ars: total,
       monto: total,
       importe: total,
+      ...descuentoCampos,
       ids_movimiento: idVenta ? [Number(idVenta)] : [],
       id_presupuesto_origen: idPresupuesto,
       operacion_key: arcaOperationKey || getOrCreatePresupuestoArcaKey(idPresupuesto),
       operacion_contexto: "PRESUPUESTO_VENTA",
       operacion_id_origen: idPresupuesto,
-      observaciones: extra.observaciones || "",
       emisor: emisorPdf.emisor,
       ...extra,
+      observaciones: [extra.observaciones || "", observacionDescuento].filter(Boolean).join(" "),
     };
-  }, [mediosPayload, tipoVentaSelected, isContado, clienteBase, idTipoVenta, fecha, items, total, idPresupuesto, fiscalPdfParaInterno, arcaOperationKey]);
+  }, [mediosPayload, tipoVentaSelected, isContado, clienteBase, idTipoVenta, fecha, items, total, idPresupuesto, fiscalPdfParaInterno, arcaOperationKey, descuentoCampos, observacionDescuento]);
 
   const subirPdfDocumento = useCallback(async ({ tipo, idMovimiento, blob, filename, meta, emitidoEnArca = false, factura = null }) => {
     if (!idMovimiento || !blob) throw new Error(`No se pudo generar o subir ${String(tipo || "comprobante").toLowerCase()}.`);
@@ -1534,9 +1566,18 @@ export default function ModalAsignarPresupuestoVenta({
                       const itemCantidad = safeNumber(it.cantidad);
                       const itemPrecio = safeNumber(it.precio);
                       const itemIvaPct = safeNumber(it.iva_pct);
-                      const itemSubtotal = safeNumber(it.subtotal) || itemCantidad * itemPrecio;
-                      const itemIvaMonto = safeNumber(it.iva_monto) || itemSubtotal * itemIvaPct / 100;
-                      const itemTotal = safeNumber(it.total) || itemSubtotal + itemIvaMonto;
+                      // Con descuento se muestran los importes originales del renglón;
+                      // el descuento general se informa una sola vez en el resumen.
+                      const conPrecioLista = Boolean(descuento) && it.precio_lista !== null && it.precio_lista !== undefined && it.precio_lista !== "";
+                      const itemSubtotal = conPrecioLista
+                        ? roundMoneyDesc(itemCantidad * itemPrecio)
+                        : (safeNumber(it.subtotal) || itemCantidad * itemPrecio);
+                      const itemIvaMonto = conPrecioLista
+                        ? roundMoneyDesc(itemSubtotal * itemIvaPct / 100)
+                        : (safeNumber(it.iva_monto) || itemSubtotal * itemIvaPct / 100);
+                      const itemTotal = conPrecioLista
+                        ? roundMoneyDesc(itemSubtotal + itemIvaMonto)
+                        : (safeNumber(it.total) || itemSubtotal + itemIvaMonto);
 
                       return (
                         <div key={it.id} className="gm-table-row dc-asignar-product-row">
@@ -1602,17 +1643,43 @@ export default function ModalAsignarPresupuestoVenta({
                       </div>
                       <div className="gm-foot-sep" />
                     </div>
-                    <div className="gm-summary-chips">
-                      <div className="gm-summary-chip gm-summary-chip--sub">
-                        <span>Subtotal</span>
-                        <b>{moneyARS(subtotal)}</b>
-                      </div>
-                      <div className="gm-summary-chip gm-summary-chip--iva">
-                        <span>IVA</span>
-                        <b>{moneyARS(ivaTotal)}</b>
-                      </div>
-                      <div className="gm-summary-chip gm-summary-chip--total">
-                        <span>Total</span>
+                    <div className="gm-summary-chips" data-testid="asignar-summary">
+                      {descuento ? (
+                        <>
+                          <div className="gm-summary-chip gm-summary-chip--sub" data-testid="asignar-total-original">
+                            <span>Total original</span>
+                            <b>{moneyARS(descuento.totalBruto)}</b>
+                          </div>
+                          <div className="gm-summary-chip dg-summary-chip--discount" data-testid="asignar-descuento" aria-label="Descuento general del presupuesto">
+                            <span>
+                              Descuento general
+                              {descuento.tipo === DESCUENTO_PORCENTAJE
+                                ? ` (${formatPorcentaje(descuento.valor)} %)`
+                                : ` (≈ ${formatPorcentaje(descuento.porcentajeEfectivo)} %)`}
+                            </span>
+                            <b>- {moneyARS(descuento.monto)}</b>
+                          </div>
+                          {ivaTotal > 0 ? (
+                            <div className="gm-summary-chip gm-summary-chip--iva">
+                              <span>IVA incluido</span>
+                              <b>{moneyARS(ivaTotal)}</b>
+                            </div>
+                          ) : null}
+                        </>
+                      ) : (
+                        <>
+                          <div className="gm-summary-chip gm-summary-chip--sub">
+                            <span>Subtotal</span>
+                            <b>{moneyARS(subtotal)}</b>
+                          </div>
+                          <div className="gm-summary-chip gm-summary-chip--iva">
+                            <span>IVA</span>
+                            <b>{moneyARS(ivaTotal)}</b>
+                          </div>
+                        </>
+                      )}
+                      <div className="gm-summary-chip gm-summary-chip--total" data-testid="asignar-total">
+                        <span>{descuento ? "Total final" : "Total"}</span>
                         <b>{moneyARS(total)}</b>
                       </div>
                     </div>

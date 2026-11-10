@@ -1,6 +1,7 @@
 import { expect } from '@playwright/test';
 import { authenticatedApi, expectApiSuccess } from './api.js';
 import { todayISO } from './data.js';
+import { planCan } from './plan.js';
 import {
   createServiceArticleFixture,
   deleteServiceArticleFixture,
@@ -47,7 +48,11 @@ function isOtherIncomeCreditOperation(request, operation) {
 }
 
 export async function createStockProduct(page, product) {
+  // El fixture se adapta al plan del tenant: sin resources.stock (plan
+  // "Servicios con Insumos") el backend sólo admite materiales sin existencias.
+  const controlStock = product.controlStock ?? await planCan(page, 'resources.stock');
   const row = await createServiceArticleFixture(page, {
+    controlStock,
     type: product.type || 'MATERIAL',
     name: product.name,
     description: product.description || (product.sku ? `REF ${product.sku}` : undefined),
@@ -63,6 +68,10 @@ export async function createStockProduct(page, product) {
   // BALTO Servicios crea un artículo real de servicio_articulos y no un producto
   // del viejo módulo Stock de Comercio.
   expect(Number(row?.id_articulo || 0), `El alta de ${product.name} debe devolver id_articulo`).toBeGreaterThan(0);
+  expect(Number(row?.controla_stock), `El artículo ${product.name} debe respetar el control de stock del plan`).toBe(controlStock ? 1 : 0);
+  if (!controlStock) {
+    expect(Number(row?.stock_actual ?? 0), `El material ${product.name} no debe tener existencias en un plan sin stock`).toBe(0);
+  }
   return row;
 }
 
@@ -320,6 +329,7 @@ export async function createSale(page, data) {
   await fillMovementRow(dialog, {
     serviceName: data.serviceName,
     productName: data.productName,
+    description: data.description,
     quantity: data.quantity ?? 2,
     price: data.price ?? 150,
     servicePriceKind: data.servicePriceKind,
@@ -333,7 +343,7 @@ export async function createSale(page, data) {
   if (/CONTADO/i.test(selected.text)) await fillPayment(dialog);
 
   await clickSaveAndWait(dialog, /Guardar venta/i, { timeout: 60_000 });
-  return searchRow(page, data.serviceName || data.productName, /Buscar por descripción, cliente/i);
+  return searchRow(page, data.serviceName || data.productName || data.description, /Buscar por descripción, cliente/i);
 }
 
 export async function openSaleCreditNote(page, productName) {
@@ -560,6 +570,7 @@ export async function prepareBudget(page, data) {
   const itemRow = await fillMovementRow(dialog, {
     serviceName: data.serviceName,
     productName: data.productName,
+    description: data.description,
     quantity: data.quantity ?? 1,
     price: data.price ?? 150,
     servicePriceKind: data.servicePriceKind,
@@ -578,7 +589,7 @@ export async function prepareBudget(page, data) {
 export async function createBudget(page, data) {
   const { dialog } = await prepareBudget(page, data);
   await clickSaveAndWait(dialog, /^Guardar$/i, { timeout: 60_000 });
-  return searchRow(page, data.serviceName || data.productName, /Buscar por descripción/i);
+  return searchRow(page, data.serviceName || data.productName || data.description, /Buscar por descripción/i);
 }
 
 export async function prepareBudgetConversion(page, productName) {

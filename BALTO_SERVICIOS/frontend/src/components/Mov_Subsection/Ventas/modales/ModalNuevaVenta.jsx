@@ -24,6 +24,16 @@ import {
 import { saveRemitoPdf } from "../../../../utils/RemitoPdfBuilder";
 import { DEMO_BLOCK_MESSAGE, isBaltoDemoMode } from "../../../../utils/demoMode";
 import { usePlan } from "../../../../session/planCapabilities";
+import DescuentoGeneralControl from "../../../Global/DescuentoGeneral/DescuentoGeneralControl.jsx";
+import {
+  DESCUENTO_PORCENTAJE,
+  calcularDescuentoGeneral,
+  calcularRenglonesBrutos,
+  calcularResumenOperacion,
+  descuentoPayload,
+  formatPorcentaje,
+  prorratearDescuentoGeneral,
+} from "../../../../utils/descuentoGeneral.js";
 
 /* ================================================================
    CONSTANTS
@@ -1604,6 +1614,9 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
   const [accionContado, setAccionContado] = useState("guardar");
   const [cliInput, setCliInput] = useState("");
   const [rows, setRows] = useState(() => [buildEmptyRow()]);
+  // Descuento general: ajuste comercial sobre el total (no es un renglón).
+  const [descuentoTipo, setDescuentoTipo] = useState(DESCUENTO_PORCENTAJE);
+  const [descuentoValor, setDescuentoValor] = useState("");
   const [mediosFilas, setMediosFilas] = useState(() => [buildEmptyMedioPagoVenta()]);
   const [saving, setSaving] = useState(false);
   const [addUI, setAddUI] = useState({ open: false, kind: null, rowId: null, text: "", cuit: "", fiscalData: null, fiscalError: "", lookupLoading: false, saving: false });
@@ -1657,6 +1670,8 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
       setAccionContado("guardar");
       setCliInput("");
       setRows([buildEmptyRow()]);
+      setDescuentoTipo(DESCUENTO_PORCENTAJE);
+      setDescuentoValor("");
       setMediosFilas([buildEmptyMedioPagoVenta()]);
       setAddUI({ open: false, kind: null, rowId: null, text: "", cuit: "", fiscalData: null, fiscalError: "", lookupLoading: false, saving: false });
       setSaving(false);
@@ -1758,6 +1773,48 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
     },
     [updateFilter]
   );
+
+  // Alta rápida: crea el cliente real en `clientes`, sin ficha fiscal.
+  // Se utiliza el endpoint de catálogo que ya respeta los permisos de Ventas.
+  const guardarClienteSimple = useCallback(async () => {
+    if (addUI.saving || addUI.lookupLoading) return;
+    const nombre = upperInput(addUI.text).trim().replace(/\s+/g, " ");
+    if (!nombre || nombre.length > 180) {
+      setAddUI((prev) => ({ ...prev, fiscalError: "Ingresá un nombre válido (máximo 180 caracteres)." }));
+      return;
+    }
+
+    const existente = clientesList.find((c) => normalizeText(c?.nombre) === normalizeText(nombre) && Number(getClienteId(c)) > 0);
+    if (existente) {
+      registrarClienteLocal(existente);
+      setClienteFiscalDb(null);
+      setFiscalArcaData(null);
+      setFiscalCuitInput("");
+      resetAddUIState();
+      showToast("exito", `El cliente ya existía. Se seleccionó "${existente.nombre}".`, 3000);
+      return;
+    }
+
+    setAddUI((prev) => ({ ...prev, saving: true, fiscalError: "" }));
+    try {
+      const { idUsuario } = getAuthInfo();
+      const data = await apiPostJson(API_CATALOGO, { catalogo: "clientes", nombre, idUsuario });
+      const item = data?.item || data?.data?.item || {};
+      const id = Number(getClienteId(item) || item.id || 0);
+      if (!data?.exito || id <= 0) throw new Error(data?.mensaje || "No se pudo guardar el cliente.");
+      const cliente = registrarClienteLocal({ ...item, id_cliente: id, nombre: item.nombre || nombre, activo: 1 });
+      setClienteFiscalDb(null);
+      setFiscalArcaData(null);
+      setFiscalCuitInput("");
+      setFiscalError("");
+      resetAddUIState();
+      showToast("exito", `Cliente "${cliente.nombre}" guardado y seleccionado.`, 3200);
+    } catch (error) {
+      const mensaje = error?.message || "No se pudo crear el cliente.";
+      setAddUI((prev) => ({ ...prev, saving: false, fiscalError: mensaje }));
+      showToast("error", mensaje, 4200);
+    }
+  }, [API_CATALOGO, addUI, clientesList, registrarClienteLocal, resetAddUIState, showToast]);
 
   const startAddCliente = useCallback(() => {
     if (saving) return;
@@ -2188,46 +2245,36 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
     };
   }, [open, onClose, openResumenFactura, addUI.open, fiscalPanelOpen]);
 
+  // Cálculo único (src/utils/descuentoGeneral.js, replicado en PHP).
+  // rowsCalc conserva la representación comercial (precioLista, subtotalBruto,
+  // ivaMontoBruto, totalBruto) que se muestra en la grilla y la neta (precio,
+  // subtotal, ivaMonto, total) con el descuento general prorrateado, que es la
+  // que se guarda, se cobra y se informa a ARCA. Sin descuento ambas coinciden.
   const rowsBaseCalc = useMemo(
-    () =>
-      rows.map((r) => {
-        const tieneItemSeleccionado = hasUsableSaleItem(r);
-        const cantidad = Math.max(0, safeNumber(r.cantidad));
-        const precioLista = Math.max(0, safeNumber(r.precio));
-        const ivaPct = Math.max(0, safeNumber(r.ivaPct));
-        const subtotalBruto = tieneItemSeleccionado ? roundMoney(cantidad * precioLista) : 0;
-        const ivaMontoBruto = roundMoney(subtotalBruto * (ivaPct / 100));
-        const totalBruto = roundMoney(subtotalBruto + ivaMontoBruto);
-        return {
-          ...r,
-          precioLista,
-          subtotalBruto,
-          ivaMontoBruto,
-          totalBruto,
-        };
-      }),
+    () => calcularRenglonesBrutos(rows, hasUsableSaleItem),
     [rows]
   );
 
+  const descuentoResumen = useMemo(
+    () => calcularDescuentoGeneral(rowsBaseCalc, descuentoTipo, descuentoValor),
+    [rowsBaseCalc, descuentoTipo, descuentoValor]
+  );
+
   const rowsCalc = useMemo(
-    () => rowsBaseCalc.map((r) => ({
-      ...r,
-      precio: r.precioLista,
-      subtotal: r.subtotalBruto,
-      ivaMonto: r.ivaMontoBruto,
-      total: r.totalBruto,
-    })),
-    [rowsBaseCalc]
+    () => prorratearDescuentoGeneral(rowsBaseCalc, descuentoResumen),
+    [rowsBaseCalc, descuentoResumen]
   );
 
   const resumen = useMemo(
-    () => ({
-      subtotal: roundMoney(rowsCalc.reduce((a, r) => a + safeNumber(r.subtotal), 0)),
-      iva: roundMoney(rowsCalc.reduce((a, r) => a + safeNumber(r.ivaMonto), 0)),
-      total: roundMoney(rowsCalc.reduce((a, r) => a + safeNumber(r.total), 0)),
-    }),
-    [rowsCalc]
+    () => calcularResumenOperacion(rowsCalc, descuentoResumen),
+    [rowsCalc, descuentoResumen]
   );
+
+  const observacionDescuento = resumen.descuento > 0
+    ? `Descuento general aplicado: ${resumen.descuentoTipo === DESCUENTO_PORCENTAJE
+        ? `${formatPorcentaje(resumen.descuentoValor)} %`
+        : `${moneyARS(resumen.descuento)} (≈ ${formatPorcentaje(resumen.descuentoPorcentajeEfectivo)} %)`} sobre ${moneyARS(resumen.totalBruto)}. Total final ${moneyARS(resumen.total)}.`
+    : "";
 
   const tipoVentaSelected = useMemo(() => {
     const id = Number(filters.id_tipo_venta);
@@ -2505,6 +2552,10 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
       return { ok: false, msg: "Falta seleccionar la Forma de venta." };
     }
 
+    if (resumen.descuentoError) {
+      return { ok: false, msg: `Descuento general: ${resumen.descuentoError}` };
+    }
+
 
     if (isContado) {
       const filasPago = mediosFilas.filter((r) => r.id_medio_pago && r.id_medio_pago !== "");
@@ -2640,6 +2691,9 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
           unidad: "u",
           precio_unitario: Number(r.precioLista ?? r.precio ?? 0),
           precio: Number(r.precioLista ?? r.precio ?? 0),
+          // Importes NETOS (descuento general prorrateado): son los que van a ARCA.
+          bonif_pct: Number(r.bonifPctAplicado || 0),
+          impBonif: Number(r.descuentoSubtotalMonto || 0),
           subtotal: Number(r.subtotal || 0),
           ars: Number(r.total || 0),
           iva_pct: Number(r.ivaPct || 0),
@@ -2693,14 +2747,15 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
         total_ars: Number(resumen.total || 0),
         monto: Number(resumen.total || 0),
         importe: Number(resumen.total || 0),
+        ...descuentoPayload(resumen),
         operacion_key: arcaOperationKey || getOrCreateNuevaVentaArcaKey(),
         operacion_contexto: "FACTURA_VENTA",
         operacion_id_origen: null,
-        observaciones: "",
+        observaciones: observacionDescuento,
         emisor: emisorPdf.emisor,
       };
     },
-    [rowsCalc, mediosFilas, mediosPagoList, selectedClienteNombre, selectedClienteId, filters.id_tipo_venta, fecha, isContado, resumen, arcaOperationKey]
+    [rowsCalc, mediosFilas, mediosPagoList, selectedClienteNombre, selectedClienteId, filters.id_tipo_venta, fecha, isContado, resumen, arcaOperationKey, observacionDescuento]
   );
 
   const buildVentaNoFacturadaPayload = useCallback(
@@ -2716,6 +2771,8 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
           unidad: "u",
           precio_unitario: Number(r.precioLista ?? r.precio ?? 0),
           precio: Number(r.precioLista ?? r.precio ?? 0),
+          bonif_pct: Number(r.bonifPctAplicado || 0),
+          impBonif: Number(r.descuentoSubtotalMonto || 0),
           subtotal: Number(r.subtotal || 0),
           ars: Number(r.total || 0),
           iva_pct: Number(r.ivaPct || 0),
@@ -2755,7 +2812,12 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
         total_ars: Number(resumen.total || 0),
         monto: Number(resumen.total || 0),
         importe: Number(resumen.total || 0),
-        observaciones: "Comprobante interno generado automáticamente por una venta no facturada. Sin CAE, sin QR fiscal y sin validez fiscal.",
+        ...descuentoPayload(resumen),
+        observaciones: [
+          "Comprobante interno generado automáticamente por una venta no facturada.",
+          observacionDescuento,
+          "Sin CAE, sin QR fiscal y sin validez fiscal.",
+        ].filter(Boolean).join(" "),
         emisor: emisorPdf.emisor,
       };
     },
@@ -2774,6 +2836,7 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
       isContado,
       fecha,
       resumen,
+      observacionDescuento,
     ]
   );
 
@@ -2920,7 +2983,10 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
           id_stock_variante: null,
           descripcion: String(r.detalleText || "").trim() || null,
           cantidad: Math.round(Number(r.cantidad) * 1000000) / 1000000,
-          precio: Math.round(Number(r.precio) * 100) / 100,
+          // Precio de lista (el que cargó el usuario). Con descuento general el
+          // backend recalcula y prorratea los netos; subtotal/iva/total viajan
+          // sólo para detectar una pantalla desactualizada.
+          precio: Math.round(Number(r.precioLista ?? r.precio) * 100) / 100,
           precio_lista: Math.round(Number(r.precioLista ?? r.precio) * 100) / 100,
           iva_pct: Math.round(Number(r.ivaPct) * 100) / 100,
           subtotal: Math.round(Number(r.subtotal) * 100) / 100,
@@ -2963,6 +3029,7 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
         idUsuario,
         items: payloads,
         medios_pago: isContado ? mediosPayload : [],
+        ...descuentoPayload(resumen),
         operacion_key: operacionFiscalKey || undefined,
         operacion_contexto: operacionFiscalContexto || undefined,
       });
@@ -3901,11 +3968,11 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
                               className="gm-cell-input gm-cell-input--right"
                               type="text"
                               inputMode="decimal"
-                              value={r.precioFocused ? r.precioDraft ?? "" : formatMoneyInputARS(r.precio)}
+                              value={r.precioFocused ? r.precioDraft ?? "" : formatMoneyInputARS(r.precioLista ?? r.precio)}
                               onFocus={(e) => {
                                 updateRow(r.id, {
                                   precioFocused: true,
-                                  precioDraft: formatEditableMoney(r.precio),
+                                  precioDraft: formatEditableMoney(r.precioLista ?? r.precio),
                                 });
                                 setTimeout(() => e.target.select(), 0);
                               }}
@@ -3929,7 +3996,7 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
                             <input
                               className="gm-cell-input gm-cell-input--right"
                               type="text"
-                              value={moneyARS(r.precio)}
+                              value={moneyARS(r.precioLista ?? r.precio)}
                               readOnly
                               tabIndex={-1}
                               style={{
@@ -3959,11 +4026,13 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
                           </select>
                         </div>
 
-                        <div className="gm-table-cell gm-table-cell--right gm-table-cell--mono gm-table-cell--soft">
-                          {moneyARS(r.ivaMonto)}
+                        {/* Presentación comercial: importes ANTES del descuento general.
+                            El descuento se informa una sola vez en el resumen. */}
+                        <div className="gm-table-cell gm-table-cell--right gm-table-cell--mono gm-table-cell--soft" data-testid="nv-row-iva">
+                          {moneyARS(r.ivaMontoBruto ?? r.ivaMonto)}
                         </div>
-                        <div className="gm-table-cell gm-table-cell--right gm-table-cell--mono gm-table-cell--total">
-                          {moneyARS(r.total)}
+                        <div className="gm-table-cell gm-table-cell--right gm-table-cell--mono gm-table-cell--total" data-testid="nv-row-total">
+                          {moneyARS(r.totalBruto ?? r.total)}
                         </div>
                         <div className="gm-table-cell gm-table-cell--center" id="delete_cell">
                           <button
@@ -4005,17 +4074,43 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
                     </button>
                     <div className="gm-foot-sep" />
                   </div>
-                  <div className="gm-summary-chips">
-                    <div className="gm-summary-chip gm-summary-chip--sub">
-                      <span>Subtotal</span>
-                      <b>{moneyARS(resumen.subtotal)}</b>
-                    </div>
-                    <div className="gm-summary-chip gm-summary-chip--iva">
-                      <span>IVA</span>
-                      <b>{moneyARS(resumen.iva)}</b>
-                    </div>
-                    <div className="gm-summary-chip gm-summary-chip--total">
-                      <span>Total</span>
+                  <div className="gm-summary-chips" data-testid="nv-summary">
+                    {resumen.descuento > 0 ? (
+                      <>
+                        <div className="gm-summary-chip gm-summary-chip--sub" data-testid="nv-summary-subtotal" title="Suma de los renglones con sus precios originales (IVA incluido).">
+                          <span>Total original</span>
+                          <b>{moneyARS(resumen.totalBruto)}</b>
+                        </div>
+                        <div className="gm-summary-chip dg-summary-chip--discount" data-testid="nv-summary-descuento">
+                          <span>
+                            Descuento general
+                            {resumen.descuentoTipo === DESCUENTO_PORCENTAJE
+                              ? ` (${formatPorcentaje(resumen.descuentoValor)} %)`
+                              : ` (≈ ${formatPorcentaje(resumen.descuentoPorcentajeEfectivo)} %)`}
+                          </span>
+                          <b>- {moneyARS(resumen.descuento)}</b>
+                        </div>
+                        {resumen.iva > 0 ? (
+                          <div className="gm-summary-chip gm-summary-chip--iva" data-testid="nv-summary-iva" title="IVA contenido en el total final, luego del descuento. Ya está incluido.">
+                            <span>IVA incluido</span>
+                            <b>{moneyARS(resumen.iva)}</b>
+                          </div>
+                        ) : null}
+                      </>
+                    ) : (
+                      <>
+                        <div className="gm-summary-chip gm-summary-chip--sub" data-testid="nv-summary-subtotal">
+                          <span>Subtotal</span>
+                          <b>{moneyARS(resumen.subtotal)}</b>
+                        </div>
+                        <div className="gm-summary-chip gm-summary-chip--iva" data-testid="nv-summary-iva">
+                          <span>IVA</span>
+                          <b>{moneyARS(resumen.iva)}</b>
+                        </div>
+                      </>
+                    )}
+                    <div className="gm-summary-chip gm-summary-chip--total" data-testid="nv-summary-total">
+                      <span>{resumen.descuento > 0 ? "Total final" : "Total"}</span>
                       <b>{moneyARS(resumen.total)}</b>
                     </div>
                   </div>
@@ -4106,6 +4201,21 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
                           Forma de venta *
                         </label>
                       </div>
+
+                      <DescuentoGeneralControl
+                        tipo={descuentoTipo}
+                        valor={descuentoValor}
+                        resumen={resumen}
+                        onTipoChange={(t) => {
+                          setDescuentoTipo(t);
+                          setDescuentoValor("");
+                        }}
+                        onValorChange={setDescuentoValor}
+                        onQuitar={() => setDescuentoValor("")}
+                        disabled={saving}
+                        money={moneyARS}
+                        contexto="la venta"
+                      />
 
                       {isContado && (
                         <PanelMediosPagoInlineVenta
@@ -4277,8 +4387,13 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
       <ModalClienteFiscalArca
         open={addUI.open && addUI.kind === "clientes"}
         dark={dark}
-        title="Agregar cliente por CUIT"
-        infoTitle="Alta rápida por CUIT"
+        title="Agregar cliente"
+        permitirAltaSimple
+        entidad="cliente"
+        nombreSimple={addUI.text}
+        onNombreSimpleChange={(value) => setAddUI((p) => ({ ...p, text: upperInput(value), fiscalError: "" }))}
+        onConfirmarAltaSimple={guardarClienteSimple}
+        infoTitle="Alta con CUIT"
         description={
           <>
             Ingresá el CUIT, consultamos ARCA, guardamos la razón social en <b>Clientes</b> y los datos completos en <b>Clientes fiscales</b>.

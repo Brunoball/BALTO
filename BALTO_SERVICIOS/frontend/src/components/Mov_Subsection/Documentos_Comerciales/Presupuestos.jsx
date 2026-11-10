@@ -37,6 +37,7 @@ import { useListas } from "../../../context/ListasContext.jsx";
 import { useDateRange } from "../../../context/DateRangeContext";
 import { readMovPerfCache, writeMovPerfCache, clearMovPerfCache } from "../_shared/performanceCache.js";
 import { saveVentaNoFacturadaPdf } from "../../../utils/VentaNoFacturadaPdfBuilder";
+import { descuentoDesdeMovimiento, itemsConBonificacion } from "../../../utils/descuentoGeneral.js";
 import { saveRemitoPdf } from "../../../utils/RemitoPdfBuilder";
 import { DOCUMENTOS_API, documentosRequest } from "./api/documentosComercialesApi.js";
 import useDocumentosToast from "./hooks/useDocumentosToast.js";
@@ -525,7 +526,9 @@ function normalizeClienteFiscalPdf(fiscalSource, clienteSource = {}, nombreFallb
 }
 
 function buildItemsFacturacionFromPresupuesto(items) {
-  return (Array.isArray(items) ? items : [])
+  // Con descuento general los importes guardados ya son netos; se agrega el
+  // precio original y la bonificación por renglón sólo para el comprobante.
+  return itemsConBonificacion((Array.isArray(items) ? items : [])
     .filter((it) => Number(it?.total ?? 0) > 0 || Number(it?.cantidad ?? 0) > 0)
     .map((it, idx) => ({
       id: it?.id_item ?? it?.id ?? idx + 1,
@@ -545,7 +548,8 @@ function buildItemsFacturacionFromPresupuesto(items) {
       iva_pct: Number(it?.iva_pct ?? 0),
       iva_monto: Number(it?.iva_monto ?? 0),
       total: Number(it?.total ?? 0),
-    }));
+      precio_lista: it?.precio_lista ?? null,
+    })));
 }
 
 function documentLabel(tipo) {
@@ -984,6 +988,7 @@ export default function Presupuestos() {
     const clienteFiscalPdf = normalizeClienteFiscalPdf(fiscal || {}, clienteSource, row?.cliente || movimiento?.cliente || "Cliente");
     const total = Number(movimiento?.monto_total ?? row?.monto_total ?? 0) || items.reduce((acc, it) => acc + Number(it.total || 0), 0);
     const fechaCbte = String(movimiento?.fecha || row?.fecha || todayISO()).slice(0, 10);
+    const descuento = descuentoDesdeMovimiento({ ...row, ...movimiento }, total);
 
     return {
       id_pago: null,
@@ -1007,6 +1012,10 @@ export default function Presupuestos() {
       total_ars: total,
       monto: total,
       importe: total,
+      descuento_tipo: descuento ? descuento.tipo : null,
+      descuento_valor: descuento ? descuento.valor : 0,
+      descuento_monto: descuento ? descuento.monto : 0,
+      total_bruto: descuento ? descuento.totalBruto : total,
       ids_movimiento: [Number(idVenta)].filter((x) => Number.isFinite(x) && x > 0),
       id_presupuesto_origen: row?.id_movimiento || movimiento?.id_movimiento || null,
       observaciones:

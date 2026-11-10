@@ -371,11 +371,44 @@ function normalizeItems(data) {
     .filter((it) => it.descripcion && it.cantidad > 0);
 }
 
+/**
+ * Descuento general del presupuesto. Los renglones del PDF muestran los
+ * precios ORIGINALES (documento comercial); el descuento se informa una sola
+ * vez en los totales. Neto, IVA y total final llegan ya calculados por el
+ * mismo algoritmo que guarda el backend (no se vuelve a restar nada).
+ */
+function getDescuentoPresupuesto(data, totalItems) {
+  const monto = Math.round(safeNumber(data?.descuento_monto, 0) * 100) / 100;
+  if (!(monto > 0)) return null;
+  const totalFinal = Math.round(safeNumber(data?.total_ars ?? data?.total, totalItems - monto) * 100) / 100;
+  let bruto = Math.round(safeNumber(data?.total_bruto, totalItems) * 100) / 100;
+  if (!(bruto > 0) || Math.abs(bruto - monto - totalFinal) > 0.02) bruto = Math.round((totalFinal + monto) * 100) / 100;
+  const esPct = String(data?.descuento_tipo || "").toUpperCase() === "PORCENTAJE";
+  const pct = esPct ? safeNumber(data?.descuento_valor, 0) : (bruto > 0 ? (monto / bruto) * 100 : 0);
+  return { monto, bruto, totalFinal, etiqueta: `${esPct ? "" : "equiv. "}${numEs(pct, 2)} %` };
+}
+
 function getTotales(items, data) {
   const subtotal = items.reduce((a, it) => a + safeNumber(it.subtotal, 0), 0);
   const iva = items.reduce((a, it) => a + safeNumber(it.ivaMonto, 0), 0);
   const total = items.reduce((a, it) => a + safeNumber(it.total, 0), 0);
   const tieneDesgloseServicio = items.some((it) => Boolean(it?.desgloseServicio));
+
+  const descuento = getDescuentoPresupuesto(data, total);
+  if (descuento) {
+    // Con descuento, neto e IVA son los de los renglones prorrateados (los mismos
+    // que guarda la base); si no llegan, se reparten proporcionalmente.
+    const ivaNeto = data?.iva_ars ?? data?.iva;
+    const iva = ivaNeto !== undefined && ivaNeto !== null
+      ? safeNumber(ivaNeto, 0)
+      : Math.round(items.reduce((a, it) => a + safeNumber(it.ivaMonto, 0), 0) * (descuento.totalFinal / (total || 1)) * 100) / 100;
+    return {
+      descuento,
+      subtotal: Math.round((descuento.totalFinal - iva) * 100) / 100,
+      iva,
+      total: descuento.totalFinal,
+    };
+  }
 
   // Cuando un servicio se presenta desglosado, cada material/insumo puede tener
   // una alícuota propia. En ese caso el PDF debe cerrar contra sus renglones
@@ -449,8 +482,12 @@ function drawLabelValue(doc, label, value, x, y, w, maxLines = 3) {
   return startY + Math.max(1, valueLines.length) * 9 + 5;
 }
 
-function presupuestoFooterRequiredHeight() {
-  return 92 + 8 + 158 + 42 + 10;
+function presupuestoTotalsHeight(data) {
+  return safeNumber(data?.descuento_monto, 0) > 0 ? 132 : 92;
+}
+
+function presupuestoFooterRequiredHeight(data = {}) {
+  return presupuestoTotalsHeight(data) + 8 + 158 + 42 + 10;
 }
 
 function drawOuter(doc) {
@@ -753,7 +790,7 @@ function drawTotalsAndFooter(doc, items, data, y) {
   const totals = getTotales(items, data);
   const condiciones = getCondicionesPresupuesto(data || {});
 
-  const totH = 92;
+  const totH = presupuestoTotalsHeight(data);
   const gap = 8;
   const termsH = 158;
   const footerH = 42;
@@ -777,13 +814,31 @@ function drawTotalsAndFooter(doc, items, data, y) {
   const labelX = sepX + 24;
   const valueX = B + innerW - 14;
   set(doc, "helvetica", "bold", 8.8);
-  text(doc, "Subtotal: $", labelX, totY + 28);
-  text(doc, moneyEs(totals.subtotal), valueX, totY + 28, { align: "right" });
-  text(doc, "IVA: $", labelX, totY + 50);
-  text(doc, moneyEs(totals.iva), valueX, totY + 50, { align: "right" });
-  set(doc, "helvetica", "bold", 10);
-  text(doc, "Importe Total: $", labelX, totY + 75);
-  text(doc, moneyEs(totals.total), valueX, totY + 75, { align: "right" });
+  if (totals.descuento) {
+    text(doc, "Total original: $", labelX, totY + 24);
+    text(doc, moneyEs(totals.descuento.bruto), valueX, totY + 24, { align: "right" });
+    text(doc, "Descuento general: $", labelX, totY + 44);
+    text(doc, `- ${moneyEs(totals.descuento.monto)}`, valueX, totY + 44, { align: "right" });
+    set(doc, "helvetica", "normal", 7.2);
+    text(doc, `(${totals.descuento.etiqueta} sobre el total original)`, labelX, totY + 53);
+    line(doc, labelX, totY + 59, valueX, totY + 59, 0.35);
+    set(doc, "helvetica", "bold", 8.8);
+    text(doc, "Subtotal neto: $", labelX, totY + 74);
+    text(doc, moneyEs(totals.subtotal), valueX, totY + 74, { align: "right" });
+    text(doc, "IVA: $", labelX, totY + 92);
+    text(doc, moneyEs(totals.iva), valueX, totY + 92, { align: "right" });
+    set(doc, "helvetica", "bold", 10);
+    text(doc, "Importe Total: $", labelX, totY + 116);
+    text(doc, moneyEs(totals.total), valueX, totY + 116, { align: "right" });
+  } else {
+    text(doc, "Subtotal: $", labelX, totY + 28);
+    text(doc, moneyEs(totals.subtotal), valueX, totY + 28, { align: "right" });
+    text(doc, "IVA: $", labelX, totY + 50);
+    text(doc, moneyEs(totals.iva), valueX, totY + 50, { align: "right" });
+    set(doc, "helvetica", "bold", 10);
+    text(doc, "Importe Total: $", labelX, totY + 75);
+    text(doc, moneyEs(totals.total), valueX, totY + 75, { align: "right" });
+  }
 
   rect(doc, B, termsY, innerW, termsH, 0.55);
   fillRect(doc, B, termsY, innerW, 22, 0.90);
@@ -837,7 +892,7 @@ export async function buildPresupuestoPdf({ data } = {}) {
   const tituloModelo = getTituloModeloPresupuesto(data || {});
   const H = doc.internal.pageSize.getHeight();
   const B = 10;
-  const bottomLimit = H - B - presupuestoFooterRequiredHeight();
+  const bottomLimit = H - B - presupuestoFooterRequiredHeight(data || {});
   let y;
   let cols = getColumns(doc);
   let tituloPendiente = true;
@@ -924,7 +979,7 @@ export async function buildPresupuestoPdf({ data } = {}) {
     if (title.drawn) y = title.y;
   }
 
-  if (y + presupuestoFooterRequiredHeight() > H - B) {
+  if (y + presupuestoFooterRequiredHeight(data || {}) > H - B) {
     doc.addPage();
     startPage();
     // También se identifica la hoja final si únicamente contiene los totales.

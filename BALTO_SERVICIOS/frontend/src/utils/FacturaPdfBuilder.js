@@ -228,6 +228,8 @@ function computeItems(fact, data, totalArs) {
         unidad: sanitizePdfText(it?.unidad || "serv."),
         precio: safeNumber(it?.precio_unitario ?? it?.precio, valueArs),
         subtotal: safeNumber(it?.subtotal ?? it?.total, valueArs),
+        // Descuento general prorrateado: bonificación incluida en el subtotal neto.
+        impBonif: Math.max(0, safeNumber(it?.impBonif ?? it?.imp_bonif, 0)),
       };
     })
     .filter(Boolean);
@@ -642,6 +644,21 @@ function drawLogoOrFallback(doc, logoDataUrl, em, leftX, headerY, splitX) {
   text(doc, clampToWidth(doc, em?.razon || "BALTO", maxTextW), leftX, logoBoxY + 28);
 }
 
+/**
+ * Descuento general informado en el comprobante. Los renglones ya llegan
+ * NETOS (descuento prorrateado), por lo que el total NUNCA se vuelve a reducir:
+ * sólo se informa total original y descuento incluido.
+ */
+function getDescuentoGeneral(data, total) {
+  const monto = Math.round(safeNumber(data?.descuento_monto, 0) * 100) / 100;
+  if (!(monto > 0)) return null;
+  let bruto = Math.round(safeNumber(data?.total_bruto, 0) * 100) / 100;
+  if (!(bruto > 0) || Math.abs(bruto - monto - total) > 0.02) bruto = Math.round((total + monto) * 100) / 100;
+  const esPct = String(data?.descuento_tipo || "").toUpperCase() === "PORCENTAJE";
+  const pct = esPct ? safeNumber(data?.descuento_valor, 0) : (bruto > 0 ? (monto / bruto) * 100 : 0);
+  return { monto, bruto, etiqueta: `${esPct ? "" : "equiv. "}${numEs(pct, 2)} %` };
+}
+
 async function drawBottomAnchored(doc, ctx, layout) {
   const { fact, data, forceTestAmount, testAmount } = ctx;
   const { W, H, B, innerW } = layout;
@@ -654,9 +671,10 @@ async function drawBottomAnchored(doc, ctx, layout) {
   const totalTest = safeNumber(testAmount, 1000);
   const total = toBool(forceTestAmount) ? totalTest : totalReal;
 
+  const descuento = toBool(forceTestAmount) ? null : getDescuentoGeneral(data, total);
   const footerH = 118;
   const gap = 18;
-  const totH = 78;
+  const totH = descuento ? 118 : 78;
   const footY = H - B - footerH;
   const totY = footY - gap - totH;
 
@@ -667,14 +685,25 @@ async function drawBottomAnchored(doc, ctx, layout) {
   const xLbl = xVal - 132;
 
   set(doc, "helvetica", "bold", 9);
-  text(doc, "Subtotal: $", xLbl, totY + 24, { align: "right" });
-  text(doc, moneyEs(total), xVal, totY + 24, { align: "right" });
+  let rowY = totY + 24;
+  if (descuento) {
+    text(doc, "Total original: $", xLbl, rowY, { align: "right" });
+    text(doc, moneyEs(descuento.bruto), xVal, rowY, { align: "right" });
+    rowY += 20;
+    text(doc, `Descuento general (${descuento.etiqueta}): $`, xLbl, rowY, { align: "right" });
+    text(doc, `- ${moneyEs(descuento.monto)}`, xVal, rowY, { align: "right" });
+    rowY += 20;
+  }
+  text(doc, descuento ? "Subtotal con descuento: $" : "Subtotal: $", xLbl, rowY, { align: "right" });
+  text(doc, moneyEs(total), xVal, rowY, { align: "right" });
+  rowY += 20;
 
-  text(doc, "Importe Otros Tributos: $", xLbl, totY + 44, { align: "right" });
-  text(doc, moneyEs(0), xVal, totY + 44, { align: "right" });
+  text(doc, "Importe Otros Tributos: $", xLbl, rowY, { align: "right" });
+  text(doc, moneyEs(0), xVal, rowY, { align: "right" });
+  rowY += 20;
 
-  text(doc, "Importe Total: $", xLbl, totY + 64, { align: "right" });
-  text(doc, moneyEs(total), xVal, totY + 64, { align: "right" });
+  text(doc, "Importe Total: $", xLbl, rowY, { align: "right" });
+  text(doc, moneyEs(total), xVal, rowY, { align: "right" });
 
   const qrSize = 92;
   const qrX = B + 10;
@@ -937,14 +966,27 @@ async function drawPage(doc, pageName, ctx) {
   const left = B;
   const right = B + innerW;
 
+  const totalReal = safeNumber(
+    fact?.imp_total ?? fact?.importe ?? data?.monto ?? data?.importe ?? 0,
+    0
+  );
+  const totalTest = safeNumber(testAmount, 1000);
+  const total = toBool(forceTestAmount) ? totalTest : totalReal;
+
+  const items = computeItems({ ...fact, importe: total }, data, total);
+  // Columna de bonificación sólo cuando la venta tiene descuento general:
+  // Cantidad × P. Unit. original − Bonif. = Subtotal neto del renglón.
+  const conBonif = !toBool(forceTestAmount) && items.some((it) => safeNumber(it.impBonif, 0) > 0.004);
+
   const wCodigo = 50;
-  const wCant = 70;
+  const wCant = conBonif ? 58 : 70;
   const wUM = 50;
   const wPU = 70;
+  const wBonif = conBonif ? 64 : 0;
   const wSubt = 75;
   const wProd = Math.max(
     10,
-    innerW - (wCodigo + wCant + wUM + wPU + wSubt)
+    innerW - (wCodigo + wCant + wUM + wPU + wBonif + wSubt)
   );
 
   const x0 = left;
@@ -953,6 +995,7 @@ async function drawPage(doc, pageName, ctx) {
   const x3 = x2 + wCant;
   const x4 = x3 + wUM;
   const x5 = x4 + wPU;
+  const x5b = x5 + wBonif;
   const x6 = right;
 
   const padL = 8;
@@ -964,16 +1007,8 @@ async function drawPage(doc, pageName, ctx) {
   text(doc, "Cantidad", x3 - padR, tblY + 15, { align: "right" });
   text(doc, "U. Medida", x4 - padR, tblY + 15, { align: "right" });
   text(doc, "Precio Unit.", x5 - padR, tblY + 15, { align: "right" });
+  if (conBonif) text(doc, "Bonif.", x5b - padR, tblY + 15, { align: "right" });
   text(doc, "Subtotal", x6 - padR, tblY + 15, { align: "right" });
-
-  const totalReal = safeNumber(
-    fact?.imp_total ?? fact?.importe ?? data?.monto ?? data?.importe ?? 0,
-    0
-  );
-  const totalTest = safeNumber(testAmount, 1000);
-  const total = toBool(forceTestAmount) ? totalTest : totalReal;
-
-  const items = computeItems({ ...fact, importe: total }, data, total);
 
   set(doc, "helvetica", "normal", 9);
   let y = tblY + headerRowH + 16;
@@ -998,6 +1033,7 @@ async function drawPage(doc, pageName, ctx) {
     text(doc, numEs(it.cantidad ?? 1, 2), x3 - padR, y, { align: "right" });
     text(doc, s(it.unidad || "serv."), x4 - padR, y, { align: "right" });
     text(doc, moneyEs(it.precio || 0), x5 - padR, y, { align: "right" });
+    if (conBonif) text(doc, safeNumber(it.impBonif, 0) > 0.004 ? `-${moneyEs(it.impBonif)}` : "", x5b - padR, y, { align: "right" });
     text(doc, moneyEs(it.subtotal || 0), x6 - padR, y, { align: "right" });
 
     y += blockH + 4;

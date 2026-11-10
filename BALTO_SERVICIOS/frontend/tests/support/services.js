@@ -2,6 +2,7 @@ import { expect } from '@playwright/test';
 import { authenticatedApi, expectApiSuccess } from './api.js';
 import { uniqueName } from './data.js';
 import { waitForBusyToFinish } from './ui.js';
+import { planCan } from './plan.js';
 
 function normalize(value) {
   return String(value || '').trim().toLocaleUpperCase('es-AR');
@@ -133,7 +134,19 @@ export async function createServiceArticleFixture(page, options = {}) {
     ? 'servicios_stock_producto_crear'
     : type === 'INSUMO' ? 'servicios_insumo_crear' : 'servicios_material_crear';
   const name = String(options.name || uniqueName(type)).trim();
-  const controlStock = type === 'PRODUCTO' ? true : options.controlStock !== false;
+  const planAllowsStock = await planCan(page, 'resources.stock');
+  // En Básico/Intermedio no se puede dar de alta stock físico. El valor
+  // por defecto del fixture debe reflejar el plan real y no asumir plan Full.
+  const controlStock = type === 'PRODUCTO'
+    ? true
+    : (options.controlStock === undefined ? planAllowsStock : options.controlStock === true);
+  if (controlStock && !planAllowsStock) {
+    throw new Error(`El fixture ${name} necesita resources.stock (plan Full); el tenant actual no lo permite.`);
+  }
+  // Aunque el escenario indique stock: 5/10/20, para un material sin control de
+  // existencias hay que enviar CERO. El backend rechaza correctamente cualquier
+  // stock_actual != 0 con FUNCIONALIDAD_NO_INCLUIDA_PLAN.
+  const stockInicial = controlStock ? Number(options.stock ?? 10) : 0;
 
   const body = expectApiSuccess(
     await serviciosApi(page, action, {
@@ -144,7 +157,7 @@ export async function createServiceArticleFixture(page, options = {}) {
         id_categoria: Number(options.categoryId || 0) || null,
         id_unidad: Number(unit.id_unidad),
         controla_stock: controlStock ? 1 : 0,
-        stock_actual: controlStock ? Number(options.stock ?? 10) : Number(options.stock ?? 0),
+        stock_actual: stockInicial,
         costo_unitario: Number(options.cost ?? 100),
         precio_venta: options.price === null ? null : Number(options.price ?? 150),
         iva_pct: Number(options.ivaPct ?? 21),
@@ -218,9 +231,24 @@ export async function expectServiceStock(page, name, expected, precision = 6) {
   return getServiceArticleByName(page, name, { activo: 'todos' });
 }
 
+/**
+ * Igual que expectServiceStock, pero sólo verifica existencias cuando el plan del
+ * tenant tiene control de stock (resources.stock). En los planes sin stock los
+ * artículos se registran sin existencias y no hay nada que medir.
+ */
+export async function expectServiceStockIfControlled(page, name, expected, precision = 6) {
+  if (!(await planCan(page, 'resources.stock'))) return null;
+  return expectServiceStock(page, name, expected, precision);
+}
+
 export async function getAnyServiceArticleByName(page, name, options = {}) {
-  const stock = await getServiceArticleByName(page, name, options);
-  if (stock) return stock;
+  // servicios_stock_listar exige stock.panel (Full). Consultarlo en Intermedio
+  // devuelve 403 incluso durante el cleanup de un material sin existencias.
+  // En ese plan buscar por los endpoints de materiales/insumos habilitados.
+  if (await planCan(page, 'stock.panel')) {
+    const stock = await getServiceArticleByName(page, name, options);
+    if (stock) return stock;
+  }
   const material = await getTypedServiceArticleByName(page, name, 'MATERIAL', options);
   if (material) return material;
   return getTypedServiceArticleByName(page, name, 'INSUMO', options);

@@ -515,6 +515,24 @@ export default function ModalDetalleMovimiento({
     originalItems.reduce((acc, item) => acc + toFiniteNumber(item?.total), 0)
   );
 
+  // Descuento general (ventas y presupuestos). Los renglones ya están NETOS:
+  // el total de la operación es la suma de renglones; el descuento sólo se informa.
+  const descuentoMonto = Math.max(0, firstFiniteNumber(row?.descuento_monto, row?.monto_descuento));
+  const descuentoTipo = String(row?.descuento_tipo || "").trim().toUpperCase();
+  const descuentoValor = Math.max(0, firstFiniteNumber(row?.descuento_valor));
+  const totalBrutoComercial = firstFiniteNumber(
+    row?.total_bruto,
+    row?.monto_total_bruto,
+    row?.total_sin_descuento,
+    originalTotal + descuentoMonto
+  );
+  const hasCommercialDiscount = descuentoMonto > 0.004 && totalBrutoComercial > 0;
+  const totalConDescuento = Math.max(0, Math.round((totalBrutoComercial - descuentoMonto) * 100) / 100);
+  const descuentoPctEquivalente = totalBrutoComercial > 0 ? (descuentoMonto / totalBrutoComercial) * 100 : 0;
+  const descuentoLabel = descuentoTipo === "PORCENTAJE"
+    ? `${formatNumber(descuentoValor)}% · ${moneyARS(descuentoMonto)}`
+    : `${moneyARS(descuentoMonto)} (≈ ${formatNumber(descuentoPctEquivalente)}%)`;
+
 
   const currentTotal = firstFiniteNumber(
     row?.monto_total_actual,
@@ -719,6 +737,10 @@ export default function ModalDetalleMovimiento({
 
             {estado ? <InfoPill label="Estado" value={estado} /> : null}
 
+            {hasCommercialDiscount ? (
+              <InfoPill label="Descuento general" value={descuentoLabel} strong />
+            ) : null}
+
             {hasCreditTrace ? (
               <InfoPill label="Estado documental" value="Ajustada por nota de crédito" strong />
             ) : null}
@@ -738,6 +760,28 @@ export default function ModalDetalleMovimiento({
             />
 
             <div className={unifiedItemsScroll ? "mdm-items-scroll" : "mdm-items-content"}>
+
+              {hasCommercialDiscount ? (
+                <div className="mdm-commercial-discount" role="note" aria-label="Detalle del descuento comercial">
+                  <div className="mdm-commercial-discount__heading">
+                    <div className="mdm-commercial-discount__title">
+                      <FontAwesomeIcon icon={faFileInvoiceDollar} aria-hidden="true" />
+                      <div>
+                        <strong>Descuento general aplicado</strong>
+                        <span>Los precios originales no se modificaron. Cada renglón se registra con el descuento ya prorrateado, tal como se cobra y se factura.</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mdm-commercial-discount__totals">
+                    <span>Total original <b>{moneyARS(totalBrutoComercial)}</b></span>
+                    <span className="is-discount">
+                      Descuento {descuentoTipo === "PORCENTAJE" ? `(${formatNumber(descuentoValor)}%)` : `(≈ ${formatNumber(descuentoPctEquivalente)}%)`}
+                      <b>- {moneyARS(descuentoMonto)}</b>
+                    </span>
+                    <span className="is-final">Total final <b>{moneyARS(totalConDescuento)}</b></span>
+                  </div>
+                </div>
+              ) : null}
 
               {hasCreditTrace ? (
               <div
@@ -936,7 +980,14 @@ export default function ModalDetalleMovimiento({
                               </span>
                             </span>
                             <span data-label="Cantidad">{formatNumber(item?.cantidad)}</span>
-                            <span data-label="Precio">{moneyARS(item?.precio)}</span>
+                            <span
+                              data-label="Precio"
+                              title={hasCommercialDiscount && item?.precio_lista != null && item?.precio_lista !== ""
+                                ? `Precio original. Unitario neto con descuento: ${moneyARS(item?.precio)}`
+                                : undefined}
+                            >
+                              {moneyARS(hasCommercialDiscount && item?.precio_lista != null && item?.precio_lista !== "" ? item.precio_lista : item?.precio)}
+                            </span>
                             <span data-label="IVA %">{formatNumber(item?.iva_pct)}%</span>
                             <span data-label="IVA">{moneyARS(item?.iva_monto)}</span>
                             <span className="is-strong" data-label="Total">{moneyARS(item?.total)}</span>
@@ -1014,11 +1065,11 @@ export default function ModalDetalleMovimiento({
                 <div className="mi-cr-foot-actions mdm-foot-actions" />
                 <div className="mi-cr-totals mdm-foot-totals">
                   <div className="mi-cr-totalLine mi-cr-totalLine--sub">
-                    <span>{hasCreditTrace ? "Subtotal original" : "Subtotal"}</span>
+                    <span>{hasCommercialDiscount ? "Subtotal con descuento" : hasCreditTrace ? "Subtotal original" : "Subtotal"}</span>
                     <b>{moneyARS(resumenItems.subtotal)}</b>
                   </div>
                   <div className="mi-cr-totalLine mi-cr-totalLine--iva">
-                    <span>{hasCreditTrace ? "IVA original" : "IVA"}</span>
+                    <span>{hasCommercialDiscount ? "IVA con descuento" : hasCreditTrace ? "IVA original" : "IVA"}</span>
                     <b>{moneyARS(resumenItems.iva)}</b>
                   </div>
                   {hasCreditTrace ? (

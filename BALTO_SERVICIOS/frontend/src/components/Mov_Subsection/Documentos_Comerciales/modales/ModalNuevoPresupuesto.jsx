@@ -18,6 +18,16 @@ import {
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 import { savePresupuestoPdf } from "../../../../utils/PresupuestoPdfBuilder";
+import DescuentoGeneralControl from "../../../Global/DescuentoGeneral/DescuentoGeneralControl.jsx";
+import {
+  DESCUENTO_PORCENTAJE,
+  calcularDescuentoGeneral,
+  calcularRenglonesBrutos,
+  calcularResumenOperacion,
+  descuentoPayload,
+  formatPorcentaje,
+  prorratearDescuentoGeneral,
+} from "../../../../utils/descuentoGeneral.js";
 import { usePlan } from "../../../../session/planCapabilities";
 import { DOCUMENTOS_API, documentosRequest } from "../api/documentosComercialesApi.js";
 
@@ -1048,6 +1058,9 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
   const [condiciones, setCondiciones] = useState(buildDefaultCondicionesPresupuesto);
   const [activeAccordion, setActiveAccordion] = useState(null);
   const [rows, setRows] = useState([buildEmptyRow()]);
+  // Descuento general del presupuesto (ajuste comercial sobre el total).
+  const [descuentoTipo, setDescuentoTipo] = useState(DESCUENTO_PORCENTAJE);
+  const [descuentoValor, setDescuentoValor] = useState("");
   const rowsContainerRef = useRef(null);
   const scrollToNewRow = useAutoScrollRows(rowsContainerRef, rows.length);
   const [presupuestoPersonalizado, setPresupuestoPersonalizado] = useState(false);
@@ -1061,6 +1074,7 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
   const [configFacturacion, setConfigFacturacion] = useState(null);
   const [addUI, setAddUI] = useState({
     open: false,
+    nombre: "",
     cuit: "",
     fiscalData: null,
     fiscalError: "",
@@ -1097,13 +1111,15 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
     setCondiciones(buildDefaultCondicionesPresupuesto());
     setActiveAccordion(null);
     setRows([buildEmptyRow()]);
+    setDescuentoTipo(DESCUENTO_PORCENTAJE);
+    setDescuentoValor("");
     setPresupuestoPersonalizado(false);
     setModeloOrigen(null);
     setGuardarComoModelo(false);
     setModeloNombre("");
     setModeloDescripcion("");
     setSaving(false);
-    setAddUI({ open: false, cuit: "", fiscalData: null, fiscalError: "", lookupLoading: false, saving: false });
+    setAddUI({ open: false, nombre: "", cuit: "", fiscalData: null, fiscalError: "", lookupLoading: false, saving: false });
     let alive = true;
     apiGetJson(`${API}?action=config_facturacion_get`)
       .then((data) => {
@@ -1185,7 +1201,7 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
   }, []);
 
   const resetAddUIState = useCallback(() => {
-    setAddUI({ open: false, cuit: "", fiscalData: null, fiscalError: "", lookupLoading: false, saving: false });
+    setAddUI({ open: false, nombre: "", cuit: "", fiscalData: null, fiscalError: "", lookupLoading: false, saving: false });
   }, []);
 
   const registrarClienteLocal = useCallback((clienteRaw, fiscalRaw = null) => {
@@ -1213,10 +1229,45 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
     return { ...item, cliente_fiscal: fiscalRaw || null };
   }, []);
 
+  // Alta rápida desde Presupuestos, sin CUIT y sin navegar a Cuentas Corrientes.
+  const guardarNuevoClienteSimple = useCallback(async () => {
+    if (addUI.saving || addUI.lookupLoading) return;
+    const nombre = upperInput(addUI.nombre || "").trim().replace(/\s+/g, " ");
+    if (!nombre || nombre.length > 180) {
+      setAddUI((prev) => ({ ...prev, fiscalError: "Ingresá un nombre válido (máximo 180 caracteres)." }));
+      return;
+    }
+
+    const existente = clientesList.find((c) => normalizeText(getClienteNombre(c)) === normalizeText(nombre) && Number(getClienteId(c)) > 0);
+    if (existente) {
+      registrarClienteLocal(existente);
+      resetAddUIState();
+      onToast?.("exito", `El cliente ya existía. Se seleccionó "${getClienteNombre(existente)}".`, 3000);
+      return;
+    }
+
+    setAddUI((prev) => ({ ...prev, saving: true, fiscalError: "" }));
+    try {
+      const { idUsuario } = getAuditUserPayload();
+      const saved = await apiPostJson(`${API}?action=catalogo_crear`, { catalogo: "clientes", nombre, idUsuario });
+      const item = saved?.item || saved?.data?.item || {};
+      const id = Number(getClienteId(item) || item.id || 0);
+      if (!saved?.exito || id <= 0) throw new Error(saved?.mensaje || "No se pudo crear el cliente.");
+      const cliente = registrarClienteLocal({ ...item, id_cliente: id, nombre: item.nombre || nombre, activo: 1 });
+      resetAddUIState();
+      onToast?.("exito", `Cliente "${cliente.nombre}" guardado y seleccionado.`, 3200);
+    } catch (error) {
+      const mensaje = error?.message || "No se pudo guardar el cliente.";
+      setAddUI((prev) => ({ ...prev, saving: false, fiscalError: mensaje }));
+      onToast?.("error", mensaje, 4200);
+    }
+  }, [API, addUI, clientesList, registrarClienteLocal, resetAddUIState, onToast]);
+
   const startAddCliente = useCallback(() => {
     if (saving) return;
     setAddUI({
       open: true,
+      nombre: cliInput || "",
       cuit: "",
       fiscalData: null,
       fiscalError: "",
@@ -1466,17 +1517,37 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
     e.currentTarget.blur();
   }, [commitPrecioInput]);
 
-  const computedRows = useMemo(() => {
-    return rows.map((r) => {
-      const cantidad = safeNumber(r.cantidad);
-      const precio = safeNumber(r.precio);
-      const ivaPct = safeNumber(r.ivaPct);
-      const subtotal = cantidad * precio;
-      const iva_monto = subtotal * ivaPct / 100;
-      const total = subtotal + iva_monto;
-      return { ...r, cantidadDigitada: r.cantidad, cantidad, precio, ivaPct, subtotal, iva_monto, total };
-    });
+  // Mismo cálculo que la venta y que el backend (src/utils/descuentoGeneral.js):
+  // importes redondeados por renglón como los guarda la base. Cada fila
+  // conserva su versión comercial (…Bruto: precios originales, la que se ve en
+  // la grilla y en el PDF) y la neta con el descuento general prorrateado (la
+  // que se persiste y se copia a la venta al convertir).
+  const rowsBaseCalc = useMemo(() => {
+    const base = rows.map((r) => ({
+      ...r,
+      cantidadDigitada: r.cantidad,
+      cantidad: safeNumber(r.cantidad),
+      precio: safeNumber(r.precio),
+      ivaPct: safeNumber(r.ivaPct),
+    }));
+    return calcularRenglonesBrutos(base, () => true);
   }, [rows]);
+
+  const descuentoResumen = useMemo(
+    () => calcularDescuentoGeneral(rowsBaseCalc, descuentoTipo, descuentoValor),
+    [rowsBaseCalc, descuentoTipo, descuentoValor]
+  );
+
+  const computedRows = useMemo(
+    () => prorratearDescuentoGeneral(rowsBaseCalc, descuentoResumen).map((r) => ({
+      ...r,
+      // Netos (persistidos): subtotal / iva_monto / total.
+      iva_monto: r.ivaMonto,
+      // El precio unitario que ve y edita el usuario es siempre el original.
+      precio: r.precioLista,
+    })),
+    [rowsBaseCalc, descuentoResumen]
+  );
 
   const openFechaPicker = useCallback(() => {
     if (saving) return;
@@ -1515,16 +1586,18 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [open, requestClose, addUI.open, modelsOpen]);
 
-  const totals = useMemo(() => {
-    return computedRows.reduce(
-      (acc, r) => ({
-        subtotal: acc.subtotal + safeNumber(r.subtotal),
-        iva: acc.iva + safeNumber(r.iva_monto),
-        total: acc.total + safeNumber(r.total),
-      }),
-      { subtotal: 0, iva: 0, total: 0 }
-    );
-  }, [computedRows]);
+  const resumenDescuento = useMemo(
+    () => calcularResumenOperacion(computedRows, descuentoResumen),
+    [computedRows, descuentoResumen]
+  );
+
+  // Totales FINALES (netos del descuento): son los que se guardan, se muestran
+  // como total del presupuesto y se mantienen al convertirlo en venta.
+  const totals = useMemo(() => ({
+    subtotal: resumenDescuento.subtotal,
+    iva: resumenDescuento.iva,
+    total: resumenDescuento.total,
+  }), [resumenDescuento]);
 
   const condicionesPreview = useMemo(() => normalizeCondicionesPresupuesto(condiciones, fecha), [condiciones, fecha]);
 
@@ -1539,6 +1612,7 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
     }
     const validItems = computedRows.filter((r) => safeStr(r.detalleText) && r.cantidad > 0 && r.precio > 0);
     if (!validItems.length) return "Agregá al menos un producto o servicio con cantidad y precio.";
+    if (resumenDescuento.descuentoError) return `Descuento general: ${resumenDescuento.descuentoError}`;
     if (guardarNuevoModelo && !safeStr(modeloNombre)) return "Ingresá un nombre para guardar el presupuesto como modelo.";
 
     const problems = [];
@@ -1552,7 +1626,7 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
       if (!(r.precio > 0)) problems.push(`Fila ${idx + 1}: el precio debe ser mayor a 0.`);
     });
     return problems[0] || "";
-  }, [clienteSel, fecha, computedRows, condiciones.validezDias, guardarNuevoModelo, modeloNombre]);
+  }, [clienteSel, fecha, computedRows, condiciones.validezDias, guardarNuevoModelo, modeloNombre, resumenDescuento.descuentoError]);
 
   const buildItemsPayload = useCallback(() => {
     return computedRows
@@ -1570,8 +1644,11 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
         descripcion: upperStr(r.detalleText),
         detalle: upperStr(r.detalleText),
         cantidad: r.cantidad,
-        precio: r.precio,
-        precio_unitario: r.precio,
+        // Precio original. Con descuento general el backend recalcula y prorratea;
+        // subtotal / iva_monto / total (netos) sólo verifican que la pantalla esté al día.
+        precio: r.precioLista,
+        precio_unitario: r.precioLista,
+        precio_lista: r.precioLista,
         iva_pct: r.ivaPct,
         subtotal: r.subtotal,
         iva_monto: r.iva_monto,
@@ -1588,10 +1665,17 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
   // cambiar movimientos, stock ni conversión a venta. Sólo el PDF expande un servicio
   // en materiales/insumos + mano de obra y distribuye su importe comercial según la
   // composición de costos. La suma del desglose sigue siendo exactamente la del servicio.
+  // Los renglones del PDF muestran los importes ORIGINALES (documento
+  // comercial). El descuento general se informa una sola vez en los totales.
   const buildPdfItemsPayload = useCallback(() => {
     return computedRows
       .filter((r) => safeStr(r.detalleText) && r.cantidad > 0 && r.precio > 0)
-      .flatMap((r) => buildPdfItemsForBudgetRow(r));
+      .flatMap((r) => buildPdfItemsForBudgetRow({
+        ...r,
+        subtotal: r.subtotalBruto,
+        iva_monto: r.ivaMontoBruto,
+        total: r.totalBruto,
+      }));
   }, [computedRows]);
 
   const uploadPresupuestoPdf = useCallback(async ({ idMovimiento, payload, items }) => {
@@ -1629,6 +1713,7 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
       subtotal_ars: totals.subtotal,
       iva_ars: totals.iva,
       total_ars: totals.total,
+      ...descuentoPayload(resumenDescuento),
       observaciones: payload?.observaciones || observaciones,
       condiciones_presupuesto: payload?.condiciones_presupuesto || normalizeCondicionesPresupuesto(condiciones, fecha),
       validez_dias: payload?.validez_dias,
@@ -1664,6 +1749,7 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
       fecha_cbte: fecha.replace(/-/g, ""),
       fecha_cbte_iso: fecha,
       monto_ars: totals.total,
+      ...descuentoPayload(resumenDescuento),
       condiciones_presupuesto: pdfData.condiciones_presupuesto,
       validez_dias: pdfData.validez_dias,
       fecha_validez: pdfData.fecha_validez,
@@ -1678,7 +1764,7 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
     }));
 
     return await apiPostForm(`${API}?action=ventas_comprobantes_vincular_movimiento`, fd);
-  }, [API, clienteSel, cliInput, configFacturacion, fecha, observaciones, condiciones, totals]);
+  }, [API, clienteSel, cliInput, configFacturacion, fecha, observaciones, condiciones, totals, resumenDescuento]);
 
   const handleSubmit = useCallback(async (e) => {
     e.preventDefault();
@@ -1706,6 +1792,7 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
       iva_total: totals.iva,
       total: totals.total,
       monto_total: totals.total,
+      ...descuentoPayload(resumenDescuento),
       observaciones: condicionesPayload.notas || observaciones,
       validez_dias: condicionesPayload.validez_dias,
       fecha_validez: condicionesPayload.fecha_validez,
@@ -1748,7 +1835,7 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
     } finally {
       setSaving(false);
     }
-  }, [API, buildItemsPayload, buildPdfItemsPayload, clienteSel, cliInput, fecha, observaciones, condiciones, guardarNuevoModelo, modeloDescripcion, modeloNombre, modeloOrigen, onSaved, onToast, presupuestoPersonalizado, totals, uploadPresupuestoPdf, validate]);
+  }, [API, buildItemsPayload, buildPdfItemsPayload, clienteSel, cliInput, fecha, observaciones, condiciones, guardarNuevoModelo, modeloDescripcion, modeloNombre, modeloOrigen, onSaved, onToast, presupuestoPersonalizado, totals, resumenDescuento, uploadPresupuestoPdf, validate]);
 
   if (!open) return null;
 
@@ -1943,11 +2030,12 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
                       </select>
                     </div>
 
-                    <div className="gm-table-cell gm-table-cell--right gm-table-cell--mono gm-table-cell--soft">
-                      {moneyARS(r.iva_monto)}
+                    {/* Importes originales; el descuento general se informa en el resumen. */}
+                    <div className="gm-table-cell gm-table-cell--right gm-table-cell--mono gm-table-cell--soft" data-testid="np-row-iva">
+                      {moneyARS(r.ivaMontoBruto ?? r.iva_monto)}
                     </div>
-                    <div className="gm-table-cell gm-table-cell--right gm-table-cell--mono gm-table-cell--total">
-                      {moneyARS(r.total)}
+                    <div className="gm-table-cell gm-table-cell--right gm-table-cell--mono gm-table-cell--total" data-testid="np-row-total">
+                      {moneyARS(r.totalBruto ?? r.total)}
                     </div>
                     <div className="gm-table-cell gm-table-cell--center" id="delete_cell">
                       <button
@@ -2112,17 +2200,43 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
                   <div className="gm-foot-sep" />
                 </div>
 
-                <div className="gm-summary-chips">
-                  <div className="gm-summary-chip gm-summary-chip--sub">
-                    <span>Subtotal</span>
-                    <b>{moneyARS(totals.subtotal)}</b>
-                  </div>
-                  <div className="gm-summary-chip gm-summary-chip--iva">
-                    <span>IVA</span>
-                    <b>{moneyARS(totals.iva)}</b>
-                  </div>
-                  <div className="gm-summary-chip gm-summary-chip--total">
-                    <span>Total</span>
+                <div className="gm-summary-chips" data-testid="np-summary">
+                  {resumenDescuento.descuento > 0 ? (
+                    <>
+                      <div className="gm-summary-chip gm-summary-chip--sub" data-testid="np-summary-subtotal" title="Suma de los renglones con sus precios originales (IVA incluido).">
+                        <span>Total original</span>
+                        <b>{moneyARS(resumenDescuento.totalBruto)}</b>
+                      </div>
+                      <div className="gm-summary-chip dg-summary-chip--discount" data-testid="np-summary-descuento">
+                        <span>
+                          Descuento general
+                          {resumenDescuento.descuentoTipo === DESCUENTO_PORCENTAJE
+                            ? ` (${formatPorcentaje(resumenDescuento.descuentoValor)} %)`
+                            : ` (≈ ${formatPorcentaje(resumenDescuento.descuentoPorcentajeEfectivo)} %)`}
+                        </span>
+                        <b>- {moneyARS(resumenDescuento.descuento)}</b>
+                      </div>
+                      {totals.iva > 0 ? (
+                        <div className="gm-summary-chip gm-summary-chip--iva" data-testid="np-summary-iva" title="IVA contenido en el total final, luego del descuento.">
+                          <span>IVA incluido</span>
+                          <b>{moneyARS(totals.iva)}</b>
+                        </div>
+                      ) : null}
+                    </>
+                  ) : (
+                    <>
+                      <div className="gm-summary-chip gm-summary-chip--sub" data-testid="np-summary-subtotal">
+                        <span>Subtotal</span>
+                        <b>{moneyARS(totals.subtotal)}</b>
+                      </div>
+                      <div className="gm-summary-chip gm-summary-chip--iva" data-testid="np-summary-iva">
+                        <span>IVA</span>
+                        <b>{moneyARS(totals.iva)}</b>
+                      </div>
+                    </>
+                  )}
+                  <div className="gm-summary-chip gm-summary-chip--total" data-testid="np-summary-total">
+                    <span>{resumenDescuento.descuento > 0 ? "Total final" : "Total"}</span>
                     <b>{moneyARS(totals.total)}</b>
                   </div>
                 </div>
@@ -2179,6 +2293,21 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
                       />
                       <span className="gm-label dc-label--autocomplete">Cliente *</span>
                     </div>
+
+                    <DescuentoGeneralControl
+                      tipo={descuentoTipo}
+                      valor={descuentoValor}
+                      resumen={resumenDescuento}
+                      onTipoChange={(t) => {
+                        setDescuentoTipo(t);
+                        setDescuentoValor("");
+                      }}
+                      onValorChange={setDescuentoValor}
+                      onQuitar={() => setDescuentoValor("")}
+                      disabled={saving}
+                      money={moneyARS}
+                      contexto="el presupuesto"
+                    />
 
 
                     {!tieneModeloCargado ? (
@@ -2260,8 +2389,13 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
       <ModalClienteFiscalArca
         open={addUI.open}
         dark={dark}
-        title="Agregar cliente por CUIT"
-        infoTitle="Alta rápida por CUIT"
+        title="Agregar cliente"
+        permitirAltaSimple
+        entidad="cliente"
+        nombreSimple={addUI.nombre || ""}
+        onNombreSimpleChange={(value) => setAddUI((prev) => ({ ...prev, nombre: upperInput(value), fiscalError: "" }))}
+        onConfirmarAltaSimple={guardarNuevoClienteSimple}
+        infoTitle="Alta con CUIT"
         description={
           <>
             Ingresá el CUIT, consultamos ARCA, guardamos la razón social en <b>Clientes</b> y los datos completos en <b>Clientes fiscales</b>.

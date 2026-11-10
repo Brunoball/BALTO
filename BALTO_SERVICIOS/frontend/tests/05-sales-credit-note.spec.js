@@ -24,7 +24,8 @@ import {
   deleteUnusedStockProduct,
   openMovementDetail,
 } from './support/flows.js';
-import { expectServiceStock } from './support/services.js';
+import { expectServiceStockIfControlled as expectServiceStock } from './support/services.js';
+import { planCan } from './support/plan.js';
 
 const CREDIT_NOTE_MOTIVES = [
   'DEVOLUCION_MERCADERIA',
@@ -56,6 +57,7 @@ function parseArsInput(value) {
 
 test('@crud @critical venta: contado asigna exactamente el total vigente al medio de pago', async ({ page }, testInfo) => {
   await requireMutations(test, page);
+  test.skip(!(await planCan(page, 'resources.sell')), 'El plan del tenant no permite vender materiales/insumos.');
   test.setTimeout(4 * 60_000);
   const diagnostics = installDiagnostics(page);
   const productName = uniqueName('VENTA-CONTADO');
@@ -83,10 +85,12 @@ test('@crud @critical venta: contado asigna exactamente el total vigente al medi
   const typeField = dialog.locator('.gm-field').filter({ hasText: 'Forma de venta' }).first();
   await selectFirstNonEmpty(typeField.locator('select'), /CONTADO/i);
 
-  // BALTO Servicios actual ya no expone el descuento comercial heredado de
-  // Comercio. El medio de pago debe cubrir exactamente el total vigente.
-  await expect(dialog.getByLabel('Tipo de descuento')).toHaveCount(0);
-  await expect(dialog.getByLabel('Valor del descuento')).toHaveCount(0);
+  // El descuento general está disponible pero es opcional: sin valor cargado la
+  // venta conserva su total y el medio de pago debe cubrir exactamente ese total.
+  // (Los casos con descuento viven en 48-descuentos-generales.spec.js.)
+  await expect(dialog.getByLabel('Tipo de descuento')).toBeVisible();
+  await expect(dialog.getByLabel('Valor del descuento')).toHaveValue('');
+  await expect(dialog.getByTestId('descuento-general')).toContainText(/Sin descuento aplicado/i);
 
   await fillPayment(dialog);
   const amountInput = dialog.locator('.gm-payment-row--amount input').first();
@@ -111,6 +115,7 @@ test('@crud @critical venta: contado asigna exactamente el total vigente al medi
   expect(body?.exito !== false && body?.success !== false, body?.mensaje || body?.message).toBeTruthy();
   expect(Number(requestPayload?.total_bruto ?? requestPayload?.total ?? 1000)).toBeCloseTo(1000, 2);
   expect(Number(requestPayload?.descuento_monto || 0)).toBeCloseTo(0, 2);
+  expect(requestPayload?.descuento_tipo ?? null).toBeNull();
   expect(Number(result?.monto_total ?? result?.total ?? 0)).toBeCloseTo(1000, 2);
   expect(Number(result?.total_pagado ?? 0)).toBeCloseTo(1000, 2);
 
@@ -143,6 +148,7 @@ test('@crud @critical venta: descuenta stock y NC interna reingresa stock', asyn
   // verificación final aunque todas las mutaciones principales ya habían pasado.
   test.setTimeout(4 * 60_000);
   await requireMutations(test, page);
+  test.skip(!(await planCan(page, 'resources.sell')), 'El plan del tenant no permite vender materiales/insumos.');
   const diagnostics = installDiagnostics(page);
   const productName = uniqueName('VENTA-NC');
 
@@ -198,6 +204,7 @@ test('@crud @critical venta: descuenta stock y NC interna reingresa stock', asyn
 test('@crud @critical NC venta: repetir la misma petición no duplica nota ni stock', async ({ page }, testInfo) => {
   test.setTimeout(4 * 60_000);
   await requireMutations(test, page);
+  test.skip(!(await planCan(page, 'resources.sell')), 'El plan del tenant no permite vender materiales/insumos.');
   const diagnostics = installDiagnostics(page);
   const productName = uniqueName('VENTA-NC-IDEMPOTENCIA');
 
@@ -273,6 +280,7 @@ test('@crud @critical NC venta: repetir la misma petición no duplica nota ni st
 
 test('@crud @critical NC venta: ejecuta realmente los cuatro motivos actuales y valida su impacto de stock', async ({ page }, testInfo) => {
   await requireMutations(test, page);
+  test.skip(!(await planCan(page, 'resources.sell')), 'El plan del tenant no permite vender materiales/insumos.');
   test.setTimeout(9 * 60_000);
   const diagnostics = installDiagnostics(page);
   const productName = uniqueName('VENTA-NC-CUATRO-MOTIVOS');

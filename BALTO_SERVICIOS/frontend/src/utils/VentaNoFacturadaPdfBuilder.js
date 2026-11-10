@@ -527,6 +527,8 @@ function normalizeItems(data = {}) {
         unidad: sanitizePdfText(it?.unidad || "u"),
         precio: safeNumber(precio, 0),
         subtotal: safeNumber(subtotal, 0),
+        // Descuento general prorrateado: bonificación ya incluida en el subtotal neto.
+        impBonif: Math.max(0, safeNumber(it?.impBonif ?? it?.imp_bonif, 0)),
       };
     })
     .filter((it) => it && safeNumber(it.subtotal, 0) > 0);
@@ -550,12 +552,33 @@ function normalizeItems(data = {}) {
 function getTotales(items, data = {}) {
   const subtotalItems = items.reduce((acc, it) => acc + safeNumber(it.subtotal, 0), 0);
   const total = safeNumber(data?.total_ars ?? data?.monto ?? data?.importe, subtotalItems);
+  const totalFinal = Number.isFinite(total) && total > 0 ? total : subtotalItems;
+
+  // Descuento general: los renglones ya están netos. Se informa, NO se resta otra vez.
+  let descuento = null;
+  const monto = Math.round(safeNumber(data?.descuento_monto, 0) * 100) / 100;
+  if (monto > 0) {
+    let bruto = Math.round(safeNumber(data?.total_bruto, 0) * 100) / 100;
+    if (!(bruto > 0) || Math.abs(bruto - monto - totalFinal) > 0.02) bruto = Math.round((totalFinal + monto) * 100) / 100;
+    const esPct = String(data?.descuento_tipo || "").toUpperCase() === "PORCENTAJE";
+    const pct = esPct ? safeNumber(data?.descuento_valor, 0) : (bruto > 0 ? (monto / bruto) * 100 : 0);
+    descuento = { monto, bruto, etiqueta: `${esPct ? "" : "equiv. "}${numEs(pct, 2)} %` };
+  }
 
   return {
     subtotal: subtotalItems,
     otrosTributos: 0,
-    total: Number.isFinite(total) && total > 0 ? total : subtotalItems,
+    total: totalFinal,
+    descuento,
   };
+}
+
+function hasBonif(items) {
+  return (Array.isArray(items) ? items : []).some((it) => safeNumber(it?.impBonif, 0) > 0.004);
+}
+
+function totalsHeight(data = {}) {
+  return safeNumber(data?.descuento_monto, 0) > 0 ? 128 : 88;
 }
 
 function drawLogoOrFallback(doc, logoDataUrl, em, boxX, boxY, boxW) {
@@ -717,7 +740,7 @@ function drawHeader(doc, data, logoDataUrl) {
 
   return recY + recH;
 }
-function getFacturaTableColumns(doc) {
+function getFacturaTableColumns(doc, conBonif = false) {
   const W = doc.internal.pageSize.getWidth();
   const B = 10;
   const innerW = W - B * 2;
@@ -725,13 +748,14 @@ function getFacturaTableColumns(doc) {
   const right = B + innerW;
 
   const wCodigo = 50;
-  const wCant = 70;
+  const wCant = conBonif ? 58 : 70;
   const wUM = 50;
   const wPU = 70;
+  const wBonif = conBonif ? 64 : 0;
   const wSubt = 75;
   const wProd = Math.max(
     10,
-    innerW - (wCodigo + wCant + wUM + wPU + wSubt)
+    innerW - (wCodigo + wCant + wUM + wPU + wBonif + wSubt)
   );
 
   const x0 = left;
@@ -740,6 +764,7 @@ function getFacturaTableColumns(doc) {
   const x3 = x2 + wCant;
   const x4 = x3 + wUM;
   const x5 = x4 + wPU;
+  const x5b = x5 + wBonif;
   const x6 = right;
 
   return {
@@ -749,18 +774,20 @@ function getFacturaTableColumns(doc) {
     x3,
     x4,
     x5,
+    x5b,
     x6,
+    conBonif,
     padL: 8,
     padR: 8,
   };
 }
 
-function drawTableHeader(doc, y) {
+function drawTableHeader(doc, y, conBonif = false) {
   const W = doc.internal.pageSize.getWidth();
   const B = 10;
   const innerW = W - B * 2;
   const headerRowH = 22;
-  const c = getFacturaTableColumns(doc);
+  const c = getFacturaTableColumns(doc, conBonif);
 
   fillRect(doc, B, y, innerW, headerRowH, 0.84);
   rect(doc, B, y, innerW, headerRowH, 0.55);
@@ -771,6 +798,7 @@ function drawTableHeader(doc, y) {
   text(doc, "Cantidad", c.x3 - c.padR, y + 15, { align: "right" });
   text(doc, "U. Medida", c.x4 - c.padR, y + 15, { align: "right" });
   text(doc, "Precio Unit.", c.x5 - c.padR, y + 15, { align: "right" });
+  if (c.conBonif) text(doc, "Bonif.", c.x5b - c.padR, y + 15, { align: "right" });
   text(doc, "Subtotal", c.x6 - c.padR, y + 15, { align: "right" });
 
   return {
@@ -807,6 +835,11 @@ function drawTableRow(doc, item, idx, cols, y, maxBodyY) {
   text(doc, moneyEs(item.precio || 0), cols.x5 - cols.padR, y, {
     align: "right",
   });
+  if (cols.conBonif && safeNumber(item.impBonif, 0) > 0.004) {
+    text(doc, `-${moneyEs(item.impBonif)}`, cols.x5b - cols.padR, y, {
+      align: "right",
+    });
+  }
   text(doc, moneyEs(item.subtotal || 0), cols.x6 - cols.padR, y, {
     align: "right",
   });
@@ -824,7 +857,7 @@ function drawTotalsAndFooter(doc, items, data, y) {
   const innerW = W - B * 2;
   const totals = getTotales(items, data);
 
-  const totH = 88;
+  const totH = totalsHeight(data);
   const footerH = 62;
   const footerTopY = H - B - footerH;
   const minTotY = footerTopY - totH;
@@ -856,15 +889,29 @@ function drawTotalsAndFooter(doc, items, data, y) {
   const valueX = B + innerW - 14;
 
   set(doc, "helvetica", "bold", 8.8);
-  text(doc, "Subtotal: $", labelX, totY + 26);
-  text(doc, moneyEs(totals.subtotal), valueX, totY + 26, { align: "right" });
+  let rowY = totY + 26;
+  if (totals.descuento) {
+    text(doc, "Total original: $", labelX, rowY);
+    text(doc, moneyEs(totals.descuento.bruto), valueX, rowY, { align: "right" });
+    rowY += 20;
+    text(doc, "Descuento general: $", labelX, rowY);
+    text(doc, `- ${moneyEs(totals.descuento.monto)}`, valueX, rowY, { align: "right" });
+    set(doc, "helvetica", "normal", 7.2);
+    text(doc, `(${totals.descuento.etiqueta} sobre el total original)`, labelX, rowY + 9);
+    set(doc, "helvetica", "bold", 8.8);
+    rowY += 24;
+  }
+  text(doc, totals.descuento ? "Subtotal c/ desc.: $" : "Subtotal: $", labelX, rowY);
+  text(doc, moneyEs(totals.subtotal), valueX, rowY, { align: "right" });
+  rowY += totals.descuento ? 18 : 22;
 
-  text(doc, "Importe Otros Tributos: $", labelX, totY + 48);
-  text(doc, moneyEs(totals.otrosTributos), valueX, totY + 48, { align: "right" });
+  text(doc, "Importe Otros Tributos: $", labelX, rowY);
+  text(doc, moneyEs(totals.otrosTributos), valueX, rowY, { align: "right" });
+  rowY += totals.descuento ? 22 : 24;
 
   set(doc, "helvetica", "bold", 9.8);
-  text(doc, "Importe Total: $", labelX, totY + 72);
-  text(doc, moneyEs(totals.total), valueX, totY + 72, { align: "right" });
+  text(doc, "Importe Total: $", labelX, rowY);
+  text(doc, moneyEs(totals.total), valueX, rowY, { align: "right" });
 
   line(doc, B, footerTopY, W - B, footerTopY, 0.45);
 
@@ -911,7 +958,8 @@ export async function buildVentaNoFacturadaPdf({ data } = {}) {
 
   const H = doc.internal.pageSize.getHeight();
   const footerH = 62;
-  const totalsH = 88;
+  const totalsH = totalsHeight(data || {});
+  const conBonif = hasBonif(items);
   const B = 10;
   const bottomLimit = H - B - footerH - totalsH - 20;
 
@@ -924,7 +972,7 @@ export async function buildVentaNoFacturadaPdf({ data } = {}) {
     y = drawHeader(doc, data || {}, logoDataUrl);
     y += 14;
 
-    const header = drawTableHeader(doc, y);
+    const header = drawTableHeader(doc, y, conBonif);
     y = header.nextY;
     cols = header.cols;
   };
