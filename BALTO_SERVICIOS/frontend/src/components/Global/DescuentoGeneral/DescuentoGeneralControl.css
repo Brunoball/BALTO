@@ -114,7 +114,7 @@
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
-  gap: 5px 12px;
+  gap: 5px 10px;
   margin: 0;
   padding-top: 7px;
   border-top: 1px dashed rgba(180, 83, 9, .23);
@@ -145,8 +145,8 @@
 }
 
 .dg-box__summary .is-final dd {
-  color: #0f5132;
-  font-size: 11px;
+  color: #44403c;
+  font-size: 10px;
 }
 
 .dg-summary-chip--discount {
@@ -158,39 +158,39 @@
   color: #b45309;
 }
 
-html[data-theme="oscuro"] .dg-box {
+:is(html[data-theme="oscuro"] .dg-box, .mi-modal--dark .dg-box) {
   border-color: rgba(245, 158, 11, .28);
   background: rgba(245, 158, 11, .07);
 }
 
-html[data-theme="oscuro"] .dg-box__head strong,
-html[data-theme="oscuro"] .dg-box__input-wrap > span,
-html[data-theme="oscuro"] .dg-box__summary .is-discount dt,
-html[data-theme="oscuro"] .dg-box__summary .is-discount dd,
-html[data-theme="oscuro"] .dg-box__clear,
-html[data-theme="oscuro"] .dg-summary-chip--discount b {
+:is(html[data-theme="oscuro"] .dg-box__head, .mi-modal--dark .dg-box__head) strong,
+:is(html[data-theme="oscuro"] .dg-box__input-wrap, .mi-modal--dark .dg-box__input-wrap) > span,
+:is(html[data-theme="oscuro"] .dg-box__summary, .mi-modal--dark .dg-box__summary) .is-discount dt,
+:is(html[data-theme="oscuro"] .dg-box__summary, .mi-modal--dark .dg-box__summary) .is-discount dd,
+:is(html[data-theme="oscuro"] .dg-box__clear, .mi-modal--dark .dg-box__clear),
+:is(html[data-theme="oscuro"] .dg-summary-chip--discount, .mi-modal--dark .dg-summary-chip--discount) b {
   color: #fbbf24;
 }
 
-html[data-theme="oscuro"] .dg-box__clear {
+:is(html[data-theme="oscuro"] .dg-box__clear, .mi-modal--dark .dg-box__clear) {
   background: transparent;
   border-color: rgba(251, 191, 36, .35);
 }
 
-html[data-theme="oscuro"] .dg-box__head span,
-html[data-theme="oscuro"] .dg-box__summary {
+:is(html[data-theme="oscuro"] .dg-box__head, .mi-modal--dark .dg-box__head) span,
+:is(html[data-theme="oscuro"] .dg-box__summary, .mi-modal--dark .dg-box__summary) {
   color: var(--color-text-secondary, #cbd5e1);
 }
 
-html[data-theme="oscuro"] .dg-box__summary dd {
+:is(html[data-theme="oscuro"] .dg-box__summary, .mi-modal--dark .dg-box__summary) dd {
   color: var(--color-text-primary, #f8fafc);
 }
 
-html[data-theme="oscuro"] .dg-box__summary .is-final dd {
-  color: #6ee7b7;
+:is(html[data-theme="oscuro"] .dg-box__summary, .mi-modal--dark .dg-box__summary) .is-final dd {
+  color: #f8fafc;
 }
 
-html[data-theme="oscuro"] .dg-box__error {
+:is(html[data-theme="oscuro"] .dg-box__error, .mi-modal--dark .dg-box__error) {
   color: #fca5a5;
 }
 
@@ -207,3 +207,10 @@ html[data-theme="oscuro"] .dg-box__error {
     justify-content: space-between;
   }
 }
+
+/* Resumen compacto con la misma disposición y tonos que Comercio. */
+.dg-box__summary b { color: #44403c; }
+.dg-box__summary .is-applied, .dg-box__summary .is-applied b { color: #b45309; }
+:is(html[data-theme="oscuro"] .dg-box__summary, .mi-modal--dark .dg-box__summary) b { color: #f8fafc; }
+:is(html[data-theme="oscuro"] .dg-box__summary, .mi-modal--dark .dg-box__summary) .is-applied,
+:is(html[data-theme="oscuro"] .dg-box__summary, .mi-modal--dark .dg-box__summary) .is-applied b { color: #fbbf24; }

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { normalizarPaginacion } from '../utilidades/paginacion';
 import { listarProductos } from '../api/catalogoApi';
 
 export const LIMITE_PREDETERMINADO = 12;
@@ -35,8 +36,7 @@ export function useCatalogo(habilitado, consulta = {}, revision = 0) {
         if (controller.signal.aborted) return;
         setState({
           productos: Array.isArray(data.productos) ? data.productos : [],
-          total: Number.isFinite(data.total) ? data.total : (data.productos || []).length,
-          totalPaginas: Number.isFinite(data.total_paginas) ? data.total_paginas : 1,
+          ...normalizarPaginacion(data, params.limite || LIMITE_PREDETERMINADO, params.pagina || 1),
           masPaginas: Boolean(data.siguiente_pagina_posible),
           categorias: Array.isArray(data.categorias) ? data.categorias : [],
           precioRango: data.precio_rango || null,

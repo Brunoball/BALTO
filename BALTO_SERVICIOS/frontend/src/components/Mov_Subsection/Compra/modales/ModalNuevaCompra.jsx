@@ -2392,7 +2392,6 @@ export default function ModalNuevaCompra({ open, lists, onClose, onToast, onSave
             loading={addUI.lookupLoading}
             saving={addUI.saving}
             confirmText="Confirmar y cargar proveedor"
-            footerHelp="Primero buscá el CUIT. Cuando aparezcan los datos, confirmá para guardar la razón social en proveedores y los datos completos en clientes fiscales."
             requireFiscalData={true}
             onCuitChange={(v) => setAddUI((p) => ({ ...p, cuit: v, fiscalData: null, fiscalError: "" }))}
             onLookup={consultarArcaAddProveedor}

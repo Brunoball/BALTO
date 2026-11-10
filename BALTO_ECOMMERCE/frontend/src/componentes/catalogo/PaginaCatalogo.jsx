@@ -77,17 +77,17 @@ function paginasVisibles(actual, total) {
   return out;
 }
 
-function Paginacion({ pagina, totalPaginas, onChange }) {
+function Paginacion({ pagina, totalPaginas, onChange, actualizando }) {
   if (totalPaginas <= 1) return null;
   return <nav className="catalog-pagination" aria-label="Paginación del catálogo">
-    <button type="button" disabled={pagina <= 1} onClick={() => onChange(pagina - 1)}><ChevronLeft size={17}/> Anterior</button>
+    <button type="button" disabled={actualizando || pagina <= 1} onClick={() => onChange(pagina - 1)}><ChevronLeft size={17}/> Anterior</button>
     <div className="catalog-pages">
       {paginasVisibles(pagina, totalPaginas).map((n) => typeof n === 'string'
         ? <span key={n} className="catalog-pages-gap" aria-hidden="true">…</span>
-        : <button key={n} type="button" className="catalog-page" aria-current={n === pagina ? 'page' : undefined} aria-label={`Página ${n}`} onClick={() => n !== pagina && onChange(n)}>{n}</button>)}
+        : <button key={n} type="button" className="catalog-page-button" disabled={actualizando} aria-current={n === pagina ? 'page' : undefined} aria-label={`Página ${n}`} onClick={() => n !== pagina && onChange(n)}>{n}</button>)}
     </div>
     <span className="catalog-page-status">Página {pagina} de {totalPaginas}</span>
-    <button type="button" disabled={pagina >= totalPaginas} onClick={() => onChange(pagina + 1)}>Siguiente <ChevronRight size={17}/></button>
+    <button type="button" disabled={actualizando || pagina >= totalPaginas} onClick={() => onChange(pagina + 1)}>Siguiente <ChevronRight size={17}/></button>
   </nav>;
 }
 
@@ -184,7 +184,11 @@ export default function PaginaCatalogo({ config }) {
   };
   const priceActive = Boolean(minPrice || maxPrice);
   const activeFilters = [term.trim(), filtros.categoria, filtros.orden !== 'destacados', filtros.disponibles, priceActive].filter(Boolean).length;
-  const changePage = (next) => { aplicar({ pagina: next }, { push: true }); window.scrollTo({ top: 0, behavior: 'smooth' }); };
+  useEffect(() => {
+    if (enabled && !cargando && !actualizando && !error && filtros.pagina > totalPaginas) aplicar({ pagina: totalPaginas });
+  }, [enabled, cargando, actualizando, error, filtros.pagina, totalPaginas, aplicar]);
+
+  const changePage = (next) => { if (actualizando || next < 1 || next > totalPaginas) return; aplicar({ pagina: next }, { push: true }); window.scrollTo({ top: 0, behavior: 'smooth' }); };
   const searchTerm = filtros.q;
   const title = searchTerm ? <>Resultados para “{searchTerm}”</> : categoriaActual ? categoriaActual.nombre : 'Todos los productos';
   const ready = enabled && !cargando && !error;
@@ -232,7 +236,7 @@ export default function PaginaCatalogo({ config }) {
           {enabled && <button type="button" ref={toggleRef} className="catalog-filter-toggle" aria-controls="filtros-catalogo" aria-expanded={filtersOpen} onClick={() => setFiltersOpen(true)}><SlidersHorizontal size={16}/> Filtros{activeFilters > 0 && <span className="catalog-filter-badge">{activeFilters}</span>}</button>}
         </div>
         {contenido}
-        {ready && <Paginacion pagina={filtros.pagina} totalPaginas={totalPaginas} onChange={changePage}/>}
+        {ready && <Paginacion pagina={filtros.pagina} totalPaginas={totalPaginas} onChange={changePage} actualizando={actualizando}/>}
       </section>
     </div>
   </main>;

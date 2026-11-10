@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShieldCheck } from 'lucide-react';
+import { ShieldCheck, ReceiptText, Truck } from 'lucide-react';
 import { useCarrito } from '../carrito/contexto/CarritoContext';
 import { formatQuantity, lineCents } from '../carrito/utilidades/carrito';
 import { precioARS } from '../global/utilidades/formato';
@@ -9,13 +9,13 @@ import { precioARS } from '../global/utilidades/formato';
  * no hay costos de envío, impuestos, promociones ni medios de pago configurados,
  * por eso no se presentan como disponibles.
  */
-export default function ResumenPedido({ config, title = 'Resumen del pedido', modalidad = null, alcancePago = null, children }) {
+export default function ResumenPedido({ config, title = 'Resumen del pedido', destacado = false, modalidad = null, alcancePago = null, children }) {
   const { items, lineState, validacionVigente, validation, subtotal } = useCarrito();
   const moneda = items[0]?.moneda || config?.moneda || 'ARS';
   const total = validacionVigente && validation.resumen ? Number(validation.resumen.subtotal) : subtotal;
   const modalidades = config?.entrega_modalidades || [];
   return <section className="order-summary" aria-labelledby="order-summary-title">
-    <h2 id="order-summary-title">{title}</h2>
+    <h2 id="order-summary-title">{destacado && <span className="cart-section-icon"><ReceiptText size={19} aria-hidden="true"/></span>}{title}</h2>
     <ul className="order-summary-lines">
       {items.map((x) => {
         const l = lineState(x.key);
@@ -31,8 +31,8 @@ export default function ResumenPedido({ config, title = 'Resumen del pedido', mo
       {modalidad === 'ENVIO' || modalidad === 'A_COORDINAR'
         ? <div><dt>{modalidad === 'ENVIO' ? 'Costo de envío' : 'Entrega'}</dt><dd data-testid="summary-shipping">A coordinar</dd></div>
         : modalidad === 'RETIRO'
-          ? <div><dt>Entrega</dt><dd>Retiro en el local</dd></div>
-          : <div><dt>Entrega</dt><dd>{modalidades.length === 1 ? modalidades[0].nombre : 'Según la modalidad elegida'}</dd></div>}
+          ? <div><dt>{destacado && <Truck size={14} aria-hidden="true"/>}Entrega</dt><dd>Retiro en el local</dd></div>
+          : <div><dt>{destacado && <Truck size={14} aria-hidden="true"/>}Entrega</dt><dd>{modalidades.length === 1 ? modalidades[0].nombre : 'Según la modalidad elegida'}</dd></div>}
       <div className="order-summary-total"><dt>{modalidad === 'ENVIO' ? 'Total productos' : 'Total'}</dt><dd data-testid="summary-total">{precioARS(total, moneda)}</dd></div>
     </dl>
     {modalidad === 'ENVIO' && <p className="order-summary-pending">{alcancePago === 'PRODUCTOS' ? 'El importe a transferir corresponde a los productos. ' : ''}El envío no está incluido: la tienda te informará su costo.</p>}

@@ -110,3 +110,37 @@
   .cart-drawer { overflow-y:auto; overscroll-behavior:contain; }
   .cart-drawer .cart-list { flex:none; overflow:visible; }
 }
+
+/* Página del carrito: acentos verdes y superficies sobrias. */
+.cart-page .cart-page-list { border-color:#cfddd4; box-shadow:0 4px 18px rgba(24,58,52,.035); }
+.cart-list-heading { display:flex; align-items:center; gap:10px; padding:17px 0; border-bottom:1px solid #dce6df; }
+.cart-list-heading h2 { margin:0; font:800 15px Manrope,sans-serif; color:#183a34; }
+.cart-section-icon { display:inline-flex; align-items:center; justify-content:center; flex:none; width:34px; height:34px; border-radius:9px; background:#e6f0e9; color:#285440; }
+.cart-items-badge { margin-left:auto; padding:5px 9px; border-radius:6px; background:#edf4ef; color:#3f6050; font-size:11px; font-weight:700; }
+.cart-page .cart-item-image { border:1px solid #e1e8e2; }
+.cart-page .cart-item-unit, .cart-page .cart-item-variant { color:#536b5d; }
+.cart-page .cart-item-title { overflow-wrap:anywhere; }
+.cart-page .cart-qty { border-color:#b8ccbf; background:#f3f7f4; }
+.cart-page .cart-qty button { background:#edf4ef; color:#285440; }
+.cart-page .cart-remove { display:grid; place-items:center; border-radius:7px; color:#974a43; background:#faf0ee; margin-left:6px; }
+.cart-page .cart-remove:hover { background:#f3dfdb; color:#792d27; }
+.cart-page .cart-clear.inline { display:inline-flex; align-items:center; gap:6px; color:#78504b; text-decoration:none; border-radius:7px; }
+.cart-page .cart-clear.inline:hover { background:#faf0ee; }
+.cart-page .order-summary { background:#f1f6f2; border-color:#bdcfc3; box-shadow:0 4px 18px rgba(24,58,52,.04); }
+.cart-page .order-summary h2 { display:flex; align-items:center; gap:10px; color:#183a34; font-size:17px; }
+.cart-page .order-summary-lines li { border-color:#d7e3db; }
+.cart-page .order-summary-lines li small, .cart-page .order-summary-note { color:#526b5c; }
+.cart-page .order-summary-totals dt { display:flex; align-items:center; gap:6px; }
+.cart-page .order-summary-total { background:#183a34; color:#fff!important; padding:16px; margin-top:10px; border:0; border-radius:10px; align-items:center; flex-wrap:wrap; }
+.cart-page .order-summary-total dd { margin-left:auto; }
+.cart-page .summary-cta { background:#214c3e; color:#fff; }
+.cart-page .summary-cta:hover { background:#183a34; }
+.cart-page .checkout-off { background:#e6eee8; color:#4b6355; border:1px solid #d0ded4; }
+.cart-page button:focus-visible, .cart-page a:focus-visible { outline:2px solid #315f4e; outline-offset:3px; }
+@media (max-width:480px) {
+  .cart-list-heading { gap:8px; }
+  .cart-items-badge { font-size:10px; padding:5px 7px; }
+  .cart-page .cart-item-controls { flex-wrap:wrap; gap:10px 0; }
+  .cart-page .cart-item-subtotal { font-size:12px; }
+  .cart-page .order-summary { padding:20px; }
+}

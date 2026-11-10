@@ -3,7 +3,6 @@ import "./DescuentoGeneralControl.css";
 import {
   DESCUENTO_MONTO,
   DESCUENTO_PORCENTAJE,
-  formatPorcentaje,
 } from "../../../utils/descuentoGeneral.js";
 
 function defaultMoney(v) {
@@ -41,7 +40,6 @@ export default function DescuentoGeneralControl({
   const hintId = `${uid}-hint`;
   const descuento = Number(resumen?.descuento || 0);
   const totalBruto = Number(resumen?.totalBruto || 0);
-  const totalFinal = Number(resumen?.total || 0);
   const error = String(resumen?.descuentoError || "");
   const activo = descuento > 0;
   const hayValor = String(valor ?? "").trim() !== "";
@@ -55,7 +53,7 @@ export default function DescuentoGeneralControl({
     >
       <div className="dg-box__head">
         <div>
-          <strong>Descuento general</strong>
+          <strong>Descuento manual</strong>
           <span id={hintId}>Se aplica sobre el total de {contexto}. No modifica los precios cargados.</span>
         </div>
         {hayValor ? (
@@ -81,7 +79,7 @@ export default function DescuentoGeneralControl({
           aria-label="Tipo de descuento"
         >
           <option value={DESCUENTO_PORCENTAJE}>Porcentaje (%)</option>
-          <option value={DESCUENTO_MONTO}>Monto fijo ($)</option>
+          <option value={DESCUENTO_MONTO}>Importe ($)</option>
         </select>
         <div className="dg-box__input-wrap">
           <span aria-hidden="true">{tipo === DESCUENTO_PORCENTAJE ? "%" : "$"}</span>
@@ -107,40 +105,12 @@ export default function DescuentoGeneralControl({
         </div>
       ) : null}
 
-      <dl className="dg-box__summary" aria-live="polite">
-        <div>
-          <dt>Total original</dt>
-          <dd data-testid="dg-total-original">{money(totalBruto)}</dd>
-        </div>
+      <div className="dg-box__summary" aria-live="polite">
+        <span>Total sin descuento: <b data-testid="dg-total-original">{money(totalBruto)}</b></span>
         {activo ? (
-          <>
-            <div className="is-discount">
-              <dt>
-                Descuento
-                {resumen?.descuentoTipo === DESCUENTO_PORCENTAJE
-                  ? ` (${formatPorcentaje(resumen?.descuentoValor)} %)`
-                  : ""}
-              </dt>
-              <dd data-testid="dg-descuento-monto">- {money(descuento)}</dd>
-            </div>
-            {resumen?.descuentoTipo === DESCUENTO_MONTO ? (
-              <div className="is-equivalent">
-                <dt>Equivale a</dt>
-                <dd data-testid="dg-porcentaje-equivalente">{formatPorcentaje(resumen?.descuentoPorcentajeEfectivo)} %</dd>
-              </div>
-            ) : null}
-            <div className="is-final">
-              <dt>Total final</dt>
-              <dd data-testid="dg-total-final">{money(totalFinal)}</dd>
-            </div>
-          </>
-        ) : (
-          <div className="is-none">
-            <dt>Descuento</dt>
-            <dd>Sin descuento aplicado</dd>
-          </div>
-        )}
-      </dl>
+          <span className="is-applied">Se descuentan <b data-testid="dg-descuento-monto">{money(descuento)}</b></span>
+        ) : <span>Sin descuento aplicado</span>}
+      </div>
     </div>
   );
 }

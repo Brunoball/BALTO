@@ -4405,7 +4405,6 @@ export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved
         loading={addUI.lookupLoading}
         saving={addUI.saving}
         confirmText="Confirmar y cargar cliente"
-        footerHelp="Primero buscá el CUIT. Cuando aparezcan los datos, confirmá para guardar la razón social en clientes y los datos completos en clientes fiscales."
         requireFiscalData={true}
         onCuitChange={(v) => setAddUI((p) => ({ ...p, cuit: v, fiscalData: null, fiscalError: "" }))}
         onLookup={consultarArcaAddCliente}

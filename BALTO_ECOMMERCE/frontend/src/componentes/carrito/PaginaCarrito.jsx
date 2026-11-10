@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, ArrowUpRight, MessageCircle, ShoppingBag } from 'lucide-react';
+import { ArrowLeft, ArrowUpRight, MessageCircle, ShoppingBag, Trash2 } from 'lucide-react';
 import { useCarrito } from './contexto/CarritoContext';
 import { useSincronizarCarrito } from './hooks/useSincronizarCarrito';
 import LineaCarrito from './LineaCarrito';
@@ -21,17 +21,18 @@ export default function PaginaCarrito({ config }) {
       ? <><EstadoVacio title="Tu carrito está vacío" description="Explorá el catálogo y agregá los productos que te interesen." icon={ShoppingBag}/><div className="standard-page-action"><Link to="/catalogo" className="btn btn-dark">Ver catálogo <ArrowUpRight size={17}/></Link></div></>
       : <div className="cart-layout">
         <section className="cart-page-list" aria-label="Productos en el carrito">
+          <div className="cart-list-heading"><span className="cart-section-icon"><ShoppingBag size={19} aria-hidden="true"/></span><h2>Tus productos</h2><span className="cart-items-badge">{itemCount} {itemCount === 1 ? 'artículo' : 'artículos'}</span></div>
           <AvisosCarrito/>
           {items.map((item) => <LineaCarrito key={item.key} item={item}/>)}
           <div className="cart-page-tools">
             <Link to="/catalogo" className="back-to-catalog"><ArrowLeft size={16}/> Seguir comprando</Link>
             {confirmClear
               ? <div className="cart-clear-confirm" role="group" aria-label="Confirmar vaciado"><span>¿Vaciar el carrito?</span><button type="button" onClick={() => { clearItems(); setConfirmClear(false); }}>Sí, vaciar</button><button type="button" onClick={() => setConfirmClear(false)}>Cancelar</button></div>
-              : <button type="button" className="cart-clear inline" onClick={() => setConfirmClear(true)}>Vaciar carrito</button>}
+              : <button type="button" className="cart-clear inline" onClick={() => setConfirmClear(true)}><Trash2 size={14} aria-hidden="true"/> Vaciar carrito</button>}
           </div>
         </section>
         <aside className="cart-page-aside">
-          <ResumenPedido config={config}>
+          <ResumenPedido config={config} destacado>
             {checkout
               ? (listoParaComprar
                 ? <Link to="/checkout" className="btn btn-dark summary-cta" data-testid="go-checkout">Continuar con la compra <ArrowUpRight size={18}/></Link>

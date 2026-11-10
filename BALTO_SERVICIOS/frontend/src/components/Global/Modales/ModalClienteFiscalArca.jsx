@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -47,7 +47,6 @@ export default function ModalClienteFiscalArca({
   lookupText = "Consultar ARCA",
   searchingText = "Consultando ARCA...",
   confirmText = "Confirmar",
-  footerHelp = "",
   requireFiscalData = false,
   permitirConsumidorFinal = false,
   permitirAltaSimple = false,
@@ -74,13 +73,6 @@ export default function ModalClienteFiscalArca({
   const canConfirm = !busy && (esAltaSimple ? nombreLimpio.length > 0 && nombreLimpio.length <= 180 : esConsumidorFinal ? !!onConfirmarConsumidorFinal : cuitOk && (!requireFiscalData || !!fiscalData));
   const confirmar = () => esAltaSimple ? onConfirmarAltaSimple?.() : esConsumidorFinal ? onConfirmarConsumidorFinal?.() : onConfirm?.();
 
-  const helperText = useMemo(() => {
-    if (footerHelp) return footerHelp;
-    if (requireFiscalData) {
-      return "Primero buscá el CUIT. Cuando aparezcan los datos, confirmá para guardar el cliente y sus datos fiscales.";
-    }
-    return "Ingresá el CUIT, consultá ARCA y confirmá para continuar.";
-  }, [footerHelp, requireFiscalData]);
 
   useEffect(() => {
     if (open) setModo(permitirAltaSimple ? "simple" : "cuit");
@@ -147,7 +139,7 @@ export default function ModalClienteFiscalArca({
 
         <div className="mi-modal__content gcf-modal__content">
           <div className="gcf-modal__layout">
-            <section className="gcf-client-card" aria-label="Tarjeta del cliente">
+            <section className="gcf-client-card" aria-label={`Datos del ${entidadNombre}`}>
               <div className="gcf-client-card__top">
                 <div className="gcf-client-card__avatar" aria-hidden="true">
                   <FontAwesomeIcon icon={esConsumidorFinal || fiscalData ? faBuilding : faUser} />
@@ -220,11 +212,13 @@ export default function ModalClienteFiscalArca({
                   <label className={`gcf-modo-emision__option ${esAltaSimple ? "is-selected" : ""}`}>
                     <input type="radio" name="gcf-modo-alta" checked={esAltaSimple} onChange={() => setModo("simple")} disabled={busy} />
                     <span className="gcf-modo-emision__radio" aria-hidden="true" />
+                    <span className="gcf-modo-emision__icon" aria-hidden="true"><FontAwesomeIcon icon={faUser} /></span>
                     <span className="gcf-modo-emision__name">Solo nombre (sin CUIT)</span>
                   </label>
                   <label className={`gcf-modo-emision__option ${!esAltaSimple ? "is-selected" : ""}`}>
                     <input type="radio" name="gcf-modo-alta" checked={!esAltaSimple} onChange={() => setModo("cuit")} disabled={busy} />
                     <span className="gcf-modo-emision__radio" aria-hidden="true" />
+                    <span className="gcf-modo-emision__icon" aria-hidden="true"><FontAwesomeIcon icon={faIdCard} /></span>
                     <span className="gcf-modo-emision__name">Con CUIT / ARCA</span>
                   </label>
                 </div>
@@ -249,12 +243,14 @@ export default function ModalClienteFiscalArca({
                 <section className="nc-section gcf-panel-section">
                   <div className="nc-section-head"><span className="nc-section-dot" /><span>Datos básicos</span></div>
                   <div className="nc-section-body gcf-panel-section__body">
-                    <label className="gcf-simple-label" htmlFor="gcf-nombre-simple">Nombre del {entidadNombre} *</label>
+                    <div className="fl-field gcf-modal__field">
                     <input id="gcf-nombre-simple" ref={nombreInputRef} className="fl-input gcf-simple-input"
                       aria-label={`Nombre del ${entidadNombre}`}
                       autoComplete="off" maxLength={180} value={nombreSimple}
                       onChange={(event) => onNombreSimpleChange?.(event.target.value)} disabled={busy}
-                      placeholder={entidadNombre === "proveedor" ? "Nombre del proveedor" : "Nombre y apellido o nombre comercial"} />
+                      placeholder=" " />
+                    <label className="fl-label" htmlFor="gcf-nombre-simple"><FontAwesomeIcon icon={faUser} className="gcf-modal__label-icon" />Nombre del {entidadNombre} *</label>
+                    </div>
                     <p className="gcf-simple-hint">No se requiere CUIT ni consulta a ARCA para crear el registro.</p>
                   </div>
                 </section>
@@ -314,7 +310,6 @@ export default function ModalClienteFiscalArca({
                 </div>
               )}
 
-              {!esConsumidorFinal && !esAltaSimple && helperText && <div className="gcf-modal__help">{helperText}</div>}
 
               <div className="gcf-modal__actions">
                 <button type="button" className="mit-btn mit-btn--ghost" onClick={onClose} disabled={busy}>
