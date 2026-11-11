@@ -312,9 +312,16 @@ export default function ModalHistorialAjustes({ open, onClose, onChanged, showTo
             )}
           </div>
         </div>
-        {abierta && (
-          <div className="fc-tr-detail" id={detalleId} role="row" data-transferencia-detalle={t.id_transferencia}>
-            <dl role="cell" aria-colspan={9}>
+        <div
+          id={detalleId}
+          className={`fc-tr-detailReveal ${abierta ? "is-open" : ""}`}
+          role="row"
+          aria-hidden={!abierta}
+          data-transferencia-detalle={t.id_transferencia}
+        >
+          <div className="fc-tr-detailReveal__clip">
+            <div className="fc-tr-detail">
+              <dl role="cell" aria-colspan={9}>
               <div><dt>ID</dt><dd>#{t.id_transferencia}</dd></div>
               <div><dt>Fecha y hora</dt><dd>{fmtDateTime(t.created_at)}</dd></div>
               <div><dt>Importe transferido</dt><dd>{moneyARS(t.importe)}</dd></div>
@@ -327,9 +334,10 @@ export default function ModalHistorialAjustes({ open, onClose, onChanged, showTo
               {t.id_transferencia_revertida && <div><dt>Revierte a</dt><dd>Transferencia #{t.id_transferencia_revertida}</dd></div>}
               {t.revertido_por && <div><dt>Revertida por</dt><dd>#{t.revertido_por}{t.fecha_reversion ? ` · ${fmtDateES(t.fecha_reversion)}` : ""}{t.revertido_por_usuario ? ` · ${t.revertido_por_usuario}` : ""}</dd></div>}
               <div className="fc-tr-detail__wide"><dt>Observaciones</dt><dd>{t.observaciones || "—"}</dd></div>
-            </dl>
+              </dl>
+            </div>
           </div>
-        )}
+        </div>
       </React.Fragment>
     );
   };
