@@ -27,22 +27,29 @@ test('@analisis-financiero @saldos API concilia saldo de inicio, apertura y movi
     // Los ajustes manuales de saldo son un concepto propio: deben venir informados
     // siempre (aunque sea 0) y explicar la diferencia restante del cierre.
     expect(m, `${m.nombre} debe informar ajustes_manuales`).toHaveProperty('ajustes_manuales');
+    // Las transferencias internas entre cajas también son un concepto propio
+    // (neto firmado por medio); explican el resto de la variación del medio.
+    expect(m, `${m.nombre} debe informar transferencias_internas`).toHaveProperty('transferencias_internas');
     expect(amount(m.saldo_final)).toBeCloseTo(
       amount(m.saldo_inicio) + amount(m.saldo_inicial_aplicado) + amount(m.ingresos)
-        - amount(m.egresos) + amount(m.ajustes_internos) + amount(m.ajustes_manuales), 2,
+        - amount(m.egresos) + amount(m.ajustes_internos) + amount(m.ajustes_manuales)
+        + amount(m.transferencias_internas), 2,
     );
     expect(amount(m.saldo_inicial_configurado)).toBeCloseTo(
       (m.saldos_iniciales || []).reduce((sum, s) => sum + amount(s.importe), 0), 2,
     );
   }
   const sum = (key) => medio.reduce((total, m) => total + amount(m[key]), 0);
-  for (const key of ['saldo_inicio', 'saldo_inicial_aplicado', 'saldo_inicial_configurado', 'ingresos', 'egresos', 'ajustes_internos', 'ajustes_manuales', 'saldo_final']) {
+  for (const key of ['saldo_inicio', 'saldo_inicial_aplicado', 'saldo_inicial_configurado', 'ingresos', 'egresos', 'ajustes_internos', 'ajustes_manuales', 'transferencias_internas', 'saldo_final']) {
     expect(amount(t[key]), `Total ${key} debe coincidir con el detalle por medio`).toBeCloseTo(sum(key), 2);
   }
   expect(amount(t.saldo_final)).toBeCloseTo(
     amount(t.saldo_inicio) + amount(t.saldo_inicial_aplicado) + amount(t.ingresos)
-      - amount(t.egresos) + amount(t.ajustes_internos) + amount(t.ajustes_manuales), 2,
+      - amount(t.egresos) + amount(t.ajustes_internos) + amount(t.ajustes_manuales)
+      + amount(t.transferencias_internas), 2,
   );
+  // Las transferencias entre cajas nunca cambian el total del negocio.
+  expect(amount(t.transferencias_internas), 'Transferencias internas: neto total 0').toBeCloseTo(0, 2);
   expect(amount(json.valores.resultado_neto)).toBeCloseTo(
     amount(json.valores.ventas) + amount(json.valores.otros_ingresos)
       - amount(json.valores.costo_variable) - amount(json.valores.costo_fijo)

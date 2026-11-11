@@ -280,16 +280,18 @@ test.describe('@flujo @ajustes-saldo interfaz (mocks, sin escrituras)', () => {
     expect(body).not.toHaveProperty('fecha');
   });
 
-  test('12 · historial muestra fecha, medio, importe, saldos, motivo, usuario y estado', async ({ page }) => {
+  test('12 · historial muestra fecha, medio, importe, saldos, motivo y estado sin columna de usuario', async ({ page }) => {
     await mockAjustes(page);
     await openFlujo(page);
     await page.getByRole('button', { name: 'Historial de ajustes de saldo' }).click();
     const hist = page.getByRole('dialog', { name: 'Historial de ajustes de saldo' });
     const row = hist.locator('[data-ajuste-id="1"]');
     await expect(row).toBeVisible();
-    for (const text of ['EFECTIVO', 'ESTABLECER SALDO REAL', 'DIFERENCIA DE ARQUEO', 'FALTANTE EN ARQUEO', 'ADMIN', 'VIGENTE']) {
+    for (const text of ['EFECTIVO', 'ESTABLECER SALDO REAL', 'DIFERENCIA DE ARQUEO', 'FALTANTE EN ARQUEO', 'VIGENTE']) {
       await expect(row.getByText(text, { exact: true })).toBeVisible();
     }
+    await expect(hist.getByRole('columnheader', { name: 'Usuario' })).toHaveCount(0);
+    await expect(row.locator('[data-label="Usuario"]')).toHaveCount(0);
     await expect(row.locator('[data-label="Ajuste"]')).toHaveText(/−\s?\$\s?5\.000,00/);
     await expect(row.locator('[data-label="Saldo anterior"]')).toHaveText(/150\.000,00/);
     await expect(row.locator('[data-label="Saldo posterior"]')).toHaveText(/145\.000,00/);

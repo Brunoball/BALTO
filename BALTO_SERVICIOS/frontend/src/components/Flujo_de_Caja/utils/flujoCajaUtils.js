@@ -47,6 +47,7 @@ export function normalizePaymentCards(rawCards) {
     ingresos: Number(card?.ingresos || 0),
     egresos: Number(card?.egresos || 0),
     ajustes: Number(card?.ajustes || 0),
+    transferencias: Number(card?.transferencias || 0),
     saldo: Number(card?.saldo || 0),
     medios: Array.isArray(card?.medios)
       ? card.medios.map((m) => ({
@@ -67,6 +68,8 @@ export function normalizeRows(rawRows) {
     saldo_inicial_aplicado: Number(r?.saldo_inicial_aplicado || 0),
     ajustes_internos: Number(r?.ajustes_internos || 0),
     ajustes_manuales: Number(r?.ajustes_manuales || 0),
+    transferencias_internas: Number(r?.transferencias_internas || 0),
+    transferencias_cantidad: Number(r?.transferencias_cantidad || 0),
     medios_pago: normalizePaymentCards(r?.medios_pago),
   }));
 }
@@ -180,4 +183,34 @@ export function computeAjustePreview(saldoActual, tipo, importe) {
     diferencia: diferencia / 100,
     saldoNuevo: (saldoCents + diferencia) / 100,
   };
+}
+
+/* =========================================================
+   Transferencias internas entre cajas
+========================================================= */
+
+/**
+ * Vista previa local (informativa). Todo en centavos: origen −importe,
+ * destino +importe, total del negocio sin cambios. El backend recalcula.
+ */
+export function computeTransferenciaPreview(saldoOrigen, saldoDestino, importe) {
+  if (importe == null) return null;
+  const imp = Math.round(Number(importe) * 100);
+  const o = Math.round(Number(saldoOrigen || 0) * 100);
+  const d = Math.round(Number(saldoDestino || 0) * 100);
+  return {
+    importe: imp / 100,
+    origenActual: o / 100,
+    origenPosterior: (o - imp) / 100,
+    destinoActual: d / 100,
+    destinoPosterior: (d + imp) / 100,
+    variacionTotal: 0,
+    suficiente: imp <= o,
+  };
+}
+
+/** "10.000,00" a partir de un número (para normalizar el campo al salir). */
+export function formatMoneyInput(n) {
+  if (n == null || !Number.isFinite(Number(n))) return "";
+  return Number(n).toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }

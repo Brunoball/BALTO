@@ -124,6 +124,7 @@ function MediumRow({ item, expanded, toggle }) {
             <div><span>Apertura registrada hasta el cierre</span><strong>{money(item.saldo_inicial_configurado)}</strong></div>
             <div><span>Ajustes internos del período</span><strong>{money(item.ajustes_internos)}</strong></div>
             <div><span>Ajustes manuales de saldo</span><strong className={toNumberOrZero(item.ajustes_manuales) < 0 ? "af-negative" : ""}>{money(item.ajustes_manuales)}</strong></div>
+            <div><span>Transferencias internas (neto)</span><strong className={toNumberOrZero(item.transferencias_internas) < 0 ? "af-negative" : ""}>{money(item.transferencias_internas)}</strong></div>
             <div><span>Variación total del período</span><strong className={item.variacion < 0 ? "af-negative" : "af-positive"}>{money(item.variacion)}</strong></div>
             <div><span>Fecha(s) de apertura</span><strong>{(item.saldos_iniciales || []).map((s) => formatISODate(s.fecha)).join(" · ") || "No configurada"}</strong></div>
           </div>
@@ -156,6 +157,7 @@ function MediumRow({ item, expanded, toggle }) {
           <div><span>Apertura registrada hasta el cierre</span><strong>{money(item.saldo_inicial_configurado)}</strong></div>
           <div><span>Ajustes internos del período</span><strong>{money(item.ajustes_internos)}</strong></div>
           <div><span>Ajustes manuales de saldo</span><strong className={toNumberOrZero(item.ajustes_manuales) < 0 ? "af-negative" : ""}>{money(item.ajustes_manuales)}</strong></div>
+          <div><span>Transferencias internas (neto)</span><strong className={toNumberOrZero(item.transferencias_internas) < 0 ? "af-negative" : ""}>{money(item.transferencias_internas)}</strong></div>
           <div><span>Variación total del período</span><strong className={toNumberOrZero(item.variacion) < 0 ? "af-negative" : "af-positive"}>{money(item.variacion)}</strong></div>
           <div className="af-mcard__dates"><span>Fecha(s) de apertura</span><strong>{(item.saldos_iniciales || []).map((s) => formatISODate(s.fecha)).join(" · ") || "No configurada"}</strong></div>
         </div>
@@ -321,6 +323,9 @@ export default function Analisis_Financiero() {
                   <FlowRow label="Egresos pagados" value={fin.egresos} tone="negative"/>
                   <FlowRow label="Depósitos / reversiones de cheques" value={fin.ajustes_internos} tone="info"/>
                   <FlowRow label="Ajustes manuales de saldo" value={fin.ajustes_manuales} tone="info"/>
+                  {toNumberOrZero(fin.transferencias_movidas) > 0 && (
+                    <FlowRow label={`Transferencias entre cajas (${money(fin.transferencias_movidas)} movidos)`} value={fin.transferencias_internas} tone="info"/>
+                  )}
                   <FlowRow label="Saldo al cierre" value={fin.saldo_final} strong/>
                 </article>
               </div>

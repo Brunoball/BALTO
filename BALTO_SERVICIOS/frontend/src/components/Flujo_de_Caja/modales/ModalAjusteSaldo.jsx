@@ -3,6 +3,8 @@
 // Flujo: formulario con vista previa inmediata → confirmación con valores
 // recalculados por el backend → registro. El modal se cierra sólo cuando el
 // backend confirma la operación.
+// La cuarta pestaña "Transferir entre cajas" (TransferenciaCajasForm) registra
+// movimientos internos entre dos medios: no es un ajuste ni modifica el total.
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -28,6 +30,7 @@ import "../../Global/Global_css/Global_Modals.css";
 import "../../Global/Global_css/GlobalsModalsV2.css";
 import "./ajustes_saldo.css";
 
+import TransferenciaCajasForm from "./TransferenciaCajasForm.jsx";
 import {
   AjusteApiError,
   crearAjuste,
@@ -48,6 +51,13 @@ const TIPOS = [
   { codigo: "ESTABLECER", label: "Establecer saldo", hint: "Ingresá el dinero verificado físicamente o en la cuenta." },
   { codigo: "SUMAR", label: "Sumar importe", hint: "Ingresá el importe que falta registrar." },
   { codigo: "RESTAR", label: "Restar importe", hint: "Ingresá el importe a descontar." },
+];
+
+// Pestañas del modal: los tres ajustes conservan su comportamiento y la cuarta
+// abre el formulario independiente de transferencias internas.
+const TABS = [
+  ...TIPOS,
+  { codigo: "TRANSFERIR", label: "Transferir entre cajas" },
 ];
 
 const MOTIVOS_FALLBACK = [
@@ -101,7 +111,10 @@ export default function ModalAjusteSaldo({ open, onClose, onSaved, onOpenHistori
   const [confirmData, setConfirmData] = useState(null);
   const claveRef = useRef("");
   const firstFieldRef = useRef(null);
-  const busy = checking || submitting;
+  const [trBusy, setTrBusy] = useState(false);
+  const [trStep, setTrStep] = useState("form");
+  const esTransferencia = tipo === "TRANSFERIR";
+  const busy = checking || submitting || (esTransferencia && trBusy);
 
   const cargarMedios = useCallback(async ({ keepSelection = true } = {}) => {
     setLoadingMedios(true);
@@ -151,8 +164,8 @@ export default function ModalAjusteSaldo({ open, onClose, onSaved, onOpenHistori
   }, [open, busy, onClose]);
 
   useEffect(() => {
-    if (open && step === "form" && !loadingMedios) firstFieldRef.current?.focus?.();
-  }, [open, step, loadingMedios]);
+    if (open && step === "form" && !loadingMedios && !esTransferencia) firstFieldRef.current?.focus?.();
+  }, [open, step, loadingMedios, esTransferencia]);
 
   // Cualquier cambio en el formulario invalida la clave de confirmación previa.
   useEffect(() => {
@@ -257,6 +270,37 @@ export default function ModalAjusteSaldo({ open, onClose, onSaved, onOpenHistori
   if (!open) return null;
 
   const tipoInfo = TIPOS.find((t) => t.codigo === tipo) || TIPOS[0];
+  const titulo = esTransferencia
+    ? (trStep === "confirm" ? "Confirmar transferencia entre cajas" : "Ajustar saldo")
+    : (step === "confirm" ? "Confirmar ajuste de saldo" : "Ajustar saldo");
+
+  const seleccionarTab = (codigo) => {
+    setTipo(codigo);
+    clearError("importe");
+    setNotice("");
+  };
+
+  const renderTabs = () => (
+    <div className="gm-view-tabs fc-aj-typeTabs" role="tablist" aria-label="Tipo de ajuste">
+      {TABS.map((t, index) => (
+        <button key={t.codigo} id={`fc-aj-tab-${t.codigo}`} type="button" role="tab"
+          aria-selected={tipo === t.codigo} aria-controls="fc-aj-type-panel"
+          tabIndex={tipo === t.codigo ? 0 : -1} disabled={busy}
+          className={`gm-view-tab ${tipo === t.codigo ? "is-active" : ""} ${t.codigo === "TRANSFERIR" ? "fc-aj-typeTab--transfer" : ""}`}
+          onClick={() => seleccionarTab(t.codigo)}
+          onKeyDown={(event) => {
+            const keys = ["ArrowLeft", "ArrowRight", "Home", "End"];
+            if (!keys.includes(event.key)) return;
+            event.preventDefault();
+            const next = event.key === "Home" ? 0 : event.key === "End" ? TABS.length - 1 : (index + (event.key === "ArrowRight" ? 1 : -1) + TABS.length) % TABS.length;
+            seleccionarTab(TABS[next].codigo);
+            document.getElementById(`fc-aj-tab-${TABS[next].codigo}`)?.focus();
+          }}>
+          {t.label}
+        </button>
+      ))}
+    </div>
+  );
   const motivoLabel = motivos.find((m) => m.codigo === motivo)?.label || motivo;
 
   return createPortal(
@@ -271,7 +315,7 @@ export default function ModalAjusteSaldo({ open, onClose, onSaved, onOpenHistori
         <div className="mi-mini__head">
           <h4 id="fc-aj-title" className="mi-mini__title fc-aj-title">
             <FontAwesomeIcon icon={faScaleBalanced} />
-            <span>{step === "confirm" ? "Confirmar ajuste de saldo" : "Ajustar saldo"}</span>
+            <span>{titulo}</span>
           </h4>
           <button type="button" className="mi-mini__close" onClick={() => !busy && onClose?.()} disabled={busy} aria-label="Cerrar">
             <FontAwesomeIcon icon={faXmark} />
@@ -279,6 +323,17 @@ export default function ModalAjusteSaldo({ open, onClose, onSaved, onOpenHistori
         </div>
 
         <div className="mi-mini__body fc-aj-body">
+          {esTransferencia ? (
+            <TransferenciaCajasForm
+              tabs={renderTabs()}
+              onBusyChange={setTrBusy}
+              onStepChange={setTrStep}
+              onSaved={onSaved}
+              onClose={onClose}
+              onOpenHistorial={onOpenHistorial}
+              showToast={showToast}
+            />
+          ) : (<>
           {loadError && (
             <div className="fc-aj-alert fc-aj-alert--error" role="alert">
               <FontAwesomeIcon icon={faTriangleExclamation} />
@@ -302,25 +357,7 @@ export default function ModalAjusteSaldo({ open, onClose, onSaved, onOpenHistori
                 handleRevisar();
               }}
             >
-              <div className="gm-view-tabs fc-aj-typeTabs" role="tablist" aria-label="Tipo de ajuste">
-                {TIPOS.map((t, index) => (
-                  <button key={t.codigo} id={`fc-aj-tab-${t.codigo}`} type="button" role="tab"
-                    aria-selected={tipo === t.codigo} aria-controls="fc-aj-type-panel"
-                    tabIndex={tipo === t.codigo ? 0 : -1} disabled={busy}
-                    className={`gm-view-tab ${tipo === t.codigo ? "is-active" : ""}`}
-                    onClick={() => { setTipo(t.codigo); clearError("importe"); }}
-                    onKeyDown={(event) => {
-                      const keys = ["ArrowLeft", "ArrowRight", "Home", "End"];
-                      if (!keys.includes(event.key)) return;
-                      event.preventDefault();
-                      const next = event.key === "Home" ? 0 : event.key === "End" ? TIPOS.length - 1 : (index + (event.key === "ArrowRight" ? 1 : -1) + TIPOS.length) % TIPOS.length;
-                      setTipo(TIPOS[next].codigo); clearError("importe");
-                      document.getElementById(`fc-aj-tab-${TIPOS[next].codigo}`)?.focus();
-                    }}>
-                    {t.label}
-                  </button>
-                ))}
-              </div>
+              {renderTabs()}
               <div className="fc-aj-editorGrid" id="fc-aj-type-panel" role="tabpanel" aria-labelledby={`fc-aj-tab-${tipo}`}>
                 <div className="fc-aj-editorFields">
                   <h5 className="fc-aj-panelTitle"><span className="fc-aj-boxIcon" aria-hidden="true"><FontAwesomeIcon icon={faSliders} /></span><span>Datos del ajuste</span></h5>
@@ -536,6 +573,7 @@ export default function ModalAjusteSaldo({ open, onClose, onSaved, onOpenHistori
               </div>
             </div>
           )}
+          </>)}
         </div>
       </div>
     </div>,

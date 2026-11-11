@@ -24,6 +24,8 @@ export default function useAnalisisFinancieroExport({
       ["Pagos período", n(tesoreria.egresos)],
       ["Depósitos/reversiones de cheques", n(tesoreria.ajustes_internos)],
       ["Ajustes manuales de saldo", n(tesoreria.ajustes_manuales)],
+      ["Transferencias internas entre cajas (neto, sin efecto en el total)", n(tesoreria.transferencias_internas)],
+      ["Transferencias internas: importe movido", n(tesoreria.transferencias_movidas)],
       ["Saldo de cierre", n(tesoreria.saldo_final)],
       ["Variación neta de tesorería", n(tesoreria.variacion)],
       ["Ventas cobradas (fecha movimiento)", n(ventas)],
@@ -41,6 +43,7 @@ export default function useAnalisisFinancieroExport({
       SALDO_ARRANQUE: n(m.saldo_inicio), APERTURAS_PERIODO: n(m.saldo_inicial_aplicado),
       COBROS: n(m.ingresos), PAGOS: n(m.egresos), AJUSTES_INTERNOS: n(m.ajustes_internos),
       AJUSTES_MANUALES: n(m.ajustes_manuales),
+      TRANSFERENCIAS_INTERNAS: n(m.transferencias_internas),
       SALDO_CIERRE: n(m.saldo_final), SALDO_INICIAL_CONFIGURADO: n(m.saldo_inicial_configurado),
     }));
     const opening = (tesoreria.medios || []).flatMap((m) => (m.saldos_iniciales || []).map((s) => ({
