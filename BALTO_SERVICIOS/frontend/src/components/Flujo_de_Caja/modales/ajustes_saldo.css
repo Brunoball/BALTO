@@ -1357,24 +1357,31 @@ html[data-theme="oscuro"] .mov-page--flujoCaja .fc-payCard__row--transferencias 
 .fc-tr-detailReveal.is-open .fc-tr-detail { transform: translateY(0); }
 .fc-tr-detail dl {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-  gap: 10px 16px;
+  /* Seis campos en la misma fila de escritorio, incluso con el modal de 1120px. */
+  grid-template-columns: minmax(0, .85fr) minmax(0, .86fr) minmax(0, 1.3fr) minmax(0, 1.3fr) minmax(0, .86fr) minmax(0, .65fr);
+  gap: 10px 12px;
   margin: 0;
 }
 .fc-tr-detail dl > div { min-width: 0; }
 .fc-tr-detail dt { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; color: var(--mi-muted); }
 .fc-tr-detail dd { margin: 3px 0 0; color: var(--mi-text); overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
-.fc-tr-detail__wide { grid-column: 1 / -1; }
 
 @media (max-width: 1250px) {
   .fc-aj-history .fc-tr-detail { margin: -6px 0 10px; border: 1px solid var(--mi-border); border-radius: 10px; }
   .fc-aj-history .fc-tr-actions { justify-content: flex-start; }
 }
+/* En resoluciones medias, conservar Observaciones junto con otros datos. */
+@media (max-width: 1050px) {
+  .fc-aj-history .fc-tr-detail dl { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
 @media (max-width: 640px) {
   .fc-tr-sides { grid-template-columns: minmax(0, 1fr); }
   .fc-tr-route strong { margin-left: 0; flex-basis: 100%; }
-  .fc-tr-detail dl { grid-template-columns: minmax(0, 1fr); }
+  .fc-aj-history .fc-tr-detail dl { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .fc-aj-history .fc-tr-viewTabs .gm-view-tab { font-size: 11px; padding: 7px 9px; }
+}
+@media (max-width: 420px) {
+  .fc-aj-history .fc-tr-detail dl { grid-template-columns: minmax(0, 1fr); }
 }
 /* El cuerpo del historial es una columna flexible con scroll sólo en la tabla:
    subtítulo, pestañas y avisos no deben comprimirse. */

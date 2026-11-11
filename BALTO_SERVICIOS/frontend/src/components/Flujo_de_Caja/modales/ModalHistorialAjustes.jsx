@@ -322,18 +322,16 @@ export default function ModalHistorialAjustes({ open, onClose, onChanged, showTo
           <div className="fc-tr-detailReveal__clip">
             <div className="fc-tr-detail">
               <dl role="cell" aria-colspan={9}>
-              <div><dt>ID</dt><dd>#{t.id_transferencia}</dd></div>
               <div><dt>Fecha y hora</dt><dd>{fmtDateTime(t.created_at)}</dd></div>
               <div><dt>Importe transferido</dt><dd>{moneyARS(t.importe)}</dd></div>
               <div><dt>Origen · {t.medio_origen_nombre}{t.medio_origen_activo === false ? " (inactivo)" : ""}</dt>
                 <dd>{moneyARS(t.saldo_origen_anterior)} → {moneyARS(t.saldo_origen_posterior)}</dd></div>
               <div><dt>Destino · {t.medio_destino_nombre}{t.medio_destino_activo === false ? " (inactivo)" : ""}</dt>
                 <dd>{moneyARS(t.saldo_destino_anterior)} → {moneyARS(t.saldo_destino_posterior)}</dd></div>
-              <div><dt>Usuario</dt><dd>{t.usuario_nombre || "—"}</dd></div>
+              <div><dt>Observaciones</dt><dd>{t.observaciones || "—"}</dd></div>
               <div><dt>Estado</dt><dd><EstadoTransferencia row={t} /></dd></div>
               {t.id_transferencia_revertida && <div><dt>Revierte a</dt><dd>Transferencia #{t.id_transferencia_revertida}</dd></div>}
               {t.revertido_por && <div><dt>Revertida por</dt><dd>#{t.revertido_por}{t.fecha_reversion ? ` · ${fmtDateES(t.fecha_reversion)}` : ""}{t.revertido_por_usuario ? ` · ${t.revertido_por_usuario}` : ""}</dd></div>}
-              <div className="fc-tr-detail__wide"><dt>Observaciones</dt><dd>{t.observaciones || "—"}</dd></div>
               </dl>
             </div>
           </div>
