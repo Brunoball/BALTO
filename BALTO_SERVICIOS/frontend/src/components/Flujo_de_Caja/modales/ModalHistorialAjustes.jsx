@@ -301,7 +301,7 @@ export default function ModalHistorialAjustes({ open, onClose, onChanged, showTo
           <div className="mov-gridCell fc-aj-td" role="cell" data-label="Estado"><EstadoTransferencia row={t} /></div>
           <div className="mov-gridCell fc-aj-td fc-aj-td--action fc-tr-actions" role="cell" data-label="Acciones">
             <button type="button" className={`mov-iconBtn fc-tr-detailBtn ${abierta ? "is-open" : ""}`} aria-expanded={abierta} aria-controls={detalleId}
-              onClick={() => setExpandida(abierta ? null : t.id_transferencia)} title="Ver detalle" aria-label={`Detalle de la transferencia #${t.id_transferencia}`}>
+              onClick={() => setExpandida(abierta ? null : t.id_transferencia)} title={abierta ? "Ocultar detalle" : "Ver detalle"} aria-label={`Detalle de la transferencia #${t.id_transferencia}`}>
               <FontAwesomeIcon icon={faChevronDown} aria-hidden="true" />
             </button>
             {t.puede_revertir === true && (

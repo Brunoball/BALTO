@@ -1356,3 +1356,66 @@ html[data-theme="oscuro"] .mov-page--flujoCaja .fc-payCard__row--transferencias 
   .fc-aj-history .fc-tr-viewTabs { width: 100%; }
   .fc-aj-history .fc-tr-viewTabs .gm-view-tab { flex: 1 1 0; }
 }
+
+/* Transferencias: etiquetas legibles incluso mientras se cargan las cajas. */
+html[data-theme="oscuro"] .mi-mini__modal.fc-aj-editor .fl-label {
+  background: transparent !important;
+  color: #cbd5e1 !important;
+  opacity: 1;
+}
+html[data-theme="oscuro"] .mi-mini__modal.fc-aj-editor .fl-input:focus + .fl-label,
+html[data-theme="oscuro"] .mi-mini__modal.fc-aj-editor .fl-input:not(:placeholder-shown) + .fl-label,
+html[data-theme="oscuro"] .mi-mini__modal.fc-aj-editor .fc-aj-floatLabel {
+  background: #06121c !important;
+  color: #b4d2ff !important;
+}
+
+/* Acción de detalle: mismo tamaño que Revertir, con estado abierto visible. */
+.fc-aj-history .fc-tr-detailBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 32px;
+  border: 1px solid #c7d9ee;
+  border-radius: 9px;
+  background: #edf4fc;
+  color: #0055bb;
+  line-height: 1;
+  cursor: pointer;
+  transition: background .16s ease, border-color .16s ease, color .16s ease;
+}
+.fc-aj-history .fc-tr-detailBtn:hover,
+.fc-aj-history .fc-tr-detailBtn.is-open {
+  background: #dceafe;
+  border-color: #8eb7e8;
+  color: #004799;
+}
+.fc-aj-history .fc-tr-detailBtn:focus-visible {
+  outline: 2px solid #5799eb;
+  outline-offset: 2px;
+}
+html[data-theme="oscuro"] .fc-aj-history .fc-tr-detailBtn {
+  background: #102b43;
+  border-color: #315577;
+  color: #a8ceff;
+}
+html[data-theme="oscuro"] .fc-aj-history .fc-tr-detailBtn:hover,
+html[data-theme="oscuro"] .fc-aj-history .fc-tr-detailBtn.is-open {
+  background: #1b4166;
+  border-color: #6399d3;
+  color: #e2efff;
+}
+html[data-theme="oscuro"] .fc-aj-history .fc-tr-detail {
+  background: #0b1d2d;
+  border-color: #294157;
+}
+html[data-theme="oscuro"] .fc-aj-history .fc-tr-detail dt { color: #a4b8cc; }
+html[data-theme="oscuro"] .fc-aj-history .fc-tr-detail dd { color: #e2e8f0; }
+html[data-theme="oscuro"] .fc-aj-history .fc-tr-routeCell svg,
+html[data-theme="oscuro"] .fc-aj-editor .fc-tr-route svg { color: #8ab4ff; }
+html[data-theme="oscuro"] .fc-aj-editor .fc-tr-side--origen { border-left-color: #f5a623; }
+html[data-theme="oscuro"] .fc-aj-editor .fc-tr-side--destino { border-left-color: #69a9ff; }
+@media (prefers-reduced-motion: reduce) {
+  .fc-aj-history .fc-tr-detailBtn,
+  .fc-aj-history .fc-tr-detailBtn svg { transition: none; }
+}
