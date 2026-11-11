@@ -1349,7 +1349,12 @@ export default function ModalNuevaCompra({ open, lists, onClose, onToast, onSave
       const idStockVariante = getStockVarianteId(detalle);
       const preciosDisponibles = getDetallePreciosDisponibles(detalle);
       const precioInicial = pickDetallePrecioCompraInicial(preciosDisponibles);
-      const precio = Number(precioInicial?.monto ?? detalle?.precio_costo ?? detalle?.precio ?? 0);
+      // En BALTO Servicios `precios` puede incluir sólo el PRECIO DE VENTA;
+      // para una compra se debe sugerir el COSTO vigente del artículo.
+      const costoCatalogo = detalle?.precio_costo ?? detalle?.costo_unitario;
+      const precio = costoCatalogo != null && Number.isFinite(Number(costoCatalogo))
+        ? Number(costoCatalogo)
+        : Number(precioInicial?.monto ?? detalle?.precio ?? 0);
       const stockDisponible = getStockDisponible(detalle);
 
       updateRow(rowId, {
