@@ -2,6 +2,7 @@ import { test, expect } from './support/test.js';
 import { authenticatedApi, expectApiSuccess } from './support/api.js';
 import { uniqueName } from './support/data.js';
 import { requireMutations, waitDialog, waitDialogByHeading, waitForBusyToFinish } from './support/ui.js';
+import { getSessionPlan } from './support/plan.js';
 import {
   createServiceArticleFixture,
   deleteServiceArticleFixture,
@@ -57,6 +58,7 @@ test.describe('BALTO Servicios - catálogo principal', () => {
   test('@smoke @servicios ping, resumen, carga agregada y navegación del módulo', async ({ page }) => {
     await page.goto('/panel/servicios');
     await waitForBusyToFinish(page);
+    const plan = await getSessionPlan(page);
 
     const ping = await apiGet(page, 'servicios_ping');
     expect(ping.module).toBe('servicios');
@@ -71,14 +73,22 @@ test.describe('BALTO Servicios - catálogo principal', () => {
 
     const catalogo = await apiGet(page, 'servicios_modulo_cargar', { seccion: 'servicios', limit: 1000 });
     expect(catalogo.seccion).toBe('servicios');
-    for (const key of ['unidades', 'categorias_servicios', 'servicios', 'articulos', 'trabajadores']) {
+    // En el Básico no se exponen recursos; no exigir el catálogo de artículos.
+    for (const key of [
+      'unidades', 'categorias_servicios', 'servicios', 'trabajadores',
+      ...(plan.can('resources.manage') ? ['articulos'] : []),
+    ]) {
       expect(Array.isArray(catalogo[key]), `${key} debe venir en la carga agregada`).toBe(true);
     }
 
-    const inventario = await apiGet(page, 'servicios_modulo_cargar', { seccion: 'inventario', limit: 1000 });
-    expect(inventario.seccion).toBe('inventario');
-    for (const key of ['unidades', 'categorias_materiales', 'categorias_insumos', 'categorias_productos', 'materiales', 'insumos', 'stock', 'articulos']) {
-      expect(Array.isArray(inventario[key]), `${key} debe venir en la carga de inventario`).toBe(true);
+    // Plan 1 no incluye Inventario; consultar directamente esa API debe seguir
+    // bloqueado (la suite 47 verifica el contrato HTTP 403 del backend).
+    if (plan.can('resources.manage')) {
+      const inventario = await apiGet(page, 'servicios_modulo_cargar', { seccion: 'inventario', limit: 1000 });
+      expect(inventario.seccion).toBe('inventario');
+      for (const key of ['unidades', 'categorias_materiales', 'categorias_insumos', 'categorias_productos', 'materiales', 'insumos', 'stock', 'articulos']) {
+        expect(Array.isArray(inventario[key]), `${key} debe venir en la carga de inventario`).toBe(true);
+      }
     }
 
     await expect(page.getByText('Servicios', { exact: true }).first()).toBeVisible();
@@ -113,50 +123,68 @@ test.describe('BALTO Servicios - catálogo principal', () => {
     await page.getByRole('tablist').getByRole('button', { name: /^Trabajadores$/ }).click();
     await expect(page.getByPlaceholder('Buscar trabajador o rol...')).toBeVisible();
 
-    await page.goto('/panel/servicios?seccion=inventario');
-    await waitForBusyToFinish(page);
-    await expect(page.getByText('Inventario de servicios', { exact: true })).toBeVisible();
-    for (const [tab, placeholder, addLabel, dialogTitle] of [
-      ['Materiales', 'Buscar material...', 'Agregar material', 'Agregar material'],
-      ['Insumos', 'Buscar insumo...', 'Agregar insumo', 'Agregar insumo'],
-      ['Stock', 'Buscar producto, material o insumo...', 'Agregar producto', 'Agregar producto'],
-    ]) {
-      await page.getByRole('tablist').getByRole('button', { name: new RegExp(`^${tab}$`) }).click();
-      await expect(page.getByPlaceholder(placeholder)).toBeVisible();
-      await page.getByRole('button', { name: addLabel, exact: true }).click();
+    if (plan.can('resources.manage')) {
+      await page.goto('/panel/servicios?seccion=inventario');
+      await waitForBusyToFinish(page);
+      await expect(page.getByText('Inventario de servicios', { exact: true })).toBeVisible();
+      // Stock/productos sólo existen en el Full. Materiales e insumos también
+      // pertenecen al Intermedio, pero allí NO deben mostrar control de stock.
+      const tabs = [
+        ['Materiales', 'Buscar material...', 'Agregar material', 'Agregar material'],
+        ['Insumos', 'Buscar insumo...', 'Agregar insumo', 'Agregar insumo'],
+        ...(plan.can('stock.panel')
+          ? [['Stock', 'Buscar producto, material o insumo...', 'Agregar producto', 'Agregar producto']]
+          : []),
+      ];
+      await expect(page.getByRole('tablist').getByRole('button', { name: /^Stock$/ }))
+        .toHaveCount(plan.can('stock.panel') ? 1 : 0);
+      for (const [tab, placeholder, addLabel, dialogTitle] of tabs) {
+        await page.getByRole('tablist').getByRole('button', { name: new RegExp(`^${tab}$`) }).click();
+        await expect(page.getByPlaceholder(placeholder)).toBeVisible();
+        await page.getByRole('button', { name: addLabel, exact: true }).click();
 
-      const articleDialog = await waitDialog(page, dialogTitle);
-      const stockToggle = articleDialog.locator('.servicios-stock-control input[type="checkbox"]');
-      if (tab === 'Stock') {
-        await expect(stockToggle).toHaveCount(0);
-        await expect(articleDialog.getByText(/El producto siempre controla existencias\./i)).toBeVisible();
-        await expect(articleDialog.getByRole('textbox', { name: 'Stock inicial', exact: true })).toBeVisible();
-      } else {
-        await expect(stockToggle).toHaveCount(1);
-        await expect(stockToggle).not.toBeChecked();
-        await expect(articleDialog.getByRole('textbox', { name: 'Stock inicial', exact: true })).toHaveCount(0);
-        await expect(articleDialog.getByText(/no aparecerá ni impactará en Stock/i)).toBeVisible();
+        const articleDialog = await waitDialog(page, dialogTitle);
+        const stockToggle = articleDialog.locator('.servicios-stock-control input[type="checkbox"]');
+        if (tab === 'Stock') {
+          await expect(stockToggle).toHaveCount(0);
+          await expect(articleDialog.getByText(/El producto siempre controla existencias\./i)).toBeVisible();
+          await expect(articleDialog.getByRole('textbox', { name: 'Stock inicial', exact: true })).toBeVisible();
+        } else if (plan.can('resources.stock')) {
+          await expect(articleDialog.getByText('Stock y valores', { exact: true })).toBeVisible();
+          await expect(stockToggle).toHaveCount(1);
+          await expect(stockToggle).not.toBeChecked();
+          await expect(articleDialog.getByRole('textbox', { name: 'Stock inicial', exact: true })).toHaveCount(0);
+          await expect(articleDialog.getByText(/no aparecerá ni impactará en Stock/i)).toBeVisible();
+        } else {
+          // Plan 2: la ausencia del checkbox es comportamiento CORRECTO.
+          await expect(articleDialog.getByText('Costos y valores', { exact: true })).toBeVisible();
+          await expect(stockToggle).toHaveCount(0);
+          await expect(articleDialog.getByText(/Controlar stock de este/i)).toHaveCount(0);
+          await expect(articleDialog.getByRole('textbox', { name: 'Stock inicial', exact: true })).toHaveCount(0);
+          await expect(articleDialog.getByText(/no aparecerá ni impactará en Stock/i)).toHaveCount(0);
+        }
+        const categorySelect = articleDialog.getByRole('combobox', { name: 'Categoría', exact: true });
+        await expect(categorySelect.getByRole('option', { name: '+ AGREGAR CATEGORÍA', exact: true })).toHaveCount(1);
+        await expect(categorySelect.getByRole('option', { name: 'SIN CATEGORÍA', exact: true })).toHaveCount(1);
+        await expect(articleDialog.getByRole('combobox', { name: 'Unidad de medida', exact: true }).getByRole('option', { name: '+ AGREGAR UNIDAD', exact: true })).toHaveCount(1);
+
+        await categorySelect.selectOption('__ADD__');
+        const quickDialog = await waitQuickCategoryDialog(page);
+        await expect(quickDialog.getByRole('textbox', { name: 'Nombre de la categoría', exact: true })).toBeVisible();
+        await quickDialog.getByRole('button', { name: 'Cancelar', exact: true }).click();
+        await expect(quickDialog).toBeHidden();
+        await articleDialog.getByRole('button', { name: 'Cancelar', exact: true }).click();
+        await expect(articleDialog).toBeHidden();
       }
-      const categorySelect = articleDialog.getByRole('combobox', { name: 'Categoría', exact: true });
-      await expect(categorySelect.getByRole('option', { name: '+ AGREGAR CATEGORÍA', exact: true })).toHaveCount(1);
-      await expect(categorySelect.getByRole('option', { name: 'SIN CATEGORÍA', exact: true })).toHaveCount(1);
-      await expect(articleDialog.getByRole('combobox', { name: 'Unidad de medida', exact: true }).getByRole('option', { name: '+ AGREGAR UNIDAD', exact: true })).toHaveCount(1);
-
-      await categorySelect.selectOption('__ADD__');
-      const quickDialog = await waitQuickCategoryDialog(page);
-      await expect(quickDialog.getByRole('textbox', { name: 'Nombre de la categoría', exact: true })).toBeVisible();
-      await quickDialog.getByRole('button', { name: 'Cancelar', exact: true }).click();
-      await expect(quickDialog).toBeHidden();
-      await articleDialog.getByRole('button', { name: 'Cancelar', exact: true }).click();
-      await expect(articleDialog).toBeHidden();
+      await expect(page.getByRole('button', { name: 'Categorías', exact: true })).toHaveCount(0);
     }
-    await expect(page.getByRole('button', { name: 'Categorías', exact: true })).toHaveCount(0);
   });
 
 
   test('@crud @critical alta rápida de categorías desde los desplegables de Servicios', async ({ page }) => {
     test.setTimeout(2 * 60_000);
     await requireMutations(test, page);
+    const plan = await getSessionPlan(page);
 
     const cases = [
       {
@@ -192,10 +220,15 @@ test.describe('BALTO Servicios - catálogo principal', () => {
         createAction: 'servicios_articulos_categoria_crear',
       },
     ];
+    // Servicio: todos los planes. Material e insumo: 2/3. Producto: sólo 3.
+    const availableCases = cases.filter((cfg) =>
+      cfg.group === 'SERVICIO'
+      || (cfg.group === 'PRODUCTO' ? plan.can('products.manage') : plan.can('resources.manage')),
+    );
     const created = [];
 
     try {
-      for (const cfg of cases) {
+      for (const cfg of availableCases) {
         await page.goto(cfg.path);
         await waitForBusyToFinish(page);
         if (cfg.tab) {
@@ -245,6 +278,7 @@ test.describe('BALTO Servicios - catálogo principal', () => {
 
   test('@crud @critical unidad + trabajador + servicio + composición: ciclo completo', async ({ page }) => {
     await requireMutations(test, page);
+    const plan = await getSessionPlan(page);
 
     const unitName = uniqueName('UNIDAD-CATALOGO', 70);
     const unitNameUpdated = `${unitName}-EDIT`.slice(0, 70);
@@ -311,15 +345,20 @@ test.describe('BALTO Servicios - catálogo principal', () => {
       expect(exactName(workers, workerName)).toBeTruthy();
       await apiPost(page, 'servicios_trabajador_reactivar', { id_trabajador: workerId });
 
-      const article = await createServiceArticleFixture(page, {
-        name: articleName,
-        type: 'MATERIAL',
-        idUnit: unitId,
-        stock: 25,
-        cost: 40,
-        price: 75,
-      });
-      articleCreated = true;
+      // Plan 1 trabaja con mano de obra sin artículos. Los planes 2/3
+      // agregan composición de materiales; el helper respeta las existencias del plan.
+      let article = null;
+      if (plan.can('services.composition')) {
+        article = await createServiceArticleFixture(page, {
+          name: articleName,
+          type: 'MATERIAL',
+          idUnit: unitId,
+          stock: 25,
+          cost: 40,
+          price: 75,
+        });
+        articleCreated = true;
+      }
 
       const serviceCreated = await apiPost(page, 'servicios_servicio_crear', {
         nombre: serviceName,
@@ -331,7 +370,7 @@ test.describe('BALTO Servicios - catálogo principal', () => {
         precio_venta: 1000,
         iva_pct: 21,
         composicion: {
-          articulos: [{ id_articulo: Number(article.id_articulo), cantidad: 2, iva_pct: 10.5 }],
+          articulos: article ? [{ id_articulo: Number(article.id_articulo), cantidad: 2, iva_pct: 10.5 }] : [],
           trabajadores: [{ id_trabajador: workerId, horas_estimadas: 1.5 }],
         },
       });
@@ -340,8 +379,12 @@ test.describe('BALTO Servicios - catálogo principal', () => {
 
       let serviceGet = await apiGet(page, 'servicios_servicio_obtener', { id_servicio: serviceId });
       expect(serviceGet.servicio?.nombre).toBe(serviceName);
-      expect(serviceGet.servicio?.articulos?.some((row) => Number(row.id_articulo) === Number(article.id_articulo))).toBe(true);
-      expect(Number(serviceGet.servicio?.articulos?.find((row) => Number(row.id_articulo) === Number(article.id_articulo))?.iva_pct)).toBeCloseTo(10.5, 6);
+      if (article) {
+        expect(serviceGet.servicio?.articulos?.some((row) => Number(row.id_articulo) === Number(article.id_articulo))).toBe(true);
+        expect(Number(serviceGet.servicio?.articulos?.find((row) => Number(row.id_articulo) === Number(article.id_articulo))?.iva_pct)).toBeCloseTo(10.5, 6);
+      } else {
+        expect(serviceGet.servicio?.articulos || []).toHaveLength(0);
+      }
       expect(serviceGet.servicio?.trabajadores?.some((row) => Number(row.id_trabajador) === workerId)).toBe(true);
 
       let catalog = (await apiGet(page, 'servicios_catalogo_listar', { activo: 'todos', q: serviceName })).servicios;
@@ -350,13 +393,17 @@ test.describe('BALTO Servicios - catálogo principal', () => {
       await apiPost(page, 'servicios_composicion_guardar', {
         id_servicio: serviceId,
         composicion: {
-          articulos: [{ id_articulo: Number(article.id_articulo), cantidad: 3, iva_pct: 27 }],
+          articulos: article ? [{ id_articulo: Number(article.id_articulo), cantidad: 3, iva_pct: 27 }] : [],
           trabajadores: [{ id_trabajador: workerId, horas_estimadas: 2 }],
         },
       });
       serviceGet = await apiGet(page, 'servicios_servicio_obtener', { id_servicio: serviceId });
-      expect(Number(serviceGet.servicio?.articulos?.[0]?.cantidad)).toBeCloseTo(3, 6);
-      expect(Number(serviceGet.servicio?.articulos?.[0]?.iva_pct)).toBeCloseTo(27, 6);
+      if (article) {
+        expect(Number(serviceGet.servicio?.articulos?.[0]?.cantidad)).toBeCloseTo(3, 6);
+        expect(Number(serviceGet.servicio?.articulos?.[0]?.iva_pct)).toBeCloseTo(27, 6);
+      } else {
+        expect(serviceGet.servicio?.articulos || []).toHaveLength(0);
+      }
       expect(Number(serviceGet.servicio?.trabajadores?.[0]?.horas_estimadas)).toBeCloseTo(2, 6);
 
       await apiPost(page, 'servicios_servicio_actualizar', {
@@ -393,10 +440,12 @@ test.describe('BALTO Servicios - catálogo principal', () => {
       // mostrarse al editarlo, sin modificar el IVA global del material.
       await row.getByTitle('Editar').click();
       const editServiceDialog = await waitDialog(page, 'Editar servicio');
-      await editServiceDialog.getByRole('tab', { name: 'Composición del servicio', exact: true }).click();
-      const articleCompositionRow = editServiceDialog.locator('.servicios-component-row').filter({ hasText: articleName }).first();
-      await expect(articleCompositionRow).toBeVisible();
-      await expect(articleCompositionRow.getByRole('combobox')).toHaveValue('27');
+      if (article) {
+        await editServiceDialog.getByRole('tab', { name: 'Composición del servicio', exact: true }).click();
+        const articleCompositionRow = editServiceDialog.locator('.servicios-component-row').filter({ hasText: articleName }).first();
+        await expect(articleCompositionRow).toBeVisible();
+        await expect(articleCompositionRow.getByRole('combobox')).toHaveValue('27');
+      }
       await editServiceDialog.getByRole('button', { name: 'Cerrar', exact: true }).click();
       await expect(editServiceDialog).toBeHidden();
 

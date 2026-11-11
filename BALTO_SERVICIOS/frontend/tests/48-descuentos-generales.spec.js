@@ -198,7 +198,7 @@ test('@crud @critical @descuentos venta contado con 10 %: total, pagos, DB, deta
     await formaDeVenta(dialog, /CONTADO/i);
     const box = await aplicarDescuento(dialog, 'PORCENTAJE', '10');
     await expect(box.getByTestId('dg-descuento-monto')).toContainText(/100,00/);
-    await expect(box.getByTestId('dg-total-final')).toContainText(/900,00/);
+    // El total final se muestra en el resumen de la venta, no en el control.
     // El renglón conserva el precio y el total originales.
     await expect(dialog.getByTestId('nv-row-total').first()).toContainText(/1\.000,00/);
     await expect(dialog.getByTestId('nv-summary-descuento')).toContainText(/100,00/);
@@ -262,8 +262,9 @@ test('@crud @critical @descuentos venta cuenta corriente con monto fijo: deuda =
     await selectFirstAutocomplete(dialog, 'Cliente');
     await formaDeVenta(dialog, /CUENTA\s*CORRIENTE/i);
     const box = await aplicarDescuento(dialog, 'MONTO', '280');
-    await expect(box.getByTestId('dg-porcentaje-equivalente')).toContainText('10,07');
-    await expect(box.getByTestId('dg-total-final')).toContainText(/2\.500,00/);
+    await expect(box.getByTestId('dg-total-original')).toContainText(/2\.780,00/);
+    await expect(dialog.getByTestId('nv-summary-descuento')).toContainText(/≈\s*10,07\s*%/);
+    await expect(dialog.getByTestId('nv-summary-total')).toContainText(/2\.500,00/);
 
     const responsePromise = esperarPost(page, 'ventas_crear_batch');
     await clickSaveAndWait(dialog, /Guardar venta/i, { timeout: 90_000 });
@@ -433,7 +434,7 @@ test('@crud @critical @descuentos presupuesto con 10 %: guardado, detalle y PDF'
     const { dialog } = await prepareBudget(page, { ...c.row, quantity: 1, price: 1000, ivaPct: 21 });
     const box = await aplicarDescuento(dialog, 'PORCENTAJE', '10');
     await expect(box.getByTestId('dg-total-original')).toContainText(/1\.210,00/);
-    await expect(box.getByTestId('dg-total-final')).toContainText(/1\.089,00/);
+    await expect(dialog.getByTestId('np-summary-total')).toContainText(/1\.089,00/);
     await expect(dialog.getByTestId('np-row-total').first()).toContainText(/1\.210,00/);
 
     const { payload, body, id, multipart } = await guardarPresupuesto(page, dialog);
@@ -468,8 +469,8 @@ test('@crud @critical @descuentos presupuesto $278.000 − $28.000 → venta con
 
   try {
     const { dialog } = await prepareBudget(page, { ...c.row, quantity: 1, price: 278000, ivaPct: 0 });
-    const box = await aplicarDescuento(dialog, 'MONTO', '28.000');
-    await expect(box.getByTestId('dg-porcentaje-equivalente')).toContainText('10,07');
+    await aplicarDescuento(dialog, 'MONTO', '28.000');
+    await expect(dialog.getByTestId('np-summary-descuento')).toContainText(/≈\s*10,07\s*%/);
     await expect(dialog.getByTestId('np-summary-total')).toContainText(/250\.000,00/);
     const saved = await guardarPresupuesto(page, dialog);
     budgetId = saved.id;

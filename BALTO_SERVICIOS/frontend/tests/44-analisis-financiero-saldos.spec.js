@@ -1,6 +1,7 @@
 import { test, expect } from './support/test.js';
 import { authenticatedApi, expectApiSuccess } from './support/api.js';
 import { waitForBusyToFinish } from './support/ui.js';
+import { getSessionPlan } from './support/plan.js';
 
 // Sólo lectura: apto tanto para local como para un smoke remoto, sin CRUD.
 const range = { fecha_desde: '2026-10-01', fecha_hasta: '2026-10-28' };
@@ -68,17 +69,29 @@ test('@analisis-financiero @saldos cambian las aperturas al cambiar el rango, no
   expect(opening).toBeCloseTo((before.tesoreria.medios || []).reduce((total, m) => total + amount(m.saldo_inicial_aplicado), 0), 2);
 });
 
-test('@analisis-financiero UI muestra las 3 pestañas actuales sin perder gráfico ni saldos', async ({ page }) => {
+test('@analisis-financiero UI muestra las pestañas según plan sin perder gráfico ni saldos', async ({ page }) => {
   await page.goto('/panel/analisis-financiero');
   await waitForBusyToFinish(page);
 
-  // La interfaz actual presenta tres PESTAÑAS, no las secciones antiguas.
+  // La cuarta pestaña se habilita por la capacidad del plan, no por un
+  // número fijo de pestañas: Básico = 3; Intermedio/Full con costeo = 4.
+  const { can } = await getSessionPlan(page);
+  const conCosteo = can('services.costing');
   const tabs = page.getByRole('tablist', { name: 'Secciones del análisis financiero' });
   await expect(tabs).toBeVisible();
   const disponibilidad = tabs.getByRole('tab', { name: 'Disponibilidad' });
   const resultados = tabs.getByRole('tab', { name: 'Resultados' });
   const medios = tabs.getByRole('tab', { name: 'Medios de pago' });
-  await expect(tabs.getByRole('tab')).toHaveCount(3);
+  const rentabilidad = tabs.getByRole('tab', { name: 'Rentabilidad' });
+  const rentabilidadPanel = page.locator('#af-panel-rentabilidad');
+  await expect(tabs.getByRole('tab')).toHaveCount(conCosteo ? 4 : 3);
+  if (conCosteo) {
+    await expect(rentabilidad).toBeVisible();
+    await expect(rentabilidadPanel).toBeHidden();
+  } else {
+    await expect(rentabilidad).toHaveCount(0);
+    await expect(rentabilidadPanel).toHaveCount(0);
+  }
   await expect(disponibilidad).toHaveAttribute('aria-selected', 'true');
   await expect(page.getByRole('heading', { name: 'Movimientos de dinero' })).toBeVisible();
 
@@ -134,6 +147,17 @@ test('@analisis-financiero UI muestra las 3 pestañas actuales sin perder gráfi
     await expect(table.getByRole('columnheader', { name: header })).toBeVisible();
   }
   await expect(table.locator('.af-mediumFoot')).toBeVisible();
+
+  if (conCosteo) {
+    // En planes con costeo, Rentabilidad debe poder abrirse sin superponer
+    // las otras pestañas. El contenido se carga al entrar en ella.
+    await rentabilidad.click();
+    await expect(rentabilidad).toHaveAttribute('aria-selected', 'true');
+    await expect(rentabilidadPanel).toBeVisible();
+    await expect(disponibilidadPanel).toBeHidden();
+    await expect(resultadosPanel).toBeHidden();
+    await expect(mediosPanel).toBeHidden();
+  }
 
   // Volver a Disponibilidad debe conservar gráficos y saldos, no recargar una
   // pantalla desactualizada ni dejar un panel superpuesto.
