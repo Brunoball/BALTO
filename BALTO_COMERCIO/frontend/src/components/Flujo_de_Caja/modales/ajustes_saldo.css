@@ -372,7 +372,13 @@
   overscroll-behavior: contain;
 }
 .fc-aj-tr { display: grid; grid-template-columns: 140px 1fr 1fr 122px 122px 122px 1.5fr 166px 106px; align-items: stretch; }
-.fc-aj-history .fc-aj-tr--head { background: var(--color-primary, #0055bb); scrollbar-gutter: stable; overflow-y: auto; }
+/* El encabezado no se desplaza: se mantiene la reserva lateral para alinear
+   las columnas con el cuerpo, que es el único sector con scroll vertical. */
+.fc-aj-history .fc-aj-tr--head {
+  background: var(--color-primary, #0055bb);
+  scrollbar-gutter: stable;
+  overflow-y: hidden;
+}
 .fc-aj-history .fc-aj-th { color: #fff; white-space: normal; }
 .fc-aj-history .fc-aj-td { color: var(--mi-text); white-space: normal; overflow-wrap: anywhere; }
 .fc-aj-history .fc-aj-tr:not(.fc-aj-tr--head) { background: var(--mi-bg); border-bottom: 1px solid var(--color-border); }
