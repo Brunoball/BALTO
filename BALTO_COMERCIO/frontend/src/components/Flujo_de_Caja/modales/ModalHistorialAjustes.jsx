@@ -186,8 +186,8 @@ export default function ModalHistorialAjustes({ open, onClose, onChanged, showTo
 
   const netoVista = (vista !== "TRANSFERENCIAS" ? neto : 0) + (vista !== "AJUSTES" ? netoTransfer : 0);
   const columnas = vista === "AJUSTES"
-    ? ["Fecha y hora", "Medio", "Tipo", "Ajuste", "Saldo anterior", "Saldo posterior", "Motivo", "Usuario", "Estado", "Acciones"]
-    : ["Fecha y hora", "Medio(s)", "Tipo", "Importe", "Saldo anterior", "Saldo posterior", "Motivo / Obs.", "Usuario", "Estado", "Acciones"];
+    ? ["Fecha y hora", "Medio", "Tipo", "Ajuste", "Saldo anterior", "Saldo posterior", "Motivo", "Estado", "Acciones"]
+    : ["Fecha y hora", "Medio(s)", "Tipo", "Importe", "Saldo anterior", "Saldo posterior", "Motivo / Obs.", "Estado", "Acciones"];
 
   const actualizarFiltro = (campo, valor) => {
     const next = { ...filtros, [campo]: valor };
@@ -258,7 +258,6 @@ export default function ModalHistorialAjustes({ open, onClose, onChanged, showTo
         <span>{r.motivo_label}</span>
         {r.observaciones && <small title={r.observaciones}>{r.observaciones}</small>}
       </div>
-      <div className="mov-gridCell fc-aj-td" role="cell" data-label="Usuario">{r.usuario_nombre || "—"}</div>
       <div className="mov-gridCell fc-aj-td" role="cell" data-label="Estado"><EstadoBadge row={r} /></div>
       <div className="mov-gridCell fc-aj-td fc-aj-td--action" role="cell" data-label="Acciones">
         {r.puede_revertir === true || r.puede_revertir === 1 || r.puede_revertir === "1" ? (
@@ -299,7 +298,6 @@ export default function ModalHistorialAjustes({ open, onClose, onChanged, showTo
             <span>{t.tipo === "REVERSION" ? "REVERSIÓN" : "TRANSFERENCIA INTERNA"}</span>
             {t.observaciones && <small title={t.observaciones}>{t.observaciones}</small>}
           </div>
-          <div className="mov-gridCell fc-aj-td" role="cell" data-label="Usuario">{t.usuario_nombre || "—"}</div>
           <div className="mov-gridCell fc-aj-td" role="cell" data-label="Estado"><EstadoTransferencia row={t} /></div>
           <div className="mov-gridCell fc-aj-td fc-aj-td--action fc-tr-actions" role="cell" data-label="Acciones">
             <button type="button" className={`mov-iconBtn fc-tr-detailBtn ${abierta ? "is-open" : ""}`} aria-expanded={abierta} aria-controls={detalleId}
@@ -323,7 +321,7 @@ export default function ModalHistorialAjustes({ open, onClose, onChanged, showTo
         >
           <div className="fc-tr-detailReveal__clip">
             <div className="fc-tr-detail">
-              <dl role="cell" aria-colspan={10}>
+              <dl role="cell" aria-colspan={9}>
               <div><dt>Fecha y hora</dt><dd>{fmtDateTime(t.created_at)}</dd></div>
               <div><dt>Importe transferido</dt><dd>{moneyARS(t.importe)}</dd></div>
               <div><dt>Origen · {t.medio_origen_nombre}{t.medio_origen_activo === false ? " (inactivo)" : ""}</dt>
@@ -331,7 +329,6 @@ export default function ModalHistorialAjustes({ open, onClose, onChanged, showTo
               <div><dt>Destino · {t.medio_destino_nombre}{t.medio_destino_activo === false ? " (inactivo)" : ""}</dt>
                 <dd>{moneyARS(t.saldo_destino_anterior)} → {moneyARS(t.saldo_destino_posterior)}</dd></div>
               <div><dt>Observaciones</dt><dd>{t.observaciones || "—"}</dd></div>
-              <div><dt>Usuario</dt><dd>{t.usuario_nombre || "—"}</dd></div>
               <div><dt>Estado</dt><dd><EstadoTransferencia row={t} /></dd></div>
               {t.id_transferencia_revertida && <div><dt>Revierte a</dt><dd>Transferencia #{t.id_transferencia_revertida}</dd></div>}
               {t.revertido_por && <div><dt>Revertida por</dt><dd>#{t.revertido_por}{t.fecha_reversion ? ` · ${fmtDateES(t.fecha_reversion)}` : ""}{t.revertido_por_usuario ? ` · ${t.revertido_por_usuario}` : ""}</dd></div>}
@@ -422,18 +419,18 @@ export default function ModalHistorialAjustes({ open, onClose, onChanged, showTo
           <div className="fc-aj-table" role="table" aria-busy={loading} aria-label="Historial de ajustes de saldo">
             <div className="mov-gridTable mov-gridTable--head fc-aj-tr fc-aj-tr--head" role="row">
               {columnas.map((h, i) => (
-                <div key={i} className={`mov-gridCell--head fc-aj-th ${i >= 3 && i <= 5 ? "is-right" : i >= 8 ? "is-center" : ""}`} role="columnheader">{h}</div>
+                <div key={i} className={`mov-gridCell--head fc-aj-th ${i >= 3 && i <= 5 ? "is-right" : i >= 7 ? "is-center" : ""}`} role="columnheader">{h}</div>
               ))}
             </div>
             <div className="fc-aj-tableBody" role="rowgroup">
             {loading && Array.from({ length: 24 }, (_, i) => (
               <div key={`loading-${i}`} className="mov-gridTable mov-gridTable--row fc-aj-tr" role="row" aria-hidden="true">
-                {Array.from({ length: 10 }, (_, j) => <div key={j} className="mov-gridCell fc-aj-td" role="cell"><span className="fc-aj-skeleton" /></div>)}
+                {Array.from({ length: 9 }, (_, j) => <div key={j} className="mov-gridCell fc-aj-td" role="cell"><span className="fc-aj-skeleton" /></div>)}
               </div>
             ))}
             {!loading && items.map((it) => (it.kind === "ajuste" ? renderAjuste(it.row) : renderTransferencia(it.row)))}
             {!loading && !items.length && !error && (
-              <div className="fc-aj-empty" role="row"><div role="cell" aria-colspan={10}><FontAwesomeIcon icon={faClockRotateLeft} /><strong>No hay registros</strong><span>No se encontraron movimientos para los filtros seleccionados.</span></div></div>
+              <div className="fc-aj-empty" role="row"><div role="cell" aria-colspan={9}><FontAwesomeIcon icon={faClockRotateLeft} /><strong>No hay registros</strong><span>No se encontraron movimientos para los filtros seleccionados.</span></div></div>
             )}
             </div>
           </div>

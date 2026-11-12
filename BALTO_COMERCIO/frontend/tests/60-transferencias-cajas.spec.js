@@ -8,7 +8,7 @@ import { cleanupTestUser, createEmployeeTestUser, loginTestUserInNewContext } fr
  * BALTO Comercio · Transferencias internas entre cajas (Flujo de Caja).
  *
  * Adaptado de la suite 50 de BALTO Servicios. Diferencias de Comercio:
- *  - El historial conserva la columna Usuario (también para transferencias).
+ *  - El historial oculta Usuario en la tabla y en el detalle de transferencias.
  *  - Se verifica además el Dashboard de Comercio (caja actual, líquido y
  *    saldos por medio), que toma sus disponibilidades de Análisis Financiero.
  *
@@ -320,9 +320,9 @@ test.describe('@flujo @transferencias interfaz (mocks, sin escrituras)', () => {
     const hist = page.getByRole('dialog', { name: 'Historial de ajustes de saldo' });
     const row = hist.locator('[data-transferencia-id="7"]');
     await expect(row).toBeVisible();
-    // Comercio conserva la columna Usuario del historial (también en transferencias).
-    await expect(hist.getByRole('columnheader', { name: 'Usuario', exact: true })).toHaveCount(1);
-    await expect(row.locator('[data-label="Usuario"]')).toHaveText('ADMIN');
+    // Usuario ya no se muestra en la tabla del historial.
+    await expect(hist.getByRole('columnheader', { name: 'Usuario', exact: true })).toHaveCount(0);
+    await expect(row.locator('[data-label="Usuario"]')).toHaveCount(0);
     for (const text of ['BANCO', 'PERSONAL PAY', 'TRANSFERENCIA INTERNA', 'VIGENTE']) {
       await expect(row.getByText(text, { exact: true }).first()).toBeVisible();
     }
@@ -331,8 +331,8 @@ test.describe('@flujo @transferencias interfaz (mocks, sin escrituras)', () => {
     const det = hist.locator('[data-transferencia-detalle="7"]');
     await expect(det).toContainText(/175\.000,00 → \$\s?150\.000,00/);
     await expect(det).toContainText(/0,00 → \$\s?25\.000,00/);
-    await expect(det.getByText('Usuario', { exact: true })).toBeVisible();
-    await expect(det.getByText('ADMIN', { exact: true })).toBeVisible();
+    await expect(det.getByText('Usuario', { exact: true })).toHaveCount(0);
+    await expect(det.getByText('ADMIN', { exact: true })).toHaveCount(0);
 
     await hist.getByRole('tab', { name: 'Ajustes' }).click();
     await expect(hist.locator('[data-transferencia-id]')).toHaveCount(0);
@@ -736,16 +736,33 @@ test.describe('@flujo @transferencias @mutations transferencias reales y concili
 
   test('44 · no se revierte si la caja que devuelve no tiene saldo suficiente', async ({ page }) => {
     const s = await snapshot(page);
-    const { origen } = elegirPar(s.medios);
-    const activos = s.medios.filter((m) => m.puede_destino && m.id_medio_pago !== origen?.id_medio_pago);
-    test.skip(!origen || activos.length < 2 || amount(origen.saldo_actual) < 10, 'Se necesitan tres medios y saldo en el origen.');
-    const [b, c] = activos;
-    const x = expectApiSuccess(await authenticatedApi(page, 'flujo_caja_transferencias_crear', { method: 'POST', body: bodyFor(origen, b, 5) })).transferencia;
-    const s2 = await snapshot(page);
-    // Vaciar B hacia C: la caja que debería devolver ya no tiene el dinero.
-    const vaciar = expectApiSuccess(await authenticatedApi(page, 'flujo_caja_transferencias_crear', {
-      method: 'POST', body: bodyFor(s2.byId[b.id_medio_pago], s2.byId[c.id_medio_pago], s2.byId[b.id_medio_pago].saldo_actual),
+    // Usar dos cajas activas. El origen debe poder enviar y luego recibir;
+    // la receptora B parte de saldo >= 0 para que el vaciado sea reversible.
+    // No elegir una tercera caja arbitraria: podría tener saldo negativo y
+    // bloquear la reversión de limpieza aunque el rechazo esperado ya pasó.
+    const activos = s.medios.filter((m) => m.puede_origen && m.puede_destino);
+    const origen = [...activos].filter((m) => amount(m.saldo_actual) >= 10)
+      .sort((a, b) => amount(b.saldo_actual) - amount(a.saldo_actual))[0];
+    const b = [...activos].filter((m) => m.id_medio_pago !== origen?.id_medio_pago && amount(m.saldo_actual) >= 0)
+      .sort((a, b) => amount(a.saldo_actual) - amount(b.saldo_actual))[0];
+    test.skip(!origen || !b, 'Se requieren dos cajas activas: origen con $10 o más y destino con saldo no negativo.');
+
+    const x = expectApiSuccess(await authenticatedApi(page, 'flujo_caja_transferencias_crear', {
+      method: 'POST', body: bodyFor(origen, b, 5),
     })).transferencia;
+    const s2 = await snapshot(page);
+    const saldoB = amount(s2.byId[b.id_medio_pago].saldo_actual);
+    expect(saldoB, 'B debe tener saldo positivo para vaciarse').toBeGreaterThan(0);
+
+    // Vaciar B devolviéndolo al ORIGEN de x, no a una tercera caja con saldo
+    // potencialmente negativo. Al revertir este vaciado, el origen dispone
+    // necesariamente del dinero recibido; después B puede revertir x.
+    const vaciar = expectApiSuccess(await authenticatedApi(page, 'flujo_caja_transferencias_crear', {
+      method: 'POST', body: bodyFor(s2.byId[b.id_medio_pago], s2.byId[origen.id_medio_pago], saldoB),
+    })).transferencia;
+    const s3 = await snapshot(page);
+    close(s3.byId[b.id_medio_pago].saldo_actual, 0, 'B quedó vacía antes de intentar la reversión');
+
     const totalAntes = (await listarTr(page)).total;
     const res = await authenticatedApi(page, 'flujo_caja_transferencias_revertir', {
       method: 'POST', body: { id_transferencia: x.id_transferencia, observaciones: `${RUN_PREFIX} REVERSION SIN SALDO`, clave_solicitud: clave('rsin') },
@@ -753,13 +770,18 @@ test.describe('@flujo @transferencias @mutations transferencias reales y concili
     expect(res.status).toBe(409);
     expect(res.body.codigo).toBe('SALDO_INSUFICIENTE');
     expect(res.body.mensaje).toMatch(/No se puede revertir automáticamente/);
-    expect((await listarTr(page)).total, 'Sin escrituras').toBe(totalAntes);
-    // Dejar el estado ordenado: revertir primero el vaciado y luego la original.
+    expect((await listarTr(page)).total, 'Sin escrituras tras el rechazo').toBe(totalAntes);
+
+    // Revertir en orden inverso para deshacer sólo los movimientos de la prueba.
     for (const id of [vaciar.id_transferencia, x.id_transferencia]) {
       expectApiSuccess(await authenticatedApi(page, 'flujo_caja_transferencias_revertir', {
         method: 'POST', body: { id_transferencia: id, observaciones: `${RUN_PREFIX} REVERSION ORDEN`, clave_solicitud: clave('rord') },
       }));
     }
+    const fin = await snapshot(page);
+    close(fin.byId[origen.id_medio_pago].saldo_actual, origen.saldo_actual, 'El origen recupera su saldo inicial');
+    close(fin.byId[b.id_medio_pago].saldo_actual, b.saldo_actual, 'B recupera su saldo inicial');
+    close(fin.fc.saldo_actual, s.fc.saldo_actual, 'La operación y su reversión no alteran el total');
   });
 
   test('36 · transferencia entre dos medios del mismo grupo visual', async ({ page }) => {
