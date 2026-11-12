@@ -315,7 +315,7 @@ test.describe('@flujo @transferencias interfaz (mocks, sin escrituras)', () => {
     const hist = page.getByRole('dialog', { name: 'Historial de ajustes de saldo' });
     const row = hist.locator('[data-transferencia-id="7"]');
     await expect(row).toBeVisible();
-    // El usuario ya no ocupa una columna en la tabla; sigue visible en el detalle de auditoría.
+    // Por diseño, no se muestra el usuario en ninguna parte del historial.
     await expect(hist.getByRole('columnheader', { name: 'Usuario', exact: true })).toHaveCount(0);
     for (const text of ['BANCO', 'PERSONAL PAY', 'TRANSFERENCIA INTERNA', 'VIGENTE']) {
       await expect(row.getByText(text, { exact: true }).first()).toBeVisible();
@@ -325,8 +325,9 @@ test.describe('@flujo @transferencias interfaz (mocks, sin escrituras)', () => {
     const det = hist.locator('[data-transferencia-detalle="7"]');
     await expect(det).toContainText(/175\.000,00 → \$\s?150\.000,00/);
     await expect(det).toContainText(/0,00 → \$\s?25\.000,00/);
-    await expect(det.getByText('Usuario', { exact: true })).toBeVisible();
-    await expect(det.getByText('ADMIN', { exact: true })).toBeVisible();
+    // El detalle tampoco debe mostrar el usuario responsable.
+    await expect(det.getByText('Usuario', { exact: true })).toHaveCount(0);
+    await expect(det.getByText('ADMIN', { exact: true })).toHaveCount(0);
 
     await hist.getByRole('tab', { name: 'Ajustes' }).click();
     await expect(hist.locator('[data-transferencia-id]')).toHaveCount(0);

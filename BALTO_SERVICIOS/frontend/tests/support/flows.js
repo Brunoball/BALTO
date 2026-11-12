@@ -320,10 +320,53 @@ export async function applyPurchaseCreditNoteAndCapture(page, productName, optio
   return { response, body };
 }
 
+// Una navegación nueva vuelve a consultar auth_session_check. En suites largas,
+// una caída puntual de red puede mostrar la pantalla de error de sesión aunque
+// la session_key siga vigente. El test puede reintentar esa consulta GET UNA vez;
+// no se reintentan ventas, no se hace un nuevo login y no se ignoran errores 401.
+async function openNewSaleAfterNavigation(page) {
+  const newSale = page.getByRole('button', { name: /Nueva Venta/i });
+  const authError = page.getByRole('heading', {
+    name: 'No se pudo validar la sesión',
+    exact: true,
+  });
+
+  // Esperamos un estado concreto en lugar de consumir 15 s buscando un botón
+  // que no existe mientras el GlobalSessionGate muestra el error de red.
+  await expect.poll(async () => {
+    if (await newSale.isVisible()) return 'ready';
+    if (await authError.isVisible()) return 'auth-error';
+    return 'loading';
+  }, {
+    timeout: 30_000,
+    intervals: [250, 500, 1_000],
+    message: 'Ventas debe cargar o informar explícitamente el error de sesión',
+  }).not.toBe('loading');
+
+  if (await authError.isVisible()) {
+    const transientMessage = page.getByText(
+      /No se pudo contactar la API de BALTO_SERVICIOS para validar la sesión/i,
+    );
+    expect(
+      await transientMessage.isVisible(),
+      'La validación de sesión falló por un motivo NO transitorio; no se debe reintentar automáticamente.',
+    ).toBe(true);
+
+    // Sólo reintentar la validación de sesión (lectura), nunca la venta.
+    await page.getByRole('button', { name: 'Reintentar', exact: true }).click();
+    await expect(
+      newSale,
+      'No se recuperó la validación de sesión tras un único reintento de la API.',
+    ).toBeVisible({ timeout: 30_000 });
+  }
+
+  await newSale.click();
+}
+
 export async function createSale(page, data) {
   await page.goto('/panel/ventas');
   await waitForBusyToFinish(page);
-  await page.getByRole('button', { name: /Nueva Venta/i }).click();
+  await openNewSaleAfterNavigation(page);
   const dialog = await waitDialog(page, 'Nueva Venta');
 
   await fillMovementRow(dialog, {

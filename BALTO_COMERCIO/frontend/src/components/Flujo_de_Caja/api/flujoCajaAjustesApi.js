@@ -108,3 +108,46 @@ export function nuevaClaveSolicitud() {
   const uuid = window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`;
   return `ajs-${uuid}`.slice(0, 64);
 }
+
+/* =========================================================
+   Transferencias internas entre cajas
+   El navegador sólo envía qué medios, qué importe y qué saldos vio el
+   usuario; el backend recalcula saldos, valida y registra atómicamente.
+========================================================= */
+
+export function obtenerMediosTransferencia() {
+  return get("flujo_caja_transferencias_medios", { _: Date.now() });
+}
+
+export function previsualizarTransferencia({ idMedioOrigen, idMedioDestino, importe }) {
+  return get("flujo_caja_transferencias_previsualizar", {
+    id_medio_origen: idMedioOrigen,
+    id_medio_destino: idMedioDestino,
+    importe,
+    _: Date.now(),
+  });
+}
+
+export function crearTransferencia(payload) {
+  return post("flujo_caja_transferencias_crear", payload);
+}
+
+export function revertirTransferencia(payload) {
+  return post("flujo_caja_transferencias_revertir", payload);
+}
+
+export function listarTransferencias({ fechaDesde = "", fechaHasta = "", idMedioPago = "", tipo = "", estado = "" } = {}) {
+  return get("flujo_caja_transferencias_listar", {
+    fecha_desde: fechaDesde,
+    fecha_hasta: fechaHasta,
+    id_medio_pago: idMedioPago,
+    tipo,
+    estado,
+    _: Date.now(),
+  });
+}
+
+export function nuevaClaveTransferencia() {
+  const uuid = window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  return `trf-${uuid}`.slice(0, 64);
+}

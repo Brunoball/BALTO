@@ -231,6 +231,7 @@ export default function Flujo_Caja() {
       ["SALDO = saldo del día anterior + APERTURAS + INGRESOS − EGRESOS + DEPOSITOS_NETOS + AJUSTES_MANUALES"],
       ["AJUSTES_MANUALES: correcciones de saldo registradas desde Flujo de Caja (no son ventas, compras, cobros ni pagos)."],
       ["DEPOSITOS_NETOS: depósitos y reversiones de cheques/eCheqs hacia el banco."],
+      ["Las transferencias internas entre cajas mueven dinero entre medios de pago: no cambian el SALDO total ni son ingresos o egresos."],
       ["Saldo base al inicio del período", Number(bloque?.saldo_base ?? 0)],
     ]);
     notes["!cols"] = [{ wch: 110 }, { wch: 18 }];
@@ -266,6 +267,7 @@ export default function Flujo_Caja() {
       "FLUJO DE CAJA",
       "SALDO = saldo anterior + APERTURAS + INGRESOS - EGRESOS + DEPÓSITOS NETOS + AJUSTES MANUALES",
       "AJUSTES MANUALES: correcciones de saldo; no son ventas, compras, cobros ni pagos.",
+      "TRANSFERENCIAS INTERNAS entre cajas: mueven dinero entre medios de pago y no cambian el SALDO total.",
       "========================================",
     ].join("\n");
     downloadBlob(`${header}\n${lines.join("\n")}`, `${exportBaseName}.txt`, "text/plain;charset=utf-8;");
@@ -509,6 +511,13 @@ export default function Flujo_Caja() {
                           <b className={Number(card.ajustes) > 0 ? "is-positive" : "is-negative"}>{moneyARSSigned(card.ajustes)}</b>
                         </div>
                       )}
+                      {/* Transferencias internas: neto firmado de la tarjeta; nunca son ingresos ni egresos. */}
+                      {Math.abs(Number(card.transferencias || 0)) >= 0.005 && (
+                        <div className="fc-payCard__row fc-payCard__row--transferencias" data-testid={`fc-card-transferencias-${card.key}`}>
+                          <span>Transferencias internas</span>
+                          <b className={Number(card.transferencias) > 0 ? "is-positive" : "is-negative"}>{moneyARSSigned(card.transferencias)}</b>
+                        </div>
+                      )}
                     </div>
                   </div>
                 );
@@ -555,7 +564,7 @@ export default function Flujo_Caja() {
                       style={{ gridTemplateColumns: gridCols }}
                       role="row"
                       tabIndex={0}
-                      title={`Ver detalle del día en las tarjetas superiores. Aperturas: ${moneyARS(r.saldo_inicial_aplicado)}. Depósitos/reversiones de cheques: ${moneyARS(r.ajustes_internos)}. Ajustes manuales de saldo: ${moneyARSSigned(r.ajustes_manuales)}`}
+                      title={`Ver detalle del día en las tarjetas superiores. Aperturas: ${moneyARS(r.saldo_inicial_aplicado)}. Depósitos/reversiones de cheques: ${moneyARS(r.ajustes_internos)}. Ajustes manuales de saldo: ${moneyARSSigned(r.ajustes_manuales)}${r.transferencias_cantidad ? `. Transferencias internas entre cajas: ${r.transferencias_cantidad} (no cambian el saldo total)` : ""}`}
                       onClick={() => setSelectedDate(r.fecha)}
                       onKeyDown={(ev) => {
                         if (ev.key === "Enter" || ev.key === " ") {

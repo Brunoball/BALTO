@@ -64,6 +64,33 @@ mutaciones reales (`@mutations`, sólo con `PW_ALLOW_MUTATIONS=1`, tenant E2E y 
 migración `tesoreria_ajustes_saldo` aplicada). Los ajustes de prueba llevan el
 RUN_PREFIX en observaciones y el limpiador E2E los elimina (reversiones primero).
 
+**Transferencias internas entre cajas (Flujo de Caja) + conciliación con Análisis Financiero y Dashboard:**
+
+Requiere la migración `database/migrations/2026_11_11_tesoreria_transferencias.sql`
+aplicada en el tenant E2E (sin ella, el bloque `@mutations` se omite solo).
+
+```powershell
+npx playwright test tests/00-preflight.spec.js tests/60-transferencias-cajas.spec.js tests/55-ajustes-saldos-caja.spec.js tests/50-analisis-financiero-saldos.spec.js tests/51-saldos-historicos-conciliacion.spec.js tests/58-dashboard-caja-medios.spec.js tests/59-signos-flujo-dashboard.spec.js --project=chromium --workers=1 --reporter=list --max-failures=1
+```
+
+`60` repite la estructura de `55`: interfaz con mocks, API de sólo lectura y
+mutaciones reales. Las transferencias de prueba llevan el RUN_PREFIX en
+observaciones; el limpiador E2E borra primero las reversiones y luego las
+originales (la tabla sólo admite ese DELETE dentro del limpiador).
+
+Prueba backend sin MySQL (SQLite en memoria, código real de servicio e informes):
+
+```powershell
+php api/modules/flujo_caja/tests/TransferenciasCajasTest.php api
+```
+
+**Compras → PRECIO DE COSTO (última compra cronológica, sin pisar costos manuales):**
+
+```powershell
+npx playwright test tests/00-preflight.spec.js tests/61-compras-costo-ultima-compra.spec.js tests/04-purchases-credit-note.spec.js tests/13-movement-delete-reversal.spec.js tests/39-stock-pricing-margin-coefficient.spec.js tests/57-revision-precios-sin-coeficiente.spec.js --project=chromium --workers=1 --reporter=list --max-failures=1
+php api/modules/movimientos/tests/CompraCostoUltimaCompraTest.php api
+```
+
 **Clasificación OTROS EGRESOS (Otros egresos → Análisis Financiero) + regresiones relacionadas:**
 
 Requiere la migración `database/migrations/2026_11_02_otros_egresos_clasificacion.sql`
