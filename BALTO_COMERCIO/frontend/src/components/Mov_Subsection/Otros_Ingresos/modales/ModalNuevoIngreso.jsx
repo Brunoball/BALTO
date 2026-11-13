@@ -2394,7 +2394,7 @@ export default function ModalNuevoIngreso({
                             disabled={saving}
                             aria-label={`Tipo de ítem fila ${rowIndex + 1}`}
                           >
-                            <option value="servicio">Detalle / servicio (sin stock)</option>
+                            <option value="servicio">Detalle</option>
                             <option value="producto">Producto (mueve stock)</option>
                           </select>
                           {r.tipo_item === "producto" ? (

@@ -1540,7 +1540,7 @@ export default function ModalEditarIngreso({
                               disabled={saving}
                               aria-label={`Tipo de ítem fila ${itemIndex + 1}`}
                             >
-                              <option value="servicio">Detalle / servicio (sin stock)</option>
+                              <option value="servicio">Detalle</option>
                               <option value="producto">Producto (mueve stock)</option>
                             </select>
                             {it.tipo_item === "producto" ? (
