@@ -62,6 +62,10 @@ function isRetryableTransportError(error) {
     text.includes('ECONNRESET') ||
     text.includes('ETIMEDOUT') ||
     text.includes('ECONNREFUSED') ||
+    // DNS de la API remota puede fallar transitoriamente durante suites largas.
+    // Se reintenta sólo la consulta de sesión; si persiste, el test falla.
+    text.includes('ENOTFOUND') ||
+    text.includes('EAI_AGAIN') ||
     text.includes('EPIPE') ||
     text.includes('SOCKET HANG UP') ||
     text.includes('FETCH FAILED')

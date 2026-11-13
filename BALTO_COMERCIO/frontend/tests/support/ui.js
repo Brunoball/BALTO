@@ -679,13 +679,15 @@ export async function searchRow(page, query, placeholderPattern = /Buscar/i) {
     // Recuperación única y consciente del modo. Un refresh limpia requests React
     // viejas; si estábamos viendo bajas, restauramos ese estado antes de buscar.
     const wasInactive = await stockModeIsInactive();
-    await page.reload({ waitUntil: 'domcontentloaded' });
-
-    let searchAfterReload = page.getByPlaceholder(placeholderPattern).first();
-    if (!(await searchAfterReload.isVisible({ timeout: 1_000 }).catch(() => false))) {
-      searchAfterReload = page.locator('.stock-page .cc-filter--search input').first();
-    }
-    await expect(searchAfterReload).toBeVisible({ timeout: 7_000 });
+    // Después de navegar, el gate de sesión puede mostrarse por una caída
+    // transitoria de la API. Esperar sólo el input provoca un timeout engañoso.
+    // La recuperación de gotoPanelReady sólo reintenta navegación/lecturas;
+    // nunca repite el POST que creó o modificó el producto.
+    const stockSearchAfterReload = page.locator('.stock-page .cc-filter--search input').first();
+    await gotoPanelReady(page, page.url(), stockSearchAfterReload, {
+      attempts: 3,
+      timeout: 25_000,
+    });
 
     if (wasInactive) {
       const showInactive = page.getByRole('tab', { name: /^Dados de baja$/i });

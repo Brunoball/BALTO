@@ -568,34 +568,94 @@ async function ensurePurchasePanelReady(page) {
 }
 
 async function searchPurchaseRowStrict(page, productName) {
-  // La grilla resume los ítems como "1 PRODUCTO", por lo que buscar una fila
-  // sólo por su texto visible puede devolver la primera respuesta anterior. Se
-  // fuerza una consulta nueva y se cruza el resultado con el ID real del backend.
-  const search = await ensurePurchasePanelReady(page);
+  // La grilla muestra "1 PRODUCTO" y no siempre el nombre completo.
+  // Cruzamos la respuesta del backend con el ID del movimiento visible.
+  // La API remota puede no responder antes del timeout de fetch del frontend
+  // (20 segundos): reintentamos ÚNICAMENTE esta búsqueda GET, nunca una NC.
+  const MAX_READ_ATTEMPTS = 3;
+  let listResponse = null;
 
-  await page.evaluate(() => {
-    const keys = [];
-    for (let index = 0; index < sessionStorage.length; index += 1) {
-      const key = sessionStorage.key(index);
-      if (key && key.includes(':compras:listar:cc-medios-v5:')) keys.push(key);
+  for (let attempt = 1; attempt <= MAX_READ_ATTEMPTS; attempt += 1) {
+    const search = await ensurePurchasePanelReady(page);
+
+    // Evitar que un caché persistido de la búsqueda impida una consulta real.
+    await page.evaluate(() => {
+      const keys = [];
+      for (let index = 0; index < sessionStorage.length; index += 1) {
+        const key = sessionStorage.key(index);
+        if (key && key.includes(':compras:listar:cc-medios-v5:')) keys.push(key);
+      }
+      keys.forEach((key) => sessionStorage.removeItem(key));
+    });
+
+    const matchesSearch = (request) => {
+      if (request.method() !== 'GET') return false;
+      try {
+        const url = new URL(request.url());
+        return url.searchParams.get('action') === 'compras_listar'
+          && url.searchParams.get('q') === productName;
+      } catch {
+        return false;
+      }
+    };
+
+    let issued = 0;
+    let failure = '';
+    const onRequest = (request) => {
+      if (matchesSearch(request)) issued += 1;
+    };
+    const onRequestFailed = (request) => {
+      if (matchesSearch(request)) {
+        const cause = request.failure();
+        failure = (typeof cause === 'string' ? cause : cause?.errorText) || 'sin respuesta';
+      }
+    };
+
+    page.on('request', onRequest);
+    page.on('requestfailed', onRequestFailed);
+    try {
+      // 28s > timeout de fetch del frontend (20s), pero no bloquea 60s.
+      // Registramos el listener ANTES de enviar el texto, para no perder la respuesta.
+      const responsePromise = page.waitForResponse(
+        (response) => matchesSearch(response.request()),
+        { timeout: 28_000 },
+      );
+      await search.fill(productName);
+      await search.press('Enter');
+      listResponse = await responsePromise;
+      break;
+    } catch (error) {
+      const timeout = /TimeoutError|Timeout.*exceeded/i.test(String(error?.message || error));
+      if (!timeout) throw error;
+      if (issued === 0) {
+        throw new Error(
+          `El buscador de Compras no emitió compras_listar?q=${productName}. ` +
+          'Posible caché o fallo de interacción de UI; no es un timeout del backend.',
+          { cause: error },
+        );
+      }
+      if (attempt === MAX_READ_ATTEMPTS) {
+        throw new Error(
+          `La API no respondió a compras_listar?q=${productName} después de ${MAX_READ_ATTEMPTS} intentos GET. ` +
+          `Último error de red: ${failure || 'sin respuesta HTTP'}. ` +
+          'Revisar red/Hostinger; no es una validación de la nota de crédito.',
+          { cause: error },
+        );
+      }
+      console.warn(
+        `[Playwright] Compras: GET de búsqueda sin respuesta ` +
+        `(intento ${attempt}/${MAX_READ_ATTEMPTS}); ` +
+        `error=${failure || 'timeout'}. Se reintentará la lectura sin repetir escrituras.`,
+      );
+      await page.waitForTimeout(500 * attempt);
+    } finally {
+      page.off('request', onRequest);
+      page.off('requestfailed', onRequestFailed);
     }
-    keys.forEach((key) => sessionStorage.removeItem(key));
-  });
+  }
 
-  const listResponsePromise = page.waitForResponse(
-    (response) => {
-      if (response.request().method() !== 'GET') return false;
-      const url = new URL(response.url());
-      return url.searchParams.get('action') === 'compras_listar'
-        && url.searchParams.get('q') === productName;
-    },
-    { timeout: 60_000 },
-  );
-
-  await search.fill(productName);
-  await search.press('Enter');
-
-  const listResponse = await listResponsePromise;
+  // Sólo aceptamos una respuesta auténtica del backend, con un movimiento
+  // identificable. El reintento anterior NO convierte un fallo funcional en éxito.
   const listBody = await listResponse.json().catch(() => ({}));
   expect(
     listResponse.status(),
@@ -689,7 +749,9 @@ export async function prepareBudget(page, data) {
     price: data.price ?? 150,
   });
 
-  const ivaSelect = itemRow.locator('select.gm-cell-input--select').first();
+  // La fila también tiene el selector MUEVE STOCK / NO MUEVE STOCK.
+  // Apuntar sólo al select de IVA evita elegir el primer select por posición.
+  const ivaSelect = itemRow.locator('select.gm-cell-input--select:not(.gm-tipo-mov__select)').first();
   await expect(ivaSelect).toBeVisible();
   await ivaSelect.selectOption(String(data.ivaPct ?? 0));
 

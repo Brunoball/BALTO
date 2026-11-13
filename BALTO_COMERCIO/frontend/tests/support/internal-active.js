@@ -154,7 +154,8 @@ async function fillSaleRows(dialog, items) {
     }
 
     if (item.ivaPct !== undefined) {
-      const iva = row.locator('select.gm-cell-input--select').first();
+      // No confundir el selector de IVA con el de tipo de movimiento de stock.
+      const iva = row.locator('select.gm-cell-input--select:not(.gm-tipo-mov__select)').first();
       await expect(iva).toBeVisible();
       const target = String(item.ivaPct);
       const options = await iva.locator('option').evaluateAll((nodes) => nodes.map((node) => String(node.value)));

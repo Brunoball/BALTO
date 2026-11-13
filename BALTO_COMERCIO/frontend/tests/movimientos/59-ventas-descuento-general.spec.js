@@ -55,7 +55,10 @@ async function addSaleRow(dialog, index, productName, quantity, ivaPct = '0') {
   const qty = row.locator('input[type="number"]').first();
   await qty.fill(String(quantity));
   await qty.blur();
-  await row.locator('select.gm-cell-input--select').first().selectOption(String(ivaPct));
+  // El primer select es el tipo de movimiento (MUEVE/NO MUEVE STOCK).
+  const ivaSelect = row.locator('select.gm-cell-input--select:not(.gm-tipo-mov__select)').first();
+  await expect(ivaSelect).toBeVisible();
+  await ivaSelect.selectOption(String(ivaPct));
   return row;
 }
 

@@ -263,7 +263,7 @@ test.describe('@movimientos @sin-impacto-stock @mutations TIPO DE MOVIMIENTO por
     }
   });
 
-  test('UI · Nueva Compra: selector en mayúsculas y NO MUEVE STOCK con la misma lista de productos', async ({ page }) => {
+  test('UI · Nueva Compra: selector de movimiento y NO MUEVE STOCK con la misma lista de productos', async ({ page }) => {
     await requireMutations(test, page);
     const proveedor = await createParty(page, 'provider', 'PROV-UI-TIPO-MOV');
     const prod = await producto(page, 'TIPO-MOV-UI', { stock: 7, cost: 10, price: 20 });
@@ -275,9 +275,12 @@ test.describe('@movimientos @sin-impacto-stock @mutations TIPO DE MOVIMIENTO por
       const row = dialog.getByTestId('compra-row').first();
       const selector = row.getByTestId('tipo-movimiento-stock');
 
-      await expect(row.getByText('TIPO DE MOVIMIENTO', { exact: false })).toBeVisible();
+      // El selector tiene nombre accesible propio, no un rótulo visible separado.
+      // Los valores de API son MAYÚSCULOS; las etiquetas de UI se muestran en formato título.
+      await expect(selector).toBeVisible();
+      await expect(selector).toHaveAttribute('aria-label', 'Tipo de movimiento fila 1');
       await expect(selector).toHaveValue(MUEVE);
-      await expect(selector.locator('option')).toHaveText(['MUEVE STOCK', 'NO MUEVE STOCK']);
+      await expect(selector.locator('option')).toHaveText(['Mueve stock', 'No mueve stock']);
 
       await selector.selectOption(NO_MUEVE);
       await expect(row.getByTestId('concepto-sin-stock')).toHaveCount(0);
@@ -327,7 +330,7 @@ test.describe('@movimientos @sin-impacto-stock @mutations TIPO DE MOVIMIENTO por
     const venta = await waitDialog(page, 'Nueva Venta');
     const vRow = venta.getByTestId('venta-row').first();
     await expect(vRow.getByTestId('tipo-movimiento-stock')).toHaveValue(MUEVE);
-    await expect(vRow.getByTestId('tipo-movimiento-stock').locator('option')).toHaveText(['MUEVE STOCK', 'NO MUEVE STOCK']);
+    await expect(vRow.getByTestId('tipo-movimiento-stock').locator('option')).toHaveText(['Mueve stock', 'No mueve stock']);
     await vRow.getByTestId('tipo-movimiento-stock').selectOption(NO_MUEVE);
     await selectProduct(vRow, prod.name);
     // Stock 1: con NO MUEVE STOCK la cantidad no se limita a las existencias.

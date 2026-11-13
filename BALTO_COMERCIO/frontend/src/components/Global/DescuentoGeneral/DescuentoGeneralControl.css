@@ -1,0 +1,216 @@
+/* Descuento general de ventas y presupuestos (ajuste comercial sobre el total).
+   Misma paleta ámbar que BALTO Comercio para que el usuario lo reconozca. */
+.dg-box {
+  display: grid;
+  gap: 9px;
+  padding: 11px;
+  border: 1px solid rgba(245, 158, 11, .28);
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(255, 251, 235, .98), rgba(255, 255, 255, .92));
+  box-shadow: 0 8px 22px rgba(180, 83, 9, .06);
+  min-width: 0;
+}
+
+.dg-box.has-error {
+  border-color: rgba(220, 38, 38, .40);
+}
+
+.dg-box__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.dg-box__head strong,
+.dg-box__head span {
+  display: block;
+}
+
+.dg-box__head strong {
+  font-size: 12px;
+  color: #92400e;
+}
+
+.dg-box__head span {
+  margin-top: 2px;
+  font-size: 10px;
+  line-height: 1.35;
+  color: #78716c;
+}
+
+.dg-box__clear {
+  flex: 0 0 auto;
+  border: 1px solid rgba(180, 83, 9, .30);
+  background: rgba(255, 255, 255, .85);
+  color: #b45309;
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  min-height: 26px;
+}
+
+.dg-box__clear:hover:not(:disabled) {
+  background: rgba(245, 158, 11, .12);
+}
+
+.dg-box__clear:focus-visible {
+  outline: 2px solid #f59e0b;
+  outline-offset: 2px;
+}
+
+.dg-box__controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(100px, .8fr);
+  gap: 8px;
+}
+
+.dg-box__type,
+.dg-box__input {
+  min-height: 38px;
+  box-sizing: border-box;
+  max-width: 100%;
+}
+
+.dg-box__type {
+  width: 100%;
+  min-width: 0;
+}
+
+.dg-box__input-wrap {
+  position: relative;
+  min-width: 0;
+}
+
+.dg-box__input-wrap > span {
+  position: absolute;
+  top: 50%;
+  left: 11px;
+  z-index: 1;
+  transform: translateY(-50%);
+  font-size: 11px;
+  font-weight: 800;
+  color: #b45309;
+  pointer-events: none;
+}
+
+.dg-box__input {
+  width: 100%;
+  padding-left: 27px !important;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.dg-box__error {
+  font-size: 11px;
+  font-weight: 600;
+  color: #b91c1c;
+  line-height: 1.35;
+}
+
+.dg-box__summary {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 5px 10px;
+  margin: 0;
+  padding-top: 7px;
+  border-top: 1px dashed rgba(180, 83, 9, .23);
+  font-size: 10px;
+  color: #78716c;
+}
+
+.dg-box__summary > div {
+  display: flex;
+  gap: 4px;
+  align-items: baseline;
+}
+
+.dg-box__summary dt,
+.dg-box__summary dd {
+  margin: 0;
+}
+
+.dg-box__summary dd {
+  font-weight: 700;
+  color: #44403c;
+  font-variant-numeric: tabular-nums;
+}
+
+.dg-box__summary .is-discount dt,
+.dg-box__summary .is-discount dd {
+  color: #b45309;
+}
+
+.dg-box__summary .is-final dd {
+  color: #44403c;
+  font-size: 10px;
+}
+
+.dg-summary-chip--discount {
+  border-color: rgba(245, 158, 11, .26) !important;
+  background: rgba(245, 158, 11, .08) !important;
+}
+
+.dg-summary-chip--discount b {
+  color: #b45309;
+}
+
+:is(html[data-theme="oscuro"] .dg-box, .mi-modal--dark .dg-box) {
+  border-color: rgba(245, 158, 11, .28);
+  background: rgba(245, 158, 11, .07);
+}
+
+:is(html[data-theme="oscuro"] .dg-box__head, .mi-modal--dark .dg-box__head) strong,
+:is(html[data-theme="oscuro"] .dg-box__input-wrap, .mi-modal--dark .dg-box__input-wrap) > span,
+:is(html[data-theme="oscuro"] .dg-box__summary, .mi-modal--dark .dg-box__summary) .is-discount dt,
+:is(html[data-theme="oscuro"] .dg-box__summary, .mi-modal--dark .dg-box__summary) .is-discount dd,
+:is(html[data-theme="oscuro"] .dg-box__clear, .mi-modal--dark .dg-box__clear),
+:is(html[data-theme="oscuro"] .dg-summary-chip--discount, .mi-modal--dark .dg-summary-chip--discount) b {
+  color: #fbbf24;
+}
+
+:is(html[data-theme="oscuro"] .dg-box__clear, .mi-modal--dark .dg-box__clear) {
+  background: transparent;
+  border-color: rgba(251, 191, 36, .35);
+}
+
+:is(html[data-theme="oscuro"] .dg-box__head, .mi-modal--dark .dg-box__head) span,
+:is(html[data-theme="oscuro"] .dg-box__summary, .mi-modal--dark .dg-box__summary) {
+  color: var(--color-text-secondary, #cbd5e1);
+}
+
+:is(html[data-theme="oscuro"] .dg-box__summary, .mi-modal--dark .dg-box__summary) dd {
+  color: var(--color-text-primary, #f8fafc);
+}
+
+:is(html[data-theme="oscuro"] .dg-box__summary, .mi-modal--dark .dg-box__summary) .is-final dd {
+  color: #f8fafc;
+}
+
+:is(html[data-theme="oscuro"] .dg-box__error, .mi-modal--dark .dg-box__error) {
+  color: #fca5a5;
+}
+
+@media (max-width: 520px) {
+  .dg-box__controls {
+    grid-template-columns: 1fr;
+  }
+
+  .dg-box__summary {
+    flex-direction: column;
+  }
+
+  .dg-box__summary > div {
+    justify-content: space-between;
+  }
+}
+
+/* Resumen compacto con la misma disposición y tonos que Comercio. */
+.dg-box__summary b { color: #44403c; }
+.dg-box__summary .is-applied, .dg-box__summary .is-applied b { color: #b45309; }
+:is(html[data-theme="oscuro"] .dg-box__summary, .mi-modal--dark .dg-box__summary) b { color: #f8fafc; }
+:is(html[data-theme="oscuro"] .dg-box__summary, .mi-modal--dark .dg-box__summary) .is-applied,
+:is(html[data-theme="oscuro"] .dg-box__summary, .mi-modal--dark .dg-box__summary) .is-applied b { color: #fbbf24; }

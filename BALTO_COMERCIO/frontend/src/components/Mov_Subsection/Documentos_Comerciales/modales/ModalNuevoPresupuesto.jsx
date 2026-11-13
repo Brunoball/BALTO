@@ -27,6 +27,16 @@ import {
 import { savePresupuestoPdf } from "../../../../utils/PresupuestoPdfBuilder";
 import { DOCUMENTOS_API, documentosRequest } from "../api/documentosComercialesApi.js";
 import { useRefrescarListasAlAbrir } from "../../_shared/refrescoListas.js";
+import DescuentoGeneralControl from "../../../Global/DescuentoGeneral/DescuentoGeneralControl.jsx";
+import {
+  DESCUENTO_PORCENTAJE,
+  calcularDescuentoGeneral,
+  calcularRenglonesBrutos,
+  calcularResumenOperacion,
+  descuentoPayload,
+  formatPorcentaje,
+  prorratearDescuentoGeneral,
+} from "../../../../utils/descuentoGeneral.js";
 
 const NULL_OPTION = "";
 const ADD_CLIENTE_OPTION = { __action: "add_cliente", id: "__add_cliente__", nombre: "➕ Agregar cliente" };
@@ -882,6 +892,9 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
   const rowsContainerRef = useRef(null);
   const scrollToNewRow = useAutoScrollRows(rowsContainerRef, rows.length);
   const [presupuestoPersonalizado, setPresupuestoPersonalizado] = useState(false);
+  // Descuento general del presupuesto (ajuste comercial sobre el total).
+  const [descuentoTipo, setDescuentoTipo] = useState(DESCUENTO_PORCENTAJE);
+  const [descuentoValor, setDescuentoValor] = useState("");
   const [modeloOrigen, setModeloOrigen] = useState(null);
   const [guardarComoModelo, setGuardarComoModelo] = useState(false);
   const [modeloNombre, setModeloNombre] = useState("");
@@ -929,6 +942,8 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
     setActiveAccordion(null);
     setRows([buildEmptyRow()]);
     setPresupuestoPersonalizado(false);
+    setDescuentoTipo(DESCUENTO_PORCENTAJE);
+    setDescuentoValor("");
     setModeloOrigen(null);
     setGuardarComoModelo(false);
     setModeloNombre("");
@@ -1351,17 +1366,36 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
     e.currentTarget.blur();
   }, [commitPrecioInput]);
 
-  const computedRows = useMemo(() => {
-    return rows.map((r) => {
-      const cantidad = safeNumber(r.cantidad);
-      const precio = safeNumber(r.precio);
-      const ivaPct = safeNumber(r.ivaPct);
-      const subtotal = cantidad * precio;
-      const iva_monto = subtotal * ivaPct / 100;
-      const total = subtotal + iva_monto;
-      return { ...r, cantidad, precio, ivaPct, subtotal, iva_monto, total };
-    });
+  // Mismo cálculo que BALTO Servicios y que el backend (src/utils/descuentoGeneral.js):
+  // importes redondeados por renglón como los guarda la base. Cada fila
+  // conserva su versión comercial (…Bruto: precios originales, la que se ve en
+  // la grilla y en el PDF) y la neta con el descuento general prorrateado (la
+  // que se persiste y se copia a la venta al convertir).
+  const rowsBaseCalc = useMemo(() => {
+    const base = rows.map((r) => ({
+      ...r,
+      cantidad: safeNumber(r.cantidad),
+      precio: safeNumber(r.precio),
+      ivaPct: safeNumber(r.ivaPct),
+    }));
+    return calcularRenglonesBrutos(base, () => true);
   }, [rows]);
+
+  const descuentoResumen = useMemo(
+    () => calcularDescuentoGeneral(rowsBaseCalc, descuentoTipo, descuentoValor),
+    [rowsBaseCalc, descuentoTipo, descuentoValor]
+  );
+
+  const computedRows = useMemo(
+    () => prorratearDescuentoGeneral(rowsBaseCalc, descuentoResumen).map((r) => ({
+      ...r,
+      // Netos (persistidos): subtotal / iva_monto / total.
+      iva_monto: r.ivaMonto,
+      // El precio unitario que ve y edita el usuario es siempre el original.
+      precio: r.precioLista,
+    })),
+    [rowsBaseCalc, descuentoResumen]
+  );
 
   const openFechaPicker = useCallback(() => {
     if (saving) return;
@@ -1400,16 +1434,18 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [open, requestClose, addUI.open, modelsOpen]);
 
-  const totals = useMemo(() => {
-    return computedRows.reduce(
-      (acc, r) => ({
-        subtotal: acc.subtotal + safeNumber(r.subtotal),
-        iva: acc.iva + safeNumber(r.iva_monto),
-        total: acc.total + safeNumber(r.total),
-      }),
-      { subtotal: 0, iva: 0, total: 0 }
-    );
-  }, [computedRows]);
+  const resumenDescuento = useMemo(
+    () => calcularResumenOperacion(computedRows, descuentoResumen),
+    [computedRows, descuentoResumen]
+  );
+
+  // Totales FINALES (netos del descuento): son los que se guardan, se muestran
+  // como "Total final" y se copian a la venta al convertir.
+  const totals = useMemo(() => ({
+    subtotal: resumenDescuento.subtotal,
+    iva: resumenDescuento.iva,
+    total: resumenDescuento.total,
+  }), [resumenDescuento]);
 
   const condicionesPreview = useMemo(() => normalizeCondicionesPresupuesto(condiciones, fecha), [condiciones, fecha]);
 
@@ -1424,6 +1460,7 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
     }
     const validItems = computedRows.filter((r) => safeStr(r.detalleText) && r.cantidad > 0 && r.precio > 0);
     if (!validItems.length) return "Agregá al menos un producto o servicio con cantidad y precio.";
+    if (resumenDescuento.descuentoError) return `Descuento general: ${resumenDescuento.descuentoError}`;
     if (guardarNuevoModelo && !safeStr(modeloNombre)) return "Ingresá un nombre para guardar el presupuesto como modelo.";
 
     const problems = [];
@@ -1442,7 +1479,7 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
       if (!(r.precio > 0)) problems.push(`Fila ${idx + 1}: el precio debe ser mayor a 0.`);
     });
     return problems[0] || "";
-  }, [clienteSel, fecha, computedRows, condiciones.validezDias, guardarNuevoModelo, modeloNombre]);
+  }, [clienteSel, fecha, computedRows, condiciones.validezDias, guardarNuevoModelo, modeloNombre, resumenDescuento.descuentoError]);
 
   const buildItemsPayload = useCallback(() => {
     return computedRows
@@ -1461,8 +1498,11 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
         unidad_abreviatura: r.unidad_abreviatura || "",
         unidad_permite_decimales: Number(r.unidad_permite_decimales ?? 1),
         unidad: r.unidad_abreviatura || "u",
-        precio: r.precio,
-        precio_unitario: r.precio,
+        // Precio original. Con descuento general el backend recalcula y prorratea;
+        // subtotal / iva_monto / total (netos) sólo verifican que la pantalla esté al día.
+        precio: r.precioLista,
+        precio_unitario: r.precioLista,
+        precio_lista: r.precioLista,
         iva_pct: r.ivaPct,
         subtotal: r.subtotal,
         iva_monto: r.iva_monto,
@@ -1471,6 +1511,19 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
         tipo_precio: r.precio_tipo_label || "",
       }));
   }, [computedRows]);
+
+  // Los renglones del PDF muestran los importes ORIGINALES (documento
+  // comercial). El descuento general se informa una sola vez en los totales.
+  const buildPdfItemsPayload = useCallback(() => {
+    // Mismo filtro y orden que buildItemsPayload: se reemplazan sólo los importes.
+    const filas = computedRows.filter((r) => safeStr(r.detalleText) && r.cantidad > 0 && r.precio > 0);
+    return buildItemsPayload().map((it, idx) => ({
+      ...it,
+      subtotal: filas[idx].subtotalBruto,
+      iva_monto: filas[idx].ivaMontoBruto,
+      total: filas[idx].totalBruto,
+    }));
+  }, [buildItemsPayload, computedRows]);
 
   const uploadPresupuestoPdf = useCallback(async ({ idMovimiento, payload, items }) => {
     const clienteNombre = upperStr(getClienteNombre(clienteSel) || cliInput);
@@ -1507,6 +1560,7 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
       subtotal_ars: totals.subtotal,
       iva_ars: totals.iva,
       total_ars: totals.total,
+      ...descuentoPayload(resumenDescuento),
       observaciones: payload?.observaciones || observaciones,
       condiciones_presupuesto: payload?.condiciones_presupuesto || normalizeCondicionesPresupuesto(condiciones, fecha),
       validez_dias: payload?.validez_dias,
@@ -1542,6 +1596,7 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
       fecha_cbte: fecha.replace(/-/g, ""),
       fecha_cbte_iso: fecha,
       monto_ars: totals.total,
+      ...descuentoPayload(resumenDescuento),
       condiciones_presupuesto: pdfData.condiciones_presupuesto,
       validez_dias: pdfData.validez_dias,
       fecha_validez: pdfData.fecha_validez,
@@ -1556,7 +1611,7 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
     }));
 
     return await apiPostForm(`${API}?action=ventas_comprobantes_vincular_movimiento`, fd);
-  }, [API, clienteSel, cliInput, configFacturacion, fecha, observaciones, condiciones, totals]);
+  }, [API, clienteSel, cliInput, configFacturacion, fecha, observaciones, condiciones, totals, resumenDescuento]);
 
   const handleSubmit = useCallback(async (e) => {
     e.preventDefault();
@@ -1568,6 +1623,7 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
 
     const idCliente = getClienteId(clienteSel);
     const items = buildItemsPayload();
+    const pdfItems = buildPdfItemsPayload();
     const detallePresupuesto = items.map((it) => safeStr(it.descripcion || it.detalle)).filter(Boolean).join(", ");
     const fechaEnvio = String(fecha || "").slice(0, 10);
     const condicionesPayload = normalizeCondicionesPresupuesto(condiciones, fechaEnvio);
@@ -1583,6 +1639,7 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
       iva_total: totals.iva,
       total: totals.total,
       monto_total: totals.total,
+      ...descuentoPayload(resumenDescuento),
       observaciones: condicionesPayload.notas || observaciones,
       validez_dias: condicionesPayload.validez_dias,
       fecha_validez: condicionesPayload.fecha_validez,
@@ -1610,7 +1667,7 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
       const creado = await apiPostJson(`${API}?action=presupuestos_crear`, payload);
       const idMovimiento = Number(creado?.id_movimiento || creado?.movimiento?.id_movimiento || 0);
       if (!idMovimiento) throw new Error("El presupuesto se guardó, pero el backend no devolvió id_movimiento.");
-      await uploadPresupuestoPdf({ idMovimiento, payload, items });
+      await uploadPresupuestoPdf({ idMovimiento, payload, items: pdfItems });
       const modeloGuardado = creado?.modelo_guardado || creado?.modelo || null;
       onToast?.(
         "exito",
@@ -1625,7 +1682,7 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
     } finally {
       setSaving(false);
     }
-  }, [API, buildItemsPayload, clienteSel, cliInput, fecha, observaciones, condiciones, guardarNuevoModelo, modeloDescripcion, modeloNombre, modeloOrigen, onSaved, onToast, presupuestoPersonalizado, totals, uploadPresupuestoPdf, validate]);
+  }, [API, buildItemsPayload, buildPdfItemsPayload, clienteSel, cliInput, fecha, observaciones, condiciones, guardarNuevoModelo, modeloDescripcion, modeloNombre, modeloOrigen, onSaved, onToast, presupuestoPersonalizado, resumenDescuento, totals, uploadPresupuestoPdf, validate]);
 
   if (!open) return null;
 
@@ -1824,11 +1881,12 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
                       </select>
                     </div>
 
-                    <div className="gm-table-cell gm-table-cell--right gm-table-cell--mono gm-table-cell--soft" title={String((moneyARS(r.iva_monto)) ?? "")}>
-                      {moneyARS(r.iva_monto)}
+                    {/* Importes originales; el descuento general se informa en el resumen. */}
+                    <div className="gm-table-cell gm-table-cell--right gm-table-cell--mono gm-table-cell--soft" title={String((moneyARS(r.ivaMontoBruto ?? r.iva_monto)) ?? "")}>
+                      {moneyARS(r.ivaMontoBruto ?? r.iva_monto)}
                     </div>
-                    <div className="gm-table-cell gm-table-cell--right gm-table-cell--mono gm-table-cell--total" title={String((moneyARS(r.total)) ?? "")}>
-                      {moneyARS(r.total)}
+                    <div className="gm-table-cell gm-table-cell--right gm-table-cell--mono gm-table-cell--total" title={String((moneyARS(r.totalBruto ?? r.total)) ?? "")}>
+                      {moneyARS(r.totalBruto ?? r.total)}
                     </div>
                     <div className="gm-table-cell gm-table-cell--center" id="delete_cell">
                       <button
@@ -1976,17 +2034,43 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
                   <div className="gm-foot-sep" />
                 </div>
 
-                <div className="gm-summary-chips">
-                  <div className="gm-summary-chip gm-summary-chip--sub">
-                    <span>Subtotal</span>
-                    <b>{moneyARS(totals.subtotal)}</b>
-                  </div>
-                  <div className="gm-summary-chip gm-summary-chip--iva">
-                    <span>IVA</span>
-                    <b>{moneyARS(totals.iva)}</b>
-                  </div>
-                  <div className="gm-summary-chip gm-summary-chip--total">
-                    <span>Total</span>
+                <div className="gm-summary-chips" data-testid="np-summary">
+                  {resumenDescuento.descuento > 0 ? (
+                    <>
+                      <div className="gm-summary-chip gm-summary-chip--sub" data-testid="np-summary-subtotal" title="Suma de los renglones con sus precios originales (IVA incluido).">
+                        <span>Total original</span>
+                        <b>{moneyARS(resumenDescuento.totalBruto)}</b>
+                      </div>
+                      <div className="gm-summary-chip dg-summary-chip--discount" data-testid="np-summary-descuento">
+                        <span>
+                          Descuento general
+                          {resumenDescuento.descuentoTipo === DESCUENTO_PORCENTAJE
+                            ? ` (${formatPorcentaje(resumenDescuento.descuentoValor)} %)`
+                            : ` (≈ ${formatPorcentaje(resumenDescuento.descuentoPorcentajeEfectivo)} %)`}
+                        </span>
+                        <b>- {moneyARS(resumenDescuento.descuento)}</b>
+                      </div>
+                      {totals.iva > 0 ? (
+                        <div className="gm-summary-chip gm-summary-chip--iva" data-testid="np-summary-iva" title="IVA contenido en el total final, luego del descuento.">
+                          <span>IVA incluido</span>
+                          <b>{moneyARS(totals.iva)}</b>
+                        </div>
+                      ) : null}
+                    </>
+                  ) : (
+                    <>
+                      <div className="gm-summary-chip gm-summary-chip--sub" data-testid="np-summary-subtotal">
+                        <span>Subtotal</span>
+                        <b>{moneyARS(totals.subtotal)}</b>
+                      </div>
+                      <div className="gm-summary-chip gm-summary-chip--iva" data-testid="np-summary-iva">
+                        <span>IVA</span>
+                        <b>{moneyARS(totals.iva)}</b>
+                      </div>
+                    </>
+                  )}
+                  <div className="gm-summary-chip gm-summary-chip--total" data-testid="np-summary-total">
+                    <span>{resumenDescuento.descuento > 0 ? "Total final" : "Total"}</span>
                     <b>{moneyARS(totals.total)}</b>
                   </div>
                 </div>
@@ -2044,6 +2128,20 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
                       <span className="gm-label dc-label--autocomplete">Cliente *</span>
                     </div>
 
+                    <DescuentoGeneralControl
+                      tipo={descuentoTipo}
+                      valor={descuentoValor}
+                      resumen={resumenDescuento}
+                      onTipoChange={(t) => {
+                        setDescuentoTipo(t);
+                        setDescuentoValor("");
+                      }}
+                      onValorChange={setDescuentoValor}
+                      onQuitar={() => setDescuentoValor("")}
+                      disabled={saving}
+                      money={moneyARS}
+                      contexto="el presupuesto"
+                    />
 
                     {!tieneModeloCargado ? (
                       <div className={`presupuesto-save-model ${guardarComoModelo ? "is-active" : ""}`}>
