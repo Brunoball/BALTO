@@ -23,6 +23,7 @@ import {
 import ModalVerComprobante from "../../../Global/Ver_Comprobantes/ModalVerComprobante.jsx";
 import { usePlan } from "../../../../session/planCapabilities";
 import ProductStockAutocomplete from "../../_shared/ProductStockAutocomplete.jsx";
+import { useRefrescarListasAlAbrir } from "../../_shared/refrescoListas.js";
 
 const NULL_OPTION = "";
 const ADD_OPTION = "__ADD__";
@@ -1332,6 +1333,7 @@ export default function ModalEditarCompra({
   onCatalogCreated,
   dark: darkProp,
 }) {
+  useRefrescarListasAlAbrir(open);
   // Plan: renglones de catálogo (materiales/insumos con stock) desde el plan con
   // insumos. Renglones históricos se muestran tal cual; los nuevos son manuales
   // en el plan profesional. El backend valida igualmente cada renglón.

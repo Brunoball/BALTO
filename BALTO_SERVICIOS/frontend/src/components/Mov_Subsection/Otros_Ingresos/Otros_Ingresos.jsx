@@ -43,6 +43,7 @@ import {
 
 import * as XLSX from "xlsx";
 import { useListas } from "../../../context/ListasContext.jsx";
+import { notificarStockActualizado } from "../_shared/refrescoListas.js";
 import { useDateRange } from "../../../context/DateRangeContext.jsx";
 import { readMovPerfCache, writeMovPerfCache, clearMovPerfCache } from "../_shared/performanceCache.js";
 import { getDetalleMovimiento, getResumenItemsMovimiento } from "../_shared/detalleMovimiento.js";
@@ -1988,6 +1989,8 @@ export default function OtrosIngresos() {
           setModoNC("NORMAL");
           signedUrlCacheRef.current.clear();
           signedUrlInFlightRef.current.clear();
+          // La nota de crédito puede devolver stock: refrescar productos/insumos.
+          notificarStockActualizado();
           await reloadVista();
 
           if (currentMode === "ELIMINAR_TOTAL") {

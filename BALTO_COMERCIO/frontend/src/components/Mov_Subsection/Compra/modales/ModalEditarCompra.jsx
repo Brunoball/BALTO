@@ -29,6 +29,7 @@ import {
   payloadTipoMovimientoStock,
   tipoMovimientoDesdeItem,
 } from "../../_shared/tipoMovimientoStock.js";
+import { useRefrescarListasAlAbrir } from "../../_shared/refrescoListas.js";
 
 const NULL_OPTION = "";
 const ADD_OPTION = "__ADD__";
@@ -1396,6 +1397,7 @@ export default function ModalEditarCompra({
   onCatalogCreated,
   dark: darkProp,
 }) {
+  useRefrescarListasAlAbrir(open);
   const ENDPOINT_BASE = `${BASE_URL}/api.php`;
   const ENDPOINT_UPLOAD_LINK = `${BASE_URL}/api.php?action=compras_comprobantes_vincular_movimientos_lote_upload`;
   const ENDPOINT_DELETE_COMP = `${BASE_URL}/api.php?action=compras_eliminar_comprobante`;

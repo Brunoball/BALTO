@@ -14,6 +14,7 @@ import {
   faDollarSign,
 } from "@fortawesome/free-solid-svg-icons";
 import { recibosFetch } from "../api/recibosApi.js";
+import { useRefrescarListasAlAbrir } from "../../_shared/refrescoListas.js";
 
 
 const NULL_OPTION = "";
@@ -312,6 +313,7 @@ export default function ModalEditarRecibo({
   onToast,
   dark,
 }) {
+  useRefrescarListasAlAbrir(open);
   const API_LISTS = `${BASE_URL}/api.php?action=global_obtener_listas`;
   const darkOn = isDarkEnabled(dark);
 

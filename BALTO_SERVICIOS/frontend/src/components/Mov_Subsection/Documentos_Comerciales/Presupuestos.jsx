@@ -34,6 +34,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import * as XLSX from "xlsx";
 import { useListas } from "../../../context/ListasContext.jsx";
+import { notificarStockActualizado } from "../_shared/refrescoListas.js";
 import { useDateRange } from "../../../context/DateRangeContext";
 import { readMovPerfCache, writeMovPerfCache, clearMovPerfCache } from "../_shared/performanceCache.js";
 import { saveVentaNoFacturadaPdf } from "../../../utils/VentaNoFacturadaPdfBuilder";
@@ -1190,6 +1191,8 @@ export default function Presupuestos() {
 
       setOpenConvert(false);
       setSelectedRow(null);
+      // La venta generada descuenta stock: refrescar productos/insumos.
+      notificarStockActualizado();
       await reloadVista();
     } catch (e) {
       showToast("error", e?.message || "No se pudo asignar el presupuesto como venta.", 5200);
@@ -1506,6 +1509,8 @@ export default function Presupuestos() {
           }
           setOpenConvert(false);
           setSelectedRow(null);
+          // La venta generada descuenta stock: refrescar productos/insumos.
+          notificarStockActualizado();
           await reloadVista();
         }}
       />

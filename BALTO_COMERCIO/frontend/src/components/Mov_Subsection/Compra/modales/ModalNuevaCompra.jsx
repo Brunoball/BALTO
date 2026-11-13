@@ -26,6 +26,7 @@ import useStockBarcodeScanner from "../../_shared/useStockBarcodeScanner.js";
 import ModalClienteFiscalArca from "../../../Global/Modales/ModalClienteFiscalArca.jsx";
 import TipoMovimientoStockSelect from "../../_shared/TipoMovimientoStockSelect.jsx";
 import { TIPO_MOV_MUEVE_STOCK, payloadTipoMovimientoStock } from "../../_shared/tipoMovimientoStock.js";
+import { useRefrescarListasAlAbrir } from "../../_shared/refrescoListas.js";
 
 const NULL_OPTION = "";
 const NOMBRE_COMPROBANTE_GENERICO = "Comprobante adjunto";
@@ -997,6 +998,7 @@ function AddCatalogMiniModal({ open, title, value, saving, onChange, onCancel, o
    MODAL PRINCIPAL
 ============================================================ */
 export default function ModalNuevaCompra({ open, lists, onClose, onToast, onSaved }) {
+  useRefrescarListasAlAbrir(open);
   const API_BATCH = `${BASE_URL}/api.php?action=compras_crear_batch`;
   const API_UPLOAD_LINK = `${BASE_URL}/api.php?action=compras_comprobantes_vincular_movimientos_lote_upload`;
   const API_PADRON_CUIT = `${BASE_URL}/api.php?action=padron_cuit&op=padron_cuit`;

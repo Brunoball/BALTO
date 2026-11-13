@@ -23,6 +23,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { otrosEgresosFetch } from "../api/otrosEgresosApi.js";
 import { mensajeClasificacionesFaltantes, resolveClasificacionesEgreso } from "../utils/clasificacionesEgreso.js";
+import { useRefrescarListasAlAbrir } from "../../_shared/refrescoListas.js";
 
 /* ─── IVA options ─── */
 const IVA_OPTIONS = [
@@ -1113,6 +1114,7 @@ export default function ModalEditarEgreso({
   onSubmit,
   onSaved,
 }) {
+  useRefrescarListasAlAbrir(open);
   const API = `${BASE_URL}/api.php`;
   const showToast = useCallback(
     (tipo, mensaje, duracion = 2800) => onToast?.(tipo, mensaje, duracion),

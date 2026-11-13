@@ -26,6 +26,7 @@ import "./ModalEgreso.css";
 import "../../../Global/Global_css/GlobalMovementEntryResponsive.css";
 import { otrosEgresosFetch } from "../api/otrosEgresosApi.js";
 import { mensajeClasificacionesFaltantes, resolveClasificacionesEgreso } from "../utils/clasificacionesEgreso.js";
+import { useRefrescarListasAlAbrir } from "../../_shared/refrescoListas.js";
 
 /* ─────────────────────────────────────────
    CONSTANTES Y HELPERS  (idénticos a NuevaCompra)
@@ -786,6 +787,7 @@ export default function ModalNuevoEgreso({
   onSubmit,
   onSaved,
 }) {
+  useRefrescarListasAlAbrir(open);
   const API_UPLOAD = `${BASE_URL}/api.php?action=otros_egresos_comprobantes_vincular_movimiento_upload`;
   const API_DETALLES_CREAR = `${BASE_URL}/api.php?action=otros_egresos_detalles_crear`;
 

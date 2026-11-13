@@ -36,6 +36,7 @@ import {
 } from "../../../../utils/VentaNoFacturadaPdfBuilder";
 import { saveRemitoPdf } from "../../../../utils/RemitoPdfBuilder";
 import { DEMO_BLOCK_MESSAGE, isBaltoDemoMode } from "../../../../utils/demoMode";
+import { useRefrescarListasAlAbrir } from "../../_shared/refrescoListas.js";
 
 /* ================================================================
    CONSTANTS
@@ -1495,6 +1496,7 @@ export function PanelMediosPagoInlineVenta({
    MODAL PRINCIPAL
 ================================================================ */
 export default function ModalNuevaVenta({ open, lists, tiendaNubeVenta = null, onClose, onToast, onSaved }) {
+  useRefrescarListasAlAbrir(open);
   const API_BATCH = `${BASE_URL}/api.php?action=ventas_crear_batch`;
   const API_TN_COMPLETAR = `${BASE_URL}/api.php?action=ventas_tienda_nube_completar`;
   const API_CATALOGO = `${BASE_URL}/api.php?action=catalogo_crear`;

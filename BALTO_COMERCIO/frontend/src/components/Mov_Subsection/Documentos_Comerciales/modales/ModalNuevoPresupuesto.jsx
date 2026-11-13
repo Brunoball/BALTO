@@ -26,6 +26,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { savePresupuestoPdf } from "../../../../utils/PresupuestoPdfBuilder";
 import { DOCUMENTOS_API, documentosRequest } from "../api/documentosComercialesApi.js";
+import { useRefrescarListasAlAbrir } from "../../_shared/refrescoListas.js";
 
 const NULL_OPTION = "";
 const ADD_CLIENTE_OPTION = { __action: "add_cliente", id: "__add_cliente__", nombre: "➕ Agregar cliente" };
@@ -859,6 +860,7 @@ async function apiPostForm(url, formData) {
 }
 
 export default function ModalNuevoPresupuesto({ open, lists, initialModel = null, modelsOpen = false, onOpenModels, onClose, onToast, onSaved }) {
+  useRefrescarListasAlAbrir(open);
   const API = DOCUMENTOS_API;
   const API_PADRON_CUIT = `${API}?action=padron_cuit&op=padron_cuit`;
   const API_SAVE_CLIENTE_DESDE_ARCA = `${API}?action=cliente_fiscal_crear_desde_arca`;

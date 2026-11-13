@@ -30,6 +30,7 @@ import {
 } from "../../../../utils/descuentoGeneral.js";
 import { usePlan } from "../../../../session/planCapabilities";
 import { DOCUMENTOS_API, documentosRequest } from "../api/documentosComercialesApi.js";
+import { useRefrescarListasAlAbrir } from "../../_shared/refrescoListas.js";
 
 const NULL_OPTION = "";
 const ADD_CLIENTE_OPTION = { __action: "add_cliente", id: "__add_cliente__", nombre: "➕ Agregar cliente" };
@@ -1030,6 +1031,7 @@ async function apiPostForm(url, formData) {
 }
 
 export default function ModalNuevoPresupuesto({ open, lists, initialModel = null, modelsOpen = false, onOpenModels, onClose, onToast, onSaved }) {
+  useRefrescarListasAlAbrir(open);
   // Plan: materiales/insumos como renglón propio desde el plan 2 (resources.sell);
   // productos sólo con products.sell (plan 3). Consumos de materiales en servicios
   // con services.composition. Sin resources.stock no se muestra stock.

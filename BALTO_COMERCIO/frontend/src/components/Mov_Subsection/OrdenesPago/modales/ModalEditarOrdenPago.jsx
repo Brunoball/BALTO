@@ -14,6 +14,7 @@ import {
   faDollarSign,
 } from "@fortawesome/free-solid-svg-icons";
 import { ordenesPagoFetch } from "../api/ordenesPagoApi.js";
+import { useRefrescarListasAlAbrir } from "../../_shared/refrescoListas.js";
 
 
 const NULL_OPTION = "";
@@ -315,6 +316,7 @@ export default function ModalEditarOrdenPago({
   onSave,
   onToast,
 }) {
+  useRefrescarListasAlAbrir(open);
   const API_LISTS = `${BASE_URL}/api.php?action=global_obtener_listas`;
   const showToast = useCallback((tipo, mensaje) => onToast?.(tipo, mensaje), [onToast]);
 

@@ -23,6 +23,7 @@ import ProductStockAutocomplete from "../../_shared/ProductStockAutocomplete.jsx
 import useStockBarcodeScanner from "../../_shared/useStockBarcodeScanner.js";
 import ModalNuevaDescripcion from "./ModalNuevaDescripcion.jsx";
 import { otrosIngresosFetch } from "../api/otrosIngresosApi.js";
+import { useRefrescarListasAlAbrir } from "../../_shared/refrescoListas.js";
 
 // ─── Constantes ────────────────────────────────────────────────────────────────
 const NULL_OPTION = "";
@@ -703,6 +704,7 @@ export default function ModalEditarIngreso({
   onSaved,
   dark: darkProp,
 }) {
+  useRefrescarListasAlAbrir(open);
   const API = `${BASE_URL}/api.php`;
 
   const showToast = useCallback(

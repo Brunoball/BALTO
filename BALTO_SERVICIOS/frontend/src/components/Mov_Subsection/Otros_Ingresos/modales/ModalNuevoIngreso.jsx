@@ -18,6 +18,7 @@ import "../../../Global/Global_css/roots.css";
 import "./ModalIngreso.css";
 import "../../../Global/Global_css/GlobalMovementEntryResponsive.css";
 import { otrosIngresosFetch } from "../api/otrosIngresosApi.js";
+import { useRefrescarListasAlAbrir } from "../../_shared/refrescoListas.js";
 
 // ─── Constantes ────────────────────────────────────────────────────────────────
 const NULL_OPTION = "";
@@ -969,6 +970,7 @@ export default function ModalNuevoIngreso({
   onSubmit,
   onSaved,
 }) {
+  useRefrescarListasAlAbrir(open);
   const API_UPLOAD = `${BASE_URL}/api.php?action=otros_ingresos_comprobantes_vincular_movimiento_upload`;
   const API_VINCULAR_FACTURA = `${BASE_URL}/api.php?action=otros_ingresos_comprobantes_vincular_movimiento`;
   const API_CHEQUES_ACTUALIZAR = `${BASE_URL}/api.php?action=mov_global_cheques_actualizar`;

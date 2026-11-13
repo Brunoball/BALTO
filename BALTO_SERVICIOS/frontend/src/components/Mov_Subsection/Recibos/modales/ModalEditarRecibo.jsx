@@ -14,6 +14,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { usePlan } from "../../../../session/planCapabilities";
 import { recibosFetch } from "../api/recibosApi.js";
+import { useRefrescarListasAlAbrir } from "../../_shared/refrescoListas.js";
 
 
 const NULL_OPTION = "";
@@ -342,6 +343,7 @@ export default function ModalEditarRecibo({
   onToast,
   dark,
 }) {
+  useRefrescarListasAlAbrir(open);
   // Plan: materiales/insumos como renglón propio desde el plan 2 (resources.sell);
   // productos sólo con products.sell. El backend valida por el tipo real.
   const plan = usePlan();

@@ -34,6 +34,7 @@ import {
   formatPorcentaje,
   prorratearDescuentoGeneral,
 } from "../../../../utils/descuentoGeneral.js";
+import { useRefrescarListasAlAbrir } from "../../_shared/refrescoListas.js";
 
 /* ================================================================
    CONSTANTS
@@ -1532,6 +1533,7 @@ export function PanelMediosPagoInlineVenta({
    MODAL PRINCIPAL
 ================================================================ */
 export default function ModalNuevaVenta({ open, lists, onClose, onToast, onSaved }) {
+  useRefrescarListasAlAbrir(open);
   // Plan: materiales/insumos como renglón propio desde el plan 2 (resources.sell);
   // productos comerciales sólo con products.sell (plan 3). Consumos de materiales
   // en servicios con services.composition. Sólo el plan 3 controla existencias

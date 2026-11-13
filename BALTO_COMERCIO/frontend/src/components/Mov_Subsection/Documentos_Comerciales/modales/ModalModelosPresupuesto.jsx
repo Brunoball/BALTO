@@ -17,6 +17,7 @@ import "../../../Global/Global_css/roots.css";
 import "./ModalModelosPresupuesto.css";
 import "./ModalPresupuestosChecklist.css";
 import { DOCUMENTOS_API, documentosRequest } from "../api/documentosComercialesApi.js";
+import { useRefrescarListasAlAbrir } from "../../_shared/refrescoListas.js";
 
 const IVA_OPTIONS = [0, 10.5, 21, 27];
 
@@ -165,6 +166,7 @@ async function parseJson(res) {
 }
 
 export default function ModalModelosPresupuesto({ open, lists, onClose, onToast, onUseModel }) {
+  useRefrescarListasAlAbrir(open);
   const API = DOCUMENTOS_API;
   const stockOptions = useMemo(() => normalizeLists(lists), [lists]);
   const [modelos, setModelos] = useState([]);

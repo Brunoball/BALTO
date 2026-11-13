@@ -826,9 +826,8 @@ export default function Presupuestos() {
     event?.preventDefault?.();
     event?.stopPropagation?.();
     setSelectedModelForNew(null);
-    refrescarListasStock();
     setOpenAdd(true);
-  }, [refrescarListasStock]);
+  }, []);
 
   const fetchPresupuestoDetalle = useCallback(async (idMovimiento) => {
     const data = await apiGet(`${API}?action=presupuestos_obtener&id_movimiento=${encodeURIComponent(idMovimiento)}`);
@@ -1377,7 +1376,7 @@ export default function Presupuestos() {
             <div className="doccom-presuExportDesktop">
               <BotonExportar className="doccom-exportBtn" disabled={loadingRows || filteredRows.length === 0} loading={false} label="Exportar" title={filteredRows.length ? "Exportar archivo" : "No hay datos para exportar"} opciones={exportOptions} align="right" entityLabel="presupuestos" currentRows={filteredRows} allRows={hasMore ? null : filteredRows} loadAllRows={loadAllRowsForExport} currentCount={filteredRows.length} allCount={hasMore ? null : filteredRows.length} hasMore={hasMore} />
             </div>
-            <button type="button" className="mov-btn doccom-presuModelsBtn" onClick={() => { refrescarListasStock(); setOpenModels(true); }} title="Ver y administrar modelos de presupuesto">
+            <button type="button" className="mov-btn doccom-presuModelsBtn" onClick={() => setOpenModels(true)} title="Ver y administrar modelos de presupuesto">
               Modelos
             </button>
             <button type="button" className="mov-btn mov-btn--primary doccom-presuNewBtn" onClick={handleOpenNuevoPresupuesto} title="Crear nuevo presupuesto">
@@ -1466,7 +1465,6 @@ export default function Presupuestos() {
         onUseModel={(modelo) => {
           setSelectedModelForNew({ ...(modelo || {}) });
           setOpenModels(false);
-          refrescarListasStock();
           setOpenAdd(true);
         }}
       />

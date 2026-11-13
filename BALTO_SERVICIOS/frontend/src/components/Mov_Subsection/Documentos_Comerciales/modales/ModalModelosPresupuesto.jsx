@@ -11,6 +11,7 @@ import "./ModalModelosPresupuesto.css";
 import "./ModalPresupuestosChecklist.css";
 import { usePlan } from "../../../../session/planCapabilities";
 import { DOCUMENTOS_API, documentosRequest } from "../api/documentosComercialesApi.js";
+import { useRefrescarListasAlAbrir } from "../../_shared/refrescoListas.js";
 
 const IVA_OPTIONS = [0, 10.5, 21, 27];
 
@@ -169,6 +170,7 @@ async function parseJson(res) {
 }
 
 export default function ModalModelosPresupuesto({ open, lists, onClose, onToast, onUseModel }) {
+  useRefrescarListasAlAbrir(open);
   // Plan: un modelo es una plantilla de venta. Materiales/insumos como renglón
   // propio desde el plan 2 (resources.sell); productos sólo con products.sell.
   // El backend valida por el tipo real del artículo (los ya guardados se conservan).

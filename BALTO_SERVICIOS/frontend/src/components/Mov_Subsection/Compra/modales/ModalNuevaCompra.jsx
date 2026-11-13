@@ -24,6 +24,7 @@ import GlobalAutocomplete from "../../../Global/GlobalAutocomplete/GlobalAutocom
 import ProductStockAutocomplete from "../../_shared/ProductStockAutocomplete.jsx";
 import { usePlan } from "../../../../session/planCapabilities";
 import ModalClienteFiscalArca from "../../../Global/Modales/ModalClienteFiscalArca.jsx";
+import { useRefrescarListasAlAbrir } from "../../_shared/refrescoListas.js";
 
 const NULL_OPTION = "";
 const NOMBRE_COMPROBANTE_GENERICO = "Comprobante adjunto";
@@ -1011,6 +1012,7 @@ function AddCatalogMiniModal({ open, title, value, saving, onChange, onCancel, o
    MODAL PRINCIPAL
 ============================================================ */
 export default function ModalNuevaCompra({ open, lists, onClose, onToast, onSaved }) {
+  useRefrescarListasAlAbrir(open);
   // Plan: compras de materiales/insumos (con impacto en stock) desde el plan con
   // insumos; en el plan profesional la compra es un gasto con detalle manual.
   const plan = usePlan();
