@@ -2,6 +2,11 @@ import fs from 'node:fs';
 import http from 'node:http';
 import https from 'node:https';
 import { AUTH_FILE, ENV, assertSafeMutationConfiguration } from './env.js';
+import cleanupResponse from './cleanup-response.cjs';
+
+// Importación ESM↔CommonJS compatible con Playwright y con Node al ejecutar cleanup-now.mjs.
+// Evita createRequire(import.meta.url), que falla cuando Playwright transforma este archivo.
+const { normalizeCleanupResponse, describeCleanupFailure, assertCleanupEnvelope } = cleanupResponse;
 
 const CONFIRMATION = 'BORRAR_SOLO_DATOS_PLAYWRIGHT';
 const CLEANUP_ACTION = 'config_testing_e2e_cleanup';
@@ -12,16 +17,6 @@ function endpoint(action) {
   const url = new URL(`${base}/api.php`);
   url.searchParams.set('action', action);
   return url.toString();
-}
-
-function normalizeResult(status, text) {
-  let body = {};
-  try {
-    body = text ? JSON.parse(text) : {};
-  } catch {
-    body = { raw: text };
-  }
-  return { status, ok: status >= 200 && status < 300, body, text };
 }
 
 function authFromStorageState(state) {
@@ -97,6 +92,7 @@ function rawHttpRequest(url, { method, headers, payload, timeoutMs = 120_000 }) 
           resolve({
             status: Number(res.statusCode || 0),
             text: chunks.join(''),
+            headers: res.headers || {},
           });
         });
       },
@@ -144,7 +140,7 @@ async function nodeApi(action, { method = 'GET', body = null, query = {}, auth =
     timeoutMs: ENV.cleanupTimeoutMs,
   });
 
-  return normalizeResult(result.status, result.text);
+  return normalizeCleanupResponse(result.status, result.text, result.headers);
 }
 
 function isTransientCleanupStatus(status) {
@@ -164,7 +160,7 @@ async function nodeApiWithRetry(action, options = {}) {
     try {
       lastResult = await nodeApi(action, options);
       lastError = null;
-      if (!isTransientCleanupStatus(lastResult.status) || attempt === attempts) {
+      if (lastResult.challenge || !isTransientCleanupStatus(lastResult.status) || attempt === attempts) {
         return lastResult;
       }
     } catch (error) {
@@ -180,25 +176,22 @@ async function nodeApiWithRetry(action, options = {}) {
 }
 
 function assertCleanupResult(result, phase) {
-  if (!result.ok || result.body?.exito === false) {
-    const message = String(result.body?.mensaje || result.text || 'Falló la limpieza E2E.');
-    if (result.status === 404) {
-      throw new Error(
-        `[Playwright cleanup] ${phase}: herramientas E2E no disponibles en el backend. ` +
-        'Verificá BALTO_E2E_TOOLS_ENABLED=1 en el .env privado del backend seleccionado.',
-      );
-    }
-    if (result.status === 403 && ENV.environment === 'production') {
-      throw new Error(
-        `[Playwright cleanup] ${phase}: producción no habilitó mutaciones E2E. ` +
-        'Además de BALTO_E2E_TOOLS_ENABLED=1, producción requiere BALTO_E2E_ALLOW_PRODUCTION=1. ' +
-        `Backend: ${message}`,
-      );
-    }
+  // Sólo un JSON exito=true + restantes_total=0 confirma que se borraron los datos.
+  // Nunca registrar una página HTML (403/CDN) completa en consola, porque además
+  // de ser inútil podría contener valores sensibles y saturar el log de Playwright.
+  if (result.status === 404 && result.validJson) {
     throw new Error(
-      `[Playwright cleanup] ${phase}: HTTP ${result.status}. ${message}`,
+      `[Playwright cleanup] ${phase}: herramientas E2E no disponibles en el backend. ` +
+      'Verificá BALTO_E2E_TOOLS_ENABLED=1 en el .env privado del backend seleccionado.',
     );
   }
+  if (result.status === 403 && ENV.environment === 'production' && !result.challenge && result.validJson) {
+    throw new Error(
+      `[Playwright cleanup] ${phase}: producción no habilitó mutaciones E2E. ` +
+      'Revisá los permisos del tenant E2E. ' + describeCleanupFailure(result, phase),
+    );
+  }
+  assertCleanupEnvelope(result, phase);
 
   const remaining = Number(result.body?.restantes_total || 0);
   if (remaining !== 0) {
@@ -255,8 +248,8 @@ export async function cleanupE2EWithPage(
       },
     });
 
-    const remaining = Number(result.body?.restantes_total || 0);
-    if (!result.ok || result.body?.exito === false || remaining === 0 || pass === 3) {
+    const remaining = Number(result.body?.restantes_total);
+    if (!result.ok || !result.validJson || result.body?.exito !== true || remaining === 0 || pass === 3) {
       return assertCleanupResult(result, pass > 1 ? `${phase} (pasada ${pass})` : phase);
     }
 
@@ -285,8 +278,8 @@ export async function cleanupE2EFromStorage(
       },
     });
 
-    const remaining = Number(result.body?.restantes_total || 0);
-    if (!result.ok || result.body?.exito === false || remaining === 0 || pass === 3) {
+    const remaining = Number(result.body?.restantes_total);
+    if (!result.ok || !result.validJson || result.body?.exito !== true || remaining === 0 || pass === 3) {
       return assertCleanupResult(result, pass > 1 ? `${phase} (pasada ${pass})` : phase);
     }
 
@@ -306,12 +299,6 @@ export async function e2eCleanupStatusFromStorage(
     query: { scope, ...(prefix ? { prefix } : {}) },
   });
 
-  if (!result.ok || result.body?.exito === false) {
-    throw new Error(
-      `No se pudo consultar el estado de limpieza E2E: HTTP ${result.status}. ` +
-      `${result.body?.mensaje || result.text || ''}`,
-    );
-  }
-
+  assertCleanupEnvelope(result, 'consulta de estado E2E');
   return result.body;
 }

@@ -22,6 +22,13 @@ import {
   faBasketShopping,
 } from "@fortawesome/free-solid-svg-icons";
 import ModalVerComprobante from "../../../Global/Ver_Comprobantes/ModalVerComprobante.jsx";
+import ProductStockAutocomplete from "../../_shared/ProductStockAutocomplete.jsx";
+import TipoMovimientoStockSelect from "../../_shared/TipoMovimientoStockSelect.jsx";
+import {
+  TIPO_MOV_MUEVE_STOCK,
+  payloadTipoMovimientoStock,
+  tipoMovimientoDesdeItem,
+} from "../../_shared/tipoMovimientoStock.js";
 
 const NULL_OPTION = "";
 const ADD_OPTION = "__ADD__";
@@ -987,6 +994,161 @@ function getNumeroFromItemOCompra(row, item, keys, fallback) {
 }
 
 /* =========================
+   Renglones de la compra (edición multi-ítem)
+   ---------------------------------------------------------
+   Antes la edición tomaba sólo el primer ítem y reenviaba un único renglón,
+   por lo que una compra de dos renglones perdía uno al guardarse. Ahora se
+   cargan y se reenvían TODOS los renglones, cada uno con su TIPO DE MOVIMIENTO.
+========================= */
+function positiveIdOrNull(v) {
+  const n = Number(v);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+function normalizeTipoPrecioNombreCompra(nombre) {
+  return String(nombre ?? "")
+    .toUpperCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+/** Precio inicial al elegir un producto: mismo criterio que Nueva Compra (costo/compra). */
+function precioCompraInicialDesdeProducto(detalle) {
+  const lista = Array.isArray(detalle?.precios) ? detalle.precios : [];
+  const costo =
+    lista.find((p) => {
+      const nombre = normalizeTipoPrecioNombreCompra(p?.tipo_precio || p?.nombre);
+      return nombre.includes("COSTO") || nombre.includes("COMPRA");
+    }) ||
+    lista.find((p) => Number(p?.id_tipo_precio_stock ?? 0) === 1) ||
+    lista[0];
+  const n = Number(costo?.monto ?? costo?.precio ?? detalle?.precio_costo ?? detalle?.precio ?? 0);
+  return Number.isFinite(n) && n > 0 ? n : 0;
+}
+function stockDisponibleDesdeProducto(detalle) {
+  const c = detalle?.stock ?? detalle?.stock_disponible ?? detalle?.stockDisponible ?? detalle?.cantidad_stock ?? null;
+  if (c === null || c === undefined || c === "") return null;
+  const n = Number(c);
+  return Number.isFinite(n) ? n : null;
+}
+function buildEmptyRowCompra() {
+  return {
+    id: uid(),
+    id_item: null,
+    tipoMovimientoStock: TIPO_MOV_MUEVE_STOCK,
+    id_detalle: NULL_OPTION,
+    id_stock_producto: NULL_OPTION,
+    id_stock_variante: NULL_OPTION,
+    id_detalle_original: null,
+    textoOriginal: "",
+    detalleText: "",
+    cantidad: 1,
+    precio: 0,
+    precioDraft: "",
+    precioFocused: false,
+    ivaPct: 0,
+    id_stock_unidad: null,
+    unidad_abreviatura: "",
+    unidad_permite_decimales: 1,
+    stock_disponible: null,
+    sinStock: false,
+  };
+}
+function nombreItemCompra(item) {
+  const producto = String(item?.producto_nombre ?? item?.stock_producto_nombre ?? "").trim();
+  const variante = String(item?.variante_nombre ?? item?.stock_variante_nombre ?? item?.nombre_variante ?? "").trim();
+  const historico = String(item?.nombre ?? item?.descripcion ?? item?.detalle ?? item?.detalle_nombre ?? "").trim();
+  if (historico && !isResumenProductosLabel(historico)) return historico;
+  if (producto) return [producto, variante].filter(Boolean).join(" - ");
+  return historico;
+}
+function buildRowFromItemCompra(item) {
+  const idProducto = positiveIdOrNull(item?.id_stock_producto ?? item?.idStockProducto ?? item?.stock_producto_id);
+  const idVariante = positiveIdOrNull(item?.id_stock_variante ?? item?.idStockVariante ?? item?.stock_variante_id);
+  const nombre = nombreItemCompra(item);
+  const cantidad = Math.max(0, safeNumber(item?.cantidad ?? 1));
+  const precio = Math.max(0, safeNumber(item?.precio ?? item?.precio_unitario ?? 0));
+  const tieneProducto = Boolean(idProducto || idVariante);
+  return {
+    ...buildEmptyRowCompra(),
+    id_item: positiveIdOrNull(item?.id_item),
+    // Cada renglón muestra el TIPO DE MOVIMIENTO con el que se guardó.
+    tipoMovimientoStock: tipoMovimientoDesdeItem(item),
+    id_stock_producto: idProducto ? String(idProducto) : NULL_OPTION,
+    id_stock_variante: idVariante ? String(idVariante) : NULL_OPTION,
+    // Renglón histórico de Detalles (sin producto): se reenvía igual mientras
+    // no se cambie. Nunca se usa un ID de producto como detalle.
+    id_detalle_original: tieneProducto ? null : positiveIdOrNull(item?.id_detalle),
+    textoOriginal: tieneProducto ? "" : nombre,
+    detalleText: nombre,
+    cantidad: Math.round(cantidad * 1000) / 1000,
+    precio: Math.round(precio * 100) / 100,
+    ivaPct: Math.max(0, safeNumber(item?.iva_pct ?? item?.ivaPct ?? 0)),
+    id_stock_unidad: item?.id_stock_unidad ?? null,
+    unidad_abreviatura: String(item?.unidad_abreviatura ?? "").trim(),
+    unidad_permite_decimales: Number(item?.unidad_permite_decimales ?? 1) === 0 ? 0 : 1,
+  };
+}
+function buildRowsFromCompra(row) {
+  const r = row || {};
+  const items = getCompraItemsDetalle(r);
+  if (items.length) return items.map(buildRowFromItemCompra);
+  // Registro antiguo sin items_detalle: se arma un renglón con los campos planos.
+  const legacy = {
+    id_stock_producto: r.id_stock_producto ?? r.idStockProducto ?? r.stock_producto_id ?? null,
+    id_stock_variante: r.id_stock_variante ?? r.idStockVariante ?? null,
+    id_detalle: r.id_detalle ?? null,
+    nombre: getProductoNombreFromCompra(r),
+    cantidad: r.cantidad ?? 1,
+    precio: r.precio ?? r.monto_total ?? 0,
+    iva_pct: r.iva_pct ?? 0,
+  };
+  const hasData = positiveIdOrNull(legacy.id_stock_producto) || positiveIdOrNull(legacy.id_stock_variante) || String(legacy.nombre || "").trim();
+  return [hasData ? buildRowFromItemCompra(legacy) : buildEmptyRowCompra()];
+}
+function calcRowsCompra(rows) {
+  return (Array.isArray(rows) ? rows : []).map((r) => {
+    const t = calcItemTotals(r.cantidad, r.precio, r.ivaPct);
+    return { ...r, subtotal: t.subtotal, ivaMonto: t.iva_monto, total: t.total };
+  });
+}
+function esRenglonHistoricoSinProducto(r) {
+  return positiveIdOrNull(r?.id_stock_producto) === null &&
+    positiveIdOrNull(r?.id_detalle_original) !== null &&
+    String(r?.detalleText || "") === String(r?.textoOriginal || "");
+}
+function rowTieneDetalleCompraEdit(r) {
+  return positiveIdOrNull(r?.id_stock_producto) !== null || esRenglonHistoricoSinProducto(r);
+}
+function rowTocadaCompraEdit(r) {
+  return String(r?.detalleText || "").trim() !== "" ||
+    positiveIdOrNull(r?.id_stock_producto) !== null ||
+    safeNumber(r?.precio) !== 0;
+}
+/** Ítems del payload de edición (el backend recalcula importes y valida el tipo). */
+function buildItemsPayloadCompra(rows) {
+  return calcRowsCompra(rows)
+    .filter((r) => rowTieneDetalleCompraEdit(r))
+    .map((r) => {
+      const historico = esRenglonHistoricoSinProducto(r);
+      return {
+        // Renglón con producto: MUEVE STOCK suma existencias; NO MUEVE STOCK no.
+        // Renglón histórico sin producto: se reenvía tal como estaba.
+        ...(historico ? {} : payloadTipoMovimientoStock(r)),
+        id_detalle: historico ? Number(r.id_detalle_original) : null,
+        id_stock_producto: historico ? null : positiveIdOrNull(r.id_stock_producto),
+        id_stock_variante: historico ? null : positiveIdOrNull(r.id_stock_variante),
+        cantidad: Math.round(Math.max(0, safeNumber(r.cantidad)) * 1000) / 1000,
+        precio: Math.round(Math.max(0, safeNumber(r.precio)) * 100) / 100,
+        iva_pct: Math.round(Math.max(0, safeNumber(r.ivaPct)) * 100) / 100,
+        subtotal: r.subtotal,
+        iva_monto: r.ivaMonto,
+        total: r.total,
+      };
+    });
+}
+
+/* =========================
    Build form + medios
 ========================= */
 function buildFormFromRowCompra(row, fixedLocal) {
@@ -1050,21 +1212,28 @@ function compraPayloadCoincideConRow(payload, row) {
   const moneyEq = (a, b, tolerance = 0.01) => Math.abs(safeNumber(a) - safeNumber(b)) <= tolerance;
   const qtyEq = (a, b) => Math.abs(safeNumber(a) - safeNumber(b)) <= 0.001;
 
-  const payloadProductoId = id(payload.id_stock_producto ?? payload.id_detalle);
-  const payloadVarianteId = id(payload.id_stock_variante);
+  const itemsPayload = Array.isArray(payload.items) ? payload.items : [];
+  const itemsOriginales = buildItemsPayloadCompra(buildRowsFromCompra(row));
+  if (itemsPayload.length !== itemsOriginales.length) return false;
+  const itemsIguales = itemsPayload.every((it, i) => {
+    const o = itemsOriginales[i];
+    return (
+      String(it.tipo_movimiento_stock || "") === String(o.tipo_movimiento_stock || "") &&
+      String(it.descripcion || "") === String(o.descripcion || "") &&
+      id(it.id_stock_producto) === id(o.id_stock_producto) &&
+      id(it.id_stock_variante) === id(o.id_stock_variante) &&
+      qtyEq(it.cantidad, o.cantidad) &&
+      moneyEq(it.precio, o.precio) &&
+      moneyEq(it.iva_pct, o.iva_pct) &&
+      moneyEq(it.total, o.total)
+    );
+  });
 
   return (
+    itemsIguales &&
     String(payload.fecha || "").slice(0, 10) === String(original.fecha || "").slice(0, 10) &&
     id(payload.id_tipo_venta) === id(original.id_tipo_venta) &&
-    id(payload.id_proveedor) === id(original.id_proveedor) &&
-    payloadProductoId === id(original.id_detalle) &&
-    payloadVarianteId === id(original.id_stock_variante) &&
-    qtyEq(payload.cantidad, original.cantidad) &&
-    moneyEq(payload.precio, original.precio) &&
-    moneyEq(payload.iva_pct, original.iva_pct) &&
-    moneyEq(payload.subtotal, original.subtotal) &&
-    moneyEq(payload.iva_monto, original.iva_monto) &&
-    moneyEq(payload.total ?? payload.monto_total, original.total)
+    id(payload.id_proveedor) === id(original.id_proveedor)
   );
 }
 function buildMediosFromRowCompra(row, mediosPagoList) {
@@ -1337,10 +1506,9 @@ export default function ModalEditarCompra({
     const fixedLocal = { idEntrada: findIdByIncludes(merged.tiposMovimiento, "entrada") };
     return buildFormFromRowCompra(row, fixedLocal);
   });
+  const [rows, setRows] = useState(() => buildRowsFromCompra(row));
   const [proveedorInput, setProveedorInput] = useState("");
   const [proveedorFocus, setProveedorFocus] = useState(false);
-  const [detalleInput, setDetalleInput] = useState("");
-  const [detalleFocus, setDetalleFocus] = useState(false);
   const [mediosFilas, setMediosFilas] = useState(() => [buildEmptyMedioPago()]);
 
   const [archivoNuevo, setArchivoNuevo] = useState(null);
@@ -1358,7 +1526,6 @@ export default function ModalEditarCompra({
   const comprobanteRequestRef = useRef(0);
   const fechaRef = useRef(null);
   const proveedorInputRef = useRef(null);
-  const detalleInputRef = useRef(null);
   const fileInputRef = useRef(null);
   const rowsContainerRef = useRef(null);
   const [hasScroll, setHasScroll] = useState(false);
@@ -1377,7 +1544,7 @@ export default function ModalEditarCompra({
       ro.disconnect();
       window.removeEventListener("resize", check);
     };
-  }, [open, form]);
+  }, [open, form, rows]);
 
   const tipoVentaObj = useMemo(
     () => getTipoVentaObj(tiposVentaUI, form.id_tipo_venta),
@@ -1385,11 +1552,38 @@ export default function ModalEditarCompra({
   );
   const esContado = useMemo(() => isTipoVentaContado(tipoVentaObj), [tipoVentaObj]);
 
-  const resumen = useMemo(() => ({
-    subtotal: safeNumber(form.subtotal),
-    iva: safeNumber(form.iva_monto),
-    total: safeNumber(form.total),
-  }), [form.subtotal, form.iva_monto, form.total]);
+  const rowsCalc = useMemo(() => calcRowsCompra(rows), [rows]);
+
+  const resumen = useMemo(() => {
+    const r2 = (n) => Math.round(n * 100) / 100;
+    return {
+      subtotal: r2(rowsCalc.reduce((a, r) => a + safeNumber(r.subtotal), 0)),
+      iva: r2(rowsCalc.reduce((a, r) => a + safeNumber(r.ivaMonto), 0)),
+      total: r2(rowsCalc.reduce((a, r) => a + safeNumber(r.total), 0)),
+    };
+  }, [rowsCalc]);
+
+  const updateRow = useCallback((rowId, patch) => {
+    setRows((prev) => prev.map((r) => (r.id === rowId ? { ...r, ...patch } : r)));
+  }, []);
+  const addRow = useCallback(() => {
+    setRows((prev) => [...prev, buildEmptyRowCompra()]);
+    setTimeout(() => {
+      const el = rowsContainerRef.current;
+      if (el) el.scrollTop = el.scrollHeight;
+    }, 0);
+  }, []);
+  const removeRow = useCallback((rowId) => {
+    setRows((prev) => {
+      const next = prev.filter((r) => r.id !== rowId);
+      return next.length ? next : prev;
+    });
+  }, []);
+  const handleTipoMovimientoChange = useCallback((rowId, nuevoTipo) => {
+    setRows((prev) => prev.map((r) => (r.id === rowId
+      ? { ...r, tipoMovimientoStock: nuevoTipo }
+      : r)));
+  }, []);
 
   const sumaMediosPago = useMemo(
     () => mediosFilas.reduce((acc, mp) => acc + safeNumber(mp.monto), 0),
@@ -1481,13 +1675,6 @@ export default function ModalEditarCompra({
     setForm((p) => ({ ...p, id_proveedor: ADD_OPTION }));
   }, [saving, proveedorInput]);
 
-  const startAddDetalle = useCallback(() => {
-    if (saving) return;
-    setDetalleFocus(false);
-    setAddUI({ open: true, catalogo: "detalles", text: detalleInput.trim() || "", saving: false });
-    setForm((p) => ({ ...p, id_detalle: ADD_OPTION }));
-  }, [saving, detalleInput]);
-
   const guardarNuevoCatalogo = useCallback(async () => {
     const catalogo = addUI.catalogo;
     const nombre = String(addUI.text || "").trim();
@@ -1531,11 +1718,6 @@ export default function ModalEditarCompra({
         setProveedorInput(newNombre);
         setProveedorFocus(false);
         setTimeout(() => proveedorInputRef.current?.focus(), 0);
-      } else {
-        setForm((p) => ({ ...p, id_detalle: String(Number(newId)) }));
-        setDetalleInput(newNombre);
-        setDetalleFocus(false);
-        setTimeout(() => detalleInputRef.current?.focus(), 0);
       }
 
       setAddUI({ open: false, catalogo: null, text: "", saving: false });
@@ -1557,17 +1739,9 @@ export default function ModalEditarCompra({
         );
         return hit ? getGenericId(hit) : null;
       }
-      if (kind === "detalle") {
-        const name = norm(detalleInput);
-        if (!name) return null;
-        const hit = (Array.isArray(safeLists.detalles) ? safeLists.detalles : []).find(
-          (d) => norm(d?.nombre) === name
-        );
-        return hit ? getGenericId(hit) : null;
-      }
       return null;
     },
-    [proveedorInput, detalleInput, safeLists.proveedores, safeLists.detalles]
+    [proveedorInput, safeLists.proveedores]
   );
 
   const prevOpenRef = useRef(false);
@@ -1591,12 +1765,7 @@ export default function ModalEditarCompra({
       nameById(merged.proveedores, built.id_proveedor) || String(rowRef.current?.proveedor || "").trim()
     );
     setProveedorFocus(false);
-    setDetalleInput(
-      built.id_stock_variante && built.id_stock_variante !== NULL_OPTION
-        ? getProductoNombreFromCompra(rowRef.current)
-        : (nameById(merged.detalles, built.id_detalle) || getProductoNombreFromCompra(rowRef.current))
-    );
-    setDetalleFocus(false);
+    setRows(buildRowsFromCompra(rowRef.current));
 
     const mediosIniciales = buildMediosFromRowCompra(rowRef.current, merged.mediosPago);
     setMediosFilas(mediosIniciales);
@@ -1667,22 +1836,6 @@ export default function ModalEditarCompra({
     setForm((p) => ({ ...p, fecha: nuevaFecha }));
   }, [showToast]);
 
-  const recalcFromItem = useCallback((nextPartial) => {
-    setForm((p) => {
-      const next = { ...p, ...nextPartial };
-      const t = calcItemTotals(safeNumber(next.cantidad), safeNumber(next.precio), safeNumber(next.iva_pct));
-      next.subtotal = t.subtotal;
-      next.iva_monto = t.iva_monto;
-      next.total = t.total;
-      next.monto_total = t.total;
-      return next;
-    });
-  }, []);
-
-  const onCantidadChange = useCallback((v) => recalcFromItem({ cantidad: v === "" ? "" : Number(v) }), [recalcFromItem]);
-  const onPrecioChange = useCallback((v) => recalcFromItem({ precio: v === "" ? "" : Number(v) }), [recalcFromItem]);
-  const onIvaPctChange = useCallback((v) => recalcFromItem({ iva_pct: v === "" ? "" : Number(v) }), [recalcFromItem]);
-
   const findExactCatalogItem = useCallback((arr, value) => {
     const q = normalizeText(value);
     if (!q) return null;
@@ -1699,21 +1852,9 @@ export default function ModalEditarCompra({
     return all.filter((p) => normalizeText(p?.nombre).includes(q)).slice(0, 25);
   }, [safeLists.proveedores, proveedorInput, proveedorFocus]);
 
-  const filteredDetalles = useMemo(() => {
-    const all = Array.isArray(safeLists.detalles) ? safeLists.detalles : [];
-    const q = normalizeText(detalleInput);
-    if (!detalleFocus || q.length < 1) return [];
-    return all.filter((d) => normalizeText(d?.nombre).includes(q)).slice(0, 25);
-  }, [safeLists.detalles, detalleInput, detalleFocus]);
-
   const proveedorExacto = useMemo(
     () => findExactCatalogItem(safeLists.proveedores, proveedorInput),
     [findExactCatalogItem, safeLists.proveedores, proveedorInput]
-  );
-
-  const detalleExacto = useMemo(
-    () => findExactCatalogItem(safeLists.detalles, detalleInput),
-    [findExactCatalogItem, safeLists.detalles, detalleInput]
   );
 
   const puedeAgregarProveedor = useMemo(() => {
@@ -1721,13 +1862,7 @@ export default function ModalEditarCompra({
     return proveedorFocus && q.length >= 2 && !proveedorExacto && filteredProveedores.length === 0;
   }, [proveedorFocus, proveedorInput, proveedorExacto, filteredProveedores.length]);
 
-  const puedeAgregarDetalle = useMemo(() => {
-    const q = normalizeText(detalleInput);
-    return detalleFocus && q.length >= 2 && !detalleExacto && filteredDetalles.length === 0;
-  }, [detalleFocus, detalleInput, detalleExacto, filteredDetalles.length]);
-
   const mostrarSugerenciasProveedor = proveedorFocus && (filteredProveedores.length > 0 || puedeAgregarProveedor);
-  const mostrarSugerenciasDetalle = detalleFocus && (filteredDetalles.length > 0 || puedeAgregarDetalle);
 
   const handleProveedorInputChange = useCallback((e) => {
     const value = e.target.value;
@@ -1746,38 +1881,53 @@ export default function ModalEditarCompra({
     setForm((prev) => ({ ...prev, id_proveedor: pid != null ? String(pid) : NULL_OPTION }));
     setProveedorFocus(false);
   }, []);
-  const handleDetalleInputChange = useCallback((e) => {
-    const value = e.target.value;
-    const exact = findExactCatalogItem(safeLists.detalles, value);
-
-    setDetalleInput(value);
-    setForm((prev) => ({
-      ...prev,
-      id_detalle: exact ? String(getGenericId(exact)) : NULL_OPTION,
-      id_stock_variante: NULL_OPTION,
-    }));
-  }, [findExactCatalogItem, safeLists.detalles]);
-  const handleSelectDetalle = useCallback((det) => {
-    const idProducto = getStockProductoIdFromSelection(det) || getGenericId(det);
+  const handleSelectProductoRow = useCallback((rowId, det) => {
+    const idProducto = getStockProductoIdFromSelection(det);
     const idVariante = getStockVarianteIdFromSelection(det);
     const productoNombre = String(det?.producto_nombre ?? det?.stock_producto_nombre ?? det?.nombre ?? "").trim();
     const varianteNombre = String(det?.nombre_variante ?? det?.variante_nombre ?? det?.stock_variante_nombre ?? "").trim();
     const nombre = String(det?.label ?? [productoNombre, varianteNombre].filter(Boolean).join(" - ") ?? "").trim();
-
-    setDetalleInput(nombre || productoNombre);
-    setForm((prev) => ({
-      ...prev,
-      id_detalle: idProducto != null ? String(idProducto) : NULL_OPTION,
-      id_stock_variante: idVariante != null ? String(idVariante) : NULL_OPTION,
+    setRows((prev) => prev.map((r) => {
+      if (r.id !== rowId) return r;
+      const precioProducto = precioCompraInicialDesdeProducto(det);
+      return {
+        ...r,
+        id_detalle: NULL_OPTION,
+        id_stock_producto: idProducto != null ? String(idProducto) : NULL_OPTION,
+        id_stock_variante: idVariante != null ? String(idVariante) : NULL_OPTION,
+        id_detalle_original: null,
+        textoOriginal: "",
+        detalleText: nombre || productoNombre,
+        id_stock_unidad: det?.id_stock_unidad ?? det?.id_unidad_stock ?? null,
+        unidad_abreviatura: det?.unidad_abreviatura ?? det?.unidad ?? det?.unidad_nombre ?? "",
+        unidad_permite_decimales: Number(det?.unidad_permite_decimales ?? det?.permite_decimales ?? 1),
+        stock_disponible: stockDisponibleDesdeProducto(det),
+        sinStock: false,
+        // Producto nuevo: se propone su costo; si ya había precio cargado se respeta.
+        precio: safeNumber(r.precio) > 0 && r.id_stock_producto ? r.precio : (precioProducto || r.precio),
+        precioDraft: "",
+        precioFocused: false,
+      };
     }));
-    setDetalleFocus(false);
   }, []);
 
   const handleBarcodeProductSelect = useCallback((producto) => {
-    handleSelectDetalle(producto);
     const nombre = String(producto?.label ?? producto?.nombre ?? producto?.producto_nombre ?? "Producto").trim();
+    // 1) primera fila "Mueve stock" vacía; 2) compra de un único renglón con
+    // producto: se reemplaza (comportamiento histórico de la edición);
+    // 3) en otro caso se agrega un renglón nuevo.
+    const destino =
+      rows.find((r) => !positiveIdOrNull(r.id_stock_producto) && !String(r.detalleText || "").trim()) ||
+      (rows.length === 1 ? rows[0] : null);
+    if (destino) {
+      handleSelectProductoRow(destino.id, producto);
+    } else {
+      const nueva = buildEmptyRowCompra();
+      setRows((prev) => [...prev, nueva]);
+      setTimeout(() => handleSelectProductoRow(nueva.id, producto), 0);
+    }
     showToast("exito", `Producto leído: ${nombre}`, 1800);
-  }, [handleSelectDetalle, showToast]);
+  }, [rows, handleSelectProductoRow, showToast]);
 
   useStockBarcodeScanner({
     enabled: open && !saving && !addUI.open && !openVerComp,
@@ -1794,10 +1944,8 @@ export default function ModalEditarCompra({
       const n = Number(v);
       return Number.isFinite(n) && n > 0 ? n : null;
     };
-    const cantidad = Math.max(0, safeNumber(form.cantidad));
-    const precio = Math.max(0, safeNumber(form.precio));
-    const iva_pct = Math.max(0, safeNumber(form.iva_pct));
-    const t = calcItemTotals(cantidad, precio, iva_pct);
+    const items = buildItemsPayloadCompra(rows);
+    const totalItems = Math.round(items.reduce((acc, it) => acc + safeNumber(it.total), 0) * 100) / 100;
 
     const mediosPagoPayload = esContado
       ? mediosFilas.flatMap((mp) => {
@@ -1834,22 +1982,16 @@ export default function ModalEditarCompra({
       id_tipo_movimiento: toNullableId(form.id_tipo_movimiento),
       id_proveedor: toNullableId(form.id_proveedor),
       id_cliente: null,
-      id_detalle: toNullableId(form.id_detalle),
-      id_stock_producto: toNullableId(form.id_detalle),
-      id_stock_variante: toNullableId(form.id_stock_variante),
-      cantidad: Math.round(cantidad * 1000) / 1000,
-      precio: Math.round(precio * 100) / 100,
-      iva_pct: Math.round(iva_pct * 100) / 100,
-      subtotal: t.subtotal,
-      iva_monto: t.iva_monto,
-      total: t.total,
-      monto_total: Math.max(0, Math.round(t.total * 100) / 100),
+      // Todos los renglones de la compra, cada uno con su TIPO DE MOVIMIENTO.
+      items,
+      total: totalItems,
+      monto_total: Math.max(0, totalItems),
       accion_compra: esContado ? "pagar" : "guardar",
       es_pagada: esContado,
       id_medio_pago: null,
       medios_pago: mediosPagoPayload,
     };
-  }, [form, esContado, mediosFilas, safeLists.mediosPago]);
+  }, [form, rows, esContado, mediosFilas, safeLists.mediosPago]);
 
   const eliminarComprobanteActual = useCallback(async () => {
     if (!form.id_movimiento) throw new Error("Falta id_movimiento para eliminar el comprobante.");
@@ -2071,23 +2213,28 @@ export default function ModalEditarCompra({
         const resolved = resolveIdByExactName("proveedor");
         if (resolved) proveedorId = String(resolved);
       }
-      let detalleId = form.id_detalle;
-      if (!detalleId || detalleId === NULL_OPTION || detalleId === ADD_OPTION) {
-        const resolved = resolveIdByExactName("detalle");
-        if (resolved) detalleId = String(resolved);
-      }
-
       if (!proveedorId || proveedorId === NULL_OPTION || proveedorId === ADD_OPTION) {
         throw new Error("Seleccioná un proveedor o crealo con Agregar nuevo proveedor.");
       }
-      if (!detalleId || detalleId === NULL_OPTION || detalleId === ADD_OPTION) {
-        throw new Error("Seleccioná un detalle o crealo con Agregar nuevo detalle.");
+      // Validación de renglones: ninguno se descarta en silencio.
+      const filasCalc = calcRowsCompra(rows);
+      const filasConDatos = filasCalc.filter(rowTocadaCompraEdit);
+      if (!filasConDatos.length) throw new Error("Cargá al menos un renglón (producto o concepto).");
+      for (let i = 0; i < filasCalc.length; i++) {
+        const fila = filasCalc[i];
+        if (!rowTocadaCompraEdit(fila)) continue;
+        if (!rowTieneDetalleCompraEdit(fila)) {
+          throw new Error(`Fila ${i + 1}: seleccioná un producto del stock.`);
+        }
+        if (!(safeNumber(fila.cantidad) > 0)) throw new Error(`Fila ${i + 1}: la cantidad debe ser mayor a 0.`);
+        if (!(safeNumber(fila.precio) > 0)) throw new Error(`Fila ${i + 1}: el precio debe ser mayor a 0.`);
+        if (positiveIdOrNull(fila.id_stock_producto) !== null && Number(fila.unidad_permite_decimales ?? 1) === 0 && Math.abs(safeNumber(fila.cantidad) - Math.round(safeNumber(fila.cantidad))) > 0.000001) {
+          throw new Error(`Fila ${i + 1}: la unidad ${fila.unidad_abreviatura || "u"} no admite cantidades decimales.`);
+        }
       }
-
-      const cantidad = Math.max(0, safeNumber(form.cantidad));
-      const precio = Math.max(0, safeNumber(form.precio));
-      if (!(cantidad > 0)) throw new Error("La cantidad debe ser mayor a 0.");
-      if (!(precio > 0)) throw new Error("El precio debe ser mayor a 0.");
+      if (payload.items.length !== filasConDatos.length) {
+        throw new Error("Completá o eliminá las filas incompletas antes de guardar.");
+      }
 
       if (esContado) {
         if (!payload.medios_pago.length) throw new Error("En compras al contado debés cargar al menos un medio de pago.");
@@ -2117,8 +2264,6 @@ export default function ModalEditarCompra({
       const payloadFinal = {
         ...payload,
         id_proveedor: Number(proveedorId),
-        id_detalle: Number(detalleId),
-        id_stock_producto: Number(detalleId),
       };
 
       const habiaArchivo = Boolean(archivoActualUrl || archivoActualId);
@@ -2205,100 +2350,139 @@ export default function ModalEditarCompra({
                 </div>
 
                 <div ref={rowsContainerRef} className={`gm-table-body ${hasScroll ? "has-scroll" : ""}`}>
-                  <div className="gm-table-row">
-                    <div className="gm-table-cell gm-table-cell--detail">
-                      <div className="cmp-autocomplete" style={{ width: "100%" }}>
-                        <input
-                          ref={detalleInputRef}
-                          className="gm-cell-input"
-                          placeholder=" "
-                          value={detalleInput}
-                          onChange={handleDetalleInputChange}
-                          onFocus={() => setDetalleFocus(true)}
-                          onBlur={() => setTimeout(() => setDetalleFocus(false), 120)}
-                          disabled={saving || addUI.open || openVerComp}
-                          autoComplete="off"
-                        />
-                        {mostrarSugerenciasDetalle && (
-                          <ul className="cmp-suggest">
-                            {puedeAgregarDetalle && (
-                              <li
-                                className="cmp-suggest__item cmp-suggest__item--add"
-                                onMouseDown={(e) => {
-                                  e.preventDefault();
-                                  startAddDetalle();
-                                }}
-                              >
-                                <span>+ Agregar "{detalleInput}"</span>
-                              </li>
-                            )}
-                            {filteredDetalles.map((d) => {
-                              const did = getGenericId(d);
-                              return (
-                                <li
-                                  key={did ?? d?.nombre}
-                                  className="cmp-suggest__item"
-                                  onMouseDown={(e) => {
-                                    e.preventDefault();
-                                    handleSelectDetalle(d);
-                                  }}
-                                >
-                                  <span className="cmp-suggest-text" title={String((d.nombre) ?? "")}>{d.nombre}</span>
-                                </li>
-                              );
-                            })}
-                          </ul>
-                        )}
+                  {rowsCalc.map((r, rowIndex) => {
+                    return (
+                      <div key={r.id} className="gm-table-row" data-testid="compra-edit-row">
+                        <div className="gm-table-cell gm-table-cell--detail">
+                          <TipoMovimientoStockSelect
+                            value={r.tipoMovimientoStock}
+                            onChange={(tipo) => handleTipoMovimientoChange(r.id, tipo)}
+                            disabled={saving || addUI.open || openVerComp}
+                            rowNumber={rowIndex + 1}
+                          />
+                          <ProductStockAutocomplete
+                            value={r.detalleText}
+                            onChange={(val) =>
+                              updateRow(r.id, {
+                                detalleText: val,
+                                id_detalle: NULL_OPTION,
+                                id_stock_producto: NULL_OPTION,
+                                id_stock_variante: NULL_OPTION,
+                                id_stock_unidad: null,
+                                unidad_abreviatura: "",
+                                unidad_permite_decimales: 1,
+                                stock_disponible: null,
+                                sinStock: false,
+                              })
+                            }
+                            onSelect={(d) => handleSelectProductoRow(r.id, d)}
+                            options={safeLists.detalles}
+                            placeholder="Escribí o buscá un producto…"
+                            disabled={saving || addUI.open || openVerComp}
+                            showAllOnFocus={false}
+                            maxItems={18}
+                            allowOutOfStock
+                            emptyMessage="Sin productos activos"
+                            inputClassName="gm-cell-input"
+                          />
+                        </div>
+
+                        <div className="gm-table-cell gm-table-cell--center stock_cant">
+                          <input
+                            className="gm-cell-input gm-cell-input--center"
+                            type="number"
+                            min="0"
+                            step={Number(r.unidad_permite_decimales ?? 1) === 0 ? "1" : "0.001"}
+                            value={r.cantidad}
+                            onChange={(e) => {
+                              const v = e.target.value === "" ? "" : Math.max(0, Number(e.target.value));
+                              updateRow(r.id, { cantidad: v });
+                            }}
+                            disabled={saving}
+                            aria-label={`Cantidad fila ${rowIndex + 1}`}
+                          />
+                          {r.stock_disponible !== null && r.stock_disponible !== undefined && (
+                            <div style={{ fontSize: "10px", fontWeight: 500, color: "#666" }}>
+                              {`Stock: ${r.stock_disponible}${r.unidad_abreviatura ? ` ${r.unidad_abreviatura}` : ""}`}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="gm-table-cell gm-table-cell--center">
+                          <input
+                            className="gm-cell-input gm-cell-input--right"
+                            type="text"
+                            inputMode="decimal"
+                            value={r.precioFocused ? r.precioDraft ?? "" : formatMoneyInputARS(r.precio)}
+                            onFocus={(e) => {
+                              if (saving) return;
+                              updateRow(r.id, { precioFocused: true, precioDraft: formatEditableMoney(r.precio) });
+                              setTimeout(() => e.target.select(), 0);
+                            }}
+                            onChange={(e) => {
+                              if (saving) return;
+                              const limpio = e.target.value.replace(/[^\d,.\-]/g, "");
+                              updateRow(r.id, { precioDraft: limpio, precio: parseMoneyInputARS(limpio) });
+                            }}
+                            onBlur={() => {
+                              if (saving) return;
+                              updateRow(r.id, { precio: parseMoneyInputARS(r.precioDraft), precioDraft: "", precioFocused: false });
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                e.currentTarget.blur();
+                              }
+                            }}
+                            disabled={saving}
+                            placeholder="$ 0,00"
+                            aria-label={`Precio fila ${rowIndex + 1}`}
+                          />
+                        </div>
+
+                        <div className="gm-table-cell gm-table-cell--center">
+                          <select
+                            className="gm-cell-input gm-cell-input--center gm-cell-input--select"
+                            value={String(r.ivaPct)}
+                            onChange={(e) => updateRow(r.id, { ivaPct: Number(e.target.value) })}
+                            disabled={saving}
+                          >
+                            {IVA_OPTIONS.map((x) => <option key={x.value} value={x.value}>{x.label}</option>)}
+                          </select>
+                        </div>
+
+                        <div className="gm-table-cell gm-table-cell--right gm-table-cell--mono gm-table-cell--soft" title={String(moneyARS(r.ivaMonto))}>
+                          {moneyARS(r.ivaMonto)}
+                        </div>
+                        <div className="gm-table-cell gm-table-cell--right gm-table-cell--mono gm-table-cell--total" title={String(moneyARS(r.total))}>
+                          {moneyARS(r.total)}
+                        </div>
+                        <div className="gm-table-cell gm-table-cell--center" id="delete_cell">
+                          <button
+                            type="button"
+                            className="gm-row-delete"
+                            onClick={() => removeRow(r.id)}
+                            disabled={saving || rows.length <= 1}
+                            title="Eliminar fila"
+                          >
+                            ×
+                          </button>
+                        </div>
                       </div>
-                    </div>
-
-                    <div className="gm-table-cell gm-table-cell--center stock_cant">
-                      <input
-                        className="gm-cell-input gm-cell-input--center"
-                        type="number"
-                        min="0.001"
-                        step="0.001"
-                        value={form.cantidad}
-                        onChange={(e) => onCantidadChange(e.target.value)}
-                        disabled={saving}
-                      />
-                    </div>
-
-                    <div className="gm-table-cell gm-table-cell--center">
-                      <input
-                        className="gm-cell-input gm-cell-input--right"
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={form.precio}
-                        onChange={(e) => onPrecioChange(e.target.value)}
-                        disabled={saving}
-                      />
-                    </div>
-
-                    <div className="gm-table-cell gm-table-cell--center">
-                      <select
-                        className="gm-cell-input gm-cell-input--center gm-cell-input--select"
-                        value={String(form.iva_pct)}
-                        onChange={(e) => onIvaPctChange(e.target.value)}
-                        disabled={saving}
-                      >
-                        {IVA_OPTIONS.map((x) => <option key={x.value} value={x.value}>{x.label}</option>)}
-                      </select>
-                    </div>
-
-                    <div className="gm-table-cell gm-table-cell--right gm-table-cell--mono gm-table-cell--soft" title={String((moneyARS(form.iva_monto)) ?? "")}>
-                      {moneyARS(form.iva_monto)}
-                    </div>
-                    <div className="gm-table-cell gm-table-cell--right gm-table-cell--mono gm-table-cell--total" title={String((moneyARS(form.total)) ?? "")}>
-                      {moneyARS(form.total)}
-                    </div>
-                    <div className="gm-table-cell gm-table-cell--center" id="delete_cell" />
-                  </div>
+                    );
+                  })}
                 </div>
 
                 <div className="gm-table-foot">
                   <div className="gm-foot-actions">
+                    <button type="button" className="gm-foot-btn" onClick={addRow} disabled={saving}>
+                      <span className="gm-foot-btn__icon">
+                        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M5 1.5V8.5M1.5 5H8.5" stroke="white" strokeWidth="1.6" strokeLinecap="round" />
+                        </svg>
+                      </span>
+                      Agregar fila
+                    </button>
                     <div className="gm-foot-sep" />
                   </div>
                   <div className="gm-summary-chips">
@@ -2554,7 +2738,6 @@ export default function ModalEditarCompra({
               setForm((p) => ({
                 ...p,
                 id_proveedor: addUI.catalogo === "proveedores" ? NULL_OPTION : p.id_proveedor,
-                id_detalle: addUI.catalogo === "detalles" ? NULL_OPTION : p.id_detalle,
               }));
               closeAddMini();
             }}

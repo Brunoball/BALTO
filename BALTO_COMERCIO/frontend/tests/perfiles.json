@@ -1,0 +1,103 @@
+{
+  "version": 2,
+  "descripcion": "Módulos reales + pruebas de integracion directas; GLOBAL independiente y COMPLETO sin filtros.",
+  "modulos": {
+    "global": {
+      "carpeta": "global",
+      "impactos": [],
+      "excluir": [
+        "global/auditoria_solo_completo/00-freeze-internal.spec.js"
+      ]
+    },
+    "movimientos": {
+      "carpeta": "movimientos",
+      "impactos": [
+        "stock/31-stock-units-fractional.spec.js",
+        "cheques/15-cheques-lifecycle.spec.js",
+        "cuentas_corrientes/36-grouped-payment-current-account-regression.spec.js",
+        "flujo_caja/59-signos-flujo-dashboard.spec.js"
+      ],
+      "excluir": []
+    },
+    "stock": {
+      "carpeta": "stock",
+      "impactos": [
+        "movimientos/04-purchases-credit-note.spec.js",
+        "movimientos/05-sales-credit-note.spec.js",
+        "movimientos/61-compras-costo-ultima-compra.spec.js",
+        "movimientos/26-barcode-movements.spec.js",
+        "dashboard/40-dashboard-stock-valorizado-fraccional.spec.js",
+        "tiendanube/42-stock-tiendanube-historial-contrato.spec.js"
+      ],
+      "excluir": []
+    },
+    "flujo_caja": {
+      "carpeta": "flujo_caja",
+      "impactos": [
+        "analisis_financiero/50-analisis-financiero-saldos.spec.js",
+        "analisis_financiero/51-saldos-historicos-conciliacion.spec.js",
+        "dashboard/58-dashboard-caja-medios.spec.js",
+        "cheques/15-cheques-lifecycle.spec.js"
+      ],
+      "excluir": []
+    },
+    "dashboard": {
+      "carpeta": "dashboard",
+      "impactos": [
+        "flujo_caja/59-signos-flujo-dashboard.spec.js",
+        "analisis_financiero/50-analisis-financiero-saldos.spec.js"
+      ],
+      "excluir": []
+    },
+    "analisis_financiero": {
+      "carpeta": "analisis_financiero",
+      "impactos": [
+        "flujo_caja/59-signos-flujo-dashboard.spec.js",
+        "dashboard/58-dashboard-caja-medios.spec.js"
+      ],
+      "excluir": []
+    },
+    "cheques": {
+      "carpeta": "cheques",
+      "impactos": [
+        "cuentas_corrientes/36-grouped-payment-current-account-regression.spec.js",
+        "movimientos/54-politica-fechas-importes-pagos.spec.js",
+        "dashboard/58-dashboard-caja-medios.spec.js"
+      ],
+      "excluir": []
+    },
+    "cuentas_corrientes": {
+      "carpeta": "cuentas_corrientes",
+      "impactos": [
+        "movimientos/62-movimientos-sin-impacto-stock.spec.js",
+        "movimientos/54-politica-fechas-importes-pagos.spec.js",
+        "cheques/15-cheques-lifecycle.spec.js"
+      ],
+      "excluir": []
+    },
+    "configuracion": {
+      "carpeta": "configuracion",
+      "impactos": [
+        "contabilidad/10-config-accounting.spec.js",
+        "analisis_financiero/51-saldos-historicos-conciliacion.spec.js"
+      ],
+      "excluir": []
+    },
+    "contabilidad": {
+      "carpeta": "contabilidad",
+      "impactos": [
+        "configuracion/24-initial-balances.spec.js",
+        "analisis_financiero/50-analisis-financiero-saldos.spec.js"
+      ],
+      "excluir": []
+    },
+    "tiendanube": {
+      "carpeta": "tiendanube",
+      "impactos": [
+        "movimientos/05-sales-credit-note.spec.js",
+        "stock/37-stock-backend-regression.spec.js"
+      ],
+      "excluir": []
+    }
+  }
+}

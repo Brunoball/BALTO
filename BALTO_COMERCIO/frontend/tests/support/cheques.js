@@ -326,7 +326,11 @@ export async function payPayableWithPortfolioCheque(page, productName, cheque) {
   const debt = dialog.locator(`.gm-order-row[data-movement-id="${movementId}"]`).first();
   await expect(debt).toBeVisible({ timeout: 20_000 });
   const checkbox = debt.locator('input[type="checkbox"]');
-  if (!(await checkbox.isChecked())) await checkbox.check({ force: true });
+  // El input nativo está oculto (pointer-events: none); forzar .check() no
+  // reproduce la interacción real. La fila visible ejecuta toggleOne().
+  if (!(await checkbox.isChecked())) {
+    await debt.locator('.gm-order-td--desc').click();
+  }
   await expect(checkbox, 'La deuda debe quedar seleccionada antes de cargar el cheque').toBeChecked({ timeout: 10_000 });
   await expect(
     dialog.locator('.gm-order-table-foot-stats').first(),

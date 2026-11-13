@@ -2,6 +2,9 @@ import { test as setup, expect } from '@playwright/test';
 import { AUTH_FILE, ENV, patchPageNavigation } from '../support/env.js';
 import { cleanupE2EWithPage } from '../support/cleanup.js';
 import { RUN_PREFIX } from '../support/data.js';
+import authGateway from '../support/auth-gateway.cjs';
+
+const { readAuthResponse, requireJson, authHttpError } = authGateway;
 
 const EXPECTED_SYSTEM = ENV.expectedSystem;
 
@@ -214,19 +217,11 @@ setup('autenticar administrador de Balto', async ({ page, request }) => {
 
   const loginResponse = await loginWithRetry(request, user, password);
 
-  const loginText = await loginResponse.text();
-  let loginData = {};
-  try {
-    loginData = loginText ? JSON.parse(loginText) : {};
-  } catch {
-    throw new Error(`BALTO_LOGIN devolvió una respuesta no JSON (HTTP ${loginResponse.status()}): ${loginText.slice(0, 500)}`);
+  const loginInfo = await readAuthResponse(loginResponse, 'BALTO_LOGIN inicio (setup)');
+  const loginData = requireJson(loginInfo, 'BALTO_LOGIN inicio (setup)');
+  if (loginInfo.status >= 400 || loginData?.exito !== true) {
+    throw authHttpError('BALTO_LOGIN inicio (setup)', loginInfo);
   }
-
-  expect(
-    loginResponse.status(),
-    `Falló BALTO_LOGIN: HTTP ${loginResponse.status()} ${loginData?.mensaje || loginText}`,
-  ).toBeLessThan(400);
-  expect(loginData?.exito, loginData?.mensaje || 'BALTO_LOGIN no confirmó el acceso.').toBe(true);
 
   const sessionKey = String(loginData?.session_key || '').trim();
   expect(sessionKey, 'BALTO_LOGIN no devolvió session_key.').not.toBe('');
@@ -257,39 +252,24 @@ setup('autenticar administrador de Balto', async ({ page, request }) => {
   // ECONNRESET aunque la sesión sea válida.
   const commerceCheck = await validateCommerceSessionWithRetry(request, sessionKey);
 
-  const commerceText = await commerceCheck.text();
-  let commerceData = {};
-  try {
-    commerceData = commerceText ? JSON.parse(commerceText) : {};
-  } catch {
-    commerceData = { raw: commerceText };
+  const commerceInfo = await readAuthResponse(commerceCheck, 'BALTO_COMERCIO auth_session_check (setup)');
+  const commerceData = requireJson(commerceInfo, 'BALTO_COMERCIO auth_session_check (setup)');
+  if (commerceInfo.status !== 200 || commerceData?.exito !== true ||
+      commerceData?.sesion_valida === false) {
+    throw authHttpError('BALTO_COMERCIO auth_session_check (setup)', commerceInfo);
   }
-
-  expect(
-    commerceCheck.status(),
-    `La sesión creada por BALTO_LOGIN no fue aceptada por BALTO_COMERCIO: HTTP ${commerceCheck.status()} ${commerceData?.mensaje || commerceText}`,
-  ).toBeLessThan(400);
-  expect(
-    commerceData?.exito !== false && commerceData?.success !== false,
-    commerceData?.mensaje || commerceData?.message || 'BALTO_COMERCIO rechazó la sesión global.',
-  ).toBe(true);
 
   // Antes de cualquier cleanup o test mutable comprobamos el mismo cerrojo
   // server-side que bloquea TODA escritura saliente de Balto hacia Tienda Nube.
   // En producción, además, el backend debe tener BALTO_E2E_ALLOW_PRODUCTION=1.
   if (ENV.allowMutations) {
     const guardResponse = await validateE2EGuardWithRetry(request, sessionKey);
-    const guardText = await guardResponse.text();
-    let guardData = {};
-    try {
-      guardData = guardText ? JSON.parse(guardText) : {};
-    } catch {
-      guardData = { raw: guardText };
-    }
+    const guardInfo = await readAuthResponse(guardResponse, 'BALTO_COMERCIO e2e_guard (setup)');
+    const guardData = requireJson(guardInfo, 'BALTO_COMERCIO e2e_guard (setup)');
 
     expect(
-      guardResponse.status(),
-      `Guard E2E no disponible: HTTP ${guardResponse.status()} ${guardData?.mensaje || guardText}. ` +
+      guardInfo.status,
+      `Guard E2E no disponible: HTTP ${guardInfo.status} ${guardData?.mensaje || ""}. ` +
       (ENV.environment === 'production'
         ? 'Producción requiere BALTO_E2E_TOOLS_ENABLED=1 y BALTO_E2E_ALLOW_PRODUCTION=1.'
         : 'Staging requiere BALTO_E2E_TOOLS_ENABLED=1.'),

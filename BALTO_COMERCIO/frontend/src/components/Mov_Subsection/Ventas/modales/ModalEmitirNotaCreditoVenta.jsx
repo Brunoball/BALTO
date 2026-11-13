@@ -259,8 +259,9 @@ export default function ModalEmitirNotaCreditoVenta({
         unidad_abreviatura: safeStr(it.unidad_abreviatura || it.unidad || it.unidad_nombre || "u") || "u",
         unidad_permite_decimales: Number(it.unidad_permite_decimales ?? it.permite_decimales ?? 0) === 1 ? 1 : 0,
         cantidad: esEliminacionTotal && Number(it.cantidad_disponible || 0) > 0 ? String(Number(it.cantidad_disponible || 0)) : "",
-        tiene_stock: Number(it.id_stock_producto || 0) > 0 || Number(it.id_stock_variante || 0) > 0,
-        afecta_stock: Number(it.id_stock_producto || 0) > 0 || Number(it.id_stock_variante || 0) > 0,
+        // Renglones "NO MUEVE STOCK" (mueve_stock = 0) no devuelven stock.
+        tiene_stock: (Number(it.id_stock_producto || 0) > 0 || Number(it.id_stock_variante || 0) > 0) && String(it.mueve_stock ?? "") !== "0",
+        afecta_stock: (Number(it.id_stock_producto || 0) > 0 || Number(it.id_stock_variante || 0) > 0) && String(it.mueve_stock ?? "") !== "0",
       }));
       setItems(itemsContexto);
       if (esEliminacionTotal) setMotivo("ANULACION_TOTAL");

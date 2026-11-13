@@ -5,15 +5,17 @@ import { cleanupE2EFromStorage } from './cleanup.js';
 import { ensureAdministratorSession } from './users.js';
 
 let workerCleanupCompleted = false;
+let workerCleanupAttempted = false;
 let processFallbackStarted = false;
 
 // Red de seguridad adicional. El teardown del fixture sigue siendo el mecanismo
-// principal; beforeExit sólo actúa si el worker llega a cerrarse sin haber podido
-// completar esa limpieza (por ejemplo, un fallo del worker después del último test).
+// principal; beforeExit sólo actúa si el worker llega a cerrarse SIN intentar
+// la limpieza. Si Hostinger rechazó el intento con un challenge, no repetimos
+// inmediatamente otra solicitud desde el mismo worker.
 // No intenta scope=all: usa exclusivamente el RUN_PREFIX de este proceso, por lo que
 // sigue siendo seguro incluso si alguna vez se ejecutan varios workers en paralelo.
 process.once('beforeExit', () => {
-  if (workerCleanupCompleted || processFallbackStarted || !ENV.cleanup || !ENV.allowMutations) return;
+  if (workerCleanupCompleted || workerCleanupAttempted || processFallbackStarted || !ENV.cleanup || !ENV.allowMutations) return;
   processFallbackStarted = true;
 
   cleanupE2EFromStorage({
@@ -87,6 +89,7 @@ export const test = base.extend({
         await use();
       } finally {
         if (ENV.cleanup && ENV.allowMutations) {
+          workerCleanupAttempted = true;
           await cleanupE2EFromStorage({
             scope: 'prefix',
             prefix: RUN_PREFIX,

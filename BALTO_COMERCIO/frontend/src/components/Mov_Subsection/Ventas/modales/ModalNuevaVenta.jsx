@@ -20,6 +20,13 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFileInvoiceDollar, faPlus, faMoneyCheckDollar } from "@fortawesome/free-solid-svg-icons";
 import GlobalAutocomplete from "../../../Global/GlobalAutocomplete/GlobalAutocomplete.jsx";
 import ProductStockAutocomplete from "../../_shared/ProductStockAutocomplete.jsx";
+import TipoMovimientoStockSelect from "../../_shared/TipoMovimientoStockSelect.jsx";
+import {
+  TIPO_MOV_MUEVE_STOCK,
+  esFilaNoMueveStock,
+  payloadTipoMovimientoStock,
+  tipoMovimientoDesdeItem,
+} from "../../_shared/tipoMovimientoStock.js";
 import useStockBarcodeScanner from "../../_shared/useStockBarcodeScanner.js";
 import ModalNuevoCheque from "../../../Global/Modales/ModalNuevoCheque.jsx";
 import ModalClienteFiscalArca from "../../../Global/Modales/ModalClienteFiscalArca.jsx";
@@ -739,6 +746,8 @@ function describeLineProblem(r, idx1based) {
 function buildEmptyRow() {
   return {
     id: uid(),
+    // TIPO DE MOVIMIENTO: toda fila nueva arranca en "MUEVE STOCK".
+    tipoMovimientoStock: TIPO_MOV_MUEVE_STOCK,
     id_detalle: NULL_OPTION,
     id_stock_producto: NULL_OPTION,
     id_stock_variante: NULL_OPTION,
@@ -1615,6 +1624,7 @@ export default function ModalNuevaVenta({ open, lists, tiendaNubeVenta = null, o
       const itemsTn = Array.isArray(ventaTn?.items_detalle) ? ventaTn.items_detalle : [];
       const rowsTn = itemsTn.map((item) => ({
         ...buildEmptyRow(),
+        tipoMovimientoStock: tipoMovimientoDesdeItem(item),
         id_detalle: item?.id_detalle ? String(item.id_detalle) : NULL_OPTION,
         id_stock_producto: item?.id_stock_producto ? String(item.id_stock_producto) : NULL_OPTION,
         id_stock_variante: item?.id_stock_variante ? String(item.id_stock_variante) : NULL_OPTION,
@@ -2054,7 +2064,10 @@ export default function ModalNuevaVenta({ open, lists, tiendaNubeVenta = null, o
       const precioInicial = pickDetallePrecioInicial(preciosDisponibles);
       const precio = Number(precioInicial?.monto ?? detalle?.precio ?? 0);
       const stockDisponible = getStockDisponible(detalle);
-      const sinStock = isSinStock(stockDisponible);
+      // "NO MUEVE STOCK": el producto se vende sin descontar existencias, por
+      // lo que no se bloquea aunque no tenga stock.
+      const filaNoMueve = esFilaNoMueveStock(rows.find((x) => x.id === rowId));
+      const sinStock = !filaNoMueve && isSinStock(stockDisponible);
       const nombreDetalle = getDetalleNombre(detalle);
 
       updateRow(rowId, {
@@ -2078,7 +2091,33 @@ export default function ModalNuevaVenta({ open, lists, tiendaNubeVenta = null, o
         showToast("advertencia", `El producto "${nombreDetalle}" no tiene stock disponible.`, 2500);
       }
     },
-    [updateRow, showToast]
+    [rows, updateRow, showToast]
+  );
+
+  const handleTipoMovimientoChange = useCallback(
+    (rowId, nuevoTipo) => {
+      const row = rows.find((r) => r.id === rowId);
+      if (!row) return;
+      const patch = { tipoMovimientoStock: nuevoTipo };
+      if (esFilaNoMueveStock({ tipoMovimientoStock: nuevoTipo })) {
+        // Sin límites de existencias.
+        patch.sinStock = false;
+        if (row.cantidad === "" || row.cantidad === null || row.cantidad === undefined) patch.cantidad = 1;
+      } else if (Number(row.id_stock_producto || row.id_stock_variante || 0) > 0) {
+        // Vuelve a MUEVE STOCK: se aplican otra vez las existencias del producto.
+        const stock = row.stock_disponible;
+        if (isSinStock(stock)) {
+          patch.sinStock = true;
+          patch.cantidad = "";
+          showToast("advertencia", `El producto "${row.detalleText}" no tiene stock disponible.`, 2500);
+        } else if (stock !== null && stock !== undefined && stock !== "" && Number(row.cantidad) > Number(stock)) {
+          patch.cantidad = Number(stock);
+          showToast("advertencia", `Stock máximo disponible: ${stock}`, 2000);
+        }
+      }
+      updateRow(rowId, patch);
+    },
+    [rows, updateRow, showToast]
   );
 
   const barcodePendingRef = useRef(null);
@@ -2139,6 +2178,14 @@ export default function ModalNuevaVenta({ open, lists, tiendaNubeVenta = null, o
     (rowId, newCantidad) => {
       const row = rows.find((r) => r.id === rowId);
       if (!row) return;
+
+      // "NO MUEVE STOCK": cantidad libre, sin límite de existencias.
+      if (esFilaNoMueveStock(row)) {
+        let cantidadLibre = newCantidad === "" ? "" : Number(newCantidad);
+        if (typeof cantidadLibre === "number" && cantidadLibre < 0) cantidadLibre = 0;
+        updateRow(rowId, { cantidad: cantidadLibre });
+        return;
+      }
 
       if (row.sinStock || isSinStock(row.stock_disponible)) {
         updateRow(rowId, { cantidad: "" });
@@ -2918,6 +2965,8 @@ export default function ModalNuevaVenta({ open, lists, tiendaNubeVenta = null, o
           const stockId = Number(r.id_stock_producto || r.id_detalle);
           const varianteId = Number(r.id_stock_variante || 0);
           return {
+          // MUEVE STOCK descuenta existencias; NO MUEVE STOCK registra el producto sin descontar.
+          ...payloadTipoMovimientoStock(r),
           idUsuario,
           fecha,
           periodo: periodoApi,
@@ -3862,16 +3911,23 @@ export default function ModalNuevaVenta({ open, lists, tiendaNubeVenta = null, o
                 </div>
 
                 <div ref={rowsContainerRef} className={`gm-table-body ${hasScroll ? "has-scroll gm-table-body--scroll" : ""}`}>
-                  {rowsCalc.map((r) => {
+                  {rowsCalc.map((r, rowIndex) => {
+                    const filaNoMueve = esFilaNoMueveStock(r);
                     const stockNum =
                       r.stock_disponible !== null && r.stock_disponible !== undefined
                         ? Number(r.stock_disponible)
                         : null;
-                    const rowSinStock = r.sinStock || isSinStock(stockNum);
+                    const rowSinStock = !filaNoMueve && (r.sinStock || isSinStock(stockNum));
 
                     return (
-                      <div key={r.id} className={`gm-table-row ${rowSinStock ? "nv-row--sin-stock" : ""}`}>
+                      <div key={r.id} className={`gm-table-row ${rowSinStock ? "nv-row--sin-stock" : ""}`} data-testid="venta-row">
                         <div className="gm-table-cell gm-table-cell--detail">
+                          <TipoMovimientoStockSelect
+                            value={r.tipoMovimientoStock}
+                            onChange={(tipo) => handleTipoMovimientoChange(r.id, tipo)}
+                            disabled={saving || addUI.open || esCompletarTiendaNube}
+                            rowNumber={rowIndex + 1}
+                          />
                           <ProductStockAutocomplete
                             value={r.detalleText}
                             onChange={(val) =>
@@ -3897,6 +3953,7 @@ export default function ModalNuevaVenta({ open, lists, tiendaNubeVenta = null, o
                             disabled={saving || addUI.open || esCompletarTiendaNube}
                             showAllOnFocus={false}
                             maxItems={18}
+                            allowOutOfStock={filaNoMueve}
                             inputClassName="gm-cell-input"
                           />
                         </div>

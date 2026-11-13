@@ -1,0 +1,62 @@
+PASO 1 (ANTES DE DESPLEGAR): PROBAR EL SISTEMA GLOBAL
+
+node tests/ejecutar.cjs global
+
+
+
+
+
+PASO 2: PROBAR EL MÓDULO QUE MODIFICASTE (ELEGÍ UNO)
+
+
+MOVIMIENTOS (COMPRAS, VENTAS, PRESUPUESTOS, RECIBOS, ÓRDENES DE PAGO, FACTURAS, REMITOS)
+node tests/ejecutar.cjs movimientos
+
+
+STOCK
+node tests/ejecutar.cjs stock
+
+
+FLUJO DE CAJA
+node tests/ejecutar.cjs flujo_caja
+
+
+DASHBOARD
+node tests/ejecutar.cjs dashboard
+
+
+ANÁLISIS FINANCIERO
+node tests/ejecutar.cjs analisis_financiero
+
+
+CHEQUES Y ECHEQS
+node tests/ejecutar.cjs cheques
+
+
+CUENTAS CORRIENTES
+node tests/ejecutar.cjs cuentas_corrientes
+
+
+CONFIGURACIÓN
+node tests/ejecutar.cjs configuracion
+
+
+CONTABILIDAD (IVA COMPRAS/VENTAS)
+node tests/ejecutar.cjs contabilidad
+
+
+TIENDA NUBE
+node tests/ejecutar.cjs tiendanube
+
+
+SUITE COMPLETA (CUANDO CAMBIE ALGO GLOBAL, ESQUEMA SQL O ANTES DE UNA RELEASE GRANDE)
+node tests/ejecutar.cjs completo
+
+
+
+
+NOTAS:
+- GLOBAL cubre login, rutas/navegación, seguridad básica y chequeos globales existentes.
+- Cada módulo corre sus tests existentes, navegación de sus pantallas e integraciones directas seleccionadas.
+- No se ejecutan los otros módulos enteros; no es garantía de cubrir funciones aún sin tests.
+- Ejecutar pruebas con escritura únicamente sobre un tenant E2E aislado, NUNCA datos reales.

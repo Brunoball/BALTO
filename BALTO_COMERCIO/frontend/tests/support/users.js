@@ -1,9 +1,19 @@
 import { expect } from '@playwright/test';
-import fs from 'node:fs';
 import { authenticatedApi, expectApiSuccess } from './api.js';
 import { AUTH_FILE, ENV, patchContextNavigation, patchPageNavigation } from './env.js';
+import authGateway from './auth-gateway.cjs';
 
-const SESSION_REFRESH_INTERVAL_MS = 15 * 60 * 1000;
+const { readAuthResponse, requireJson, authHttpError } = authGateway;
+
+// Antes se renovaba el login por antigüedad del archivo (.auth/user.json).
+// Ese archivo no indica caducidad real y multiplicaba solicitudes a Hostinger.
+// Se confirma el token con la API como máximo una vez cada 5 minutos por worker.
+const SESSION_CHECK_INTERVAL_MS = 5 * 60 * 1000;
+const SESSION_INVALID_CODES = new Set([
+  'SESSION_REQUIRED', 'SESSION_INVALID', 'SESSION_REVOKED', 'SESSION_EXPIRED',
+]);
+let validatedKey = '';
+let validatedAt = 0;
 
 function loginEndpoint() {
   const base = String(ENV.loginApiURL || '').trim().replace(/\/+$/, '');
@@ -38,14 +48,6 @@ function storageAuth(state) {
   return '';
 }
 
-function authFileNeedsRefresh() {
-  try {
-    return Date.now() - fs.statSync(AUTH_FILE).mtimeMs >= SESSION_REFRESH_INTERVAL_MS;
-  } catch {
-    return true;
-  }
-}
-
 function isRetryableLoginStatus(status) {
   return [408, 429, 500, 502, 503, 504].includes(Number(status));
 }
@@ -67,7 +69,7 @@ function isRetryableTransportError(error) {
 }
 
 async function validateCommerceSessionWithRetry(request, sessionKey) {
-  const attempts = 6;
+  const attempts = 3;
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     try {
       const response = await request.get(commerceSessionEndpoint(), {
@@ -80,69 +82,79 @@ async function validateCommerceSessionWithRetry(request, sessionKey) {
         timeout: 30_000,
         failOnStatusCode: false,
       });
+      const info = await readAuthResponse(response, 'BALTO_COMERCIO auth_session_check');
+      await response.dispose().catch(() => null);
 
-      if (!isRetryableLoginStatus(response.status()) || attempt === attempts) {
-        return response;
+      // Sólo reintentamos errores de infraestructura transitorios. Un reto
+      // Hostinger lanza HOSTINGER_CDN_CHALLENGE antes de entrar en este bloque.
+      if (isRetryableLoginStatus(info.status) && attempt < attempts) {
+        await sleep(Math.min(4_000, 700 * (2 ** (attempt - 1))));
+        continue;
       }
 
-      await response.dispose().catch(() => null);
+      const body = requireJson(info, 'BALTO_COMERCIO auth_session_check');
+      if (info.status === 401 && SESSION_INVALID_CODES.has(String(body?.codigo || ''))) {
+        return false; // La API confirmó que la sesión ya no es válida.
+      }
+      if (info.status !== 200 || body?.exito !== true || body?.sesion_valida === false) {
+        throw authHttpError('BALTO_COMERCIO auth_session_check', info);
+      }
+      return true;
     } catch (error) {
-      if (!isRetryableTransportError(error)) throw error;
-      // Si agotamos los reintentos de validación, devolvemos null para que el
-      // flujo renueve la sesión mediante BALTO_LOGIN (que también tiene retry).
-      if (attempt === attempts) return null;
+      // Un 403 de CDN, error real de permisos o JSON inválido nunca debe
+      // convertirse en un login nuevo (ni provocar una cadena de reintentos).
+      if (error?.code === 'HOSTINGER_CDN_CHALLENGE' ||
+          !isRetryableTransportError(error) || attempt === attempts) {
+        throw error;
+      }
+      await sleep(Math.min(4_000, 700 * (2 ** (attempt - 1))));
     }
-
-    await sleep(Math.min(8_000, 1_000 * (2 ** (attempt - 1))));
   }
-
-  return null;
+  throw new Error('No se pudo comprobar la sesión de BALTO_COMERCIO.');
 }
 
 async function loginWithRetry(request, username, password) {
-  let last = null;
-
-  for (let attempt = 1; attempt <= 7; attempt += 1) {
+  const attempts = 4;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
     try {
       const response = await request.post(loginEndpoint(), {
         data: { nombre: username, contrasena: password },
-        headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+          Connection: 'close',
+        },
         timeout: 30_000,
         failOnStatusCode: false,
       });
-      const text = await response.text();
-      let body = {};
-      try {
-        body = text ? JSON.parse(text) : {};
-      } catch {
-        body = { raw: text };
+      const info = await readAuthResponse(response, 'BALTO_LOGIN inicio');
+      await response.dispose().catch(() => null);
+
+      if (isRetryableLoginStatus(info.status) && attempt < attempts) {
+        await sleep(Math.min(4_000, 700 * (2 ** (attempt - 1))));
+        continue;
       }
-
-      last = { status: response.status(), body, text };
-      if (!isRetryableLoginStatus(last.status) || attempt === 7) break;
+      const body = requireJson(info, 'BALTO_LOGIN inicio');
+      if (info.status >= 400 || body?.exito !== true) {
+        throw authHttpError('BALTO_LOGIN inicio', info);
+      }
+      const sessionKey = String(body?.session_key || '').trim();
+      expect(sessionKey, 'BALTO_LOGIN no devolvió session_key.').not.toBe('');
+      return {
+        sessionKey,
+        usuario: body?.usuario && typeof body.usuario === 'object'
+          ? body.usuario
+          : { usuario: username },
+      };
     } catch (error) {
-      last = { status: 0, body: {}, text: String(error?.message || error) };
-      if (attempt === 7) break;
+      if (error?.code === 'HOSTINGER_CDN_CHALLENGE' ||
+          !isRetryableTransportError(error) || attempt === attempts) {
+        throw error;
+      }
+      await sleep(Math.min(4_000, 700 * (2 ** (attempt - 1))));
     }
-
-    await sleep(Math.min(8_000, 1_000 * (2 ** (attempt - 1))));
   }
-
-  expect(
-    last?.status || 0,
-    `BALTO_LOGIN no pudo autenticar a ${username}: HTTP ${last?.status || 0} ${last?.body?.mensaje || last?.text || ''}`,
-  ).toBeLessThan(400);
-  expect(last?.body?.exito, last?.body?.mensaje || 'BALTO_LOGIN no confirmó el acceso.').toBe(true);
-
-  const sessionKey = String(last?.body?.session_key || '').trim();
-  expect(sessionKey, 'BALTO_LOGIN no devolvió session_key.').not.toBe('');
-
-  return {
-    sessionKey,
-    usuario: last?.body?.usuario && typeof last.body.usuario === 'object'
-      ? last.body.usuario
-      : { usuario: username },
-  };
+  throw new Error('No se pudo iniciar sesión en BALTO_LOGIN.');
 }
 
 async function installSession(page, auth, { persist = false } = {}) {
@@ -180,31 +192,30 @@ async function installSession(page, auth, { persist = false } = {}) {
 export async function ensureAdministratorSession(page) {
   const state = await page.context().storageState();
   const currentKey = storageAuth(state);
-  let mustRefresh = !currentKey;
+  const now = Date.now();
+
+  // Cada test dispone de su propio contexto, cargado desde el storageState del
+  // setup. Evitamos una consulta remota por test sin dejar de verificar el
+  // backend periódicamente (y en cada worker nuevo).
+  if (currentKey && currentKey === validatedKey &&
+      now - validatedAt < SESSION_CHECK_INTERVAL_MS) return;
 
   if (currentKey) {
-    const response = await validateCommerceSessionWithRetry(
-      page.context().request,
-      currentKey,
-    );
-
-    if (!response) {
-      // Un corte transitorio agotó la validación de la sesión actual. En vez de
-      // abortar un test sano, renovamos la sesión usando el login con reintentos.
-      mustRefresh = true;
-    } else {
-      const body = await response.json().catch(() => ({}));
-      mustRefresh = response.status() >= 400
-        || body?.exito === false
-        || body?.success === false
-        || authFileNeedsRefresh();
+    const isValid = await validateCommerceSessionWithRetry(page.context().request, currentKey);
+    if (isValid) {
+      validatedKey = currentKey;
+      validatedAt = Date.now();
+      return;
     }
   }
 
-  if (!mustRefresh) return;
-
+  // Sólo se inicia sesión si faltaba token o si la API respondió explícitamente
+  // 401 con un código SESSION_* admitido. No renovamos por TTL del archivo,
+  // fallos de red ni por desafíos del CDN.
   const auth = await loginWithRetry(page.context().request, ENV.user, ENV.password);
   await installSession(page, auth, { persist: true });
+  validatedKey = auth.sessionKey;
+  validatedAt = Date.now();
 }
 
 export async function createEmployeeTestUser(page, username, password) {

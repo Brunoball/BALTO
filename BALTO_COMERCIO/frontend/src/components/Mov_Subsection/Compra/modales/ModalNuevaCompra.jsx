@@ -24,6 +24,8 @@ import GlobalAutocomplete from "../../../Global/GlobalAutocomplete/GlobalAutocom
 import ProductStockAutocomplete from "../../_shared/ProductStockAutocomplete.jsx";
 import useStockBarcodeScanner from "../../_shared/useStockBarcodeScanner.js";
 import ModalClienteFiscalArca from "../../../Global/Modales/ModalClienteFiscalArca.jsx";
+import TipoMovimientoStockSelect from "../../_shared/TipoMovimientoStockSelect.jsx";
+import { TIPO_MOV_MUEVE_STOCK, payloadTipoMovimientoStock } from "../../_shared/tipoMovimientoStock.js";
 
 const NULL_OPTION = "";
 const NOMBRE_COMPROBANTE_GENERICO = "Comprobante adjunto";
@@ -723,6 +725,8 @@ function getStockDisponible(detalle) {
 function buildEmptyRow() {
   return {
     id: uid(),
+    // TIPO DE MOVIMIENTO del renglón: toda fila nueva arranca en "MUEVE STOCK".
+    tipoMovimientoStock: TIPO_MOV_MUEVE_STOCK,
     id_detalle: NULL_OPTION,
     id_stock_producto: NULL_OPTION,
     id_stock_variante: NULL_OPTION,
@@ -1800,7 +1804,9 @@ export default function ModalNuevaCompra({ open, lists, onClose, onToast, onSave
           id_tipo_venta: idTipoVenta,
           id_proveedor: proveedorIdFinal,
           proveedor_nombre: String(provInput || "").trim() || null,
-          id_detalle: stockId,
+          // MUEVE STOCK suma existencias; NO MUEVE STOCK registra el producto sin sumar.
+          ...payloadTipoMovimientoStock(r),
+          id_detalle: null,
           id_stock_producto: stockId,
           id_stock_variante: Number.isFinite(varianteId) && varianteId > 0 ? varianteId : null,
           cantidad: Math.round(Number(r.cantidad) * 1000) / 1000,
@@ -1925,10 +1931,16 @@ export default function ModalNuevaCompra({ open, lists, onClose, onToast, onSave
                 </div>
 
                 <div ref={rowsContainerRef} className={`gm-table-body ${hasScroll ? "has-scroll" : ""}`}>
-                  {rowsCalc.map((r) => {
+                  {rowsCalc.map((r, rowIndex) => {
                     return (
-                      <div key={r.id} className="gm-table-row">
+                      <div key={r.id} className="gm-table-row" data-testid="compra-row">
                         <div className="gm-table-cell gm-table-cell--detail">
+                          <TipoMovimientoStockSelect
+                            value={r.tipoMovimientoStock}
+                            onChange={(tipo) => updateRow(r.id, { tipoMovimientoStock: tipo })}
+                            disabled={saving || addUI.open}
+                            rowNumber={rowIndex + 1}
+                          />
                           <ProductStockAutocomplete
                             value={r.detalleText}
                             onChange={(val) =>

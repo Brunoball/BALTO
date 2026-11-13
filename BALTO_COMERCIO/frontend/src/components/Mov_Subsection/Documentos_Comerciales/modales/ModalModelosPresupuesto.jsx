@@ -3,6 +3,12 @@ import { createPortal } from "react-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCheck, faPen, faTrashCan } from "@fortawesome/free-solid-svg-icons";
 import ProductStockAutocomplete from "../../_shared/ProductStockAutocomplete.jsx";
+import TipoMovimientoStockSelect from "../../_shared/TipoMovimientoStockSelect.jsx";
+import {
+  TIPO_MOV_MUEVE_STOCK,
+  payloadTipoMovimientoStock,
+  tipoMovimientoDesdeItem,
+} from "../../_shared/tipoMovimientoStock.js";
 import useStockBarcodeScanner from "../../_shared/useStockBarcodeScanner.js";
 import ModalEliminar from "../../../Global/Modales/ModalEliminar.jsx";
 import "../../../Global/Global_css/GlobalsModalsV2.css";
@@ -96,6 +102,7 @@ function getPrecio(d) {
 function emptyRow() {
   return {
     localId: uid(),
+    tipoMovimientoStock: TIPO_MOV_MUEVE_STOCK,
     id_detalle: null,
     id_stock_producto: null,
     id_stock_variante: null,
@@ -113,6 +120,8 @@ function emptyRow() {
 function rowFromItem(item) {
   return {
     localId: uid(),
+    // El modelo conserva el TIPO DE MOVIMIENTO de cada producto.
+    tipoMovimientoStock: tipoMovimientoDesdeItem(item),
     id_detalle: Number(item?.id_detalle || 0) || null,
     id_stock_producto: Number(item?.id_stock_producto || 0) || null,
     id_stock_variante: Number(item?.id_stock_variante || 0) || null,
@@ -324,6 +333,7 @@ export default function ModalModelosPresupuesto({ open, lists, onClose, onToast,
         const subtotal = cantidad * precio;
         const ivaMonto = subtotal * ivaPct / 100;
         return {
+          ...(Number(r.id_stock_producto || r.id_stock_variante || 0) > 0 ? payloadTipoMovimientoStock(r) : {}),
           id_detalle: r.id_detalle || null,
           id_stock_producto: r.id_stock_producto || null,
           id_stock_variante: r.id_stock_variante || null,
@@ -621,12 +631,18 @@ export default function ModalModelosPresupuesto({ open, lists, onClose, onToast,
                   <div className="gm-table-th" />
                 </div>
                 <div className="gm-table-body presupuesto-modelos-table__body">
-                  {form.rows.map((row) => {
+                  {form.rows.map((row, rowIndex) => {
                     const subtotal = safeNumber(row.cantidad) * safeNumber(row.precio);
                     const totalRow = subtotal + subtotal * safeNumber(row.iva_pct) / 100;
                     return (
                       <div className="gm-table-row" key={row.localId}>
                         <div className="gm-table-cell gm-table-cell--detail">
+                          <TipoMovimientoStockSelect
+                            value={row.tipoMovimientoStock}
+                            onChange={(tipo) => updateRow(row.localId, { tipoMovimientoStock: tipo })}
+                            disabled={saving}
+                            rowNumber={rowIndex + 1}
+                          />
                           <ProductStockAutocomplete
                             value={row.descripcion}
                             onChange={(value) => updateRow(row.localId, { descripcion: upperInput(value), id_detalle: null, id_stock_producto: null, id_stock_variante: null, codigo: "", id_stock_unidad: null, unidad_abreviatura: "", unidad_permite_decimales: 1 })}

@@ -1,5 +1,6 @@
-import { crearReceptorConsumidorFinal, validarConsumidorFinalSinIdentificar } from "../../Facturacion/utils/consumidorFinal";
+import { crearReceptorConsumidorFinal } from "../../Facturacion/utils/consumidorFinal";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { TIPO_MOV_NO_MUEVE_STOCK, tipoMovimientoDesdeItem } from "../../_shared/tipoMovimientoStock.js";
 import { createPortal } from "react-dom";
 import "../../../Global/Global_css/GlobalsModalsV2.css";
 import "../../../Global/Global_css/Global_responsive.css";
@@ -283,6 +284,8 @@ function normalizeItem(it, i = 0) {
     id: it?.id || it?.id_item || `item-${i + 1}`,
     id_detalle: null,
     id_stock_producto: Number(it?.id_stock_producto ?? it?.idStockProducto ?? 0) || null,
+    // Tipo guardado en el presupuesto: define si descuenta stock al convertir.
+    tipoMovimientoStock: tipoMovimientoDesdeItem(it),
     codigo: safeStr(it?.codigo || it?.codigo_producto || i + 1),
     descripcion: safeStr(it?.descripcion || it?.detalle || it?.nombre || it?.producto || it?.nombre_producto || "Producto o servicio"),
     cantidad,
@@ -1424,22 +1427,6 @@ export default function ModalAsignarPresupuestoVenta({
     buildComprobantePayload,
   ]);
 
-  const iniciarFacturaConsumidorFinal = useCallback(async () => {
-    if (isBaltoDemoMode()) { showToast("advertencia", DEMO_BLOCK_MESSAGE, 5200); return; }
-    const error = validate("facturar") || validarConsumidorFinalSinIdentificar(total);
-    if (error) { showToast("advertencia", error, 5200); return; }
-    setSaving(true);
-    try {
-      const cfg = await fetchConfigFacturacion();
-      const fiscal = crearReceptorConsumidorFinal();
-      const data = buildComprobantePayload(cfg, fiscal, null, { observaciones: "Factura emitida desde presupuesto convertido en venta." });
-      setFiscalParaFacturar(fiscal);
-      setResumenFacturaData(data);
-      setOpenResumenFactura(true);
-    } catch (e) { showToast("error", e?.message || "No se pudo preparar la factura."); }
-    finally { setSaving(false); }
-  }, [validate, total, showToast, fetchConfigFacturacion, buildComprobantePayload]);
-
   const shouldNeedFiscalPanel = open && mostrarCuitFiscal && !clienteFiscalDb && clienteBase.id_cliente > 0;
 
   const finalizarFacturacionYGuardarVenta = useCallback(async (factEmitida) => {
@@ -1564,6 +1551,9 @@ export default function ModalAsignarPresupuestoVenta({
                             <div className="gm-cell-input dc-asignar-readonly-input dc-asignar-readonly-input--detalle">
                               <span title={String((safeText(it.descripcion)) ?? "")}>{safeText(it.descripcion)}</span>
                               {it.codigo ? <small>Código: {it.codigo}</small> : null}
+                              {it.tipoMovimientoStock === TIPO_MOV_NO_MUEVE_STOCK ? (
+                                <small data-testid="asignar-no-mueve-stock">NO MUEVE STOCK</small>
+                              ) : null}
                             </div>
                           </div>
 
@@ -1742,14 +1732,6 @@ export default function ModalAsignarPresupuestoVenta({
                           />
                         ) : null}
 
-                        {!convertido && (
-                          <div className="dc-factura-final-choice">
-                            <button type="button" disabled={saving || loading} onClick={iniciarFacturaConsumidorFinal}>
-                              Facturar a consumidor final sin CUIT
-                            </button>
-                            <small>La venta conserva el cliente del presupuesto. Disponible para montos menores a $10.000.000.</small>
-                          </div>
-                        )}
                         {shouldNeedFiscalPanel ? (
                           <>
                             <div className="gm-section-divider" />

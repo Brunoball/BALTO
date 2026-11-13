@@ -803,6 +803,13 @@ export default function Presupuestos() {
     setDateRange(newRange);
   }, [setDateRange]);
 
+  // El stock de los productos viene de las listas globales. Una venta (también
+  // la generada desde un presupuesto) cambia existencias: se recargan en segundo
+  // plano para que los selectores muestren el stock actual sin salir de la sección.
+  const refrescarListasStock = useCallback(() => {
+    Promise.resolve(ensureListsLoaded?.({ force: true, background: true })).catch(() => {});
+  }, [ensureListsLoaded]);
+
   const reloadVista = useCallback(async () => {
     cacheRef.current.clear();
     clearMovPerfCache(PRESUPUESTOS_CACHE_NS);
@@ -819,8 +826,9 @@ export default function Presupuestos() {
     event?.preventDefault?.();
     event?.stopPropagation?.();
     setSelectedModelForNew(null);
+    refrescarListasStock();
     setOpenAdd(true);
-  }, []);
+  }, [refrescarListasStock]);
 
   const fetchPresupuestoDetalle = useCallback(async (idMovimiento) => {
     const data = await apiGet(`${API}?action=presupuestos_obtener&id_movimiento=${encodeURIComponent(idMovimiento)}`);
@@ -1168,13 +1176,14 @@ export default function Presupuestos() {
 
       setOpenConvert(false);
       setSelectedRow(null);
+      refrescarListasStock();
       await reloadVista();
     } catch (e) {
       showToast("error", e?.message || "No se pudo asignar el presupuesto como venta.", 5200);
     } finally {
       setConvertingId(null);
     }
-  }, [API, apiPostJson, generarDocumentosVentaDesdePresupuesto, marcarPresupuestoConvertido, reloadVista, selectedRow, showToast]);
+  }, [API, apiPostJson, generarDocumentosVentaDesdePresupuesto, marcarPresupuestoConvertido, refrescarListasStock, reloadVista, selectedRow, showToast]);
 
   const confirmDelete = useCallback(async () => {
     const id = getMovimientoId(selectedRow);
@@ -1368,7 +1377,7 @@ export default function Presupuestos() {
             <div className="doccom-presuExportDesktop">
               <BotonExportar className="doccom-exportBtn" disabled={loadingRows || filteredRows.length === 0} loading={false} label="Exportar" title={filteredRows.length ? "Exportar archivo" : "No hay datos para exportar"} opciones={exportOptions} align="right" entityLabel="presupuestos" currentRows={filteredRows} allRows={hasMore ? null : filteredRows} loadAllRows={loadAllRowsForExport} currentCount={filteredRows.length} allCount={hasMore ? null : filteredRows.length} hasMore={hasMore} />
             </div>
-            <button type="button" className="mov-btn doccom-presuModelsBtn" onClick={() => setOpenModels(true)} title="Ver y administrar modelos de presupuesto">
+            <button type="button" className="mov-btn doccom-presuModelsBtn" onClick={() => { refrescarListasStock(); setOpenModels(true); }} title="Ver y administrar modelos de presupuesto">
               Modelos
             </button>
             <button type="button" className="mov-btn mov-btn--primary doccom-presuNewBtn" onClick={handleOpenNuevoPresupuesto} title="Crear nuevo presupuesto">
@@ -1404,7 +1413,7 @@ export default function Presupuestos() {
                               <button type="button" className="mov-iconBtn" title="Ver información completa del presupuesto" disabled={isAnyLoading || loadingLists || loadingDetalleId === r.id_movimiento} onClick={() => handleVerDetallePresupuesto(r)}>
                                 {loadingDetalleId === r.id_movimiento ? "..." : <FontAwesomeIcon icon={faInfoCircle} />}
                               </button>
-                              <button type="button" className={["mov-iconBtn", "mov-iconBtn--comprobante"].join(" ")} title={convertido ? "Presupuesto ya asignado como venta" : "Asignar presupuesto como venta"} disabled={isAnyLoading || loadingLists || convertingId === r.id_movimiento} onClick={() => { setSelectedRow(r); setOpenConvert(true); }} style={{ opacity: 1, cursor: "pointer" }}>
+                              <button type="button" className={["mov-iconBtn", "mov-iconBtn--comprobante"].join(" ")} title={convertido ? "Presupuesto ya asignado como venta" : "Asignar presupuesto como venta"} disabled={isAnyLoading || loadingLists || convertingId === r.id_movimiento} onClick={() => { refrescarListasStock(); setSelectedRow(r); setOpenConvert(true); }} style={{ opacity: 1, cursor: "pointer" }}>
                                 {convertingId === r.id_movimiento ? "..." : <FontAwesomeIcon icon={convertido ? faCheckCircle : faCartShopping} />}
                               </button>
                               <button type="button" className="mov-iconBtn mov-iconBtn--danger" title={convertido ? "No se puede eliminar: ya fue convertido a venta" : "Eliminar"} disabled={isAnyLoading || loadingLists || deletingId === r.id_movimiento || convertido} onClick={() => { setSelectedRow(r); setOpenDel(true); }} style={{ opacity: convertido ? 0.35 : 1, cursor: convertido ? "not-allowed" : "pointer" }}>
@@ -1457,6 +1466,7 @@ export default function Presupuestos() {
         onUseModel={(modelo) => {
           setSelectedModelForNew({ ...(modelo || {}) });
           setOpenModels(false);
+          refrescarListasStock();
           setOpenAdd(true);
         }}
       />
@@ -1484,6 +1494,7 @@ export default function Presupuestos() {
           }
           setOpenConvert(false);
           setSelectedRow(null);
+          refrescarListasStock();
           await reloadVista();
         }}
       />

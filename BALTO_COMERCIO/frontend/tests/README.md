@@ -1,154 +1,41 @@
-# BALTO Comercio — Testing Playwright (carpeta depurada)
+# BALTO Comercio — Testing profesional por módulos
 
-La carpeta contiene los tests vigentes de BALTO Comercio y sus helpers. La regresión
-sobre **fecha única** se concentra ahora en `54-politica-fechas-importes-pagos.spec.js`;
-los casos de los antiguos `52`, `53`, `55` y `56` fueron **trasladados íntegros** a ese
-archivo, sin crear tests adicionales. Los números no se renumeraron para evitar
-romper referencias conocidas.
+## Qué se ejecuta normalmente
 
-## Nuevo testing del Dashboard — Caja actual / todos los medios
+**1. GLOBAL** `node tests/ejecutar.cjs global`  
+Verifica autenticación, navegación a las secciones, protecciones y diagnósticos globales existentes. 
 
-`58-dashboard-caja-medios.spec.js` incorpora:
+**2. MÓDULO CAMBIADO** `node tests/ejecutar.cjs movimientos` (o `stock`, `flujo_caja`, etc.).  
+Ejecuta todas las pruebas existentes asignadas al módulo, sus rutas de navegación y unas pocas pruebas de integración directa elegidas por impacto. No ejecuta el sistema entero.
 
-- API de sólo lectura: el total de Caja actual coincide con la suma de **todos**
-  los medios individuales; el subtotal monetario coincide medio por medio con
-  Tesorería de Análisis Financiero.
-- Cartera real: CHEQUE y ECHEQ corresponden sólo al saldo nominal y la cantidad
-  de documentos en estado `EN_CARTERA`, comprobados contra los listados paginados;
-  no se suman cheques depositados, entregados ni históricos.
-- UI con interceptación de API, sin escribir: muestra efectivo, Mercado Pago,
-  Banco, Personal Pay, un **banco nuevo inactivo**, Cheque y eCheq, con móvil.
-- `15-cheques-lifecycle.spec.js` agrega a los casos de depósito y reversión la
-  conciliación de Dashboard: cambia la distribución cartera/banco, **no** el total.
+**3. COMPLETO** `node tests/ejecutar.cjs completo`  
+Suite completa, incluida auditoría interna restringida a staging, para cambios transversales y releases.
 
-Desde `BALTO_COMERCIO/frontend`, con frontend y backend **actualizados**:
+Los comandos válidos para tu trabajo están en `COMANDOS_TESTING.txt`. No hay comandos separados de `smoke`, `interno`, `contratos`, `exportaciones` o `documentos`: esos tests quedan dentro de los módulos reales, o en la suite completa cuando corresponda.
 
-```powershell
-npx playwright test tests/00-preflight.spec.js tests/58-dashboard-caja-medios.spec.js tests/40-dashboard-stock-valorizado-fraccional.spec.js tests/50-analisis-financiero-saldos.spec.js tests/51-saldos-historicos-conciliacion.spec.js --project=chromium --workers=1 --reporter=list --max-failures=1
-```
+## Estructura
 
-Los tres casos de `58` no modifican la base. `15` sí hace mutaciones
-controladas: ejecutarlo sólo en tenant E2E con `PW_ALLOW_MUTATIONS=1`.
+- `global/`: login, navegación global, seguridad, diagnósticos. `auditoria_solo_completo` no se ejecuta en GLOBAL, sí en COMPLETO.
+- `movimientos/`: ventas, compras, presupuestos, facturas, remitos, NC, documentos, PDFs, exportación y validaciones de pagos.
+- `stock/`: productos, variantes, costos, unidades, códigos de barras, vencimientos, precios.
+- `flujo_caja/`: ajustes, transferencias y conciliación con dashboard.
+- `dashboard/`, `analisis_financiero/`, `cheques/`, `cuentas_corrientes/`, `configuracion/`, `contabilidad/`, `tiendanube/`.
+- `support/` y `setup/`: infraestructura compartida sin cambios de lógica, no son módulos para ejecutar.
 
-**Criterio funcional:** Caja actual = dinero disponible (todos los medios,
-activos e inactivos) + valor nominal de cheques/eCheqs `EN_CARTERA`.
-La disponibilidad de Análisis Financiero y Flujo de Caja **no cambia** y
-sigue excluyendo documentos; las series de cobros/pagos del Dashboard siguen
-siendo de dinero monetario real. No se requiere migración.
+La matriz de dependencias (archivos concretos de integración) se mantiene en `perfiles.json`. No se duplican tests en los comandos de módulo. La navegación específica del módulo usa el mismo verificador de rutas que el test global; el comportamiento existente se centralizó en `support/navigation-smoke.js`.
 
-## Reemplazo
+## Instalación segura
 
-Reemplazá la carpeta `BALTO_COMERCIO/frontend/tests` por el directorio `tests/`
-incluido en el ZIP. El archivo `.auth/user.json` **no viene**: contiene sesiones y
-Playwright lo regenera durante `auth.setup.js` (usa `.env.playwright`, que no se
-incluye ni se modifica). No mezcles encima de la carpeta vieja: quedarían tests
-obsoletos que queremos eliminar.
+1. Respaldá tu `frontend/tests/` actual.
+2. Sustituí `frontend/tests/` **entera** con la del ZIP (no mezcles carpetas antiguas y nuevas).
+3. Mantené `playwright.config.*`, `package.json`, `.env.playwright` y todo el resto de la aplicación tal como están.
+4. Los datos de autenticación `tests/.auth/user.json` **no** están incluidos; los regenera `auth.setup.js`.
+5. Abrí PowerShell dentro de `frontend` y usá los comandos del TXT.
 
-## Comandos (PowerShell, desde `BALTO_COMERCIO/frontend`)
+## Alcance técnico y límites
 
-**Regresión de fechas y saldos (incluye pruebas UI, API, cuentas corrientes,
-cheques, presupuestos y conciliación):**
+Reorganizar los tests no crea mágicamente pruebas para todos los botones y escenarios. Las pruebas existentes se preservan y se agregó cobertura de **navegación** por módulo; las funcionalidades sin tests automatizados previos (por ejemplo exportaciones propias de módulos que aún no tenían tests de exportación) requieren casos nuevos para afirmar cobertura completa. 
 
-```powershell
-npx playwright test tests/00-preflight.spec.js tests/50-analisis-financiero-saldos.spec.js tests/51-saldos-historicos-conciliacion.spec.js tests/54-politica-fechas-importes-pagos.spec.js --project=chromium --workers=1 --reporter=list --max-failures=1
-```
+Los resultados E2E reales siguen pendientes de ejecución en tu máquina contra un **tenant E2E aislado**, para no afectar datos reales. Usar `PW_ALLOW_MUTATIONS=1` únicamente con ese tenant. 
 
-**Ajustes de saldos de caja (Flujo de Caja) + regresión de saldos:**
-
-```powershell
-npx playwright test tests/00-preflight.spec.js tests/55-ajustes-saldos-caja.spec.js tests/24-initial-balances.spec.js tests/50-analisis-financiero-saldos.spec.js tests/51-saldos-historicos-conciliacion.spec.js --project=chromium --workers=1 --reporter=list --max-failures=1
-```
-
-`55` tiene tres bloques: interfaz con mocks (no escribe), API de sólo lectura y
-mutaciones reales (`@mutations`, sólo con `PW_ALLOW_MUTATIONS=1`, tenant E2E y la
-migración `tesoreria_ajustes_saldo` aplicada). Los ajustes de prueba llevan el
-RUN_PREFIX en observaciones y el limpiador E2E los elimina (reversiones primero).
-
-**Transferencias internas entre cajas (Flujo de Caja) + conciliación con Análisis Financiero y Dashboard:**
-
-Requiere la migración `database/migrations/2026_11_11_tesoreria_transferencias.sql`
-aplicada en el tenant E2E (sin ella, el bloque `@mutations` se omite solo).
-
-```powershell
-npx playwright test tests/00-preflight.spec.js tests/60-transferencias-cajas.spec.js tests/55-ajustes-saldos-caja.spec.js tests/50-analisis-financiero-saldos.spec.js tests/51-saldos-historicos-conciliacion.spec.js tests/58-dashboard-caja-medios.spec.js tests/59-signos-flujo-dashboard.spec.js --project=chromium --workers=1 --reporter=list --max-failures=1
-```
-
-`60` repite la estructura de `55`: interfaz con mocks, API de sólo lectura y
-mutaciones reales. Las transferencias de prueba llevan el RUN_PREFIX en
-observaciones; el limpiador E2E borra primero las reversiones y luego las
-originales (la tabla sólo admite ese DELETE dentro del limpiador).
-
-Prueba backend sin MySQL (SQLite en memoria, código real de servicio e informes):
-
-```powershell
-php api/modules/flujo_caja/tests/TransferenciasCajasTest.php api
-```
-
-**Compras → PRECIO DE COSTO (última compra cronológica, sin pisar costos manuales):**
-
-```powershell
-npx playwright test tests/00-preflight.spec.js tests/61-compras-costo-ultima-compra.spec.js tests/04-purchases-credit-note.spec.js tests/13-movement-delete-reversal.spec.js tests/39-stock-pricing-margin-coefficient.spec.js tests/57-revision-precios-sin-coeficiente.spec.js --project=chromium --workers=1 --reporter=list --max-failures=1
-php api/modules/movimientos/tests/CompraCostoUltimaCompraTest.php api
-```
-
-**Clasificación OTROS EGRESOS (Otros egresos → Análisis Financiero) + regresiones relacionadas:**
-
-Requiere la migración `database/migrations/2026_11_02_otros_egresos_clasificacion.sql`
-aplicada en el tenant E2E. `56` lee los IDs del catálogo (no asume 1/2/3/4); sus
-mutaciones sólo corren con `PW_ALLOW_MUTATIONS=1` y se limpian por ID exacto.
-Nota: el número `56` se reutiliza para esta suite nueva; el antiguo `56` sigue
-consolidado dentro de `54`.
-
-```powershell
-npx playwright test tests/00-preflight.spec.js tests/02-navigation-smoke.spec.js tests/07-other-movements.spec.js tests/24-initial-balances.spec.js tests/39-stock-pricing-margin-coefficient.spec.js tests/50-analisis-financiero-saldos.spec.js tests/51-saldos-historicos-conciliacion.spec.js tests/54-politica-fechas-importes-pagos.spec.js tests/55-ajustes-saldos-caja.spec.js tests/56-otros-egresos-clasificacion.spec.js --project=chromium --workers=1 --reporter=list --max-failures=1
-```
-
-**Revisión de precios sin coeficiente (`57`):** sin compras de mercadería en el mes
-el coeficiente es nulo y no debe aparecer el aviso "Hay cambios pendientes en tus precios".
-Dos casos de UI con respuestas simuladas (no escriben) y uno de API (`@mutations`).
-
-```powershell
-npx playwright test tests/00-preflight.spec.js tests/57-revision-precios-sin-coeficiente.spec.js tests/39-stock-pricing-margin-coefficient.spec.js tests/41-stock-cambios-octubre.spec.js --project=chromium --workers=1 --reporter=list --max-failures=1
-```
-
-**Regresión de movimientos relacionada:**
-
-```powershell
-npx playwright test tests/04-purchases-credit-note.spec.js tests/05-sales-credit-note.spec.js tests/06-budgets.spec.js tests/07-other-movements.spec.js tests/08-current-accounts.spec.js tests/15-cheques-lifecycle.spec.js tests/36-grouped-payment-current-account-regression.spec.js --project=chromium --workers=1 --reporter=list --max-failures=1
-```
-
-**Regresión completa:**
-
-```powershell
-npx playwright test --project=chromium --workers=1 --reporter=list
-```
-
-**Listar pruebas sin ejecutarlas:**
-
-```powershell
-npx playwright test --list
-```
-
-## Seguridad / alcance
-
-- Ejecutar los tests con mutaciones **sólo contra staging o una base de pruebas**,
-  con el guard E2E del backend habilitado y sin emisiones ARCA reales.
-- Las pruebas de Tienda Nube que están intencionalmente `skip` se preservan: no
-  habilites sincronización real para hacerlas pasar.
-- Un `skip` condicionado por el tenant/las aperturas no es necesariamente basura.
-- `cleanup-now.mjs` es una utilidad activa de limpieza y se conservó.
-- `support/env.selector.js` puede ser cargado por `playwright.config.js`, que
-  está fuera de esta carpeta; **no** se elimina aunque los specs no lo importen.
-- Las pruebas por sí solas no prueban que Hostinger tenga desplegado el mismo backend.
-
-## Qué se quitó
-
-- `23-internal-navigation-smoke.spec.js`: rutas repetidas y validación más débil
-  que `02-navigation-smoke.spec.js`.
-- `example.spec.js`: navegación al dashboard cubierta por `02`.
-- `52`, `53`, `55`, `56`: contenido consolidado en `54` (no se descartan casos).
-- Backup `.bak`, `ejecucion.txt` con comandos viejos, helper `arca-safety.js`
-  sin referencias activas y `.auth/user.json` (sesión privada generada).
-
-No se cambiaron los tests de stock, Tienda Nube, facturación, configuración,
-exportación, cheques ni seguridad que verifican funcionalidades distintas.
+Los desafíos 403 del CDN de Hostinger no se resuelven reubicando archivos; la selección modular reduce la cantidad de peticiones.
