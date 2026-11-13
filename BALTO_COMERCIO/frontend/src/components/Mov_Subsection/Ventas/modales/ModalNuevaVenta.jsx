@@ -1759,6 +1759,48 @@ export default function ModalNuevaVenta({ open, lists, tiendaNubeVenta = null, o
     [updateFilter]
   );
 
+  // Alta rápida: crea el cliente real en `clientes`, sin ficha fiscal.
+  // Se utiliza el endpoint de catálogo que ya respeta los permisos de Ventas.
+  const guardarClienteSimple = useCallback(async () => {
+    if (addUI.saving || addUI.lookupLoading) return;
+    const nombre = upperInput(addUI.text).trim().replace(/\s+/g, " ");
+    if (!nombre || nombre.length > 180) {
+      setAddUI((prev) => ({ ...prev, fiscalError: "Ingresá un nombre válido (máximo 180 caracteres)." }));
+      return;
+    }
+
+    const existente = clientesList.find((c) => normalizeText(c?.nombre) === normalizeText(nombre) && Number(getClienteId(c)) > 0);
+    if (existente) {
+      registrarClienteLocal(existente);
+      setClienteFiscalDb(null);
+      setFiscalArcaData(null);
+      setFiscalCuitInput("");
+      resetAddUIState();
+      showToast("exito", `El cliente ya existía. Se seleccionó "${existente.nombre}".`, 3000);
+      return;
+    }
+
+    setAddUI((prev) => ({ ...prev, saving: true, fiscalError: "" }));
+    try {
+      const { idUsuario } = getAuthInfo();
+      const data = await apiPostJson(API_CATALOGO, { catalogo: "clientes", nombre, idUsuario });
+      const item = data?.item || data?.data?.item || {};
+      const id = Number(getClienteId(item) || item.id || 0);
+      if (!data?.exito || id <= 0) throw new Error(data?.mensaje || "No se pudo guardar el cliente.");
+      const cliente = registrarClienteLocal({ ...item, id_cliente: id, nombre: item.nombre || nombre, activo: 1 });
+      setClienteFiscalDb(null);
+      setFiscalArcaData(null);
+      setFiscalCuitInput("");
+      setFiscalError("");
+      resetAddUIState();
+      showToast("exito", `Cliente "${cliente.nombre}" guardado y seleccionado.`, 3200);
+    } catch (error) {
+      const mensaje = error?.message || "No se pudo crear el cliente.";
+      setAddUI((prev) => ({ ...prev, saving: false, fiscalError: mensaje }));
+      showToast("error", mensaje, 4200);
+    }
+  }, [API_CATALOGO, addUI, clientesList, registrarClienteLocal, resetAddUIState, showToast]);
+
   const startAddCliente = useCallback(() => {
     if (saving) return;
     setAddUI({
@@ -4420,8 +4462,13 @@ export default function ModalNuevaVenta({ open, lists, tiendaNubeVenta = null, o
       <ModalClienteFiscalArca
         open={addUI.open && addUI.kind === "clientes"}
         dark={dark}
-        title="Agregar cliente por CUIT"
-        infoTitle="Alta rápida por CUIT"
+        title="Agregar cliente"
+        permitirAltaSimple
+        entidad="cliente"
+        nombreSimple={addUI.text}
+        onNombreSimpleChange={(value) => setAddUI((p) => ({ ...p, text: upperInput(value), fiscalError: "" }))}
+        onConfirmarAltaSimple={guardarClienteSimple}
+        infoTitle="Alta con CUIT"
         description={
           <>
             Ingresá el CUIT, consultamos ARCA, guardamos la razón social en <b>Clientes</b> y los datos completos en <b>Clientes fiscales</b>.

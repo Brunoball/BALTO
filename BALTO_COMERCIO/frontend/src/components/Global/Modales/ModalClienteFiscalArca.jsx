@@ -50,6 +50,11 @@ export default function ModalClienteFiscalArca({
   footerHelp = "",
   requireFiscalData = false,
   permitirConsumidorFinal = false,
+  permitirAltaSimple = false,
+  entidad = "cliente",
+  nombreSimple = "",
+  onNombreSimpleChange,
+  onConfirmarAltaSimple,
   onConfirmarConsumidorFinal,
   onCuitChange,
   onLookup,
@@ -57,14 +62,17 @@ export default function ModalClienteFiscalArca({
   onConfirm,
 }) {
   const inputRef = useRef(null);
+  const nombreInputRef = useRef(null);
   const [modo, setModo] = useState("cuit");
   const esConsumidorFinal = permitirConsumidorFinal && modo === "consumidor_final";
+  const esAltaSimple = permitirAltaSimple && modo === "simple";
+  const entidadNombre = entidad === "proveedor" ? "proveedor" : "cliente";
+  const nombreLimpio = String(nombreSimple ?? "").trim();
   const busy = loading || saving;
   const cleanCuit = normalizeCuitInput(cuit);
   const cuitOk = cleanCuit.length === 11;
-  const canConfirm = !busy && (esConsumidorFinal ? !!onConfirmarConsumidorFinal : cuitOk && (!requireFiscalData || !!fiscalData));
-  const confirmar = () => esConsumidorFinal ? onConfirmarConsumidorFinal?.() : onConfirm?.();
-
+  const canConfirm = !busy && (esAltaSimple ? nombreLimpio.length > 0 && nombreLimpio.length <= 180 : esConsumidorFinal ? !!onConfirmarConsumidorFinal : cuitOk && (!requireFiscalData || !!fiscalData));
+  const confirmar = () => esAltaSimple ? onConfirmarAltaSimple?.() : esConsumidorFinal ? onConfirmarConsumidorFinal?.() : onConfirm?.();
   const helperText = useMemo(() => {
     if (footerHelp) return footerHelp;
     if (requireFiscalData) {
@@ -73,15 +81,16 @@ export default function ModalClienteFiscalArca({
     return "Ingresá el CUIT, consultá ARCA y confirmá para continuar.";
   }, [footerHelp, requireFiscalData]);
 
+
   useEffect(() => {
-    if (open) setModo("cuit");
-  }, [open]);
+    if (open) setModo(permitirAltaSimple ? "simple" : "cuit");
+  }, [open, permitirAltaSimple]);
 
   useEffect(() => {
     if (!open || esConsumidorFinal) return undefined;
-    const timer = setTimeout(() => inputRef.current?.focus(), 0);
+    const timer = setTimeout(() => (esAltaSimple ? nombreInputRef : inputRef).current?.focus(), 0);
     return () => clearTimeout(timer);
-  }, [open, esConsumidorFinal]);
+  }, [open, esConsumidorFinal, esAltaSimple]);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -97,7 +106,7 @@ export default function ModalClienteFiscalArca({
         event.preventDefault();
         if (canConfirm) {
           confirmar();
-        } else if (!esConsumidorFinal && cuitOk) {
+        } else if (!esConsumidorFinal && !esAltaSimple && cuitOk) {
           onLookup?.();
         }
       }
@@ -105,14 +114,14 @@ export default function ModalClienteFiscalArca({
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [open, busy, canConfirm, cuitOk, esConsumidorFinal, onClose, onConfirm, onConfirmarConsumidorFinal, onLookup]);
+  }, [open, busy, canConfirm, cuitOk, esConsumidorFinal, esAltaSimple, onClose, onConfirm, onConfirmarAltaSimple, onConfirmarConsumidorFinal, onLookup]);
 
   if (!open) return null;
 
   return createPortal(
     <div className={["mi-modal__overlay", "gcf-modal__overlay", dark ? "mi-modal__overlay--dark" : ""].join(" ").trim()}>
       <div
-        className={["mi-modal__container", "gcf-modal", dark ? "mi-modal--dark" : ""].join(" ").trim()}
+        className={["mi-modal__container", "gcf-modal", esAltaSimple ? "gcf-modal--simple" : "", dark ? "mi-modal--dark" : ""].join(" ").trim()}
         onMouseDown={(event) => event.stopPropagation()}
         role="dialog"
         aria-modal="true"
@@ -138,25 +147,30 @@ export default function ModalClienteFiscalArca({
 
         <div className="mi-modal__content gcf-modal__content">
           <div className="gcf-modal__layout">
-            <section className="gcf-client-card" aria-label="Tarjeta del cliente">
+            <section className="gcf-client-card" aria-label={`Datos del ${entidadNombre}`}>
               <div className="gcf-client-card__top">
                 <div className="gcf-client-card__avatar" aria-hidden="true">
                   <FontAwesomeIcon icon={esConsumidorFinal || fiscalData ? faBuilding : faUser} />
                 </div>
                 <div className="gcf-client-card__heading">
-                  <span className="gcf-client-card__eyebrow">Cliente fiscal</span>
-                  <h3>{esConsumidorFinal ? "A CONSUMIDOR FINAL" : fiscalData ? safeText(fiscalData.razon_social) : infoTitle}</h3>
+                  <span className="gcf-client-card__eyebrow">{esAltaSimple ? `Alta rápida de ${entidadNombre}` : `${entidadNombre === "proveedor" ? "Proveedor" : "Cliente"} fiscal`}</span>
+                  <h3>{esAltaSimple ? (nombreLimpio || `Nuevo ${entidadNombre}`) : esConsumidorFinal ? "A CONSUMIDOR FINAL" : fiscalData ? safeText(fiscalData.razon_social) : infoTitle}</h3>
                 </div>
               </div>
 
-              {description && (
+              {description && !esAltaSimple && (
                 <div className="gcf-client-card__notice">
                   <FontAwesomeIcon icon={faCircleInfo} aria-hidden="true" />
                   <div>{description}</div>
                 </div>
               )}
 
-              {esConsumidorFinal ? (
+              {esAltaSimple ? (
+                <div className="gcf-client-empty">
+                  <div className="gcf-client-empty__icon" aria-hidden="true"><FontAwesomeIcon icon={faUser} /></div>
+                  <div><b>Solo nombre, sin CUIT</b><span>Se registra en {entidadNombre === "proveedor" ? "Proveedores" : "Clientes"} y se selecciona automáticamente. Podés completar los datos fiscales después, si necesitás facturar.</span></div>
+                </div>
+              ) : esConsumidorFinal ? (
                 <div className="gcf-client-empty">
                   <div className="gcf-client-empty__icon"><FontAwesomeIcon icon={faCheckCircle} /></div>
                   <div><b>Sin identificación fiscal</b><span>Documento 99 / número 0. No se consultará el padrón ni se modificarán los datos del cliente de BALTO.</span></div>
@@ -200,7 +214,23 @@ export default function ModalClienteFiscalArca({
               )}
             </section>
 
-            <aside className="nc-aside gcf-side-panel" aria-label="Consulta de CUIT">
+            <aside className="nc-aside gcf-side-panel" aria-label={esAltaSimple ? "Alta rápida" : "Consulta de CUIT"}>
+              {permitirAltaSimple && (
+                <div className="gcf-modo-emision" role="group" aria-label="Tipo de alta">
+                  <label className={`gcf-modo-emision__option ${esAltaSimple ? "is-selected" : ""}`}>
+                    <input type="radio" name="gcf-modo-alta" checked={esAltaSimple} onChange={() => setModo("simple")} disabled={busy} />
+                    <span className="gcf-modo-emision__radio" aria-hidden="true" />
+                    <span className="gcf-modo-emision__icon" aria-hidden="true"><FontAwesomeIcon icon={faUser} /></span>
+                    <span className="gcf-modo-emision__name">Solo nombre (sin CUIT)</span>
+                  </label>
+                  <label className={`gcf-modo-emision__option ${!esAltaSimple ? "is-selected" : ""}`}>
+                    <input type="radio" name="gcf-modo-alta" checked={!esAltaSimple} onChange={() => setModo("cuit")} disabled={busy} />
+                    <span className="gcf-modo-emision__radio" aria-hidden="true" />
+                    <span className="gcf-modo-emision__icon" aria-hidden="true"><FontAwesomeIcon icon={faIdCard} /></span>
+                    <span className="gcf-modo-emision__name">Con CUIT / ARCA</span>
+                  </label>
+                </div>
+              )}
               {permitirConsumidorFinal && (
                 <div className="gcf-modo-emision" role="group" aria-label="Modo de facturación">
                   <label className={`gcf-modo-emision__option ${!esConsumidorFinal ? "is-selected" : ""}`}>
@@ -217,7 +247,22 @@ export default function ModalClienteFiscalArca({
                   </label>
                 </div>
               )}
-              {esConsumidorFinal ? (
+              {esAltaSimple ? (
+                <section className="nc-section gcf-panel-section">
+                  <div className="nc-section-head"><span className="nc-section-dot" /><span>Datos básicos</span></div>
+                  <div className="nc-section-body gcf-panel-section__body">
+                    <div className="fl-field gcf-modal__field">
+                    <input id="gcf-nombre-simple" ref={nombreInputRef} className="fl-input gcf-simple-input"
+                      aria-label={`Nombre del ${entidadNombre}`}
+                      autoComplete="off" maxLength={180} value={nombreSimple}
+                      onChange={(event) => onNombreSimpleChange?.(event.target.value)} disabled={busy}
+                      placeholder=" " />
+                    <label className="fl-label" htmlFor="gcf-nombre-simple"><FontAwesomeIcon icon={faUser} className="gcf-modal__label-icon" />Nombre del {entidadNombre} *</label>
+                    </div>
+                    <p className="gcf-simple-hint">No se requiere CUIT ni consulta a ARCA para crear el registro.</p>
+                  </div>
+                </section>
+              ) : esConsumidorFinal ? (
                 <div className="gcf-alert gcf-alert--info gcf-final-info" role="status">
                   <span className="gcf-alert__icon" aria-hidden="true"><FontAwesomeIcon icon={faCircleInfo} /></span>
                   <div className="gcf-alert__content">
@@ -273,14 +318,14 @@ export default function ModalClienteFiscalArca({
                 </div>
               )}
 
-              {!esConsumidorFinal && helperText && <div className="gcf-modal__help">{helperText}</div>}
+              {!esConsumidorFinal && !esAltaSimple && helperText && <div className="gcf-modal__help">{helperText}</div>}
 
               <div className="gcf-modal__actions">
                 <button type="button" className="mit-btn mit-btn--ghost" onClick={onClose} disabled={busy}>
                   Cancelar
                 </button>
                 <button type="button" className="mit-btn mit-btn--solid" onClick={confirmar} disabled={!canConfirm}>
-                  {saving ? "Procesando..." : esConsumidorFinal ? "Continuar sin CUIT" : confirmText}
+                  {saving ? "Procesando..." : esAltaSimple ? `Guardar ${entidadNombre}` : esConsumidorFinal ? "Continuar sin CUIT" : confirmText}
                 </button>
               </div>
             </aside>

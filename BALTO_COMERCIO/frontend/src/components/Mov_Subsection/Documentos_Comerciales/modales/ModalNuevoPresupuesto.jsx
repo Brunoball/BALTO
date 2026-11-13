@@ -905,6 +905,7 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
   const [configFacturacion, setConfigFacturacion] = useState(null);
   const [addUI, setAddUI] = useState({
     open: false,
+    nombre: "",
     cuit: "",
     fiscalData: null,
     fiscalError: "",
@@ -949,7 +950,7 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
     setModeloNombre("");
     setModeloDescripcion("");
     setSaving(false);
-    setAddUI({ open: false, cuit: "", fiscalData: null, fiscalError: "", lookupLoading: false, saving: false });
+    setAddUI({ open: false, nombre: "", cuit: "", fiscalData: null, fiscalError: "", lookupLoading: false, saving: false });
     let alive = true;
     apiGetJson(`${API}?action=config_facturacion_get`)
       .then((data) => {
@@ -1017,7 +1018,7 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
   }, []);
 
   const resetAddUIState = useCallback(() => {
-    setAddUI({ open: false, cuit: "", fiscalData: null, fiscalError: "", lookupLoading: false, saving: false });
+    setAddUI({ open: false, nombre: "", cuit: "", fiscalData: null, fiscalError: "", lookupLoading: false, saving: false });
   }, []);
 
   const registrarClienteLocal = useCallback((clienteRaw, fiscalRaw = null) => {
@@ -1045,17 +1046,52 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
     return { ...item, cliente_fiscal: fiscalRaw || null };
   }, []);
 
+  // Alta rápida desde Presupuestos, sin CUIT y sin navegar a Cuentas Corrientes.
+  const guardarNuevoClienteSimple = useCallback(async () => {
+    if (addUI.saving || addUI.lookupLoading) return;
+    const nombre = upperInput(addUI.nombre || "").trim().replace(/\s+/g, " ");
+    if (!nombre || nombre.length > 180) {
+      setAddUI((prev) => ({ ...prev, fiscalError: "Ingresá un nombre válido (máximo 180 caracteres)." }));
+      return;
+    }
+
+    const existente = clientesList.find((c) => normalizeText(getClienteNombre(c)) === normalizeText(nombre) && Number(getClienteId(c)) > 0);
+    if (existente) {
+      registrarClienteLocal(existente);
+      resetAddUIState();
+      onToast?.("exito", `El cliente ya existía. Se seleccionó "${getClienteNombre(existente)}".`, 3000);
+      return;
+    }
+
+    setAddUI((prev) => ({ ...prev, saving: true, fiscalError: "" }));
+    try {
+      const { idUsuario } = getAuditUserPayload();
+      const saved = await apiPostJson(`${API}?action=catalogo_crear`, { catalogo: "clientes", nombre, idUsuario });
+      const item = saved?.item || saved?.data?.item || {};
+      const id = Number(getClienteId(item) || item.id || 0);
+      if (!saved?.exito || id <= 0) throw new Error(saved?.mensaje || "No se pudo crear el cliente.");
+      const cliente = registrarClienteLocal({ ...item, id_cliente: id, nombre: item.nombre || nombre, activo: 1 });
+      resetAddUIState();
+      onToast?.("exito", `Cliente "${cliente.nombre}" guardado y seleccionado.`, 3200);
+    } catch (error) {
+      const mensaje = error?.message || "No se pudo guardar el cliente.";
+      setAddUI((prev) => ({ ...prev, saving: false, fiscalError: mensaje }));
+      onToast?.("error", mensaje, 4200);
+    }
+  }, [API, addUI, clientesList, registrarClienteLocal, resetAddUIState, onToast]);
+
   const startAddCliente = useCallback(() => {
     if (saving) return;
     setAddUI({
       open: true,
+      nombre: cliInput || "",
       cuit: "",
       fiscalData: null,
       fiscalError: "",
       lookupLoading: false,
       saving: false,
     });
-  }, [saving]);
+  }, [saving, cliInput]);
 
   const closeAddCliente = useCallback(() => {
     if (addUI.saving || addUI.lookupLoading) return;
@@ -2223,8 +2259,13 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
       <ModalClienteFiscalArca
         open={addUI.open}
         dark={dark}
-        title="Agregar cliente por CUIT"
-        infoTitle="Alta rápida por CUIT"
+        title="Agregar cliente"
+        permitirAltaSimple
+        entidad="cliente"
+        nombreSimple={addUI.nombre || ""}
+        onNombreSimpleChange={(value) => setAddUI((prev) => ({ ...prev, nombre: upperInput(value), fiscalError: "" }))}
+        onConfirmarAltaSimple={guardarNuevoClienteSimple}
+        infoTitle="Alta con CUIT"
         description={
           <>
             Ingresá el CUIT, consultamos ARCA, guardamos la razón social en <b>Clientes</b> y los datos completos en <b>Clientes fiscales</b>.
