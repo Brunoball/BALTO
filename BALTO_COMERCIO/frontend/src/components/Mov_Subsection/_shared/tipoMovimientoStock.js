@@ -15,8 +15,8 @@ export const TIPO_MOV_MUEVE_STOCK = "MUEVE_STOCK";
 export const TIPO_MOV_NO_MUEVE_STOCK = "NO_MUEVE_STOCK";
 
 export const TIPO_MOVIMIENTO_STOCK_OPCIONES = [
-  { value: TIPO_MOV_MUEVE_STOCK, label: "MUEVE STOCK" },
-  { value: TIPO_MOV_NO_MUEVE_STOCK, label: "NO MUEVE STOCK" },
+  { value: TIPO_MOV_MUEVE_STOCK, label: "Mueve stock" },
+  { value: TIPO_MOV_NO_MUEVE_STOCK, label: "No mueve stock" },
 ];
 
 export function normalizarTipoMovimientoStock(value) {

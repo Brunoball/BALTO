@@ -625,7 +625,7 @@ export default function ModalModelosPresupuesto({ open, lists, onClose, onToast,
             <div className="gm-movement-layout presupuesto-modelos-editor__layout">
               <section className="gm-table gm-table--movement gm-movement-main presupuesto-modelos-table">
                 <div className="gm-table-head">
-                  <div className="gm-table-th">Elemento / material</div>
+                  <div className="gm-table-th">Tipo / producto, stock o detalle</div>
                   <div className="gm-table-th">Cantidad / medida</div>
                   <div className="gm-table-th right">Precio</div>
                   <div className="gm-table-th">IVA</div>

@@ -3903,7 +3903,7 @@ export default function ModalNuevaVenta({ open, lists, tiendaNubeVenta = null, o
             <div className="gm-movement-layout">
               <section className="gm-table gm-table--movement gm-movement-main nv-table">
                 <div className={`gm-table-head ${hasScroll ? "gm-table-head--body-scroll" : ""}`}>
-                  <div className="gm-table-th" style={{ paddingLeft: 10 }}>Detalle</div>
+                  <div className="gm-table-th" style={{ paddingLeft: 10 }}>Tipo / producto, stock o detalle</div>
                   <div className="gm-table-th">Cant.</div>
                   <div className="gm-table-th right">Precio</div>
                   <div className="gm-table-th">IVA %</div>

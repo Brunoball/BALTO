@@ -431,7 +431,8 @@ export default function ProductStockAutocomplete({
         }}
         onKeyDown={handleKeyDown}
         onChange={(e) => {
-          onChange?.(e.target.value);
+          // El texto libre del producto/detalle siempre se guarda en mayúsculas.
+          onChange?.(e.target.value.toLocaleUpperCase("es-AR"));
           const next = getCurrentPos();
           if (next) {
             setListPos(next);

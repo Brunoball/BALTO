@@ -1699,7 +1699,7 @@ export default function ModalNuevoPresupuesto({ open, lists, initialModel = null
             <div className="gm-movement-main dc-presupuesto-main">
               <section className="gm-table gm-table--movement dc-presupuesto-table">
               <div className="gm-table-head">
-                <div className="gm-table-th" style={{ paddingLeft: 10 }}>Detalle</div>
+                <div className="gm-table-th" style={{ paddingLeft: 10 }}>Tipo / producto, stock o detalle</div>
                 <div className="gm-table-th">{presupuestoPersonalizado ? "Cant./medida" : "Cant."}</div>
                 <div className="gm-table-th right">Precio</div>
                 <div className="gm-table-th">IVA %</div>

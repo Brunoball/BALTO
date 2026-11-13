@@ -5,6 +5,13 @@
 
 .psa-input {
   width: 100%;
+  /* El producto o detalle se muestra en MAYÚSCULAS, incluso si viene del catálogo. */
+  text-transform: uppercase;
+}
+
+/* El texto de ayuda mantiene su formato normal, como en Servicios. */
+.psa-input::placeholder {
+  text-transform: none;
 }
 
 .psa-list {

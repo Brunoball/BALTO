@@ -1,86 +1,27 @@
-/* =========================================================
-   TIPO DE MOVIMIENTO por renglón (Compras, Ventas, Presupuestos)
-   ---------------------------------------------------------
-   Título compacto + <select> arriba del campo Detalle de cada
-   fila. Usa las variables de GlobalsModalsV2.css para respetar
-   tema claro/oscuro y la altura de las filas actuales.
-========================================================= */
-.gm-tipo-mov {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  width: 100%;
+/*
+ * El selector comparte las clases y el mismo marcado de BALTO Servicios:
+ * gm-cell-input gm-cell-input--select, sin caja, fondo ni bordes propios.
+ * El espacio inferior de 6px también se toma del select de Servicios.
+ */
+.gm-tipo-mov__select.gm-cell-input {
   min-width: 0;
-  margin-bottom: 2px;
+  text-transform: none;
 }
 
-.gm-tipo-mov__label {
-  display: block;
-  padding-left: 2px;
-  color: var(--gm-muted, #667085);
-  font-size: 9.5px;
-  font-weight: 700;
-  letter-spacing: .06em;
-  line-height: 1.1;
-  text-transform: uppercase;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  cursor: pointer;
+.gm-tipo-mov__select option {
+  text-transform: none;
 }
 
-.gm-tipo-mov__select {
-  width: 100%;
-  min-height: 26px;
-  height: 26px;
-  padding: 2px 24px 2px 7px;
-  border: 1px solid var(--gm-border, #d0d5dd);
-  border-radius: 6px;
-  background-color: var(--gm-bg-soft, #f8fafc);
-  color: var(--gm-text, #1d2939);
-  font: inherit;
-  font-size: 11.5px;
-  font-weight: 600;
-  text-transform: uppercase;
-  cursor: pointer;
-}
-
-.gm-tipo-mov__select:focus {
-  border-color: var(--gm-accent, #0055bb);
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(0, 85, 187, .10);
-}
-
-.gm-tipo-mov__select:disabled {
-  cursor: not-allowed;
-  opacity: .65;
-}
-
-/* "NO MUEVE STOCK" se distingue de forma discreta (sin colores de error). */
-.gm-tipo-mov--sin-stock .gm-tipo-mov__select {
-  border-style: dashed;
-}
-
-
-
-
-html[data-theme="oscuro"] .gm-tipo-mov__select {
-  background-color: rgba(255, 255, 255, .06);
-  border-color: rgba(255, 255, 255, .14);
+/*
+ * El select cerrado utiliza los estados, colores, hover y focus globales.
+ * Solo se fija el contraste de la lista nativa desplegada en modo oscuro.
+ */
+html[data-theme="oscuro"] .gm-tipo-mov__select option {
+  background: #071a2c;
   color: rgba(255, 255, 255, .92);
 }
 
-
-/* Móvil: el selector ocupa todo el ancho y mantiene el área táctil. */
-@media (max-width: 720px) {
-  .gm-tipo-mov__label {
-    font-size: 10px;
-  }
-
-  .gm-tipo-mov__select {
-    min-height: 34px;
-    height: 34px;
-    font-size: 13px;
-    border-radius: 8px;
-  }
+html[data-theme="oscuro"] .gm-tipo-mov__select:disabled {
+  color: rgba(255, 255, 255, .72);
+  opacity: 1;
 }
