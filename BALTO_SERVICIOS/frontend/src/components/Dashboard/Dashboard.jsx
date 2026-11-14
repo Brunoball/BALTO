@@ -548,14 +548,8 @@ export default function Dashboard() {
         <header className="db-header db-header--dashboard">
           <div className="db-header__left">
             <h1 className="db-title">Panel Contable</h1>
-<<<<<<< HEAD
             <p className="db-subtitle">{subtitulo}</p>
-=======
-            <p className="db-subtitle">
-              Vista general: saldos por medio de pago, cheques en cartera,
-              movimientos del mes, servicios y cuentas corrientes.
-            </p>
->>>>>>> 8402dc2ee6f21017fdc64a39bd1a57b0cbc0bb44
+
           </div>
 
           <div className="db-header__right db-actions">
