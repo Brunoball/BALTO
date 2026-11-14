@@ -17,6 +17,7 @@ import { crearReceptorConsumidorFinal, validarConsumidorFinalSinIdentificar } fr
 import "../../../Global/Global_css/GlobalsModalsV2.css";
 import "../../../Global/Global_css/Global_responsive.css";
 import "../../../Global/Global_css/roots.css";
+import "../../_shared/TipoMovimientoStock.css";
 import "./ModalIngreso.css";
 import "../../../Global/Global_css/GlobalMovementEntryResponsive.css";
 import { otrosIngresosFetch } from "../api/otrosIngresosApi.js";
@@ -2388,11 +2389,12 @@ export default function ModalNuevoIngreso({
                       >
                         <div className="gm-table-cell gm-table-cell--detail">
                           <select
-                            className="oi-item-kind"
+                            className="oi-item-kind gm-cell-input gm-cell-input--select gm-tipo-mov__select"
                             value={r.tipo_item === "producto" ? "producto" : "servicio"}
                             onChange={(e) => handleTipoItemChange(r.id, e.target.value)}
                             disabled={saving}
                             aria-label={`Tipo de ítem fila ${rowIndex + 1}`}
+                            style={{ marginBottom: 6 }}
                           >
                             <option value="servicio">Detalle</option>
                             <option value="producto">Producto (mueve stock)</option>

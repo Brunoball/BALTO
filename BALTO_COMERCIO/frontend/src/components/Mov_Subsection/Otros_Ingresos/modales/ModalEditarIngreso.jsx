@@ -16,6 +16,7 @@ import BASE_URL from "../../../../config/config.jsx";
 import "../../../Global/Global_css/GlobalsModalsV2.css";
 import "../../../Global/Global_css/Global_responsive.css";
 import "../../../Global/Global_css/roots.css";
+import "../../_shared/TipoMovimientoStock.css";
 import "./ModalIngreso.css";
 import ModalVerComprobante from "../../../Global/Ver_Comprobantes/ModalVerComprobante.jsx";
 import GlobalAutocomplete from "../../../Global/GlobalAutocomplete/GlobalAutocomplete.jsx";
@@ -1534,11 +1535,12 @@ export default function ModalEditarIngreso({
                           {/* Descripción */}
                           <div className="gm-table-cell gm-table-cell--detail">
                             <select
-                              className="oi-item-kind"
+                              className="oi-item-kind gm-cell-input gm-cell-input--select gm-tipo-mov__select"
                               value={it.tipo_item === "producto" ? "producto" : "servicio"}
                               onChange={(e) => handleTipoItemChange(it.uid, e.target.value)}
                               disabled={saving}
                               aria-label={`Tipo de ítem fila ${itemIndex + 1}`}
+                              style={{ marginBottom: 6 }}
                             >
                               <option value="servicio">Detalle</option>
                               <option value="producto">Producto (mueve stock)</option>

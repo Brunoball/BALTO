@@ -39,37 +39,8 @@
   line-height: 1.25;
 }
 
-.oi-item-kind {
-  width: 100%;
-  min-height: 26px;
-  margin-bottom: 3px;
-  padding: 2px 24px 2px 7px;
-  border: 1px solid var(--gm-border, #d0d5dd);
-  border-radius: 6px;
-  background: var(--gm-bg-soft, #f8fafc);
-  color: var(--gm-text, #1d2939);
-  font: inherit;
-  font-size: 11px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.oi-item-kind:focus {
-  border-color: var(--gm-accent, #0055bb);
-  outline: none;
-  box-shadow: 0 0 0 3px var(--oi-focus);
-}
-
-.oi-item-kind:disabled {
-  cursor: not-allowed;
-  opacity: .65;
-}
-
-html[data-theme="oscuro"] .oi-item-kind {
-  background: rgba(255, 255, 255, .06);
-  border-color: rgba(255, 255, 255, .14);
-  color: rgba(255, 255, 255, .92);
-}
+/* El selector Tipo de ítem usa el mismo gm-cell-input / gm-tipo-mov__select
+   que Ventas, Compras y Presupuestos. Sin estilos locales que los diferencien. */
 
 /* Buscador de cliente: mismo comportamiento visual que Nueva Venta. */
 .oi-cliente-wrap {
