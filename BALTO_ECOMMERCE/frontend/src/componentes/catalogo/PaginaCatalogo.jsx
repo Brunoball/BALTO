@@ -206,7 +206,7 @@ export default function PaginaCatalogo({ config }) {
   return <main className="catalog-page">
     <div className={`shell catalog-layout ${enabled ? '' : 'is-single'}`}>
       {enabled && <>
-        {filtersOpen && <button type="button" className="catalog-sidebar-backdrop" aria-label="Cerrar filtros" tabIndex={-1} onClick={() => setFiltersOpen(false)}/>}
+        {filtersOpen && <button type="button" className="catalog-sidebar-backdrop" aria-hidden="true" tabIndex={-1} onClick={() => setFiltersOpen(false)}/>}
         <aside id="filtros-catalogo" ref={sidebarRef} className={`catalog-sidebar ${filtersOpen ? 'is-open' : ''} ${sidebarSticky ? 'is-sticky' : ''}`} aria-label="Filtros del catálogo">
           <div className="catalog-sidebar-head">
             <strong>Filtros</strong>

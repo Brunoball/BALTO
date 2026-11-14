@@ -35,14 +35,21 @@ test.describe('Navegación', () => {
     await expect(page.getByTestId('order-number')).toHaveCount(0);
   });
 
+  // El encabezado de escritorio solo tiene "Productos"; Inicio, Favoritos, Carrito y Contacto están
+  // en el pie (y en el menú móvil, que prueba 15-movil). Antes este test buscaba un menú
+  // "Navegación principal" de escritorio que el diseño actual ya no tiene.
   test('menú principal: cada enlace navega y queda marcado como actual', async ({ page }) => {
     await page.goto('/');
-    const nav = page.getByRole('navigation', { name: 'Navegación principal' });
-    for (const [nombre, ruta] of [['Todos los productos', '/catalogo'], ['Favoritos', '/favoritos'], ['Carrito', '/carrito'], ['Contacto', '/contacto'], ['Inicio', '/']]) {
-      await nav.getByRole('link', { name: nombre, exact: true }).click();
+    const productos = page.locator('.site-header').getByRole('link', { name: 'Productos', exact: true });
+    await productos.click();
+    await expect(page).toHaveURL(/\/catalogo$/);
+    await expect(productos).toHaveAttribute('aria-current', 'page');
+    const pie = page.getByRole('contentinfo');
+    for (const [nombre, ruta] of [['Mis favoritos', '/favoritos'], ['Carrito', '/carrito'], ['Contacto', '/contacto'], ['Catálogo', '/catalogo'], ['Inicio', '/']]) {
+      await pie.getByRole('link', { name: nombre, exact: true }).click();
       await expect(page).toHaveURL(new RegExp(`${ruta.replace('/', '\\/')}$`));
-      await expect(nav.getByRole('link', { name: nombre, exact: true })).toHaveAttribute('aria-current', 'page');
     }
+    await expect(productos).not.toHaveAttribute('aria-current', 'page');
   });
 
   test('el buscador del encabezado lleva al catálogo con el término', async ({ page }) => {

@@ -41,7 +41,7 @@ export default function Encabezado({ config }) {
         </div>
       </div>
       {menuOpen && <>
-        <button type="button" className="mobile-panel-backdrop" aria-label="Cerrar menú" tabIndex={-1} onClick={closeMenu}/>
+        <button type="button" className="mobile-panel-backdrop" aria-hidden="true" tabIndex={-1} onClick={closeMenu}/>
         <div className="mobile-panel" id="menu-movil">
           <div className="shell mobile-panel-inner">
             {searchField('busqueda-movil')}
