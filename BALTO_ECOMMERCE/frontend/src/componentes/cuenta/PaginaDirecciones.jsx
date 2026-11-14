@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Briefcase, Check, LoaderCircle, MapPin, Pencil, Plus, Star, Trash2, X } from 'lucide-react';
+import { AlertTriangle, Briefcase, Check, LoaderCircle, MapPin, Pencil, Plus, Star, Trash2, X } from 'lucide-react';
 import { useCuenta } from './contexto/CuentaContext';
 import { eliminarDireccion, guardarDireccion, listarDirecciones, predeterminarDireccion } from './api/cuentaApi';
 import CamposDireccion from '../direccion/CamposDireccion';
@@ -73,7 +73,7 @@ export default function PaginaDirecciones() {
     if (auth.cliente) auth.actualizarCliente({ ...auth.cliente, id_direccion_predeterminada: pred ? pred.id : null });
     setEditando(null);
     setConfirmar(null);
-    setAviso(mensaje);
+    setAviso({ ok: true, texto: mensaje });
   }, [auth]);
 
   const accion = async (id, fn, mensaje) => {
@@ -83,7 +83,7 @@ export default function PaginaDirecciones() {
       const data = await fn(id);
       aplicar(data.direcciones || [], mensaje);
     } catch (error) {
-      setAviso(error.message);
+      setAviso({ ok: false, texto: error.message || 'No pudimos completar la operación.' });
       if (error.status === 404) setRev((n) => n + 1);
     } finally {
       setOcupado(null);
@@ -93,7 +93,9 @@ export default function PaginaDirecciones() {
   const { direcciones } = state;
   const lleno = direcciones.length >= state.maximo;
   return <EstructuraCuenta title="Mis direcciones" description="Guardá tus direcciones para elegirlas al finalizar una compra. Los pedidos conservan la dirección que usaste, aunque después la cambies.">
-    {aviso && <div className="account-notice" role="status"><Check size={16}/> {aviso}</div>}
+    {aviso && (aviso.ok
+      ? <div className="account-notice" role="status"><Check size={16}/> {aviso.texto}</div>
+      : <div className="account-notice is-error" role="alert"><AlertTriangle size={16}/> {aviso.texto}</div>)}
     {editando
       ? <AddressForm key={editando === 'nueva' ? 'nueva' : editando.id} paises={state.paises}
         inicial={editando === 'nueva'

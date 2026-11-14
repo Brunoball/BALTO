@@ -4,6 +4,7 @@ import { ArrowUpRight, Heart, LayoutGrid, Menu, Search, ShoppingBag, Store, X } 
 import { useCarrito } from '../carrito/contexto/CarritoContext';
 import { whatsAppLink } from '../global/utilidades/formato';
 import BarraAnuncios from './BarraAnuncios';
+import { pagosActivos } from '../pagos/utilidades/reglasPago';
 import MenuCuenta, { EnlacesCuentaMovil } from '../cuenta/MenuCuenta';
 
 export default function Encabezado({ config }) {
@@ -23,7 +24,7 @@ export default function Encabezado({ config }) {
     <button type="submit" aria-label="Ir al catálogo con esta búsqueda"><ArrowUpRight size={17}/></button>
   </form>;
   return <>
-    <BarraAnuncios checkout={Boolean(config.checkout_habilitado)}/>
+    <BarraAnuncios checkout={Boolean(config.checkout_habilitado)} pagos={pagosActivos(config)}/>
     <header className="site-header">
       <div className="shell header-main">
         <button className="icon-button mobile-menu-toggle" type="button" aria-label={menuOpen ? 'Cerrar menú' : 'Abrir menú'} aria-expanded={menuOpen} aria-controls="menu-movil" onClick={() => setMenuOpen(!menuOpen)}>{menuOpen ? <X size={22}/> : <Menu size={22}/>}</button>

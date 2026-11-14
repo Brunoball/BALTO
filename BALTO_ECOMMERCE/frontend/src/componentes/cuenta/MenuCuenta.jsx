@@ -4,6 +4,19 @@ import { ChevronDown, LoaderCircle, LogIn, LogOut, MapPin, Package, User } from 
 import { useCuenta } from './contexto/CuentaContext';
 import { loginPath } from '../autenticacion/utilidades/redireccionSegura';
 
+/**
+ * A dónde ir ANTES de cerrar la sesión:
+ *  - /mi-cuenta/*: al inicio (si la sesión se borra antes, RequiereSesion manda al login).
+ *  - /checkout: al carrito. El formulario de compra tiene nombre, email y teléfono de la cuenta;
+ *    si se quedaba abierto, esos datos seguían en pantalla y se volvían a guardar en el navegador
+ *    (sessionStorage) después del logout. El carrito se conserva.
+ */
+export function destinoAntesDeSalir(pathname) {
+  if (pathname.startsWith('/mi-cuenta')) return '/';
+  if (pathname.startsWith('/checkout')) return '/carrito';
+  return null;
+}
+
 export function iniciales(cliente) {
   const a = String(cliente?.nombre || '').trim()[0] || '';
   const b = String(cliente?.apellido || '').trim()[0] || '';
@@ -54,9 +67,9 @@ export default function MenuCuenta({ onNavigate }) {
   const c = auth.cliente;
   const salir = async () => {
     setSaliendo(true);
-    // Primero se sale del área privada: si la sesión se borra antes, RequiereSesion
-    // redirige al login y la persona termina en "Ingresá a tu cuenta" en vez del inicio.
-    if (location.pathname.startsWith('/mi-cuenta')) navigate('/', { replace: true });
+    // Primero se sale de las páginas con datos de la cuenta (ver destinoAntesDeSalir).
+    const destino = destinoAntesDeSalir(location.pathname);
+    if (destino) navigate(destino, { replace: true });
     await auth.logout();
     setSaliendo(false);
     setOpen(false);
@@ -95,7 +108,8 @@ export function EnlacesCuentaMovil({ onNavigate }) {
     <Link to="/mi-cuenta/direcciones" onClick={onNavigate}><MapPin size={16}/> Mis direcciones</Link>
     <Link to="/mi-cuenta/pedidos" onClick={onNavigate}><Package size={16}/> Mis pedidos</Link>
     <button type="button" onClick={async () => {
-      if (location.pathname.startsWith('/mi-cuenta')) navigate('/', { replace: true }); // antes de borrar la sesión (ver salir())
+      const destino = destinoAntesDeSalir(location.pathname); // antes de borrar la sesión (ver salir())
+      if (destino) navigate(destino, { replace: true });
       await auth.logout();
       onNavigate?.();
     }}><LogOut size={16}/> Cerrar sesión</button>

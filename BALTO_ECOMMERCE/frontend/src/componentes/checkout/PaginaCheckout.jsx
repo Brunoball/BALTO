@@ -10,11 +10,14 @@ import FormularioCheckout from './FormularioCheckout';
 import ResumenPedido from './ResumenPedido';
 import AvisosCarrito from '../carrito/AvisosCarrito';
 import { EstadoVacio } from '../global/Estados';
+import { pagosActivos } from '../pagos/utilidades/reglasPago';
 
 export default function PaginaCheckout({ config }) {
   const { items, bloqueos, validacionVigente } = useCarrito();
   const auth = useCuenta();
   const form = useCheckout(config);
+  // Con medios de pago activos el pago se elige acá; sin ellos se coordina con la tienda (como antes).
+  const cierre = pagosActivos(config) ? 'Elegí la entrega y el medio de pago: la tienda confirma la disponibilidad y verifica el pago.' : 'la tienda se comunicará para coordinar la entrega y el pago.';
   useSincronizarCarrito(items.length > 0 && !form.sending);
   if (!items.length) {
     return <main className="shell standard-page"><EstadoVacio title="No hay productos para comprar" description="Agregá productos al carrito para continuar." icon={ShoppingBag}/><div className="standard-page-action"><Link to="/catalogo" className="btn btn-dark">Ir al catálogo</Link></div></main>;
@@ -22,8 +25,8 @@ export default function PaginaCheckout({ config }) {
   return <main className="shell standard-page checkout-page">
     <Link to="/carrito" className="back-to-catalog"><ArrowLeft size={16}/> Volver al carrito</Link>
     {auth.autenticado
-      ? <div className="page-intro"><span className="eyebrow">COMPRA CON TU CUENTA</span><h1>Finalizar pedido<span>.</span></h1><p>Cargamos tus datos guardados. Revisalos y la tienda se comunicará para coordinar la entrega y el pago.</p></div>
-      : <div className="page-intro"><span className="eyebrow">COMPRA COMO INVITADO</span><h1>Finalizar pedido<span>.</span></h1><p>No necesitás registrarte. Completá tus datos y la tienda se comunicará para coordinar la entrega y el pago.</p></div>}
+      ? <div className="page-intro"><span className="eyebrow">COMPRA CON TU CUENTA</span><h1>Finalizar pedido<span>.</span></h1><p>Cargamos tus datos guardados. Revisalos{pagosActivos(config) ? '. ' : ' y '}{cierre}</p></div>
+      : <div className="page-intro"><span className="eyebrow">COMPRA COMO INVITADO</span><h1>Finalizar pedido<span>.</span></h1><p>No necesitás registrarte. Completá tus datos{pagosActivos(config) ? '. ' : ' y '}{cierre}</p></div>}
     {!form.enabled && config.checkout_bloqueo === 'SIN_MEDIOS_PAGO' && <div className="checkout-banner is-warning" role="status" data-testid="checkout-sin-pagos"><span><strong>La tienda todavía no tiene medios de pago habilitados para compras online.</strong> Podés consultarnos por los productos de tu carrito.</span></div>}
     {!form.enabled && config.checkout_bloqueo !== 'SIN_MEDIOS_PAGO' && <div className="checkout-banner" role="status" data-testid="checkout-disabled"><span><strong>La compra online todavía no está habilitada en esta tienda.</strong> Podés revisar tu pedido, pero el botón de confirmación permanece deshabilitado.</span></div>}
     {config.checkout_modo === 'PRUEBA' && <div className="checkout-banner is-test" role="status"><FlaskConical size={17}/> <span><strong>Modo prueba autorizado.</strong> El pedido se registra como prueba (número T-…), no genera ventas, no descuenta stock ni registra pagos.</span></div>}

@@ -115,6 +115,26 @@ test.describe('Autenticación · interfaz', () => {
     await expect(page.getByRole('link', { name: 'Ingresar a tu cuenta' })).toBeVisible();
   });
 
+  test('cerrar sesión durante el checkout vuelve al carrito sin dejar los datos de la cuenta', async ({ page, request }) => {
+    const p = elegir.simple(await productos(request), 1);
+    test.skip(!p, 'Se necesita un producto simple.');
+    const { sim, cliente } = await prepararCuenta(page, { escribe: false, tienda: { checkout: true, pagos: false, entregas: ['RETIRO'] } });
+    test.skip(!sim, 'En modo real no se cierra la sesión del comprador de prueba.');
+    await agregarDesdeFicha(page, p);
+    await page.goto('/checkout');
+    await expect(page.locator('#checkout-email')).toHaveValue(cliente.email);
+    await page.locator('.account-trigger').click();
+    await page.getByRole('menuitem', { name: /Cerrar sesión/ }).click();
+    // Antes se quedaba en el checkout con nombre, email y teléfono de la cuenta cargados.
+    await expect(page).toHaveURL(/\/carrito$/);
+    expect(sim.llamadas('auth_logout')).toHaveLength(1);
+    await expect(page.locator('[data-testid="cart-line"]').first()).toBeVisible(); // el carrito se conserva
+    const borrador = await page.evaluate((k) => sessionStorage.getItem(k), `balto:ecommerce:checkout-borrador:${ENV.tienda}`);
+    expect(borrador, 'El borrador del checkout con datos de la cuenta debe borrarse').toBeNull();
+    await page.goto('/checkout');
+    await expect(page.locator('#checkout-email')).toHaveValue('');
+  });
+
   test('con las cuentas deshabilitadas se compra como invitado', async ({ page }) => {
     await simularApi(page, { tienda: { cuentas: false } });
     await page.goto('/mi-cuenta');
