@@ -1,8 +1,12 @@
 // Mi cuenta · pedidos: cliente_pedidos (paginado) y cliente_pedido_detalle (con estado del pago).
 const { test, expect } = require('./soporte/test');
-const { prepararCuenta } = require('./soporte/sesion');
+const { prepararCuenta, instalarCookieReal, sesionActual } = require('./soporte/sesion');
 const { pedidoEjemplo } = require('./soporte/simulador');
 const { dinero } = require('./soporte/flujos');
+const { ENV } = require('./soporte/entorno');
+
+// Fechas de la API: ISO-8601 con el desfase de la zona de la tienda (la base guarda UTC).
+const FECHA_ISO_LOCAL = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}$/;
 
 test.describe('Mi cuenta · pedidos', () => {
   test('@smoke listado paginado y detalle con el estado del pago', async ({ page }) => {
@@ -67,5 +71,32 @@ test.describe('Mi cuenta · pedidos', () => {
     const subida = cuenta.sim.llamadas('pago_comprobante_subir')[0];
     expect(subida.headers['x-csrf-token']).toBe(cuenta.csrf);
     expect(subida.headers['x-ecom-pedido-token']).toBeUndefined();
+  });
+
+  test('sesión REAL: las fechas de pedidos y pagos llegan en hora local ISO-8601 (no UTC crudo)', async ({ page }) => {
+    test.skip(!ENV.sesionComprador, 'Sin PW_SESION_COMPRADOR.');
+    await instalarCookieReal(page.context(), page.request);
+    const s = await sesionActual(page);
+    expect(s?.autenticado, 'PW_SESION_COMPRADOR no es válida o venció.').toBe(true);
+    const t = encodeURIComponent(ENV.tienda);
+    const lista = await (await page.request.get(`/ecom-api?action=cliente_pedidos&tienda=${t}&pagina=1&limite=5`, { failOnStatusCode: false })).json();
+    expect(lista.exito).toBe(true);
+    test.skip(!lista.pedidos?.length, 'La cuenta de prueba no tiene pedidos.');
+    for (const p of lista.pedidos) expect(p.fecha, `fecha del pedido ${p.numero}`).toMatch(FECHA_ISO_LOCAL);
+    const numero = lista.pedidos[0].numero;
+    const det = await (await page.request.get(`/ecom-api?action=cliente_pedido_detalle&tienda=${t}&numero=${encodeURIComponent(numero)}`, { failOnStatusCode: false })).json();
+    expect(det.exito).toBe(true);
+    expect(det.pedido.fecha).toBe(lista.pedidos[0].fecha);
+    for (const c of det.pedido.pago?.comprobantes || []) {
+      expect(c.subido_en).toMatch(FECHA_ISO_LOCAL);
+      if (c.revisado_en !== null) expect(c.revisado_en).toMatch(FECHA_ISO_LOCAL);
+    }
+    if (det.pedido.pago?.pagado_en) expect(det.pedido.pago.pagado_en).toMatch(FECHA_ISO_LOCAL);
+    const perfil = await (await page.request.get(`/ecom-api?action=cliente_perfil&tienda=${t}`, { failOnStatusCode: false })).json();
+    expect(perfil.cliente.cliente_desde).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    // La web muestra "dd/mm/aaaa hh:mm" con la hora LOCAL (los primeros 16 caracteres del ISO).
+    await page.goto('/mi-cuenta/pedidos');
+    const [, a, m, d, hh, mm] = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(lista.pedidos[0].fecha);
+    await expect(page.locator('.order-row').first()).toContainText(`${d}/${m}/${a} ${hh}:${mm}`);
   });
 });

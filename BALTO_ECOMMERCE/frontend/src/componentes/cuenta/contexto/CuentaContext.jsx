@@ -43,9 +43,12 @@ export function CuentaProvider({ cuentas, children }) {
     try {
       const data = await consultarSesion();
       if (id !== requestId.current) return null;
-      setState(data.autenticado
+      const nuevo = data.autenticado
         ? { estado: 'autenticado', cliente: data.cliente, error: null }
-        : { estado: 'anonimo', cliente: null, error: null });
+        : { estado: 'anonimo', cliente: null, error: null };
+      // Sin cambios (mismo estado y mismos datos): se conserva el objeto anterior para no volver a
+      // dibujar toda la tienda ni reiniciar componentes que dependen de la sesión.
+      setState((s) => (s.estado === nuevo.estado && !s.error && JSON.stringify(s.cliente) === JSON.stringify(nuevo.cliente) ? s : nuevo));
       return data;
     } catch (error) {
       if (id !== requestId.current) return null;

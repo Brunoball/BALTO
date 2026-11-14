@@ -18,6 +18,6 @@ export function ImagenProducto({ url, alt = '', className = '', prioridad = fals
   const [broken, setBroken] = React.useState(false);
   React.useEffect(() => setBroken(false), [url]);
   return url && !broken
-    ? <img className={className} src={url} alt={alt} loading={prioridad ? 'eager' : 'lazy'} decoding="async" fetchpriority={prioridad ? 'high' : undefined} onError={() => setBroken(true)} />
+    ? <img className={className} src={url} alt={alt} loading={prioridad ? 'eager' : 'lazy'} decoding="async" fetchPriority={prioridad ? 'high' : undefined} onError={() => setBroken(true)} />
     : <span className={`image-fallback ${className}`} aria-label={alt || 'Sin imagen'} role="img"><Box size={42} strokeWidth={1.3} /></span>;
 }

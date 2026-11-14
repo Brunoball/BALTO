@@ -21,11 +21,17 @@ export default function PanelCarrito({ config }) {
   useEffect(() => {
     if (!cartOpen) { setConfirmClear(false); return undefined; }
     const before = document.body.style.overflow;
+    // Quien abrió el panel (botón del carrito, "Agregar"…): recupera el foco al cerrar (accesibilidad).
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     document.body.style.overflow = 'hidden';
     const handleKey = (e) => { if (e.key === 'Escape') setCartOpen(false); };
     document.addEventListener('keydown', handleKey);
     closeRef.current?.focus();
-    return () => { document.body.style.overflow = before; document.removeEventListener('keydown', handleKey); };
+    return () => {
+      document.body.style.overflow = before;
+      document.removeEventListener('keydown', handleKey);
+      if (opener?.isConnected) opener.focus({ preventScroll: true });
+    };
   }, [cartOpen, setCartOpen]);
   if (!cartOpen) return null;
   const close = () => setCartOpen(false);

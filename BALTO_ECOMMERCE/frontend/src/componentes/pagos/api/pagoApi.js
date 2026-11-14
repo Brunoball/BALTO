@@ -68,6 +68,10 @@ export async function descargarComprobante(numero, id, token) {
   } catch (_) {
     throw new EcommerceApiError('No se pudo conectar con el servidor de la tienda.', 'SIN_CONEXION');
   }
-  if (!res.ok) throw new EcommerceApiError('No pudimos descargar el comprobante.', 'DESCARGA_FALLIDA', res.status);
+  if (!res.ok) {
+    let data = null;
+    try { data = await res.json(); } catch (_) { /* respuesta sin JSON */ }
+    throw new EcommerceApiError(data?.mensaje || 'No pudimos descargar el comprobante.', data?.codigo || 'DESCARGA_FALLIDA', res.status, data);
+  }
   return res.blob();
 }

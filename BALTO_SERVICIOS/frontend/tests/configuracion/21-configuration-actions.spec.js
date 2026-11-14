@@ -1,0 +1,271 @@
+import { test, expect } from '../support/test.js';
+import { uniqueName } from '../support/data.js';
+import { authenticatedApi, expectApiSuccess } from '../support/api.js';
+import { requireMutations, waitForBusyToFinish } from '../support/ui.js';
+
+async function getCalendarConfig(page) {
+  const result = await authenticatedApi(page, 'configuracion_calendario_get');
+  expectApiSuccess(result, 'No se pudo leer la configuración del calendario');
+  return result.body?.config || {};
+}
+
+
+async function cleanupTestUser(page, names) {
+  try {
+    const list = await authenticatedApi(page, 'configuracion_usuarios_listar');
+    if (!list.ok || list.body?.exito === false) return;
+    const candidates = Array.isArray(list.body?.usuarios) ? list.body.usuarios : [];
+    const expected = new Set(names.map((value) => String(value).trim().toUpperCase()));
+    const found = candidates.find((user) => expected.has(String(user?.usuario || '').trim().toUpperCase()));
+    const id = Number(found?.idUsuarioMaster || found?.id_usuario_master || 0);
+    if (!id) return;
+    await authenticatedApi(page, 'configuracion_usuarios_eliminar', {
+      method: 'POST',
+      body: { idUsuarioMaster: id },
+    });
+  } catch {
+    // Limpieza defensiva: no tapa el error funcional original del test.
+  }
+}
+
+async function restoreCalendarConfig(page, config) {
+  const result = await authenticatedApi(page, 'configuracion_calendario_set', {
+    method: 'POST',
+    body: {
+      modo: config?.modo === 'dias_atras' ? 'dias_atras' : 'mes_completo',
+      dias_atras: Math.max(1, Number(config?.dias_atras || 10)),
+    },
+  });
+  expectApiSuccess(result, 'No se pudo restaurar la configuración del calendario');
+}
+
+test('@configuracion @crud calendario: guardar, persistir y restaurar', async ({ page }) => {
+  // En una corrida completa el DateRangeContext puede terminar de hidratar unas
+  // décimas después de que la tarjeta ya es visible. Damos margen al test para
+  // estabilizar esa hidratación y para restaurar la configuración en el finally.
+  test.setTimeout(120_000);
+
+  await requireMutations(test, page);
+
+  // Esperamos explícitamente la lectura que dispara la propia pantalla antes de
+  // tocar el formulario. En una suite larga ese GET puede tardar bastante más que
+  // el render inicial y, si termina después del click, React vuelve a hidratar el
+  // estado anterior y hace desaparecer los cambios pendientes.
+  const uiHydration = page.waitForResponse(
+    (candidate) =>
+      candidate.request().method() === 'GET' &&
+      new URL(candidate.url()).searchParams.get('action') === 'configuracion_calendario_get',
+    { timeout: 45_000 },
+  );
+  await page.goto('/panel/configuracion/calendario');
+  const hydrationResponse = await uiHydration;
+  expect(hydrationResponse.status()).toBeLessThan(400);
+  await waitForBusyToFinish(page);
+
+  const original = await getCalendarConfig(page);
+
+  try {
+    // El GET directo puede terminar unas milésimas antes que la hidratación del
+    // contexto React. Esperamos que la UI muestre el valor real del backend para
+    // evitar que un effect tardío revierta el click y vuelva a deshabilitar Guardar.
+    const currentCard = page.locator('.cal-metaCard').filter({ hasText: /Estado actual/i }).first();
+    await expect(currentCard).toBeVisible({ timeout: 30_000 });
+    await expect(currentCard).toContainText(
+      original?.modo === 'dias_atras' ? /Últimos N días/i : /Mes completo/i,
+      { timeout: 30_000 },
+    );
+
+    const targetMode = original?.modo === 'dias_atras' ? 'mes_completo' : 'dias_atras';
+    const targetButton = page.getByRole('button', {
+      name: targetMode === 'dias_atras' ? /Últimos N días/i : /Mes completo/i,
+    });
+    const saveButton = page.getByRole('button', { name: /Guardar configuración/i });
+
+    // La tarjeta puede quedar visible antes de que el GET inicial del contexto
+    // termine de aplicar su estado. Si ese GET completa justo después del click,
+    // React vuelve momentáneamente al modo original. Reintentamos la selección
+    // hasta comprobar que permanece estable, en lugar de interpretar ese race
+    // de hidratación como un fallo funcional.
+    let selectionStable = false;
+    for (let attempt = 0; attempt < 3 && !selectionStable; attempt += 1) {
+      await targetButton.click();
+      await expect(targetButton).toHaveClass(/cal-actionRow--active/, { timeout: 15_000 });
+      await expect(saveButton).toBeEnabled({ timeout: 15_000 });
+
+      await page.waitForTimeout(650);
+      const className = await targetButton.getAttribute('class').catch(() => '');
+      selectionStable = /cal-actionRow--active/.test(className || '') &&
+        await saveButton.isEnabled().catch(() => false);
+    }
+    expect(selectionStable, 'El modo elegido debe permanecer estable tras hidratar el calendario').toBeTruthy();
+
+    if (targetMode === 'dias_atras') {
+      // El modo no cruza al mes anterior: el día 1 el único valor posible es 0 (sólo hoy).
+      const maxAllowed = Math.max(0, new Date().getDate() - 1);
+      const daysInput = page.getByLabel('Cantidad de días hacia atrás');
+      await expect(daysInput).toBeVisible({ timeout: 15_000 });
+      await daysInput.fill(String(Math.min(2, maxAllowed)));
+      await daysInput.blur();
+      await expect(saveButton).toBeEnabled({ timeout: 15_000 });
+    }
+
+    const [response] = await Promise.all([
+      page.waitForResponse(
+        (candidate) =>
+          candidate.request().method() === 'POST' &&
+          new URL(candidate.url()).searchParams.get('action') === 'configuracion_calendario_set',
+        { timeout: 45_000 },
+      ),
+      saveButton.click(),
+    ]);
+    expect(response.status()).toBeLessThan(400);
+
+    await expect(page.locator('body')).toContainText(/Configuración guardada correctamente/i);
+    const persisted = await getCalendarConfig(page);
+    expect(persisted.modo).toBe(targetMode);
+  } finally {
+    await restoreCalendarConfig(page, original);
+  }
+});
+
+
+test('@configuracion tema: cambia, persiste y restaura', async ({ page }) => {
+  await requireMutations(test, page);
+  await page.goto('/panel/dashboard');
+  await waitForBusyToFinish(page);
+
+  const original = await page.locator('html').getAttribute('data-theme') || 'claro';
+  const changed = original === 'oscuro' ? 'claro' : 'oscuro';
+
+  try {
+    const responsePromise = page.waitForResponse(
+      (response) =>
+        response.request().method() === 'POST' &&
+        new URL(response.url()).searchParams.get('action') === 'usuario_tema_actualizar',
+      { timeout: 45_000 },
+    );
+    await page.getByRole('button', {
+      name: original === 'oscuro' ? /Cambiar a modo claro/i : /Cambiar a modo oscuro/i,
+    }).click();
+    expect((await responsePromise).status()).toBeLessThan(400);
+    await expect(page.locator('html')).toHaveAttribute('data-theme', changed);
+  } finally {
+    const current = await page.locator('html').getAttribute('data-theme').catch(() => original);
+    if (current !== original) {
+      const restoreResponse = page.waitForResponse(
+        (response) =>
+          response.request().method() === 'POST' &&
+          new URL(response.url()).searchParams.get('action') === 'usuario_tema_actualizar',
+        { timeout: 45_000 },
+      );
+      await page.getByRole('button', {
+        name: original === 'oscuro' ? /Cambiar a modo oscuro/i : /Cambiar a modo claro/i,
+      }).click();
+      expect((await restoreResponse).status()).toBeLessThan(400);
+      await expect(page.locator('html')).toHaveAttribute('data-theme', original);
+    }
+  }
+});
+
+test('@configuracion @crud usuarios: alta, edición, baja, activación y eliminación', async ({ page }) => {
+  await requireMutations(test, page);
+  const username = uniqueName('USUARIO', 36);
+  const editedUsername = `${username}-E`.slice(0, 40);
+  const email = `${username.toLowerCase()}@example.test`;
+
+  try {
+    await page.goto('/panel/configuracion/usuarios');
+    await waitForBusyToFinish(page);
+    await page.getByRole('button', { name: /Agregar usuario/i }).click();
+
+    let dialog = page.getByRole('dialog', { name: 'Agregar usuario' }).last();
+    await expect(dialog).toBeVisible();
+    const createInputs = dialog.locator('input.mu-input');
+    await createInputs.nth(0).fill(username);
+    await createInputs.nth(1).fill(email);
+    await createInputs.nth(2).fill('Pw!123456');
+
+    // El backend final exige rol explícito. La pantalla lo completa al cargar los
+    // roles, pero en E2E puede abrirse el modal unas décimas antes. Esperamos el
+    // catálogo y elegimos un rol válido para eliminar esa carrera sin ocultar un
+    // eventual 500 de configuracion_usuarios_listar.
+    const roleSelect = dialog.locator('select.mu-select').first();
+    await expect(roleSelect).toBeEnabled({ timeout: 30_000 });
+    const roleOptions = roleSelect.locator('option');
+    await expect(roleOptions).not.toHaveCount(0);
+    if (!(await roleSelect.inputValue())) {
+      const roleValues = await roleOptions.evaluateAll((options) =>
+        options.map((option) => String(option.value || '').trim()).filter(Boolean)
+      );
+      expect(roleValues.length, 'Debe existir al menos un rol válido para crear usuarios').toBeGreaterThan(0);
+      await roleSelect.selectOption(roleValues[0]);
+    }
+    await expect(dialog.getByRole('button', { name: /Crear usuario/i })).toBeEnabled({ timeout: 30_000 });
+
+    let responsePromise = page.waitForResponse(
+      (response) =>
+        response.request().method() === 'POST' &&
+        new URL(response.url()).searchParams.get('action') === 'configuracion_usuarios_guardar',
+      { timeout: 90_000 },
+    );
+    await dialog.getByRole('button', { name: /Crear usuario/i }).click();
+    expect((await responsePromise).status()).toBeLessThan(400);
+    await expect(dialog).toBeHidden({ timeout: 30_000 });
+
+    let row = page.locator('.cfg-users-table tbody tr').filter({ hasText: username }).first();
+    await expect(row).toBeVisible({ timeout: 30_000 });
+    await row.getByRole('button', { name: /Editar usuario/i }).click();
+
+    dialog = page.getByRole('dialog', { name: 'Editar usuario' }).last();
+    await expect(dialog).toBeVisible();
+    await dialog.locator('input.mu-input').nth(0).fill(editedUsername);
+    responsePromise = page.waitForResponse(
+      (response) =>
+        response.request().method() === 'POST' &&
+        new URL(response.url()).searchParams.get('action') === 'configuracion_usuarios_guardar',
+      { timeout: 90_000 },
+    );
+    await dialog.getByRole('button', { name: /Guardar cambios/i }).click();
+    expect((await responsePromise).status()).toBeLessThan(400);
+    await expect(dialog).toBeHidden({ timeout: 30_000 });
+
+    row = page.locator('.cfg-users-table tbody tr').filter({ hasText: editedUsername }).first();
+    await expect(row).toBeVisible({ timeout: 30_000 });
+
+    await row.getByRole('button', { name: /^Dar de baja$/i }).click();
+    let confirmDialog = page.getByRole('dialog').filter({ hasText: /Dar de baja usuario/i }).last();
+    responsePromise = page.waitForResponse(
+      (response) => new URL(response.url()).searchParams.get('action') === 'configuracion_usuarios_estado',
+      { timeout: 90_000 },
+    );
+    await confirmDialog.getByRole('button', { name: /^Dar de baja$/i }).click();
+    expect((await responsePromise).status()).toBeLessThan(400);
+
+    row = page.locator('.cfg-users-table tbody tr').filter({ hasText: editedUsername }).first();
+    await expect(row).toContainText('Inactivo');
+    await row.getByRole('button', { name: /^Activar$/i }).click();
+    confirmDialog = page.getByRole('dialog').filter({ hasText: /Activar usuario/i }).last();
+    responsePromise = page.waitForResponse(
+      (response) => new URL(response.url()).searchParams.get('action') === 'configuracion_usuarios_estado',
+      { timeout: 90_000 },
+    );
+    await confirmDialog.getByRole('button', { name: /^Activar$/i }).click();
+    expect((await responsePromise).status()).toBeLessThan(400);
+
+    row = page.locator('.cfg-users-table tbody tr').filter({ hasText: editedUsername }).first();
+    await expect(row).toContainText('Activo');
+    await row.getByRole('button', { name: /Eliminar usuario/i }).click();
+    confirmDialog = page.getByRole('dialog').filter({ hasText: /Eliminar usuario/i }).last();
+    responsePromise = page.waitForResponse(
+      (response) => new URL(response.url()).searchParams.get('action') === 'configuracion_usuarios_eliminar',
+      { timeout: 90_000 },
+    );
+    await confirmDialog.getByRole('button', { name: /^Eliminar$/i }).click();
+    expect((await responsePromise).status()).toBeLessThan(400);
+    await expect(page.locator('.cfg-users-table tbody tr').filter({ hasText: editedUsername })).toHaveCount(0, {
+      timeout: 30_000,
+    });
+  } finally {
+    await cleanupTestUser(page, [username, editedUsername]);
+  }
+});

@@ -707,9 +707,12 @@ export async function searchRow(page, query, placeholderPattern = /Buscar/i) {
     if (row) return row;
   }
 
-  // Fallo real: no escondemos un backend vacío detrás de reintentos infinitos.
+  // Una respuesta válida de una API remota puede tardar más que 3 segundos.
+  // isVisible() no espera realmente a que aparezca la fila; esta aserción sí.
+  // Si el backend devuelve un listado vacío o hay un error real, seguimos
+  // fallando con límite, sin simular filas ni repetir mutaciones.
   const firstFilteredRow = rows().first();
-  await expect(firstFilteredRow).toBeVisible({ timeout: 3_000 });
+  await expect(firstFilteredRow).toBeVisible({ timeout: 30_000 });
   return firstFilteredRow;
 }
 

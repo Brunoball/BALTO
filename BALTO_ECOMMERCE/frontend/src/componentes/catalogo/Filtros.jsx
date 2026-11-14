@@ -1,4 +1,4 @@
-import React, { useId, useState } from 'react';
+import React, { useEffect, useId, useState } from 'react';
 import { ArrowDownAZ, ArrowDownWideNarrow, ArrowUpNarrowWide, Check, ChevronDown, Clock, RotateCcw, Search, Sparkles, X } from 'lucide-react';
 import { ORDER_OPTIONS, sanitizePriceInput } from './utilidades/catalogo';
 
@@ -22,6 +22,11 @@ export default function Filtros({
 }) {
   const id = useId();
   const [categoriesOpen, setCategoriesOpen] = useState(true);
+  // El valor real vive en la URL y React Router la actualiza como transición (no al instante):
+  // mientras tanto React devolvía el interruptor a su valor anterior y "rebotaba". Se refleja el
+  // clic de inmediato y se resincroniza cuando cambia la URL (atrás/adelante, "Limpiar filtros").
+  const [soloDisponibles, setSoloDisponibles] = useState(Boolean(stockOnly));
+  useEffect(() => { setSoloDisponibles(Boolean(stockOnly)); }, [stockOnly]);
   // Categorías reales del catálogo completo (servidor), con cantidad y sangría para las subcategorías.
   const categoryOptions = [
     { value: '', label: 'Todas', nivel: 0, cantidad: null },
@@ -96,7 +101,7 @@ export default function Filtros({
     <div className="filter-group">
       <label className="stock-filter">
         <span>Solo disponibles</span>
-        <input type="checkbox" role="switch" checked={stockOnly} onChange={(e) => setStockOnly(e.target.checked)}/>
+        <input type="checkbox" role="switch" checked={soloDisponibles} onChange={(e) => { setSoloDisponibles(e.target.checked); setStockOnly(e.target.checked); }}/>
         <span className="stock-switch" aria-hidden="true"/>
       </label>
     </div>

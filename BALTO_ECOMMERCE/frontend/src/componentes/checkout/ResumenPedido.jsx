@@ -3,6 +3,7 @@ import { ShieldCheck, ReceiptText, Truck } from 'lucide-react';
 import { useCarrito } from '../carrito/contexto/CarritoContext';
 import { formatQuantity, lineCents } from '../carrito/utilidades/carrito';
 import { precioARS } from '../global/utilidades/formato';
+import { pagosActivos } from '../pagos/utilidades/reglasPago';
 
 /**
  * Resumen del pedido. Solo muestra conceptos que existen en el sistema:
@@ -14,6 +15,7 @@ export default function ResumenPedido({ config, title = 'Resumen del pedido', de
   const moneda = items[0]?.moneda || config?.moneda || 'ARS';
   const total = validacionVigente && validation.resumen ? Number(validation.resumen.subtotal) : subtotal;
   const modalidades = config?.entrega_modalidades || [];
+  const conPagos = pagosActivos(config);
   return <section className="order-summary" aria-labelledby="order-summary-title">
     <h2 id="order-summary-title">{destacado && <span className="cart-section-icon"><ReceiptText size={19} aria-hidden="true"/></span>}{title}</h2>
     <ul className="order-summary-lines">
@@ -36,7 +38,9 @@ export default function ResumenPedido({ config, title = 'Resumen del pedido', de
       <div className="order-summary-total"><dt>{modalidad === 'ENVIO' ? 'Total productos' : 'Total'}</dt><dd data-testid="summary-total">{precioARS(total, moneda)}</dd></div>
     </dl>
     {modalidad === 'ENVIO' && <p className="order-summary-pending">{alcancePago === 'PRODUCTOS' ? 'El importe a transferir corresponde a los productos. ' : ''}El envío no está incluido: la tienda te informará su costo.</p>}
-    <p className="order-summary-note"><ShieldCheck size={16}/> {validacionVigente ? 'Importes verificados con la tienda. ' : 'Verificando importes con la tienda. '}No se realizan cobros online: la tienda coordinará con vos el pago y, si corresponde, el costo de envío.</p>
+    <p className="order-summary-note"><ShieldCheck size={16}/> {validacionVigente ? 'Importes verificados con la tienda. ' : 'Verificando importes con la tienda. '}{conPagos
+      ? 'No hay cobros automáticos: elegís el medio de pago al confirmar y la tienda verifica el pago. Si corresponde, el costo de envío se coordina aparte.'
+      : 'No se realizan cobros online: la tienda coordinará con vos el pago y, si corresponde, el costo de envío.'}</p>
     {children}
   </section>;
 }

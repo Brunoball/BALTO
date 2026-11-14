@@ -5,6 +5,7 @@ import { useCarrito } from '../carrito/contexto/CarritoContext';
 import { formatQuantity, maxFor, minFor } from '../carrito/utilidades/carrito';
 import { precioARS, whatsAppLink } from '../global/utilidades/formato';
 import SelectorCantidad from '../global/SelectorCantidad';
+import { pagosActivos } from '../pagos/utilidades/reglasPago';
 
 export default function InfoProducto({ product, config }) {
   const { addItem, toggleFavorite, favorites } = useCarrito();
@@ -46,7 +47,9 @@ export default function InfoProducto({ product, config }) {
     <div className="detail-actions"><button type="button" className="btn btn-dark detail-add" disabled={!canAdd} onClick={add} data-testid="add-to-cart"><ShoppingBag size={19}/> Agregar al carrito</button><button type="button" className={`detail-heart ${favorite ? 'is-favorite' : ''}`} aria-label={favorite ? 'Quitar de favoritos' : 'Guardar en favoritos'} aria-pressed={favorite} onClick={() => toggleFavorite(product.slug)}><Heart size={20} fill={favorite ? 'currentColor' : 'none'}/></button></div>
     {feedback && <p className={`add-feedback ${feedback.ok ? 'is-ok' : 'is-error'}`} role="status">{feedback.text}{feedback.ok && <> <Link to="/carrito">Ver carrito</Link></>}</p>}
     {contact && <a className="detail-whatsapp" href={contact} target="_blank" rel="noreferrer"><MessageCircle size={19}/> Consultar este producto por WhatsApp</a>}
-    <p className="detail-disclaimer"><ShieldCheck size={19}/> {checkout
+    <p className="detail-disclaimer"><ShieldCheck size={19}/> {checkout && pagosActivos(config)
+      ? 'Agregar al carrito no reserva stock. Al confirmar elegís la entrega y el medio de pago; la tienda confirma la disponibilidad y verifica el pago.'
+      : checkout
       ? 'Agregar al carrito no reserva stock. Al confirmar el pedido la tienda se comunica para coordinar entrega y pago; no se cobra online.'
       : 'Podés armar tu carrito y consultarnos. La compra online todavía no está habilitada y agregar productos no reserva stock.'}</p>
   </div>;

@@ -29,6 +29,11 @@ export default function BotonGoogle({ onSuccess, text = 'continue_with', compact
   const onSuccessRef = useRef(onSuccess);
   onSuccessRef.current = onSuccess;
   const busyRef = useRef(false);
+  // Solo la función de login (estable). Antes el efecto dependía del objeto `auth` completo: cada
+  // cambio de la sesión (p. ej. el refresco al volver a la pestaña) pedía un NONCE NUEVO y la cookie
+  // del nonce anterior se reemplazaba; si la persona estaba en la ventana de Google en ese momento,
+  // su credencial llegaba con el nonce viejo y el servidor la rechazaba (TOKEN_INVALIDO).
+  const loginConGoogle = auth.loginConGoogle;
 
   const handleCredential = useCallback(async (response) => {
     if (busyRef.current) return; // doble callback / doble clic
@@ -40,7 +45,7 @@ export default function BotonGoogle({ onSuccess, text = 'continue_with', compact
     busyRef.current = true;
     setStatus({ estado: 'enviando', mensaje: null });
     try {
-      const data = await auth.loginConGoogle(credential);
+      const data = await loginConGoogle(credential);
       setStatus({ estado: 'ok', mensaje: null });
       onSuccessRef.current?.(data);
     } catch (error) {
@@ -50,7 +55,7 @@ export default function BotonGoogle({ onSuccess, text = 'continue_with', compact
     } finally {
       busyRef.current = false;
     }
-  }, [auth]);
+  }, [loginConGoogle]);
 
   useEffect(() => {
     if (gis.estado !== 'listo' || !auth.googleClientId) return undefined;

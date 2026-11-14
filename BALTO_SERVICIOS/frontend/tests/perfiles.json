@@ -1,0 +1,91 @@
+{
+  "version": 2,
+  "descripcion": "Módulos reales + pruebas de integracion directas; GLOBAL independiente y COMPLETO sin filtros.",
+  "modulos": {
+    "global": {
+      "carpeta": "global",
+      "impactos": [],
+      "excluir": [
+        "global/auditoria_solo_completo"
+      ]
+    },
+    "movimientos": {
+      "carpeta": "movimientos",
+      "impactos": [
+        "servicios/25-services-movements-integration.spec.js",
+        "cheques/15-cheques-lifecycle.spec.js",
+        "cuentas_corrientes/36-grouped-payment-current-account-regression.spec.js",
+        "dashboard/51-dashboard-caja-medios.spec.js"
+      ],
+      "excluir": []
+    },
+    "servicios": {
+      "carpeta": "servicios",
+      "impactos": [
+        "movimientos/04-purchases-credit-note.spec.js",
+        "movimientos/05-sales-credit-note.spec.js",
+        "movimientos/13-movement-delete-reversal.spec.js",
+        "movimientos/28-purchase-ui-health.spec.js",
+        "movimientos/60-compras-costo-catalogo.spec.js"
+      ],
+      "excluir": []
+    },
+    "flujo_caja": {
+      "carpeta": "flujo_caja",
+      "impactos": [
+        "analisis_financiero/44-analisis-financiero-saldos.spec.js",
+        "dashboard/51-dashboard-caja-medios.spec.js",
+        "cheques/15-cheques-lifecycle.spec.js",
+        "movimientos/45-politica-fechas-importes-pagos.spec.js"
+      ],
+      "excluir": []
+    },
+    "dashboard": {
+      "carpeta": "dashboard",
+      "impactos": [
+        "analisis_financiero/44-analisis-financiero-saldos.spec.js"
+      ],
+      "excluir": []
+    },
+    "analisis_financiero": {
+      "carpeta": "analisis_financiero",
+      "impactos": [
+        "dashboard/51-dashboard-caja-medios.spec.js"
+      ],
+      "excluir": []
+    },
+    "cheques": {
+      "carpeta": "cheques",
+      "impactos": [
+        "cuentas_corrientes/36-grouped-payment-current-account-regression.spec.js",
+        "movimientos/45-politica-fechas-importes-pagos.spec.js",
+        "dashboard/51-dashboard-caja-medios.spec.js"
+      ],
+      "excluir": []
+    },
+    "cuentas_corrientes": {
+      "carpeta": "cuentas_corrientes",
+      "impactos": [
+        "movimientos/45-politica-fechas-importes-pagos.spec.js",
+        "cheques/15-cheques-lifecycle.spec.js"
+      ],
+      "excluir": []
+    },
+    "configuracion": {
+      "carpeta": "configuracion",
+      "impactos": [
+        "contabilidad/10-config-accounting.spec.js",
+        "analisis_financiero/44-analisis-financiero-saldos.spec.js"
+      ],
+      "excluir": []
+    },
+    "contabilidad": {
+      "carpeta": "contabilidad",
+      "impactos": [
+        "configuracion/24-initial-balances.spec.js",
+        "analisis_financiero/44-analisis-financiero-saldos.spec.js"
+      ],
+      "excluir": []
+    }
+  }
+}
