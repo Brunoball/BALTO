@@ -1619,11 +1619,13 @@ export default function Compras() {
             <button
               type="button"
               className="mov-btn mov-btn--primary"
-              onClick={async () => {
+              onClick={() => {
                 if (loadingListsCtx) {
                   showToast?.("cargando", "Cargando listas… podés ir completando igual.", 2400);
                 }
-                await ensureComprasProductList();
+                // La apertura del modal no debe depender de una consulta remota.
+                // ModalNuevaCompra ya carga las listas completas al abrirse y
+                // permite empezar a completar mientras llegan los datos.
                 setOpenNueva(true);
               }}
               title="Crear nueva compra"

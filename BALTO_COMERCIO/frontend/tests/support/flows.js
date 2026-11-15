@@ -957,99 +957,19 @@ export async function expectOtherIncomeInvoiceSummary(dialog, data = {}) {
   for (const item of data.items || []) await expect(dialog).toContainText(item);
 }
 
-export async function continueOtherIncomeInvoiceToSummary(page, step, options = {}) {
-  if (step.kind === 'summary') return step.dialog;
-
-  const fiscalDialog = step.dialog;
-  await expect(fiscalDialog).toContainText(/Datos fiscales para facturar/i);
-  await expect(fiscalDialog).toContainText(/Factura por CUIT/i);
-  await expect(fiscalDialog).toContainText(/Consulta ARCA/i);
-  const cuit = String(options.cuit || '').replace(/\D/g, '');
-  expect(cuit, 'PW_ARCA_CLIENT_CUIT debe tener 11 dígitos si el cliente no posee ficha fiscal.').toHaveLength(11);
-
-  const cuitInput = fiscalDialog.locator('input[inputmode="numeric"]').first();
-  await expect(cuitInput).toBeVisible();
-  await cuitInput.fill(cuit);
-
-  const lookupResponsePromise = page.waitForResponse(
-    (response) =>
-      response.request().method() === 'GET' &&
-      new URL(response.url()).searchParams.get('action') === 'padron_cuit',
-    { timeout: 120_000 },
-  );
-  await fiscalDialog.getByRole('button', { name: /Consultar ARCA/i }).click();
-  const lookupResponse = await lookupResponsePromise;
-  expect(lookupResponse.status(), 'La consulta de CUIT en ARCA debe responder correctamente.').toBeLessThan(400);
-  await expect(fiscalDialog).toContainText(/Datos encontrados y listos para confirmar/i, { timeout: 120_000 });
-
-  await fiscalDialog.getByRole('button', { name: /Confirmar y facturar/i }).click();
-  await expect(fiscalDialog).toBeHidden({ timeout: 120_000 });
-  const summary = await waitDialog(page, /Resumen antes de emitir/i);
-  await expectOtherIncomeInvoiceSummary(summary, options);
-  return summary;
+// Estos helpers se conservan como exports para detectar cualquier importación
+// antigua, pero NUNCA deben efectuar una consulta/confirmación fiscal real.
+// Los tests de operaciones locales y NC internas siguen funcionando.
+function forbiddenFiscalFlow() {
+  throw new Error('[PLAYWRIGHT ARCA BLOQUEADA] No se permite confirmar ni emitir facturas/NC fiscales desde la suite E2E habitual.');
 }
 
-function expectSuccessfulJsonResponse(response, body, label) {
-  expect(
-    response.status(),
-    `${label} respondió HTTP ${response.status()}: ${JSON.stringify(body)}`,
-  ).toBeLessThan(400);
-  expect(
-    body?.exito !== false && body?.success !== false,
-    body?.mensaje || body?.message || `${label} no fue confirmada por el backend.`,
-  ).toBeTruthy();
+export async function continueOtherIncomeInvoiceToSummary() {
+  forbiddenFiscalFlow();
 }
 
-export async function emitOtherIncomeInvoice(page, summaryDialog, description) {
-  await expectOtherIncomeInvoiceSummary(summaryDialog, { items: [description] });
-  const confirmation = summaryDialog.locator('.mfr-check__input').first();
-  await expect(confirmation).toBeVisible();
-  if (!(await confirmation.isChecked())) await confirmation.check();
-
-  const arcaPromise = page.waitForResponse(
-    (response) =>
-      response.request().method() === 'POST' &&
-      new URL(response.url()).searchParams.get('action') === 'wsfe_emitir',
-    { timeout: 180_000 },
-  );
-  const createPromise = page.waitForResponse(
-    (response) =>
-      response.request().method() === 'POST' &&
-      new URL(response.url()).searchParams.get('action') === 'otros_ingresos_crear',
-    { timeout: 180_000 },
-  );
-  const linkPromise = page.waitForResponse(
-    (response) =>
-      response.request().method() === 'POST' &&
-      new URL(response.url()).searchParams.get('action') === 'otros_ingresos_comprobantes_vincular_movimiento',
-    { timeout: 180_000 },
-  );
-
-  await summaryDialog.getByRole('button', { name: /Emitir \+ facturar/i }).click();
-  const [arcaResponse, createResponse, linkResponse] = await Promise.all([
-    arcaPromise,
-    createPromise,
-    linkPromise,
-  ]);
-  const [arcaBody, createBody, linkBody] = await Promise.all([
-    arcaResponse.json().catch(() => ({})),
-    createResponse.json().catch(() => ({})),
-    linkResponse.json().catch(() => ({})),
-  ]);
-  expectSuccessfulJsonResponse(arcaResponse, arcaBody, 'La emisión ARCA');
-  expect(
-    arcaBody?.cae || arcaBody?.data?.cae || arcaBody?.factura?.cae || arcaBody?.data?.factura?.cae,
-    'ARCA debe devolver un CAE.',
-  ).toBeTruthy();
-  expectSuccessfulJsonResponse(createResponse, createBody, 'El alta del ingreso facturado');
-  expectSuccessfulJsonResponse(linkResponse, linkBody, 'La vinculación de la factura');
-  await expect(summaryDialog).toBeHidden({ timeout: 180_000 });
-
-  const row = await searchRow(page, description, /Buscar por descripción/i);
-  await expect(row.locator('button[title="Editar"]')).toHaveCount(0);
-  await expect(row.getByTitle(/Facturar ingreso/i)).toHaveCount(0);
-  await expect(row.getByTitle('Ver comprobante')).toBeEnabled();
-  return { row, arcaBody, createBody, linkBody };
+export async function emitOtherIncomeInvoice() {
+  forbiddenFiscalFlow();
 }
 
 export async function openOtherIncomeDetail(page, query) {
@@ -1080,72 +1000,8 @@ export async function expectOtherIncomeCreditTrace(page, query, expected = {}) {
   return row;
 }
 
-export async function deleteFiscalOtherIncomeThroughTotalCreditNote(page, query) {
-  const row = await searchRow(page, query, /Buscar por descripción/i);
-  await row.locator('button[title="Eliminar"]').click();
-
-  const blockedDialog = await waitDialog(page, /No se puede eliminar todavía/i);
-  await expect(blockedDialog).toContainText(/factura emitida en ARCA/i);
-  await expect(blockedDialog).toContainText(/nota de crédito por todo el saldo/i);
-  await expect(blockedDialog.getByRole('button', { name: /^Eliminar$/i })).toBeDisabled();
-  await blockedDialog.getByRole('button', { name: /Emitir nota de crédito/i }).click();
-  await expect(blockedDialog).toBeHidden();
-
-  const creditDialog = await waitDialog(page, /Nota de crédito de ingreso|Emitir nota de crédito/i);
-  await expect(creditDialog).toContainText(/Ingreso facturado en ARCA/i, { timeout: 90_000 });
-  await expect(creditDialog).toContainText(/ANULACIÓN TOTAL/i);
-  const continueButton = creditDialog.getByRole('button', { name: /^Emitir nota de crédito$/i }).last();
-  await expect(continueButton).toBeEnabled({ timeout: 90_000 });
-  await continueButton.click();
-
-  const summary = await waitDialog(page, /Resumen antes de emitir nota de crédito/i);
-  await expect(summary).toContainText(/Resumen de nota de crédito/i);
-  const confirmation = summary.locator('.mfr-check__input').first();
-  await expect(confirmation).toBeVisible();
-  if (!(await confirmation.isChecked())) await confirmation.check();
-
-  const arcaPromise = page.waitForResponse(
-    (response) => response.request().method() === 'POST'
-      && new URL(response.url()).searchParams.get('action') === 'wsfe_emitir',
-    { timeout: 180_000 },
-  );
-  const applyPromise = page.waitForResponse(
-    (response) => response.request().method() === 'POST'
-      && isOtherIncomeCreditOperation(response.request(), 'aplicar'),
-    { timeout: 180_000 },
-  );
-  await summary.getByRole('button', { name: /Emitir \+ facturar/i }).click();
-  const [arcaResponse, applyResponse] = await Promise.all([arcaPromise, applyPromise]);
-  const [arcaBody, applyBody] = await Promise.all([
-    arcaResponse.json().catch(() => ({})),
-    applyResponse.json().catch(() => ({})),
-  ]);
-  expectSuccessfulJsonResponse(arcaResponse, arcaBody, 'La nota de crédito ARCA');
-  expect(
-    arcaBody?.cae || arcaBody?.data?.cae || arcaBody?.factura?.cae || arcaBody?.data?.factura?.cae,
-    'La nota de crédito ARCA debe devolver CAE.',
-  ).toBeTruthy();
-  expectSuccessfulJsonResponse(applyResponse, applyBody, 'La aplicación de la nota de crédito total');
-  await expect(summary).toBeHidden({ timeout: 180_000 });
-
-  const finalDelete = await waitDialog(page, /Eliminar ingreso anulado/i);
-  await expect(finalDelete.getByRole('button', { name: /^Eliminar$/i })).toBeEnabled();
-  const deletePromise = page.waitForResponse(
-    (response) => response.request().method() === 'POST'
-      && new URL(response.url()).searchParams.get('action') === 'otros_ingresos_eliminar',
-    { timeout: 120_000 },
-  );
-  await finalDelete.getByRole('button', { name: /^Eliminar$/i }).click();
-  const deleteResponse = await deletePromise;
-  const deleteBody = await deleteResponse.json().catch(() => ({}));
-  expectSuccessfulJsonResponse(deleteResponse, deleteBody, 'La eliminación del ingreso fiscal anulado');
-  await expect(finalDelete).toBeHidden({ timeout: 120_000 });
-
-  const search = page.getByPlaceholder(/Buscar por descripción/i).first();
-  await search.fill(query);
-  await search.press('Enter');
-  await waitForBusyToFinish(page);
-  await expect(page.locator('.mov-gridTable--row:visible:not(.mov-row--skeleton)').filter({ hasText: query })).toHaveCount(0);
+export async function deleteFiscalOtherIncomeThroughTotalCreditNote() {
+  forbiddenFiscalFlow();
 }
 
 export async function createOtherIncomeWithProduct(page, data) {

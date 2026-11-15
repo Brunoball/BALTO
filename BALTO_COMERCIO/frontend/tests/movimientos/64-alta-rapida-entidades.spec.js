@@ -11,8 +11,13 @@ import { authenticatedApi, expectApiSuccess } from '../support/api.js';
 async function elegirAgregar(page, dialog, tipo) {
   const input = dialog.locator('.nc-prov-wrap .ga-wrap input, .dc-prov-wrap .ga-wrap input').first();
   await expect(input, `Selector de ${tipo} disponible`).toBeVisible();
+  // Un click no dispara onFocus si el input ya estaba enfocado. Además,
+  // el cierre tardío de Notificaciones de Stock puede desmontar el portal.
+  // Dos cambios reales de valor fuerzan onChange y reabren el desplegable
+  // sin dejar texto precargado en el modal de alta simple.
+  await input.fill('Agregar');
   await input.fill('');
-  await input.click();
+  await expect(input).toHaveValue('');
   const opcion = page.locator('#ga-portal-list .ga-item:not(.is-empty)').filter({ hasText: new RegExp(`Agregar ${tipo}`, 'i') }).first();
   await expect(opcion).toBeVisible({ timeout: 15_000 });
   await opcion.click();

@@ -343,6 +343,9 @@ export function assertCredentialsConfigured() {
 }
 
 export function assertSafeMutationConfiguration() {
+  if (ENV.allowArca) {
+    throw new Error('[Playwright ARCA] PW_ALLOW_ARCA debe ser 0 en todas las suites automáticas habituales.');
+  }
   if (!ENV.allowMutations) {
     throw new Error(
       'Las pruebas mutables requieren PW_ALLOW_MUTATIONS=1 en .env.playwright.',
@@ -358,44 +361,95 @@ export function assertSafeMutationConfiguration() {
 
 function normalizeTenantName(value) {
   return String(value || '')
-    .trim()
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '');
+    .trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ');
 }
 
-export function assertExpectedTenant(tenant) {
-  if (!tenant || typeof tenant !== 'object') return;
+function getActualTenant(tenant) {
+  const value = tenant?.usuario && typeof tenant.usuario === 'object' ? tenant.usuario : tenant;
+  return {
+    id: String(value?.idTenant ?? value?.id_tenant ?? value?.tenant_id ?? value?.idTenantMaster ??
+      value?.id_tenant_master ?? value?.id_tenant_actual ?? '').trim(),
+    name: String(value?.tenant_nombre ?? value?.nombre_tenant ?? value?.razon_social_tenant ??
+      value?.tenant?.nombre ?? value?.tenant?.name ?? '').trim(),
+    system: String(value?.sistema_codigo ?? tenant?.sistema?.codigo ?? '').trim().toUpperCase(),
+  };
+}
 
-  const realId = String(
-    tenant.id ??
-    tenant.tenant_id ??
-    tenant.id_tenant ??
-    tenant.idTenant ??
-    '',
-  ).trim();
-
-  const realName = String(
-    tenant.nombre ??
-    tenant.name ??
-    tenant.razon_social ??
-    tenant.tenant ??
-    '',
-  ).trim();
-
-  if (ENV.expectedTenantId && realId && realId !== ENV.expectedTenantId) {
+function validateActualTenant(tenant) {
+  if (ENV.allowMutations && !ENV.expectedTenantId && !ENV.expectedTenantName) {
     throw new Error(
-      `Tenant incorrecto. Esperado ID ${ENV.expectedTenantId}; recibido ${realId}.`,
+      '[Playwright TENANT] Antes de mutar o limpiar datos definí PW_EXPECTED_TENANT_ID ' +
+      'o PW_EXPECTED_TENANT_NAME en frontend/.env.playwright. No se acepta un tenant implícito.',
     );
   }
-
-  if (
-    ENV.expectedTenantName &&
-    realName &&
-    normalizeTenantName(realName) !== normalizeTenantName(ENV.expectedTenantName)
-  ) {
-    throw new Error(
-      `Tenant incorrecto. Esperado "${ENV.expectedTenantName}"; recibido "${realName}".`,
-    );
+  const actual = getActualTenant(tenant);
+  if (ENV.expectedTenantId) {
+    if (!actual.id) throw new Error('[Playwright TENANT] La sesión no informó el ID de tenant. Bloqueado.');
+    if (actual.id !== ENV.expectedTenantId) {
+      throw new Error(`[Playwright TENANT] ID incorrecto: esperado ${ENV.expectedTenantId}, recibido ${actual.id}.`);
+    }
   }
+  if (ENV.expectedTenantName) {
+    if (!actual.name) throw new Error('[Playwright TENANT] La sesión no informó nombre de tenant. Bloqueado.');
+    if (normalizeTenantName(actual.name) !== normalizeTenantName(ENV.expectedTenantName)) {
+      throw new Error(`[Playwright TENANT] Nombre incorrecto: esperado "${ENV.expectedTenantName}", recibido "${actual.name}".`);
+    }
+  }
+  if (actual.system && ENV.expectedSystem &&
+      !actual.system.includes(ENV.expectedSystem)) {
+    throw new Error(`[Playwright TENANT] Sistema incorrecto: esperado ${ENV.expectedSystem}, recibido ${actual.system}.`);
+  }
+  return actual;
+}
+
+/**
+ * Obtiene la identidad del tenant desde la sesión real (no desde el objeto
+ * Playwright Page). En setup también admite directamente la respuesta del
+ * auth_session_check, cuya forma { usuario: { idTenant, tenant_nombre } }
+ * quedó verificada contra el trace real de COMERCIO.
+ */
+export async function assertExpectedTenant(subject) {
+  if (!subject || typeof subject !== 'object') {
+    throw new Error('[Playwright TENANT] No se recibió una sesión verificable.');
+  }
+  if (typeof subject.context !== 'function') return validateActualTenant(subject);
+
+  // Un objeto page no tiene id ni nombre de tenant: verificar por backend.
+  // Es un GET autenticado; nunca depende del render ni escribe datos.
+  if (ENV.allowMutations && !ENV.expectedTenantId && !ENV.expectedTenantName) {
+    return validateActualTenant({});
+  }
+
+  const context = subject.context();
+  const state = await context.storageState();
+  const storageOrigins = state?.origins || [];
+  const entry = storageOrigins.flatMap((origin) => origin.localStorage || []);
+  const sessionKey = String(entry.find((item) => item.name === 'session_key')?.value || '').trim();
+  if (!sessionKey) throw new Error('[Playwright TENANT] No existe session_key para comprobar el tenant.');
+
+  // Evitamos una llamada GET adicional en cada test cuando BALTO_LOGIN ya
+  // entregó los datos de tenant firmados en la sesión autenticada.
+  const storedUsuario = entry.find((item) => item.name === 'usuario')?.value;
+  let user = null;
+  try { user = JSON.parse(storedUsuario || 'null'); } catch {}
+  const stored = getActualTenant(user);
+  if ((!ENV.expectedTenantId || stored.id) && (!ENV.expectedTenantName || stored.name) &&
+      (!stored.system || stored.system.includes(ENV.expectedSystem))) {
+    return validateActualTenant(user);
+  }
+
+  const result = await context.request.get(`${ENV.apiURL}/api.php?action=auth_session_check`, {
+    headers: { 'X-Session': sessionKey, Accept: 'application/json' },
+    failOnStatusCode: false,
+    timeout: ENV.timeoutMs,
+  });
+  if (result.status() !== 200) {
+    throw new Error(`[Playwright TENANT] auth_session_check devolvió HTTP ${result.status()}; se bloquean las mutaciones.`);
+  }
+  const data = await result.json().catch(() => null);
+  if (data?.exito !== true || data?.sesion_valida === false) {
+    throw new Error('[Playwright TENANT] No se validó la sesión del backend.');
+  }
+  return validateActualTenant(data);
 }

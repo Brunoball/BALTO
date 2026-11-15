@@ -133,6 +133,17 @@ async function instalarListadoControlado(page, modulo) {
       });
       return;
     }
+    // Ventas consulta un token después de cargar su listado inicial y luego lo
+    // utiliza para detectar cambios en vivo. Fijarlo evita que el estado del
+    // backend ajeno a este fixture reinicie la tabla durante la prueba visual.
+    if (req.method() === 'GET' && modulo.nombre === 'Ventas' && accion === 'ventas_live_token') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json; charset=utf-8',
+        body: JSON.stringify({ ok: true, exito: true, live_token: 'E2E_CONCEPTOS_ESTABLE' }),
+      });
+      return;
+    }
     if (req.method() !== 'GET' || accion !== modulo.accion) {
       await route.fallback();
       return;
@@ -181,6 +192,31 @@ for (const modulo of MODULOS) {
     const cantidadRespuestas = await instalarListadoControlado(page, modulo);
 
     await page.goto(modulo.ruta, { waitUntil: 'domcontentloaded' });
+    if (modulo.nombre === 'Ventas') {
+      // El listado puede aparecer ANTES de que termine global_obtener_listas:
+      // cuando esa carga global concluye, Ventas hace otra carga inicial y
+      // reemplaza temporalmente las filas. Esperar sólo la primera fila es
+      // insuficiente: la interacción puede quedar desmontada por esa recarga.
+      // El buscador está deshabilitado mientras cargan las listas globales.
+      const buscador = page.locator('#vents-comppr-wit');
+      const grilla = page.locator('.mov-gridBody');
+      await expect(buscador).toBeEnabled({ timeout: 45_000 });
+      // Exigimos una ventana breve de UI lista, sin skeleton ni lista global
+      // pendiente. Así no abrimos justo entre dos recargas iniciales.
+      let estableDesde = 0;
+      await expect.poll(async () => {
+        const habilitado = await buscador.isEnabled().catch(() => false);
+        const clases = await grilla.getAttribute('class').catch(() => '');
+        const listaVisible = await page.locator('.mov-detalleTabla__titulo')
+          .filter({ hasText: NOMBRE_VARIANTE }).first().isVisible().catch(() => false);
+        if (!habilitado || clases?.includes('mov-softLoading') || !listaVisible) {
+          estableDesde = 0;
+          return false;
+        }
+        if (!estableDesde) estableDesde = Date.now();
+        return Date.now() - estableDesde >= 500;
+      }, { timeout: 45_000, intervals: [100, 150, 200] }).toBe(true);
+    }
     const fila = page.locator('.mov-gridTable--row:not(.mov-row--skeleton)')
       .filter({ has: page.locator('.mov-detalleTabla__titulo', { hasText: NOMBRE_VARIANTE }) })
       .first();

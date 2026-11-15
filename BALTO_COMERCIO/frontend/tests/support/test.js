@@ -3,6 +3,10 @@ import { ENV, patchContextNavigation, patchPageNavigation } from './env.js';
 import { RUN_PREFIX } from './data.js';
 import { cleanupE2EFromStorage } from './cleanup.js';
 import { ensureAdministratorSession } from './users.js';
+import { assertExpectedTenant } from './env.js';
+import fiscalSafety from './fiscal-safety.cjs';
+
+const { actionFromRequest, isBlockedFiscalRequest } = fiscalSafety;
 
 let workerCleanupCompleted = false;
 let workerCleanupAttempted = false;
@@ -69,6 +73,22 @@ export const test = base.extend({
       patchContextNavigation(context);
       patchPageNavigation(page);
 
+      // Bloqueo preventivo en TODOS los requests del contexto, incluidas
+      // ventanas nuevas. Las llamadas con APIRequestContext se protegen aparte.
+      const blockedFiscal = [];
+      const fiscalRoute = async (route) => {
+        const request = route.request();
+        const body = request.postData() || null;
+        if (!isBlockedFiscalRequest({ url: request.url(), method: request.method(), body })) {
+          await route.fallback();
+          return;
+        }
+        const action = actionFromRequest(request.url(), body);
+        blockedFiscal.push(`${request.method()} ${action || new URL(request.url()).pathname}`);
+        await route.abort('blockedbyclient');
+      };
+      await context.route('**/*', fiscalRoute);
+
       // El centro de notificaciones se carga de forma asíncrona y puede abrirse
       // después de waitForBusyToFinish. En tests ajenos a notificaciones,
       // cerrarlo justo antes de una interacción evita que tape cualquier botón,
@@ -78,8 +98,18 @@ export const test = base.extend({
         await autoDismissStockNotifications(page);
       }
 
-      await ensureAdministratorSession(page);
-      await use();
+      try {
+        await ensureAdministratorSession(page);
+        if (ENV.allowMutations) await assertExpectedTenant(page);
+        await use();
+      } finally {
+        await context.unroute('**/*', fiscalRoute);
+        if (blockedFiscal.length) {
+          throw new Error(
+            `[PLAYWRIGHT ARCA BLOQUEADA] Se abortaron solicitudes fiscales: ${blockedFiscal.join(', ')}`,
+          );
+        }
+      }
     },
     { scope: 'test', auto: true },
   ],

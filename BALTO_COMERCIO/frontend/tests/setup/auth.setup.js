@@ -1,5 +1,5 @@
 import { test as setup, expect } from '@playwright/test';
-import { AUTH_FILE, ENV, patchPageNavigation } from '../support/env.js';
+import { AUTH_FILE, ENV, patchPageNavigation, assertExpectedTenant } from '../support/env.js';
 import { cleanupE2EWithPage } from '../support/cleanup.js';
 import { RUN_PREFIX } from '../support/data.js';
 import authGateway from '../support/auth-gateway.cjs';
@@ -258,6 +258,9 @@ setup('autenticar administrador de Balto', async ({ page, request }) => {
       commerceData?.sesion_valida === false) {
     throw authHttpError('BALTO_COMERCIO auth_session_check (setup)', commerceInfo);
   }
+
+  // IMPORTANTÍSIMO: incluso cleanup scope=all debe verificar el tenant real.
+  if (ENV.allowMutations) await assertExpectedTenant(commerceData);
 
   // Antes de cualquier cleanup o test mutable comprobamos el mismo cerrojo
   // server-side que bloquea TODA escritura saliente de Balto hacia Tienda Nube.

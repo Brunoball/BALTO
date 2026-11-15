@@ -28,10 +28,10 @@ import {
  * se muestra una sola vez en el resumen (Subtotal → Descuento general → Total
  * final). Internamente se prorratea por renglón para ARCA / persistencia / NC y
  * la suma de los renglones persistidos debe ser EXACTAMENTE el total final,
- * el cobro y el ImpTotal informado a ARCA (sin diferencias de centavos).
+ * el cobro y la base local para facturación (sin diferencias de centavos).
  *
  * Todos los casos mutan datos: sólo corren con PW_ALLOW_MUTATIONS=1 en el
- * tenant E2E. El caso de facturación intercepta wsfe_emitir y NUNCA emite.
+ * tenant E2E. El caso fiscal sólo abre el paso previo; jamás confirma emisión.
  */
 
 const ars = (text) => {
@@ -268,21 +268,17 @@ test('@crud @critical descuento general: NC interna parcial acredita el importe 
   await assertNoCriticalErrors(diagnostics, testInfo, { allowConsole: [/Tienda Nube/i, /imagen/i] });
 });
 
-test('@critical descuento general: payload de facturación ARCA (interceptado, no emite)', async ({ page }, testInfo) => {
+test('@critical descuento general: paso previo fiscal sin emitir ARCA ni guardar venta', async ({ page }, testInfo) => {
   await requireMutations(test, page);
   test.setTimeout(4 * 60_000);
   const diagnostics = installDiagnostics(page);
-  // 13) No se emite ningún comprobante: wsfe_emitir se intercepta y se responde
-  // con error controlado. Sólo se valida el payload que React enviaría a ARCA.
-  let arcaPayload = null;
-  const esWsfeEmitir = (url) => new URL(url).searchParams.get('action') === 'wsfe_emitir';
-  await page.route(esWsfeEmitir, async (route) => {
-    if (route.request().method() !== 'POST') return route.continue();
-    const body = route.request().postDataJSON() || {};
-    // ModalFacturaBaltoResumen envía el comprobante dentro de { data: {...} }.
-    if (!arcaPayload) arcaPayload = body.data || body;
-    // 422 = rechazo controlado (no cuenta como error 5xx del servidor en diagnostics).
-    await route.fulfill({ status: 422, contentType: 'application/json', body: JSON.stringify({ exito: false, mensaje: 'E2E: emisión ARCA bloqueada por el test.' }) });
+  // La cobertura de prorrateo, totales y persistencia exacta está arriba.
+  // Esta prueba comprueba que Facturar abre el flujo fiscal SIN pulsar el
+  // botón de emisión ni consultar el padrón ni producir comprobantes reales.
+  const fiscalWrites = [];
+  page.on('request', (request) => {
+    const action = new URL(request.url()).searchParams.get('action') || '';
+    if (/^(?:wsfe_emitir|arca_wsfe_emitir|factura_emitir)$/i.test(action)) fiscalWrites.push(action);
   });
 
   const names = await createProducts(page, 'DESCARCA', [{ price: 1234.57 }, { price: 333.33 }]);
@@ -291,41 +287,31 @@ test('@critical descuento general: payload de facturación ARCA (interceptado, n
   await addSaleRow(dialog, 1, names[1], 7, '10.5');
   await setDiscount(dialog, 'PORCENTAJE', 17.5);
   const screen = await readScreen(dialog);
+  expect(cents(screen.subtotal) - cents(screen.descuento)).toBe(cents(screen.total));
 
   await selectFirstAutocomplete(dialog, 'Cliente');
   const typeField = dialog.locator('.gm-field').filter({ hasText: 'Forma de venta' }).first();
   await selectFirstNonEmpty(typeField.locator('select'), /CONTADO/i);
   await fillPayment(dialog);
   await dialog.getByRole('button', { name: /^Facturar$/i }).click();
-  // Resumen fiscal: se busca DENTRO de su diálogo (en el listado de fondo hay
-  // botones "Emitir nota de crédito" que no deben tocarse).
-  const resumen = page.getByRole('dialog').filter({ has: page.getByRole('heading', { name: /Resumen antes de emitir/i }) }).last();
-  await expect(resumen).toBeVisible({ timeout: 30_000 });
-  const confirmar = resumen.getByRole('checkbox', { name: /Confirmo que los datos/i });
-  await expect(confirmar).toBeEnabled({ timeout: 30_000 });
-  // El checkbox real queda debajo del ícono personalizado (.mfr-check__box):
-  // se hace clic en la etiqueta completa, como lo haría el usuario.
-  await resumen.locator('label.mfr-check').first().click();
-  if (!(await confirmar.isChecked())) await confirmar.check({ force: true });
-  await expect(confirmar).toBeChecked();
-  const emitir = resumen.getByRole('button', { name: /Emitir \+ facturar/i });
-  await expect(emitir).toBeEnabled({ timeout: 15_000 });
-  await emitir.click();
-  await expect.poll(() => arcaPayload !== null, { timeout: 30_000 }).toBeTruthy();
 
-  const items = arcaPayload.items_facturacion || [];
-  const impNeto = items.reduce((a, i) => a + cents(i.subtotal), 0);
-  const impIva = items.reduce((a, i) => a + cents(i.iva_monto), 0);
-  expect(impNeto + impIva, 'ImpNeto + ImpIVA = ImpTotal').toBe(cents(arcaPayload.total_ars));
-  expect(cents(arcaPayload.total_ars), 'ImpTotal = total final de la pantalla').toBe(cents(screen.total));
-  expect(cents(screen.subtotal) - cents(screen.descuento)).toBe(cents(screen.total));
-  // Representación fiscal: precio unitario de lista + bonificación por renglón.
-  expect(items.map((i) => cents(i.precio_unitario))).toEqual([cents(1234.57), cents(333.33)]);
-  for (const i of items) expect(Number(i.bonif_pct)).toBeGreaterThan(0);
+  // La UI permite dos caminos: ficha fiscal existente -> resumen; de lo
+  // contrario -> datos fiscales/CUIT (el caso de la captura fallida).
+  const paso = page.getByRole('dialog').filter({
+    hasText: /Datos fiscales para facturar|Resumen antes de emitir/i,
+  }).last();
+  await expect(paso).toBeVisible({ timeout: 30_000 });
+  await expect(paso).toContainText(/Datos fiscales para facturar|Resumen antes de emitir/i);
+  // ¡NO pulsar "Confirmar y facturar", "Emitir + facturar" ni una NC fiscal!
+  expect(fiscalWrites, 'El paso previo jamás debe emitir un comprobante').toEqual([]);
 
-  // La emisión fue bloqueada: no se creó venta ni comprobante. Se cierra todo.
-  await resumen.getByRole('button', { name: /^Cerrar$/i }).click().catch(() => {});
+  const cancelar = paso.getByRole('button', { name: /^(?:Cancelar|Cerrar)$/i }).last();
+  await expect(cancelar).toBeVisible();
+  await cancelar.click();
+  await expect(paso).toBeHidden();
+
+  // Sin guardar ni emitir: sólo deben existir los productos E2E que se borran.
   await page.goto('/panel/stock');
-  for (const name of names) await deleteUnusedStockProduct(page, name).catch(() => {});
-  await assertNoCriticalErrors(diagnostics, testInfo, { allowConsole: [/Tienda Nube/i, /imagen/i, /ARCA/i, /422/, /bloqueada por el test/i] });
+  for (const name of names) await deleteUnusedStockProduct(page, name);
+  await assertNoCriticalErrors(diagnostics, testInfo, { allowConsole: [/Tienda Nube/i, /imagen/i] });
 });

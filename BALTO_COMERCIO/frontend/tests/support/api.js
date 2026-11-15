@@ -1,6 +1,9 @@
 import { expect } from '@playwright/test';
 import { ENV } from './env.js';
 import { RUN_PREFIX } from './data.js';
+import fiscalSafety from './fiscal-safety.cjs';
+
+const { isBlockedFiscalRequest } = fiscalSafety;
 
 function apiUrl(action, query = {}) {
   const base = ENV.apiURL.replace(/\/$/, '');
@@ -130,6 +133,10 @@ export async function authenticatedApi(page, action, options = {}) {
     query.e2e_run = RUN_PREFIX;
   }
   const url = apiUrl(action, query);
+  // APIRequestContext no atraviesa context.route(): bloquear también acá.
+  if (isBlockedFiscalRequest({ url, method, body: options.body })) {
+    throw new Error(`[PLAYWRIGHT ARCA BLOQUEADA] Se rechazó ${method} action=${String(action)} antes de enviar la solicitud.`);
+  }
   const sessionKey = await authenticatedSessionKey(page);
   const headers = {
     Accept: 'application/json',
