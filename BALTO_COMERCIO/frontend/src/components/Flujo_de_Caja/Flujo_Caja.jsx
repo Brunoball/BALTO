@@ -16,6 +16,8 @@ import {
   faWallet,
   faScaleBalanced,
   faClockRotateLeft,
+  faCashRegister,
+  faListCheck,
 } from "@fortawesome/free-solid-svg-icons";
 
 import Toast from "../Global/Toast.jsx";
@@ -25,7 +27,11 @@ import "../../components/Global/Calendario/calendario.css";
 import BotonExportar from "../Global/Boton_Exportar/BotonExportar.jsx";
 import ModalAjusteSaldo from "./modales/ModalAjusteSaldo.jsx";
 import ModalHistorialAjustes from "./modales/ModalHistorialAjustes.jsx";
+import ModalCierreCaja from "./modales/ModalCierreCaja.jsx";
+import ModalHistorialCierres from "./modales/ModalHistorialCierres.jsx";
 import "./modales/ajustes_saldo.css";
+import "./modales/cierres_caja.css";
+import { obtenerEstadoCierres } from "./api/flujoCajaCierresApi";
 
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
@@ -77,6 +83,23 @@ export default function Flujo_Caja() {
   const [showHistorial, setShowHistorial] = useState(false);
   const puedeAjustar = Boolean(data?.ajustes_saldo?.habilitado && data?.ajustes_saldo?.puede_gestionar);
   const handleAjustesChanged = useCallback(() => { fetchResumen(); }, [fetchResumen]);
+
+  // Cierre de caja: sólo administradores y sólo con la migración aplicada.
+  // El backend vuelve a validar permisos en cada endpoint flujo_caja_cierres_*.
+  const [showCierre, setShowCierre] = useState(false);
+  const [historialCierres, setHistorialCierres] = useState({ open: false, id: null });
+  const [estadoCierres, setEstadoCierres] = useState(null);
+  const puedeCerrar = Boolean(data?.cierres_caja?.habilitado && data?.cierres_caja?.puede_gestionar);
+  const refrescarEstadoCierres = useCallback(() => {
+    if (!puedeCerrar) { setEstadoCierres(null); return; }
+    obtenerEstadoCierres().then(setEstadoCierres).catch(() => setEstadoCierres(null));
+  }, [puedeCerrar]);
+  useEffect(() => { refrescarEstadoCierres(); }, [refrescarEstadoCierres]);
+  const handleCierresChanged = useCallback(() => { fetchResumen(); refrescarEstadoCierres(); }, [fetchResumen, refrescarEstadoCierres]);
+  const abrirHistorialCierres = useCallback((id = null) => {
+    setShowCierre(false);
+    setHistorialCierres({ open: true, id: id || null });
+  }, []);
 
   const bloque  = data?.tiendas?.[0] || null;
   const rowsRaw = bloque?.rows || [];
@@ -357,6 +380,20 @@ export default function Flujo_Caja() {
         onChanged={handleAjustesChanged}
         showToast={showToast}
       />
+      <ModalCierreCaja
+        open={showCierre}
+        onClose={() => setShowCierre(false)}
+        onSaved={handleCierresChanged}
+        onOpenCierre={abrirHistorialCierres}
+        showToast={showToast}
+      />
+      <ModalHistorialCierres
+        open={historialCierres.open}
+        initialCierreId={historialCierres.id}
+        onClose={() => setHistorialCierres({ open: false, id: null })}
+        onChanged={handleCierresChanged}
+        showToast={showToast}
+      />
 
       <section className="mov-card mov-card--table">
 
@@ -409,13 +446,51 @@ export default function Flujo_Caja() {
 
           {/* ===== ACCIONES ===== */}
           <div className="mov-card__actions" style={{ display: "flex", gap: 10, alignItems: "center" }}>
+            {puedeCerrar && (
+              <div className="fc-aj-headActions fc-cc-headActions">
+                {estadoCierres?.ultimo_cierre && (
+                  <button
+                    type="button"
+                    className={`fc-cc-indicator ${estadoCierres.diferencias_pendientes ? "" : "fc-cc-indicator--ok"}`}
+                    onClick={() => abrirHistorialCierres(estadoCierres.diferencias_pendientes ? null : estadoCierres.ultimo_cierre.id_cierre)}
+                    title={`Último cierre: ${estadoCierres.ultimo_cierre.numero} del ${fmtDateES(estadoCierres.ultimo_cierre.fecha_operativa)}`}
+                    data-testid="fc-cc-indicador"
+                  >
+                    {estadoCierres.diferencias_pendientes
+                      ? `${estadoCierres.diferencias_pendientes} dif. pendiente${estadoCierres.diferencias_pendientes === 1 ? "" : "s"}`
+                      : `Último cierre ${fmtDateES(estadoCierres.ultimo_cierre.fecha_operativa)}`}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="mov-btn mov-btn--ghost fc-aj-headBtn fc-aj-headBtn--icon"
+                  onClick={() => abrirHistorialCierres(null)}
+                  title="Historial de cierres"
+                  aria-label="Historial de cierres"
+                >
+                  <FontAwesomeIcon icon={faListCheck} />
+                  <span className="fc-aj-headBtn__text">Historial de cierres</span>
+                </button>
+                <button
+                  type="button"
+                  className="mov-btn mov-btn--primary fc-aj-headBtn"
+                  onClick={() => setShowCierre(true)}
+                  disabled={loading && !data}
+                  title={estadoCierres?.cierre_hoy ? `Ya existe el cierre ${estadoCierres.cierre_hoy.numero} de hoy` : "Arqueo y cierre de caja del día"}
+                  aria-label="Cerrar caja"
+                >
+                  <FontAwesomeIcon icon={faCashRegister} />
+                  <span className="fc-aj-headBtn__text">Cerrar caja</span>
+                </button>
+              </div>
+            )}
             {puedeAjustar && (
               <div className="fc-aj-headActions">
                 <button
                   type="button"
                   className="mov-btn mov-btn--ghost fc-aj-headBtn fc-aj-headBtn--icon"
                   onClick={() => setShowHistorial(true)}
-                  title="Historial de ajustes de saldo"
+                  title="Historial de ajustes y transferencias"
                   aria-label="Historial de ajustes de saldo"
                 >
                   <FontAwesomeIcon icon={faClockRotateLeft} />

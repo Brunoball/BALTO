@@ -15,7 +15,8 @@
         "stock/31-stock-units-fractional.spec.js",
         "cheques/15-cheques-lifecycle.spec.js",
         "cuentas_corrientes/36-grouped-payment-current-account-regression.spec.js",
-        "flujo_caja/59-signos-flujo-dashboard.spec.js"
+        "flujo_caja/59-signos-flujo-dashboard.spec.js",
+        "flujo_caja/65-cierre-caja-conciliaciones.spec.js"
       ],
       "excluir": []
     },
@@ -53,6 +54,7 @@
       "carpeta": "analisis_financiero",
       "impactos": [
         "flujo_caja/59-signos-flujo-dashboard.spec.js",
+        "flujo_caja/65-cierre-caja-conciliaciones.spec.js",
         "dashboard/58-dashboard-caja-medios.spec.js"
       ],
       "excluir": []
