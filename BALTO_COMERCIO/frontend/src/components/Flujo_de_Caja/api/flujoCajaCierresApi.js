@@ -96,16 +96,17 @@ export const listarCierres = ({ fechaDesde = "", fechaHasta = "", idMedioPago = 
 
 export const obtenerDetalleCierre = (idCierre) => get("flujo_caja_cierres_detalle", { id_cierre: idCierre });
 
-export const obtenerCandidatosConciliacion = (idDetalle) =>
-  get("flujo_caja_cierres_conciliacion_candidatos", { id_cierre_detalle: idDetalle });
+export const obtenerCandidatosConciliacion = (idDetalle, tipo = "MOVIMIENTO_REGISTRADO") =>
+  get("flujo_caja_cierres_conciliacion_candidatos", { id_cierre_detalle: idDetalle, tipo_resolucion: tipo });
 
-export const previsualizarConciliacion = ({ idDetalle, tipo, importe, observaciones, ids }) =>
+export const previsualizarConciliacion = ({ idDetalle, tipo, importe, observaciones, ids, transferencias }) =>
   get("flujo_caja_cierres_conciliacion_previsualizar", {
     id_cierre_detalle: idDetalle,
     tipo_resolucion: tipo,
     importe,
     observaciones,
     ids_movimiento_medio_pago: ids || [],
+    ids_transferencia: transferencias || [],
   });
 
 export const conciliarDiferencia = (payload) => post("flujo_caja_cierres_conciliar", payload);

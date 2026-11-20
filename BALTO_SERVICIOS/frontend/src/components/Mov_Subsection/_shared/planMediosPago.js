@@ -1,3 +1,5 @@
+import { isBaltoDemoMode } from "../../../utils/demoMode.js";
+
 /* =========================================================
    Política temporal de medios de pago por plan SaaS.
    BASICO, INTERMEDIO, PRO y DEMO permiten todos los medios.
@@ -18,13 +20,6 @@ function toIntOrNull(value) {
   if (value === null || value === undefined || value === "") return null;
   const n = Number(value);
   return Number.isFinite(n) ? n : null;
-}
-
-function isTruthyDemo(value) {
-  if (value === true) return true;
-  if (value === false || value === null || value === undefined) return false;
-  const v = normalizeText(value);
-  return ["1", "TRUE", "SI", "YES", "DEMO"].includes(v);
 }
 
 function getUsuarioStorage() {
@@ -84,33 +79,23 @@ function normalizePlanFromUsuario(usuario) {
     .map(toIntOrNull)
     .filter((n) => n !== null);
 
-  const demoFlag =
-    isTruthyDemo(u.es_demo) ||
-    isTruthyDemo(u.demo) ||
-    isTruthyDemo(u.is_demo) ||
-    isTruthyDemo(u.modo_demo) ||
-    isTruthyDemo(u.tenant_demo) ||
-    isTruthyDemo(tenant.es_demo) ||
-    isTruthyDemo(tenant.demo) ||
-    isTruthyDemo(planObj.es_demo) ||
-    isTruthyDemo(planObj.demo);
+  // Primero, ID explícito del tenant: nunca inferir DEMO por su nombre.
+  // Por ejemplo: idPlan=1, es_demo=1 => Básico DEMO (sigue siendo plan 1).
+  const declared = toIntOrNull(
+    u.idPlan ?? u.id_plan ?? u.plan_id ?? u.planId ??
+    tenant.idPlan ?? tenant.id_plan ?? planObj.idPlan ?? planObj.id_plan
+  );
+  if ([1, 2, 3, 10].includes(declared)) return declared;
 
-  if (demoFlag || nums.includes(10) || names.some((n) => n.includes("DEMO"))) return 10;
+  // Fallback para sesiones antiguas que solo enviaban nivel o nombre.
+  if (nums.includes(10)) return 10;
+  if (nums.includes(3)) return 3;
+  if (nums.includes(2)) return 2;
+  if (nums.includes(1)) return 1;
+  if (names.some((n) => n.includes("DEMO"))) return 10;
 
-  if (
-    nums.includes(3) ||
-    names.some(
-      (n) =>
-        n.includes("PRO") ||
-        n.includes("AVANZADO") ||
-        n.includes("ADVANCED")
-    )
-  ) {
-    return 3;
-  }
-
-  if (nums.includes(2) || names.some((n) => n.includes("INTERMEDIO"))) return 2;
-
+  if (names.some((n) => n.includes("INTERMEDIO") || n.includes("INSUMOS"))) return 2;
+  if (names.some((n) => n.includes("PRO") || n.includes("AVANZADO") || n.includes("ADVANCED") || n.includes("VENTA"))) return 3;
   return 1;
 }
 
@@ -127,7 +112,7 @@ export function esPlanProSaas() {
 }
 
 export function esPlanDemoSaas() {
-  return getPlanSaasIdActual() === 10;
+  return isBaltoDemoMode(getUsuarioStorage());
 }
 
 export function esPlanConMediosCompletosSaas() {

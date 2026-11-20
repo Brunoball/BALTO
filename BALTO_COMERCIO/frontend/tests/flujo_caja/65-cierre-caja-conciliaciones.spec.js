@@ -3,7 +3,7 @@ import { authenticatedApi, expectApiSuccess } from '../support/api.js';
 import { RUN_PREFIX, todayISO } from '../support/data.js';
 import { requireMutations } from '../support/ui.js';
 import { cleanupTestUser, createEmployeeTestUser, loginTestUserInNewContext } from '../support/users.js';
-import { createParty, createProduct, getLists, tipoVentaId, createSale, financialAnalysis } from '../support/financial-api.js';
+import { createParty, createProduct, getLists, tipoVentaId, createSale, financialAnalysis, movementId } from '../support/financial-api.js';
 
 /**
  * BALTO Comercio · Cierre de Caja y Conciliación de Diferencias (Flujo de Caja)
@@ -12,7 +12,7 @@ import { createParty, createProduct, getLists, tipoVentaId, createSale, financia
  *  B) API de sólo lectura: permisos, validaciones y tenant sin migración.
  *  C) Mutaciones reales: requieren PW_ALLOW_MUTATIONS=1 **y** PW_CIERRES_MUTATIONS=1,
  *     un tenant E2E aislado con la migración aplicada y la limpieza
- *     tesoreria_cierres_e2e_cleanup() integrada en config_testing_e2e_cleanup
+ *     tesoreria_cierres_e2e_cleanup() integrada en cfg_testing_e2e_cleanup
  *     (los cierres y sus ajustes llevan el RUN_PREFIX). Usan fechas operativas
  *     históricas (año 2001) para no ocupar el cierre del día real.
  *     Nunca se ejecutan contra producción sin habilitación explícita.
@@ -247,8 +247,13 @@ test.describe('@flujo @cierre-caja interfaz (mocks, sin escrituras)', () => {
     await expect(page.getByTestId('fc-cc-sobrantes')).toContainText('10.000');
     await expect(page.getByTestId('fc-cc-faltantes')).toContainText('10.000');
     await expect(page.getByText('Las diferencias se compensan en el total, pero se registran por separado')).toBeVisible();
-    await expect(page.getByTestId('fc-cc-aplicar-1')).toBeChecked();
+    // La diferencia no autoriza un asiento: el administrador debe pedirlo.
+    await expect(page.getByTestId('fc-cc-aplicar-1')).not.toBeChecked();
     await expect(page.getByTestId('fc-cc-aplicar-2')).toHaveCount(0);
+    await page.getByTestId('fc-cc-revisar').click();
+    await expect(page.getByText('No se aplicará ningún ajuste de saldo.')).toBeVisible();
+    await page.getByRole('button', { name: 'Volver' }).click();
+    await page.getByTestId('fc-cc-aplicar-1').check();
     await page.getByTestId('fc-cc-revisar').click();
     await expect(page.getByTestId('fc-cc-ajustes')).toContainText('EFECTIVO');
     await expect(page.getByTestId('fc-cc-ajustes')).not.toContainText('MERCADO PAGO');
@@ -259,6 +264,20 @@ test.describe('@flujo @cierre-caja interfaz (mocks, sin escrituras)', () => {
     expect(enviado.medios.find((m) => m.id_medio_pago === 1).aplicar_ajuste).toBe(true);
     expect(enviado.medios.find((m) => m.id_medio_pago === 2).aplicar_ajuste).toBe(false);
     expect(enviado.medios.find((m) => m.id_medio_pago === 7).saldo_verificado).toBe('0.00');
+  });
+
+  test('9b · efectivo no se ajusta por defecto aunque tenga diferencia', async ({ page }) => {
+    const st = await mockCierres(page);
+    await abrirCierre(page);
+    await completar(page, { 1: '99000', 2: '350000', 4: '200000', 8: '50000', 7: '0' });
+    await expect(page.getByTestId('fc-cc-estado-1')).toHaveText('Faltante');
+    await expect(page.getByTestId('fc-cc-aplicar-1')).not.toBeChecked();
+    await page.getByTestId('fc-cc-revisar').click();
+    await expect(page.getByText('No se aplicará ningún ajuste de saldo.')).toBeVisible();
+    await page.getByTestId('fc-cc-confirmar').click();
+    await expect(page.getByTestId('fc-cc-done')).toBeVisible();
+    expect(st.calls.confirmar).toHaveLength(1);
+    expect(st.calls.confirmar[0].medios.find((m) => m.id_medio_pago === 1).aplicar_ajuste).toBe(false);
   });
 
   test('15 · doble clic en Confirmar cierre envía una sola solicitud con clave', async ({ page }) => {
@@ -288,6 +307,10 @@ test.describe('@flujo @cierre-caja interfaz (mocks, sin escrituras)', () => {
     await mockCierres(page);
     await abrirCierre(page);
     await completar(page, { 1: '115000', 2: '350000', 4: '200000', 8: '50000', 7: '0' });
+    // El ajuste ya no viene marcado: habilitarlo de manera explicita para
+    // verificar la compensacion posterior de $10.000 en este escenario.
+    await expect(page.getByTestId('fc-cc-aplicar-1')).not.toBeChecked();
+    await page.getByTestId('fc-cc-aplicar-1').check();
     await page.getByTestId('fc-cc-revisar').click();
     await page.getByTestId('fc-cc-confirmar').click();
     await page.getByRole('button', { name: 'Ver detalle' }).click();
@@ -296,8 +319,12 @@ test.describe('@flujo @cierre-caja interfaz (mocks, sin escrituras)', () => {
     await expect(ef).toContainText('Pendiente');
     await page.getByTestId('fc-cc-conciliar-1').click();
     const cn = page.getByRole('dialog', { name: /Resolver diferencia/ });
+    // Volver a seleccionar la opcion actual no debe vaciar los movimientos ya cargados.
+    const candidatos = cn.getByTestId('fc-cn-candidatos').locator('input[type=checkbox]');
+    await expect(candidatos).toHaveCount(1);
     await cn.locator('#fc-cn-tipo').selectOption('MOVIMIENTO_REGISTRADO');
-    await page.getByTestId('fc-cn-candidatos').locator('input[type=checkbox]').first().check();
+    await expect(candidatos).toHaveCount(1);
+    await candidatos.first().check();
     await expect(page.getByTestId('fc-cn-importe')).toHaveValue(/^10\.000/);
     await page.getByTestId('fc-cn-revisar').click();
     await expect(page.getByTestId('fc-cn-compensacion')).toContainText('10.000');
@@ -337,7 +364,7 @@ test.describe('@flujo @cierre-caja interfaz (mocks, sin escrituras)', () => {
     await expect(dlg).toBeVisible();
     await expect(dlg.getByRole('button', { name: /Conciliar diferencia/ })).toHaveAttribute('aria-pressed', 'true');
     await expect(dlg.getByRole('button', { name: /Aplicar ajuste autorizado/ })).toBeEnabled();
-    await expect(dlg.getByText('Movimientos seleccionados')).toBeVisible();
+    await expect(dlg.getByText('Operaciones seleccionadas')).toBeVisible();
     await dlg.getByRole('button', { name: /Aplicar ajuste autorizado/ }).click();
     await expect(dlg.getByTestId('fc-caj-panel')).toBeVisible();
     await expect(dlg.getByText(/La diferencia seguirá pendiente/)).toBeVisible();
@@ -543,10 +570,95 @@ test.describe('@flujo @cierre-caja @mutations cierres y conciliaciones reales', 
     const product = await createProduct(page, 'CIERRE PRODUCTO', { stock: 5, cost: 10, price: 1000 });
     const otroMedio = cierre.detalles.find((d) => d.id_medio_pago !== cu.id_medio_pago);
     const venta = expectApiSuccess(await createSale(page, { fecha: todayISO(), typeId: tipoVentaId(lists, 'CONTADO'), clientId: client.id, productId: product.id, amount: 1000, medios: [{ id_medio_pago: otroMedio.id_medio_pago, monto: 1000 }] }));
-    const idPago = Number(venta.ids_pago?.[0] || 0);
-    test.skip(!idPago, 'La venta no devolvió ids_pago.');
+    const idVenta = movementId(venta);
+    expect(idVenta, 'La venta negativa debe persistirse').toBeGreaterThan(0);
+    const guardada = expectApiSuccess(await authenticatedApi(page, 'ventas_obtener', { query: { id_movimiento: idVenta } })).venta;
+    const idPago = Number((guardada?.medios_pago_detalle_original || guardada?.medios_pago_detalle || [])[0]?.id_movimiento_medio_pago || 0);
+    expect(idPago, 'El pago real debe existir para validar un medio equivocado').toBeGreaterThan(0);
     const otro = await authenticatedApi(page, 'flujo_caja_cierres_conciliar', { method: 'POST', body: { id_cierre_detalle: cu.id_cierre_detalle, tipo_resolucion: 'MOVIMIENTO_REGISTRADO', importe: '1000.00', ids_movimiento_medio_pago: [idPago], pendiente_esperado: '1000.00', clave_solicitud: clave('cnc-otro') } });
     expect(['MOVIMIENTO_OTRO_MEDIO', 'MOVIMIENTO_SENTIDO_INVALIDO'], '33 · pago de otro medio / sentido').toContain(otro.body.codigo);
+  });
+
+  test('21+ · venta real posterior: conciliar pago correcto sin duplicar saldos', async ({ page }) => {
+    test.setTimeout(180_000);
+    // Cierre histórico independiente: el saldo de una fecha ya cerrada queda
+    // congelado, y una venta posterior sólo sirve para justificar la diferencia.
+    const nuevaFecha = await fechaLibre(page);
+    const nuevaPrev = expectApiSuccess(await authenticatedApi(page, 'flujo_caja_cierres_previsualizar', {
+      query: { fecha_operativa: nuevaFecha },
+    }));
+    const efectivo = nuevaPrev.medios.find((m) => m.clase_medio === 'EFECTIVO');
+    expect(efectivo, 'Para la prueba positiva hace falta una caja EFECTIVO').toBeTruthy();
+    const cuerpoCierre = {
+      fecha_operativa: nuevaFecha,
+      observaciones: `${RUN_PREFIX} CIERRE VENTA POSTERIOR`,
+      clave_solicitud: clave('cie-venta'),
+      medios: nuevaPrev.medios.map((m) => ({
+        id_medio_pago: m.id_medio_pago,
+        saldo_esperado: money(m.saldo_esperado),
+        saldo_verificado: money(n(m.saldo_esperado) + (m.id_medio_pago === efectivo.id_medio_pago ? 1000 : 0)),
+        aplicar_ajuste: false,
+      })),
+    };
+    const cierreVenta = expectApiSuccess(await authenticatedApi(page, 'flujo_caja_cierres_confirmar', {
+      method: 'POST', body: cuerpoCierre,
+    }));
+    const detalle = cierreVenta.detalles.find((d) => d.id_medio_pago === efectivo.id_medio_pago);
+    close(detalle.diferencia, 1000);
+    expect(detalle.id_ajuste_saldo).toBeNull();
+
+    const listas = await getLists(page, 'ventas');
+    const cliente = await createParty(page, 'client', 'CIERRE PAGO REAL CLIENTE');
+    const producto = await createProduct(page, 'CIERRE PAGO REAL PRODUCTO', { stock: 5, cost: 10, price: 1000 });
+    const venta = expectApiSuccess(await createSale(page, {
+      fecha: todayISO(), typeId: tipoVentaId(listas, 'CONTADO'),
+      clientId: cliente.id, productId: producto.id, amount: 1000,
+      medios: [{ id_medio_pago: efectivo.id_medio_pago, monto: 1000 }],
+    }));
+    const idVenta = movementId(venta);
+    expect(idVenta, 'La venta E2E debe devolver un ID persistido').toBeGreaterThan(0);
+
+    // Obtenemos el ID real del pago desde el backend (no suponemos ids_pago).
+    const candidatos = expectApiSuccess(await authenticatedApi(page, 'flujo_caja_cierres_conciliacion_candidatos', {
+      query: { id_cierre_detalle: detalle.id_cierre_detalle },
+    })).rows || [];
+    const pago = candidatos.find((p) => Number(p.id_movimiento) === idVenta && Number(p.id_medio_pago) === efectivo.id_medio_pago);
+    expect(pago, 'La venta posterior debe ofrecer un pago candidato del mismo medio').toBeTruthy();
+    close(pago.monto, 1000);
+    expect(pago.sentido).toBe('INGRESO');
+
+    const saldoAntes = expectApiSuccess(await authenticatedApi(page, 'flujo_caja_ajustes_medios')).medios
+      .find((m) => m.id_medio_pago === efectivo.id_medio_pago).saldo_actual;
+    const solicitud = {
+      id_cierre_detalle: detalle.id_cierre_detalle,
+      tipo_resolucion: 'MOVIMIENTO_REGISTRADO',
+      importe: '1000.00', pendiente_esperado: '1000.00',
+      ids_movimiento_medio_pago: [pago.id_movimiento_medio_pago],
+      observaciones: `${RUN_PREFIX} VENTA CONTADO CONFIRMADA`,
+      clave_solicitud: clave('conc-venta'),
+    };
+    const conciliado = expectApiSuccess(await authenticatedApi(page, 'flujo_caja_cierres_conciliar', {
+      method: 'POST', body: solicitud,
+    }));
+    const res = conciliado.detalles.find((d) => d.id_cierre_detalle === detalle.id_cierre_detalle);
+    expect([res.estado_conciliacion, n(res.importe_pendiente), res.id_ajuste_saldo])
+      .toEqual(['CONCILIADA', 0, null]);
+    close(res.diferencia, 1000, 'El cierre histórico debe conservar su diferencia original');
+    expect(expectApiSuccess(await authenticatedApi(page, 'flujo_caja_cierres_conciliar', {
+      method: 'POST', body: solicitud,
+    })).duplicado, 'La misma clave no genera dos conciliaciones').toBe(true);
+    const conciliaciones = expectApiSuccess(await authenticatedApi(page, 'flujo_caja_cierres_conciliaciones_listar', {
+      query: { id_cierre: cierreVenta.cierre.id_cierre },
+    })).rows || [];
+    expect(conciliaciones.some((c) => c.movimientos.some((m) => Number(m.id_movimiento_medio_pago) === pago.id_movimiento_medio_pago)))
+      .toBe(true);
+    const saldoDespues = expectApiSuccess(await authenticatedApi(page, 'flujo_caja_ajustes_medios')).medios
+      .find((m) => m.id_medio_pago === efectivo.id_medio_pago).saldo_actual;
+    close(saldoDespues, saldoAntes, 'Conciliar un ingreso ya registrado no debe duplicar efectivo');
+    expect((expectApiSuccess(await authenticatedApi(page, 'flujo_caja_cierres_conciliacion_candidatos', {
+      query: { id_cierre_detalle: detalle.id_cierre_detalle },
+    })).rows || []).some((m) => Number(m.id_movimiento_medio_pago) === pago.id_movimiento_medio_pago))
+      .toBe(false);
   });
 
   test('44-47 · auditoría y empleado sin permisos por API directa', async ({ page, browser }) => {

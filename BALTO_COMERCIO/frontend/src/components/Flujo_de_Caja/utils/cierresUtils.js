@@ -27,6 +27,15 @@ export const TIPOS_RESOLUCION = [
     clases: ["EFECTIVO", "CUENTA"],
   },
   {
+    codigo: "TRANSFERENCIA_INTERNA",
+    label: "Transferencia interna ya registrada",
+    ayuda: "Elegí una transferencia interna registrada en BALTO. Se vincula sólo su pata de entrada o salida del medio afectado.",
+    requiereMovimientos: false,
+    requiereTransferencias: true,
+    obsMin: 10,
+    clases: ["EFECTIVO", "CUENTA"],
+  },
+  {
     codigo: "ERROR_DE_ARQUEO",
     label: "Error de conteo / dinero encontrado",
     ayuda: "La diferencia no existía: se contó mal o el dinero apareció.",

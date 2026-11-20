@@ -78,9 +78,10 @@ export function normalizePlanNivel(value) {
 export function normalizePlanId(value, planName = "") {
   const n = Number(value);
   const name = String(planName || "").trim().toLowerCase();
-  if (n === 10 || name.includes("demo")) return 10;
-  if (n === 3 || name.includes("pro") || name.includes("avanzado")) return 3;
-  if (n === 2 || name.includes("intermedio")) return 2;
+  if ([1, 2, 3, 10].includes(n)) return n;
+  if (name.includes("intermedio")) return 2;
+  if (name.includes("pro") || name.includes("avanzado")) return 3;
+  if (name.includes("demo")) return 10;
   return 1;
 }
 

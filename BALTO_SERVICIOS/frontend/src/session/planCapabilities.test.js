@@ -89,6 +89,31 @@ describe("planCapabilities", () => {
     expect(can("services.composition")).toBe(true);
   });
 
+  test("DEMO básico: capacidades vienen del backend, no del idPlan 10", () => {
+    localStorage.setItem("usuario", JSON.stringify({
+      idPlan: 1, es_demo: 1, plan_es_demo: 1,
+      plan_firma: "fbasico_demo", capacidades: PLAN_1.filter(
+        (cap) => !["billing.arca", "settings.sensitive"].includes(cap)
+      ),
+    }));
+    expect(getPlanSnapshot().esDemo).toBe(true);
+    expect(can("services.manage")).toBe(true);
+    expect(can("resources.manage")).toBe(false);
+    expect(can("billing.arca")).toBe(false);
+  });
+
+  test("DEMO Full: capacidades normales salvo restricciones sensibles", () => {
+    localStorage.setItem("usuario", JSON.stringify({
+      idPlan: 3, es_demo: 1, plan_es_demo: 1,
+      plan_firma: "ffull_demo", capacidades: PLAN_3.filter(
+        (cap) => !["billing.arca", "settings.sensitive"].includes(cap)
+      ),
+    }));
+    expect(getPlanSnapshot().esDemo).toBe(true);
+    expect(can("products.sell")).toBe(true);
+    expect(can("billing.arca")).toBe(false);
+  });
+
   test("detecta el 403 de plan (no es error de sesión)", () => {
     expect(isPlanDeniedPayload({ codigo: "FUNCIONALIDAD_NO_INCLUIDA_PLAN" })).toBe(true);
     expect(isPlanDeniedPayload({ codigo: "SESSION_EXPIRED" })).toBe(false);

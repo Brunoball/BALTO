@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -62,7 +62,7 @@ export default function ModalClienteFiscalArca({
 }) {
   const inputRef = useRef(null);
   const nombreInputRef = useRef(null);
-  const [modo, setModo] = useState("cuit");
+  const [modo, setModo] = useState(permitirAltaSimple ? "simple" : "cuit");
   const esConsumidorFinal = permitirConsumidorFinal && modo === "consumidor_final";
   const esAltaSimple = permitirAltaSimple && modo === "simple";
   const entidadNombre = entidad === "proveedor" ? "proveedor" : "cliente";
@@ -74,7 +74,9 @@ export default function ModalClienteFiscalArca({
   const confirmar = () => esAltaSimple ? onConfirmarAltaSimple?.() : esConsumidorFinal ? onConfirmarConsumidorFinal?.() : onConfirm?.();
 
 
-  useEffect(() => {
+  // Sincronizar el modo ANTES del primer pintado al abrir: un efecto pasivo
+  // puede restablecer "simple" luego de que el usuario elige "Con CUIT".
+  useLayoutEffect(() => {
     if (open) setModo(permitirAltaSimple ? "simple" : "cuit");
   }, [open, permitirAltaSimple]);
 

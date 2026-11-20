@@ -49,4 +49,15 @@ t('importe mayor al pendiente y aceptar sin ajuste muestran error', () => {
 });
 t('número de cierre', () => assert.equal(u.numeroCierre(12), 'CC-000012'));
 
+
+t('transferencia interna: parcial del faltante con ajuste, compensa en positivo', () => {
+  const p = u.previewConciliacionLocal({ diferencia: -1500, conciliado: 200, cubierto: true, tipo: 'TRANSFERENCIA_INTERNA', importe: 500 });
+  assert.deepEqual([p.compensacion, p.pendientePosterior, p.estado, p.error], [500, 800, 'PARCIALMENTE_CONCILIADA', '']);
+});
+t('transferencia interna: sin ajuste no inventa compensación', () => {
+  const p = u.previewConciliacionLocal({ diferencia: 600, conciliado: 0, cubierto: false, tipo: 'TRANSFERENCIA_INTERNA', importe: 600 });
+  assert.deepEqual([p.compensacion, p.pendientePosterior, p.estado], [0, 0, 'CONCILIADA']);
+  assert.equal(u.TIPOS_RESOLUCION.find((t) => t.codigo === 'TRANSFERENCIA_INTERNA').requiereTransferencias, true);
+});
+
 console.log(`\n${ok} pruebas unitarias OK`);

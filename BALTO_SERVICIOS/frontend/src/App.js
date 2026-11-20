@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "r
 import { APP_BASENAME } from "./config/config";
 import GlobalSessionGate from "./session/GlobalSessionGate";
 import { getStoredUser, hasSession, redirectToCentralAccess } from "./session/sessionClient";
-import { getBaltoPlanIdFromUsuario } from "./utils/demoMode";
+import { isBaltoDemoMode } from "./utils/demoMode";
 import { canAccessRoute, usePlan } from "./session/planCapabilities";
 
 /* Layout del panel */
@@ -117,11 +117,6 @@ function isAdminUser() {
   return normalizeRol(u?.rol ?? u?.tipo_rol, u?.id_rol) === "admin";
 }
 
-function getPlanIdUsuario() {
-  const u = getUsuarioLogueado();
-  return getBaltoPlanIdFromUsuario(u);
-}
-
 /*
  * Los módulos generales están en todos los planes; lo que depende del plan
  * (p. ej. Inventario de Servicios, también vía ?seccion=inventario) se resuelve
@@ -161,11 +156,12 @@ function RutaAdmin({ children }) {
 }
 
 function RutaNoDemoConfig({ children }) {
+  const plan = usePlan();
   if (!hasSession()) return <CentralAccessRedirect />;
 
   // En DEMO la configuración queda visible como vista previa,
   // pero solo Calendario global debe ser navegable/editable.
-  return getPlanIdUsuario() === 10 ? (
+  return (plan.esDemo || isBaltoDemoMode(getUsuarioLogueado())) ? (
     <Navigate to="/panel/configuracion" replace />
   ) : (
     children

@@ -482,6 +482,8 @@ const Principal = () => {
         plan_comercial: u.plan_comercial ?? prev.plan_comercial,
         plan_codigo: u.plan_codigo ?? prev.plan_codigo,
         plan_firma: u.plan_firma ?? prev.plan_firma,
+        es_demo: u.es_demo ?? prev.es_demo,
+        plan_es_demo: u.plan_es_demo ?? prev.plan_es_demo,
         capacidades: u.capacidades ?? prev.capacidades,
       } : prev));
     } catch {}

@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faXmark, faGear } from "@fortawesome/free-solid-svg-icons";
 import "./ModalPerfil.css";
+import { isBaltoDemoMode } from "../../utils/demoMode";
 
 function normalizeRolLabel(value) {
   const v = String(value ?? "").trim().toLowerCase();
@@ -12,7 +13,10 @@ function planLabelFromBackend(u) {
   // Denominación comercial propia de BALTO Servicios (resuelta por el backend
   // sin renombrar los planes compartidos de MASTER).
   const planComercial = String(u?.plan_comercial ?? "").trim();
-  if (planComercial) return planComercial.toLowerCase().startsWith("plan") ? planComercial : `Plan ${planComercial}`;
+  if (planComercial) {
+    const label = planComercial.toLowerCase().startsWith("plan") ? planComercial : `Plan ${planComercial}`;
+    return isBaltoDemoMode(u) && !label.toUpperCase().includes("DEMO") ? `${label} (DEMO)` : label;
+  }
 
   const planNombre = String(u?.plan_nombre ?? "").trim();
   if (planNombre) {
@@ -20,14 +24,14 @@ function planLabelFromBackend(u) {
       .replace(/[_-]+/g, " ")
       .replace(/\s+/g, " ")
       .trim();
-    return `Plan ${clean.charAt(0).toUpperCase()}${clean.slice(1)}`;
+    const label = `Plan ${clean.charAt(0).toUpperCase()}${clean.slice(1)}`;
+    return isBaltoDemoMode(u) && !label.toUpperCase().includes("DEMO") ? `${label} (DEMO)` : label;
   }
 
   const n = Number(u?.plan_nivel ?? u?.planNivel ?? u?.plan_nivel ?? 1);
-  if (n === 2) return "Plan Intermedio";
-  if (Number(u?.idPlan ?? u?.id_plan) === 10) return "Plan Demo";
-  if (n === 3) return "Plan Pro";
-  return "Plan Básico";
+  if (Number(u?.idPlan ?? u?.id_plan) === 10) return "Plan Demo (Full)";
+  const label = n === 2 ? "Plan Intermedio" : n === 3 ? "Plan Pro" : "Plan Básico";
+  return isBaltoDemoMode(u) ? `${label} (DEMO)` : label;
 }
 
 function formatMySQLDateOnly(value) {

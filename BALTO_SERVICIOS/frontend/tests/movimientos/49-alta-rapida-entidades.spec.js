@@ -115,10 +115,28 @@ test('@crud alta rápida: permite alternar con CUIT/ARCA sin exigirlo para alta 
   const dialog = await waitDialog(page, 'Nueva Venta');
   await elegirAgregar(page, dialog, 'cliente');
   const alta = page.getByRole('dialog', { name: 'Agregar cliente' });
-  await alta.getByRole('radio', { name: /Con CUIT \/ ARCA/i }).check();
-  await expect(alta.getByRole('button', { name: /Consultar ARCA/i })).toBeVisible();
+  const modoSimple = alta.getByRole('radio', { name: /Solo nombre/i });
+  const modoCuit = alta.getByRole('radio', { name: /Con CUIT \/ ARCA/i });
+  const consultarArca = alta.getByRole('button', { name: /Consultar ARCA/i });
+
+  // Esperar a que el modal termine de inicializarse. En un backend remoto
+  // el efecto de apertura puede coincidir con el primer intento de cambio.
+  await expect(alta).toBeVisible();
+  await expect(modoSimple).toBeChecked();
+  await expect(modoCuit).not.toBeChecked();
+
+  // Interactuar con la TARJETA visible, no con el input radio de 1 px oculto.
+  // Así se prueba la misma acción que realiza la persona en pantalla.
+  await alta.getByText('Con CUIT / ARCA', { exact: true }).click();
+  await expect(modoCuit).toBeChecked();
+  await expect(modoSimple).not.toBeChecked();
+  await expect(consultarArca).toBeVisible();
   await expect(alta.getByRole('button', { name: /Confirmar y cargar cliente/i })).toBeDisabled();
-  await alta.getByRole('radio', { name: /Solo nombre/i }).check();
+
+  await alta.getByText('Solo nombre (sin CUIT)', { exact: true }).click();
+  await expect(modoSimple).toBeChecked();
+  await expect(modoCuit).not.toBeChecked();
+  await expect(consultarArca).toBeHidden();
   await expect(alta.getByLabel('Nombre del cliente')).toBeVisible();
   await alta.getByRole('button', { name: /Cancelar/i }).click();
   await expect(alta).toBeHidden();

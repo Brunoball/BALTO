@@ -1,16 +1,14 @@
-// src/utils/demoMode.js
-// Helper central para detectar el plan DEMO desde el usuario guardado en localStorage.
-// IDs vigentes en master: 1=BASICO, 2=INTERMEDIO, 3=PRO y 10=DEMO.
-// Durante la transición, los tres planes comerciales tienen acceso completo.
-// DEMO conserva sus bloqueos sensibles actuales.
+// Modo DEMO es una propiedad del TENANT, independiente del plan comercial.
+// El servidor valida el modo y las capacidades; este helper sólo controla UI.
+// Compatibilidad transitoria: los tenants del antiguo plan 10 siguen siendo DEMO.
 
 export function normalizeBaltoPlanId(value, planName = "") {
   const n = Number(value);
+  if ([1, 2, 3, 10].includes(n)) return n;
   const name = String(planName || "").trim().toLowerCase();
-
-  if (n === 10 || name.includes("demo")) return 10;
-  if (n === 3 || name.includes("pro") || name.includes("avanzado")) return 3;
-  if (n === 2 || name.includes("intermedio")) return 2;
+  if (name.includes("intermedio") || name.includes("insumos")) return 2;
+  if (name.includes("pro") || name.includes("avanzado") || name.includes("venta")) return 3;
+  if (name.includes("demo")) return 10; // sesión legacy sin idPlan
   return 1;
 }
 
@@ -26,21 +24,24 @@ export function getBaltoUsuario() {
 export function getBaltoPlanIdFromUsuario(usuario = null) {
   const u = usuario || getBaltoUsuario() || {};
   return normalizeBaltoPlanId(
-    u?.idPlan ?? u?.id_plan ?? u?.plan_id ?? u?.plan_nivel ?? 1,
+    u?.idPlan ?? u?.id_plan ?? u?.plan_id ?? u?.plan_nivel,
     u?.plan_nombre ?? u?.plan ?? u?.nombre_plan ?? ""
   );
 }
 
+function isDemoFlag(value) {
+  return value === true || value === 1 || value === "1";
+}
+
 export function isBaltoDemoMode(usuario = null) {
   const u = usuario || getBaltoUsuario() || {};
-  const name = String(u?.plan_nombre ?? u?.plan ?? u?.nombre_plan ?? "").trim().toLowerCase();
   return (
-    getBaltoPlanIdFromUsuario(u) === 10 ||
-    name.includes("demo") ||
-    Number(u?.es_demo || 0) === 1 ||
-    Number(u?.demo || 0) === 1 ||
-    Number(u?.is_demo || 0) === 1 ||
-    Number(u?.modo_demo || 0) === 1
+    isDemoFlag(u.plan_es_demo) ||
+    isDemoFlag(u.es_demo) ||
+    isDemoFlag(u.demo) ||
+    isDemoFlag(u.is_demo) ||
+    isDemoFlag(u.modo_demo) ||
+    getBaltoPlanIdFromUsuario(u) === 10
   );
 }
 

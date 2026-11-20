@@ -15,6 +15,7 @@
 
 import { useSyncExternalStore } from "react";
 import { storeValidatedUser, validateServicesSession } from "./sessionClient";
+import { isBaltoDemoMode } from "../utils/demoMode";
 
 const USER_KEY = "usuario";
 export const PLAN_DENIED_CODE = "FUNCIONALIDAD_NO_INCLUIDA_PLAN";
@@ -58,7 +59,7 @@ function buildState(raw) {
     firma: String(u.plan_firma || ""),
     codigo: String(u.plan_codigo || ""),
     nombre: String(u.plan_comercial || ""),
-    esDemo: Number(u.plan_es_demo || 0) === 1,
+    esDemo: isBaltoDemoMode(u),
   });
 }
 

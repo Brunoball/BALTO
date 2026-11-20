@@ -5,6 +5,7 @@ import { ENV } from '../support/env.js';
 import { uniqueName } from '../support/data.js';
 import { authenticatedApi, expectApiSuccess } from '../support/api.js';
 import { requireMutations } from '../support/ui.js';
+import { getSessionPlan, PLAN_DENIED_CODE } from '../support/plan.js';
 import {
   cleanupTestUser,
   createEmployeeTestUser,
@@ -227,8 +228,35 @@ test('@security @critical ARCA/R2 fail-closed: TLS verificado y tenant autentica
   expect(r2).toMatch(/r2_assert_tenant_key\s*\(\s*\$key\s*\)/);
 });
 
+test('@security @demo @critical la cuenta DEMO no puede crear usuarios y conserva la sesión', async ({ page }) => {
+  const plan = await getSessionPlan(page);
+  expect(plan.status).toBe(200);
+  test.skip(!plan.esDemo, 'Esta prueba sólo aplica a tenants con es_demo=1 (o plan 10 legacy).');
+
+  // La seguridad E2E debe seguir impidiendo que la suite envíe POST a producción.
+  await requireMutations(test, page);
+  // Payload inválido: si faltara el guard de plan, la API debería responder
+  // validación, jamás crear un usuario real. La política de DEMO debe negar
+  // antes con 403 settings.sensitive.
+  const result = await authenticatedApi(page, 'configuracion_usuarios_guardar', {
+    method: 'POST',
+    body: {},
+  });
+  expect(result.status, `DEMO no debe crear usuarios: ${result.text}`).toBe(403);
+  expect(result.body?.codigo).toBe(PLAN_DENIED_CODE);
+  expect(result.body?.capacidad).toBe('settings.sensitive');
+
+  const after = await authenticatedApi(page, 'auth_session_check');
+  expect(after.status).toBe(200);
+  expect(after.body?.sesion_valida).toBe(true);
+});
+
 test('@security @roles @critical EMPLEADO conserva lo permitido y backend bloquea módulos administrativos', async ({ page, browser }) => {
   test.setTimeout(3 * 60_000);
+  const plan = await getSessionPlan(page);
+  expect(plan.status).toBe(200);
+  test.skip(plan.esDemo, 'Un tenant DEMO bloquea settings.sensitive: la creación de empleados se prueba en tenant normal.');
+  expect(plan.can('settings.sensitive'), 'Una cuenta normal debe tener capacidad de gestionar usuarios.').toBe(true);
   await requireMutations(test, page);
 
   const username = uniqueName('POLICY-EMPLEADO', 36);

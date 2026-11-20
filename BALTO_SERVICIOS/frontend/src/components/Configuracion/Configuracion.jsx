@@ -10,6 +10,7 @@ import { apiFetch, safeJsonParse } from "./api/configuracionApi";
 import useConfiguracionToast from "./hooks/useConfiguracionToast";
 import ModalManualFuncional from "./ConfiguracionManual/ModalManualFuncional";
 import { useDateRange } from "../../context/DateRangeContext";
+import { usePlan } from "../../session/planCapabilities";
 import {
   DEMO_BLOCK_MESSAGE,
   getBaltoUsuario,
@@ -56,8 +57,8 @@ function labelModo(config = {}) {
 
 export default function Configuracion() {
   const navigate = useNavigate();
-  const usuario = useMemo(() => getBaltoUsuario() || {}, []);
-  const esPlanDemo = isBaltoDemoMode(usuario);
+  const plan = usePlan();
+  const esPlanDemo = plan.esDemo || isBaltoDemoMode(getBaltoUsuario());
   const { toast, setToast, mostrarToast } = useConfiguracionToast({
     defaultDuration: 3800,
   });

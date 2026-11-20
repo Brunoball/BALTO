@@ -9,11 +9,12 @@ import { getSessionPlan, isPlanDenied, PLAN_DENIED_CODE } from '../support/plan.
  * División de planes de BALTO Servicios.
  *
  * La suite se adapta al plan REAL del tenant de la sesión (MASTER). Para validar
- * los tres planes, correrla tres veces cambiando el plan del tenant de staging:
+ * los tres planes y las dos modalidades, correrla en staging con cada combinación:
  *
  *   UPDATE tenants SET idPlan = 1 WHERE idTenant = <staging>;  -- Servicios Profesionales
  *   PW_EXPECTED_PLAN=1 npx playwright test tests/47-plan-capabilities.spec.js --project=chromium --workers=1
- *   (repetir con 2 y 3; volver al plan original al terminar)
+ *   PW_EXPECTED_PLAN=1 PW_EXPECTED_DEMO=1 ...  -- combinar niveles 1/2/3 y flags 0/1
+ *   (volver al plan y modalidad original al terminar)
  *
  * Nunca correr contra producción: usa mutaciones con prefijo E2E y limpieza.
  */
@@ -63,9 +64,21 @@ test.describe('BALTO Servicios - división de planes', () => {
     for (const cap of ['services.manage', 'services.sell', 'budgets.manage', 'accounts.current', 'finance.manage']) {
       expect(plan.can(cap), cap).toBe(true);
     }
-    if (!plan.esDemo) expect(plan.can('billing.arca')).toBe(true);
+    const expectedDemo = process.env.PW_EXPECTED_DEMO;
+    if (expectedDemo === '1' || expectedDemo === '0') {
+      expect(plan.esDemo, 'El tenant de staging no tiene modalidad DEMO esperada').toBe(expectedDemo === '1');
+    }
+    expect(Number(plan.usuario.es_demo || plan.usuario.plan_es_demo || 0)).toBe(plan.esDemo ? 1 : 0);
+    if (plan.esDemo) {
+      expect(plan.can('billing.arca')).toBe(false);
+      expect(plan.can('settings.sensitive')).toBe(false);
+      expect(plan.codigo).toContain('_DEMO');
+    } else {
+      expect(plan.can('billing.arca')).toBe(true);
+      expect(plan.can('settings.sensitive')).toBe(true);
+    }
     if (plan.can('products.manage')) expect(plan.can('resources.manage')).toBe(true);
-    if (plan.nivel && MATRIX[plan.nivel] && !plan.esDemo) {
+    if (plan.nivel && MATRIX[plan.nivel]) {
       const m = MATRIX[plan.nivel];
       expect(plan.can('workers.manage')).toBe(m.workers);
       expect(plan.can('services.workers')).toBe(m.workers);
