@@ -1,3 +1,4 @@
+import "../../Mov_Subsection/Documentos_Comerciales/DocumentosComerciales.css";
 // src/components/Flujo_de_Caja/modales/ModalHistorialAjustes.jsx
 // Historial de tesorería (sólo lectura): ajustes de saldo y transferencias
 // internas entre cajas, en un único punto de consulta. La única acción
@@ -5,22 +6,17 @@
 // ambos registros permanecen en el historial.
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faXmark,
   faClockRotateLeft,
   faRotateLeft,
   faTriangleExclamation,
-  faWallet,
-  faCircleInfo,
   faCoins,
   faArrowRightLong,
   faChevronDown,
+  faFilterCircleXmark,
 } from "@fortawesome/free-solid-svg-icons";
 
-import "../../Global/Global_css/Global_Section.css";
-import "../../Global/Global_css/Global_Modals.css";
 import "./ajustes_saldo.css";
 
 import {
@@ -33,6 +29,7 @@ import {
   revertirTransferencia,
 } from "../api/flujoCajaAjustesApi";
 import { fmtDateES, moneyARS, moneyARSSigned } from "../utils/flujoCajaUtils";
+import { Badge, FieldMsg, MetaList, ModalShell, Stat, toneOf } from "./FcModalParts.jsx";
 
 const VISTAS = [
   { codigo: "TODOS", label: "Todos" },
@@ -53,34 +50,41 @@ function compararMovimientos(a, b) {
 function fmtDateTime(value) {
   const s = String(value || "");
   const m = s.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/);
-  if (!m) return fmtDateES(s.slice(0, 10));
-  return `${m[3]}/${m[2]}/${m[1]} ${m[4]}:${m[5]}`;
+  if (!m) return { fecha: fmtDateES(s.slice(0, 10)), hora: "" };
+  return { fecha: `${m[3]}/${m[2]}/${m[1]}`, hora: `${m[4]}:${m[5]}` };
 }
 
-function signClass(n) {
-  if (n > 0.004) return "is-positive";
-  if (n < -0.004) return "is-negative";
-  return "is-neutral";
-}
+const numClase = (n) => `fc-md-num fc-md-num--${toneOf(n)}`;
+const puedeRevertir = (v) => v === true || v === 1 || v === "1";
 
 function EstadoTransferencia({ row }) {
   if (row.estado === "REVERTIDO") {
-    return <span className="fc-aj-badge fc-aj-badge--reverted" title={`Revertida por la transferencia #${row.revertido_por}`}>REVERTIDO · #{row.revertido_por}</span>;
+    return <Badge tone="reverted" title={`Revertida por la transferencia #${row.revertido_por}`}>REVERTIDO · #{row.revertido_por}</Badge>;
   }
   if (row.estado === "REVERSION") {
-    return <span className="fc-aj-badge fc-aj-badge--reversal">REVERSIÓN DE #{row.id_transferencia_revertida}</span>;
+    return <Badge tone="reversal">REVERSIÓN DE #{row.id_transferencia_revertida}</Badge>;
   }
-  return <span className="fc-aj-badge fc-aj-badge--active">VIGENTE</span>;
+  return <Badge tone="active">VIGENTE</Badge>;
 }
 
 function EstadoBadge({ row }) {
   if (row.estado === "REVERTIDO") {
-    return <span className="fc-aj-badge fc-aj-badge--reverted" title={`Revertido por el ajuste #${row.revertido_por}`}>REVERTIDO · #{row.revertido_por}</span>;
+    return <Badge tone="reverted" title={`Revertido por el ajuste #${row.revertido_por}`}>REVERTIDO · #{row.revertido_por}</Badge>;
   }
   if (row.estado === "REVERSION") {
-    return <span className="fc-aj-badge fc-aj-badge--reversal">REVERSIÓN DE #{row.id_ajuste_revertido}</span>;
+    return <Badge tone="reversal">REVERSIÓN DE #{row.id_ajuste_revertido}</Badge>;
   }
-  return <span className="fc-aj-badge fc-aj-badge--active">VIGENTE</span>;
+  return <Badge tone="active">VIGENTE</Badge>;
+}
+
+function CeldaFecha({ value }) {
+  const d = fmtDateTime(value);
+  return (
+    <div className="mov-gridCell fc-md-cell--stack" role="cell" data-label="Fecha y hora">
+      <span className="fc-md-num">{d.fecha}</span>
+      {d.hora && <small>{d.hora} h</small>}
+    </div>
+  );
 }
 
 export default function ModalHistorialAjustes({ open, onClose, onChanged, showToast }) {
@@ -154,17 +158,6 @@ export default function ModalHistorialAjustes({ open, onClose, onChanged, showTo
       .catch(() => setMedios([]));
   }, [open, cargar]);
 
-  useEffect(() => {
-    if (!open) return undefined;
-    const onKey = (e) => {
-      if (e.key !== "Escape" || reverting) return;
-      if (revertTarget) setRevertTarget(null);
-      else onClose?.();
-    };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [open, reverting, revertTarget, onClose]);
-
   // Medios presentes en el historial aunque hoy ya no sean ajustables.
   const mediosFiltro = useMemo(() => {
     const map = new Map();
@@ -185,10 +178,6 @@ export default function ModalHistorialAjustes({ open, onClose, onChanged, showTo
   }, [rows, transferencias, vista]);
 
   const netoVista = (vista !== "TRANSFERENCIAS" ? neto : 0) + (vista !== "AJUSTES" ? netoTransfer : 0);
-  const columnas = vista === "AJUSTES"
-    ? ["Fecha y hora", "Medio", "Tipo", "Ajuste", "Saldo anterior", "Saldo posterior", "Motivo", "Estado", "Acciones"]
-    : ["Fecha y hora", "Medio(s)", "Tipo", "Importe", "Saldo anterior", "Saldo posterior", "Motivo / Obs.", "Estado", "Acciones"];
-
   const actualizarFiltro = (campo, valor) => {
     const next = { ...filtros, [campo]: valor };
     if (next.fechaDesde && next.fechaHasta && next.fechaDesde > next.fechaHasta) {
@@ -244,28 +233,37 @@ export default function ModalHistorialAjustes({ open, onClose, onChanged, showTo
     }
   };
 
+
+  const hayFiltros = Object.values(filtros).some(Boolean);
+  const limpiarFiltros = () => { setFiltros(FILTROS_INICIALES); setExpandida(null); cargar(FILTROS_INICIALES, vista); };
+  const cerrarReversion = useCallback(() => { if (!reverting) setRevertTarget(null); }, [reverting]);
+
   if (!open) return null;
 
   const renderAjuste = (r) => (
-    <div key={`a-${r.id_ajuste}`} className={`mov-gridTable mov-gridTable--row fc-aj-tr ${r.estado !== "VIGENTE" ? "is-muted" : ""}`} role="row" data-ajuste-id={r.id_ajuste}>
-      <div className="mov-gridCell fc-aj-td" role="cell" data-label="Fecha y hora">{fmtDateTime(r.created_at)}</div>
-      <div className="mov-gridCell fc-aj-td" role="cell" data-label="Medio">{r.medio_nombre}</div>
-      <div className="mov-gridCell fc-aj-td" role="cell" data-label="Tipo">{r.tipo_label}</div>
-      <div className={`mov-gridCell fc-aj-td fc-aj-num ${signClass(r.diferencia)}`} role="cell" data-label="Ajuste">{moneyARSSigned(r.diferencia)}</div>
-      <div className="mov-gridCell fc-aj-td fc-aj-num" role="cell" data-label="Saldo anterior">{moneyARS(r.saldo_anterior)}</div>
-      <div className="mov-gridCell fc-aj-td fc-aj-num" role="cell" data-label="Saldo posterior">{moneyARS(r.saldo_posterior)}</div>
-      <div className="mov-gridCell fc-aj-td fc-aj-motivo" role="cell" data-label="Motivo">
-        <span>{r.motivo_label}</span>
-        {r.observaciones && <small title={r.observaciones}>{r.observaciones}</small>}
+    <div key={`a-${r.id_ajuste}`} className={`mov-gridTable fc-md-row fc-md-tr ${r.estado !== "VIGENTE" ? "is-muted" : ""}`} role="row" data-ajuste-id={r.id_ajuste}>
+      <CeldaFecha value={r.created_at} />
+      <div className="mov-gridCell fc-md-cell--stack" role="cell" data-label="Medio">
+        <span className="fc-md-ellipsis" title={r.medio_nombre}><b>{r.medio_nombre}</b></span>
+        <small>{r.tipo_label}</small>
       </div>
-      <div className="mov-gridCell fc-aj-td" role="cell" data-label="Estado"><EstadoBadge row={r} /></div>
-      <div className="mov-gridCell fc-aj-td fc-aj-td--action" role="cell" data-label="Acciones">
-        {r.puede_revertir === true || r.puede_revertir === 1 || r.puede_revertir === "1" ? (
-          <button type="button" className="mov-iconBtn fc-aj-revertBtn" onClick={() => abrirReversion(r, "ajuste")}
-            disabled={reverting} title="Revertir ajuste" aria-label={`Revertir ajuste #${r.id_ajuste}`}>
-            <FontAwesomeIcon icon={faRotateLeft} aria-hidden="true" />
-          </button>
-        ) : <span className="fc-aj-noAction" title="Ajuste no reversible" aria-label="Sin acciones disponibles">—</span>}
+      <div className="mov-gridCell is-right" role="cell" data-label="Ajuste"><span className={`${numClase(r.diferencia)} fc-md-num--strong`}>{moneyARSSigned(r.diferencia)}</span></div>
+      <div className="mov-gridCell is-right" role="cell" data-label="Saldo anterior"><span className="fc-md-num">{moneyARS(r.saldo_anterior)}</span></div>
+      <div className="mov-gridCell is-right" role="cell" data-label="Saldo posterior"><span className="fc-md-num">{moneyARS(r.saldo_posterior)}</span></div>
+      <div className="mov-gridCell fc-md-cell--stack fc-md-cell--full" role="cell" data-label="Motivo">
+        <span className="fc-md-clamp2">{r.motivo_label}</span>
+        {r.observaciones && <small className="fc-md-clamp2" title={r.observaciones}>{r.observaciones}</small>}
+      </div>
+      <div className="mov-gridCell" role="cell" data-label="Estado"><EstadoBadge row={r} /></div>
+      <div className="mov-gridCell is-center fc-md-cell--actions" role="cell" data-label="Acciones">
+        <span className="fc-md-actions">
+          {puedeRevertir(r.puede_revertir) ? (
+            <button type="button" className="mov-iconBtn" onClick={() => abrirReversion(r, "ajuste")}
+              disabled={reverting} title="Revertir ajuste" aria-label={`Revertir ajuste #${r.id_ajuste}`}>
+              <FontAwesomeIcon icon={faRotateLeft} aria-hidden="true" />
+            </button>
+          ) : <span className="fc-md-num--zero" title="Ajuste no reversible" aria-label="Sin acciones disponibles">—</span>}
+        </span>
       </div>
     </div>
   );
@@ -276,263 +274,236 @@ export default function ModalHistorialAjustes({ open, onClose, onChanged, showTo
     const efecto = t.efecto_medio;
     return (
       <React.Fragment key={`t-${t.id_transferencia}`}>
-        <div className={`mov-gridTable mov-gridTable--row fc-aj-tr fc-tr-row ${t.estado !== "VIGENTE" ? "is-muted" : ""}`} role="row" data-transferencia-id={t.id_transferencia}>
-          <div className="mov-gridCell fc-aj-td" role="cell" data-label="Fecha y hora">{fmtDateTime(t.created_at)}</div>
-          <div className="mov-gridCell fc-aj-td fc-tr-routeCell" role="cell" data-label="Medios">
-            <span title={t.medio_origen_nombre}>{t.medio_origen_nombre}</span>
-            <FontAwesomeIcon icon={faArrowRightLong} aria-label="hacia" />
-            <span title={t.medio_destino_nombre}>{t.medio_destino_nombre}</span>
+        <div className={`mov-gridTable fc-md-row fc-md-tr ${t.estado !== "VIGENTE" ? "is-muted" : ""}`} role="row" data-transferencia-id={t.id_transferencia}>
+          <CeldaFecha value={t.created_at} />
+          <div className="mov-gridCell fc-md-cell--stack" role="cell" data-label="Medios">
+            <span className="fc-hx-route">
+              <b title={t.medio_origen_nombre}>{t.medio_origen_nombre}</b>
+              <FontAwesomeIcon icon={faArrowRightLong} aria-label="hacia" />
+              <b title={t.medio_destino_nombre}>{t.medio_destino_nombre}</b>
+            </span>
+            <small>{t.tipo_label}</small>
           </div>
-          <div className="mov-gridCell fc-aj-td fc-tr-tipo" role="cell" data-label="Tipo">{t.tipo_label}</div>
-          <div className={`mov-gridCell fc-aj-td fc-aj-num ${efecto == null ? "is-neutral" : signClass(efecto)}`} role="cell" data-label="Importe"
+          <div className="mov-gridCell is-right" role="cell" data-label="Importe"
             title={efecto == null ? "Importe transferido (no cambia el total del negocio)" : "Efecto sobre el medio filtrado"}>
-            {efecto == null ? moneyARS(t.importe) : moneyARSSigned(efecto)}
+            <span className={`${efecto == null ? "fc-md-num" : numClase(efecto)} fc-md-num--strong`}>{efecto == null ? moneyARS(t.importe) : moneyARSSigned(efecto)}</span>
           </div>
-          <div className="mov-gridCell fc-aj-td fc-aj-num fc-tr-stack" role="cell" data-label="Saldo anterior">
-            <small><em>Orig.</em> <b>{moneyARS(t.saldo_origen_anterior)}</b></small><small><em>Dest.</em> <b>{moneyARS(t.saldo_destino_anterior)}</b></small>
+          <div className="mov-gridCell fc-md-cell--stack is-right" role="cell" data-label="Saldo anterior">
+            <small className="fc-hx-pair"><em>Orig.</em> <b>{moneyARS(t.saldo_origen_anterior)}</b></small>
+            <small className="fc-hx-pair"><em>Dest.</em> <b>{moneyARS(t.saldo_destino_anterior)}</b></small>
           </div>
-          <div className="mov-gridCell fc-aj-td fc-aj-num fc-tr-stack" role="cell" data-label="Saldo posterior">
-            <small><em>Orig.</em> <b>{moneyARS(t.saldo_origen_posterior)}</b></small><small><em>Dest.</em> <b>{moneyARS(t.saldo_destino_posterior)}</b></small>
+          <div className="mov-gridCell fc-md-cell--stack is-right" role="cell" data-label="Saldo posterior">
+            <small className="fc-hx-pair"><em>Orig.</em> <b>{moneyARS(t.saldo_origen_posterior)}</b></small>
+            <small className="fc-hx-pair"><em>Dest.</em> <b>{moneyARS(t.saldo_destino_posterior)}</b></small>
           </div>
-          <div className="mov-gridCell fc-aj-td fc-aj-motivo" role="cell" data-label="Observaciones">
-            <span>{t.tipo === "REVERSION" ? "REVERSIÓN" : "TRANSFERENCIA INTERNA"}</span>
-            {t.observaciones && <small title={t.observaciones}>{t.observaciones}</small>}
+          <div className="mov-gridCell fc-md-cell--stack fc-md-cell--full" role="cell" data-label="Motivo">
+            <span className="fc-md-clamp2">{t.tipo === "REVERSION" ? "REVERSIÓN" : "TRANSFERENCIA INTERNA"}</span>
+            {t.observaciones && <small className="fc-md-clamp2" title={t.observaciones}>{t.observaciones}</small>}
           </div>
-          <div className="mov-gridCell fc-aj-td" role="cell" data-label="Estado"><EstadoTransferencia row={t} /></div>
-          <div className="mov-gridCell fc-aj-td fc-aj-td--action fc-tr-actions" role="cell" data-label="Acciones">
-            <button type="button" className={`mov-iconBtn fc-tr-detailBtn ${abierta ? "is-open" : ""}`} aria-expanded={abierta} aria-controls={detalleId}
-              onClick={() => setExpandida(abierta ? null : t.id_transferencia)} title={abierta ? "Ocultar detalle" : "Ver detalle"} aria-label={`Detalle de la transferencia #${t.id_transferencia}`}>
-              <FontAwesomeIcon icon={faChevronDown} aria-hidden="true" />
-            </button>
-            {t.puede_revertir === true && (
-              <button type="button" className="mov-iconBtn fc-aj-revertBtn" onClick={() => abrirReversion(t, "transferencia")}
-                disabled={reverting} title="Revertir transferencia" aria-label={`Revertir transferencia #${t.id_transferencia}`}>
-                <FontAwesomeIcon icon={faRotateLeft} aria-hidden="true" />
+          <div className="mov-gridCell" role="cell" data-label="Estado"><EstadoTransferencia row={t} /></div>
+          <div className="mov-gridCell is-center fc-md-cell--actions" role="cell" data-label="Acciones">
+            <span className="fc-md-actions">
+              <button type="button" className={`mov-iconBtn fc-hx-detailBtn ${abierta ? "is-open" : ""}`} aria-expanded={abierta} aria-controls={detalleId}
+                onClick={() => setExpandida(abierta ? null : t.id_transferencia)} title={abierta ? "Ocultar detalle" : "Ver detalle"} aria-label={`Detalle de la transferencia #${t.id_transferencia}`}>
+                <FontAwesomeIcon icon={faChevronDown} aria-hidden="true" />
               </button>
-            )}
+              {t.puede_revertir === true && (
+                <button type="button" className="mov-iconBtn" onClick={() => abrirReversion(t, "transferencia")}
+                  disabled={reverting} title="Revertir transferencia" aria-label={`Revertir transferencia #${t.id_transferencia}`}>
+                  <FontAwesomeIcon icon={faRotateLeft} aria-hidden="true" />
+                </button>
+              )}
+            </span>
           </div>
         </div>
-        <div
-          id={detalleId}
-          className={`fc-tr-detailReveal ${abierta ? "is-open" : ""}`}
-          role="row"
-          aria-hidden={!abierta}
-          data-transferencia-detalle={t.id_transferencia}
-        >
-          <div className="fc-tr-detailReveal__clip">
-            <div className="fc-tr-detail">
-              <dl role="cell" aria-colspan={9}>
-              <div><dt>Fecha y hora</dt><dd>{fmtDateTime(t.created_at)}</dd></div>
-              <div><dt>Importe transferido</dt><dd>{moneyARS(t.importe)}</dd></div>
-              <div><dt>Origen · {t.medio_origen_nombre}{t.medio_origen_activo === false ? " (inactivo)" : ""}</dt>
-                <dd>{moneyARS(t.saldo_origen_anterior)} → {moneyARS(t.saldo_origen_posterior)}</dd></div>
-              <div><dt>Destino · {t.medio_destino_nombre}{t.medio_destino_activo === false ? " (inactivo)" : ""}</dt>
-                <dd>{moneyARS(t.saldo_destino_anterior)} → {moneyARS(t.saldo_destino_posterior)}</dd></div>
-              <div><dt>Observaciones</dt><dd>{t.observaciones || "—"}</dd></div>
-              <div><dt>Estado</dt><dd><EstadoTransferencia row={t} /></dd></div>
-              {t.id_transferencia_revertida && <div><dt>Revierte a</dt><dd>Transferencia #{t.id_transferencia_revertida}</dd></div>}
-              {t.revertido_por && <div><dt>Revertida por</dt><dd>#{t.revertido_por}{t.fecha_reversion ? ` · ${fmtDateES(t.fecha_reversion)}` : ""}{t.revertido_por_usuario ? ` · ${t.revertido_por_usuario}` : ""}</dd></div>}
-              </dl>
+        {abierta && (
+          <div id={detalleId} className="fc-hx-detail" role="row" data-transferencia-detalle={t.id_transferencia}>
+            <div role="cell">
+              <MetaList items={[
+                { label: "Importe transferido", value: moneyARS(t.importe) },
+                { label: `Origen · ${t.medio_origen_nombre}${t.medio_origen_activo === false ? " (inactivo)" : ""}`, value: `${moneyARS(t.saldo_origen_anterior)} → ${moneyARS(t.saldo_origen_posterior)}` },
+                { label: `Destino · ${t.medio_destino_nombre}${t.medio_destino_activo === false ? " (inactivo)" : ""}`, value: `${moneyARS(t.saldo_destino_anterior)} → ${moneyARS(t.saldo_destino_posterior)}` },
+                t.id_transferencia_revertida && { label: "Revierte a", value: `Transferencia #${t.id_transferencia_revertida}` },
+                t.revertido_por && { label: "Revertida por", value: `#${t.revertido_por}${t.fecha_reversion ? ` · ${fmtDateES(t.fecha_reversion)}` : ""}${t.revertido_por_usuario ? ` · ${t.revertido_por_usuario}` : ""}` },
+                { label: "Observaciones", value: t.observaciones || "—", wide: true },
+              ]} />
             </div>
           </div>
-        </div>
+        )}
       </React.Fragment>
     );
   };
 
+  const esTransferRevert = revertTarget?.kind === "transferencia";
+
   return (<>
-    {createPortal(
-    <div className="mi-mini__overlay fc-aj-overlay" role="presentation">
-      <div
-        className="mi-mini__modal fc-aj-modal fc-aj-modal--wide fc-aj-history"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="fc-aj-hist-title"
-        aria-describedby="fc-aj-hist-subtitle"
-        onMouseDown={(e) => e.stopPropagation()}
-      >
-        <div className="mi-mini__head">
-          <h4 id="fc-aj-hist-title" className="mi-mini__title fc-aj-title">
-            <FontAwesomeIcon icon={faClockRotateLeft} />
-            <span>Historial de ajustes de saldo</span>
-          </h4>
-          <button type="button" className="mi-mini__close" onClick={() => !reverting && onClose?.()} disabled={reverting} aria-label="Cerrar">
-            <FontAwesomeIcon icon={faXmark} />
-          </button>
-        </div>
-
-        <div className="mi-mini__body fc-aj-body">
-          <p id="fc-aj-hist-subtitle" className="fc-aj-help fc-tr-histSubtitle">Movimientos de tesorería: ajustes de saldo y transferencias internas entre cajas.</p>
-          <div className="gm-view-tabs fc-aj-typeTabs fc-tr-viewTabs" role="tablist" aria-label="Tipo de movimiento">
-            {VISTAS.map((v) => (
-              <button key={v.codigo} type="button" role="tab" id={`fc-hist-tab-${v.codigo}`} aria-selected={vista === v.codigo}
-                className={`gm-view-tab ${vista === v.codigo ? "is-active" : ""}`} onClick={() => cambiarVista(v.codigo)} disabled={reverting}>
-                {v.label}
-              </button>
-            ))}
-          </div>
-          <div className="fc-aj-filters fc-tr-filters" aria-label="Filtros del historial">
-            <div className="fl-field">
-              <input id="fc-aj-f-desde" type="date" className="fl-input" placeholder=" " value={filtros.fechaDesde}
-                onClick={(e) => { try { e.currentTarget.showPicker?.(); } catch {} }}
-                onChange={(e) => actualizarFiltro("fechaDesde", e.target.value)} />
-              <label className="fl-label fc-aj-floatLabel" htmlFor="fc-aj-f-desde">Desde</label>
-            </div>
-            <div className="fl-field">
-              <input id="fc-aj-f-hasta" type="date" className="fl-input" placeholder=" " value={filtros.fechaHasta}
-                onClick={(e) => { try { e.currentTarget.showPicker?.(); } catch {} }}
-                onChange={(e) => actualizarFiltro("fechaHasta", e.target.value)} />
-              <label className="fl-label fc-aj-floatLabel" htmlFor="fc-aj-f-hasta">Hasta</label>
-            </div>
-            <div className="fl-field">
-              <select id="fc-aj-f-medio" className="fl-select fc-aj-select" value={filtros.idMedioPago}
-                onChange={(e) => actualizarFiltro("idMedioPago", e.target.value)}>
-                <option value="">TODOS</option>
-                {mediosFiltro.map((m) => <option key={m.id} value={m.id}>{m.nombre}</option>)}
-              </select>
-              <label className="fl-label fc-aj-floatLabel" htmlFor="fc-aj-f-medio">Medio de pago</label>
-            </div>
-            <div className="fl-field">
-              <select id="fc-aj-f-estado" className="fl-select fc-aj-select" value={filtros.estado}
-                onChange={(e) => actualizarFiltro("estado", e.target.value)}>
-                <option value="">TODOS</option>
-                <option value="VIGENTE">VIGENTE</option>
-                <option value="REVERTIDO">REVERTIDO</option>
-                <option value="REVERSION">REVERSIÓN</option>
-              </select>
-              <label className="fl-label fc-aj-floatLabel" htmlFor="fc-aj-f-estado">Estado</label>
-            </div>
-          </div>
-
-          {error && (
-            <div className="fc-aj-alert fc-aj-alert--error" role="alert">
-              <FontAwesomeIcon icon={faTriangleExclamation} /><span>{error}</span>
-            </div>
-          )}
-          {transferError && !error && (
-            <div className="fc-aj-alert fc-aj-alert--warning" role="status">
-              <FontAwesomeIcon icon={faTriangleExclamation} /><span>Transferencias: {transferError}</span>
-            </div>
-          )}
-
-          <div className="fc-aj-tableViewport" role="region" aria-label="Tabla de movimientos de tesorería">
-          <div className="fc-aj-table" role="table" aria-busy={loading} aria-label="Historial de ajustes de saldo">
-            <div className="mov-gridTable mov-gridTable--head fc-aj-tr fc-aj-tr--head" role="row">
-              {columnas.map((h, i) => (
-                <div key={i} className={`mov-gridCell--head fc-aj-th ${i >= 3 && i <= 5 ? "is-right" : i >= 7 ? "is-center" : ""}`} role="columnheader">{h}</div>
-              ))}
-            </div>
-            <div className="fc-aj-tableBody" role="rowgroup">
-            {loading && Array.from({ length: 24 }, (_, i) => (
-              <div key={`loading-${i}`} className="mov-gridTable mov-gridTable--row fc-aj-tr" role="row" aria-hidden="true">
-                {Array.from({ length: 9 }, (_, j) => <div key={j} className="mov-gridCell fc-aj-td" role="cell"><span className="fc-aj-skeleton" /></div>)}
-              </div>
-            ))}
-            {!loading && items.map((it) => (it.kind === "ajuste" ? renderAjuste(it.row) : renderTransferencia(it.row)))}
-            {!loading && !items.length && !error && (
-              <div className="fc-aj-empty" role="row"><div role="cell" aria-colspan={9}><FontAwesomeIcon icon={faClockRotateLeft} /><strong>No hay registros</strong><span>No se encontraron movimientos para los filtros seleccionados.</span></div></div>
-            )}
-            </div>
-          </div>
-          </div>
-        </div>
-        <div className="fc-aj-historyFooter">
-          <div className="fc-aj-histMeta" role="status">
-            <span>{loading ? "Cargando historial…" : `${items.length} registro${items.length === 1 ? "" : "s"}`}</span>
+    <ModalShell
+      open
+      titleId="fc-aj-hist-title"
+      title="Historial de ajustes de saldo"
+      icon={faClockRotateLeft}
+      onClose={onClose}
+      closeDisabled={reverting}
+      size="xl"
+      className="fc-md-modal--fixed fc-hx-modal"
+      bodyClassName="fc-md-body--table"
+      footer={(
+        <>
+          <div className="fc-md-footer__start fc-md-note" role="status">
+            <span>{loading ? "Cargando…" : `${items.length} registro${items.length === 1 ? "" : "s"}`}</span>
             <span title={filtros.idMedioPago ? "Efecto sobre el medio seleccionado" : "Las transferencias internas no cambian el total del negocio"}>
-              Efecto neto <b className={signClass(netoVista)}>{loading || error ? "—" : moneyARSSigned(netoVista)}</b>
+              · Efecto neto <b className={numClase(netoVista)}>{loading || error ? "—" : moneyARSSigned(netoVista)}</b>
             </span>
           </div>
-          <button type="button" className="mit-btn mit-btn--solid" disabled={reverting} onClick={onClose}>Cerrar</button>
+          <button type="button" className="mit-btn mit-btn--ghost" disabled={reverting} onClick={onClose}>Cerrar</button>
+        </>
+      )}
+    >
+      <div className="doccom-tabsRow">
+        <div className="doccom-googleTabs" role="tablist" aria-label="Tipo de movimiento">
+          {VISTAS.map((v) => (
+            <button key={v.codigo} type="button" role="tab" id={`fc-hist-tab-${v.codigo}`} aria-selected={vista === v.codigo}
+              className={`doccom-googleTab ${vista === v.codigo ? "is-active" : ""}`} onClick={() => cambiarVista(v.codigo)} disabled={reverting}>
+              <span className="doccom-googleTab__label">{v.label}</span>
+            </button>
+          ))}
         </div>
-
       </div>
-    </div>,
-    document.body
-  )}
+      <div className="fc-md-toolbar" aria-label="Filtros del historial">
+        <div className="fl-field fc-md-fl">
+          <input id="fc-aj-f-desde" type="date" className="fl-input" placeholder=" " value={filtros.fechaDesde}
+            onChange={(e) => actualizarFiltro("fechaDesde", e.target.value)} />
+          <label className="fl-label" htmlFor="fc-aj-f-desde">Desde</label>
+        </div>
+        <div className="fl-field fc-md-fl">
+          <input id="fc-aj-f-hasta" type="date" className="fl-input" placeholder=" " value={filtros.fechaHasta}
+            onChange={(e) => actualizarFiltro("fechaHasta", e.target.value)} />
+          <label className="fl-label" htmlFor="fc-aj-f-hasta">Hasta</label>
+        </div>
+        <div className="fl-field fc-md-fl fc-md-fl--wide">
+          <select id="fc-aj-f-medio" className="fl-select" value={filtros.idMedioPago}
+            onChange={(e) => actualizarFiltro("idMedioPago", e.target.value)}>
+            <option value="">TODOS</option>
+            {mediosFiltro.map((m) => <option key={m.id} value={m.id}>{m.nombre}</option>)}
+          </select>
+          <label className="fl-label" htmlFor="fc-aj-f-medio">Medio de pago</label>
+        </div>
+        <div className="fl-field fc-md-fl">
+          <select id="fc-aj-f-estado" className="fl-select" value={filtros.estado}
+            onChange={(e) => actualizarFiltro("estado", e.target.value)}>
+            <option value="">TODOS</option>
+            <option value="VIGENTE">VIGENTE</option>
+            <option value="REVERTIDO">REVERTIDO</option>
+            <option value="REVERSION">REVERSIÓN</option>
+          </select>
+          <label className="fl-label" htmlFor="fc-aj-f-estado">Estado</label>
+        </div>
+        {hayFiltros && (
+          <div className="fc-md-toolbar__end">
+            <button type="button" className="mit-btn mit-btn--ghost fc-md-clear" onClick={limpiarFiltros} disabled={reverting}>
+              <FontAwesomeIcon icon={faFilterCircleXmark} /> Limpiar
+            </button>
+          </div>
+        )}
+      </div>
 
-  {revertTarget && createPortal(
-          <div className="mi-mini__overlay fc-aj-revert" role="presentation">
-            <div className="mi-mini__modal fc-aj-revert__card" role="alertdialog" onMouseDown={(e) => e.stopPropagation()} aria-modal="true"
-              aria-labelledby="fc-aj-revert-title" aria-describedby="fc-aj-revert-description">
-              <div className="mi-mini__head fc-aj-revert__head">
-                <h4 id="fc-aj-revert-title" className="mi-mini__title fc-aj-title">
-                  <FontAwesomeIcon icon={faRotateLeft} aria-hidden="true" />
-                  <span>{revertTarget.kind === "transferencia" ? `Revertir transferencia #${revertTarget.id_transferencia}` : `Revertir ajuste #${revertTarget.id_ajuste}`}</span>
-                </h4>
-                <button type="button" className="mi-mini__close" aria-label="Cerrar"
-                  onClick={() => setRevertTarget(null)} disabled={reverting}>
-                  <FontAwesomeIcon icon={faXmark} aria-hidden="true" />
-                </button>
-              </div>
+      {error && (
+        <div className="fc-md-alert fc-md-alert--error" role="alert">
+          <FontAwesomeIcon icon={faTriangleExclamation} /><span>{error}</span>
+        </div>
+      )}
+      {transferError && !error && (
+        <div className="fc-md-alert fc-md-alert--warning" role="status">
+          <FontAwesomeIcon icon={faTriangleExclamation} /><span>Transferencias: {transferError}</span>
+        </div>
+      )}
 
-              <div className="mi-mini__body fc-aj-revert__body">
-                <p id="fc-aj-revert-description" className="fc-aj-revert__intro">
-                  Revisá el movimiento que se generará antes de confirmar la reversión.
-                </p>
-                {revertTarget.kind === "transferencia" ? (
-                  <div className="fc-aj-revert__summary">
-                    <div className="fc-aj-revert__detail">
-                      <span className="fc-aj-revert__detailIcon" aria-hidden="true"><FontAwesomeIcon icon={faWallet} /></span>
-                      <div className="fc-aj-revert__detailText">
-                        <span>Devuelve desde → hacia</span>
-                        <strong data-testid="fc-tr-revert-route">{revertTarget.medio_destino_nombre} → {revertTarget.medio_origen_nombre}</strong>
-                      </div>
-                    </div>
-                    <div className="fc-aj-revert__detail fc-aj-revert__detail--amount is-neutral">
-                      <span className="fc-aj-revert__detailIcon" aria-hidden="true"><FontAwesomeIcon icon={faCoins} /></span>
-                      <div className="fc-aj-revert__detailText">
-                        <span>Transferencia compensatoria</span>
-                        <strong data-testid="fc-tr-revert-importe">{moneyARS(revertTarget.importe)}</strong>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                <div className="fc-aj-revert__summary">
-                  <div className="fc-aj-revert__detail">
-                    <span className="fc-aj-revert__detailIcon" aria-hidden="true"><FontAwesomeIcon icon={faWallet} /></span>
-                    <div className="fc-aj-revert__detailText">
-                      <span>Medio de pago</span>
-                      <strong>{revertTarget.medio_nombre}</strong>
-                    </div>
-                  </div>
-                  <div className={`fc-aj-revert__detail fc-aj-revert__detail--amount ${signClass(-revertTarget.diferencia)}`}>
-                    <span className="fc-aj-revert__detailIcon" aria-hidden="true"><FontAwesomeIcon icon={faCoins} /></span>
-                    <div className="fc-aj-revert__detailText">
-                      <span>Ajuste compensatorio</span>
-                      <strong className={signClass(-revertTarget.diferencia)}>{moneyARSSigned(-revertTarget.diferencia)}</strong>
-                    </div>
-                  </div>
-                </div>
-                )}
-                <div className="fl-field fc-aj-revert__field">
-                  <textarea id="fc-aj-revert-motivo" className="fl-input fc-aj-textarea" placeholder=" " rows={3} maxLength={500}
-                    value={revertMotivo} onChange={(e) => { setRevertMotivo(e.target.value.toUpperCase()); setRevertError(""); }}
-                    disabled={reverting} aria-invalid={Boolean(revertError)} aria-describedby={revertError ? "fc-aj-revert-error" : undefined} autoFocus />
-                  <label className="fl-label" htmlFor="fc-aj-revert-motivo">Motivo de la reversión</label>
-                  <div className="fc-aj-revert__fieldBottom">
-                    {revertError ? <small id="fc-aj-revert-error" className="fc-aj-error" role="alert">{revertError}</small> : <span />}
-                    <span className="fc-aj-revert__counter">{revertMotivo.length}/500</span>
-                  </div>
-                </div>
-
-                <div className="fc-aj-revert__info">
-                  <FontAwesomeIcon icon={faCircleInfo} aria-hidden="true" />
-                  <span>{revertTarget.kind === "transferencia"
-                    ? "Se registrará con fecha de hoy. La caja que devuelve el dinero debe tener saldo suficiente. La transferencia original se conserva y ambas quedan en el historial; el total del negocio no cambia."
-                    : "Se registrará con fecha de hoy. El ajuste original se conserva y ambos movimientos quedan en el historial."}</span>
-                </div>
-              </div>
-
-              <div className="fc-aj-revert__footer">
-                <button type="button" className="mit-btn mit-btn--ghost" onClick={() => setRevertTarget(null)} disabled={reverting}>Cancelar</button>
-                <button type="button" className="mit-btn mit-btn--solid" onClick={confirmarReversion} disabled={reverting}>
-                  <FontAwesomeIcon icon={faRotateLeft} aria-hidden="true" />
-                  {reverting ? "Revirtiendo…" : "Confirmar reversión"}
-                </button>
+      <div className="fc-md-table fc-md-table--cards fc-hx-table" role="table" aria-busy={loading} aria-label="Historial de ajustes de saldo">
+        <div className="mov-gridTable fc-md-tableHead fc-md-tr" role="row">
+          <div className="mov-gridCell--head" role="columnheader">Fecha y hora</div>
+          <div className="mov-gridCell--head" role="columnheader">{vista === "AJUSTES" ? "Medio" : "Medio(s)"}</div>
+          <div className="mov-gridCell--head is-right" role="columnheader">{vista === "AJUSTES" ? "Ajuste" : "Importe"}</div>
+          <div className="mov-gridCell--head is-right" role="columnheader">Saldo anterior</div>
+          <div className="mov-gridCell--head is-right" role="columnheader">Saldo posterior</div>
+          <div className="mov-gridCell--head" role="columnheader">Motivo</div>
+          <div className="mov-gridCell--head" role="columnheader">Estado</div>
+          <div className="mov-gridCell--head is-center" role="columnheader">Acciones</div>
+        </div>
+        <div className="fc-md-tbody" role="rowgroup">
+          {loading && <div className="fc-md-empty" role="row"><span role="cell">Cargando historial…</span></div>}
+          {!loading && items.map((it) => (it.kind === "ajuste" ? renderAjuste(it.row) : renderTransferencia(it.row)))}
+          {!loading && !items.length && !error && (
+            <div className="fc-md-empty" role="row">
+              <div role="cell" className="fc-md-empty__cell">
+                <FontAwesomeIcon icon={faClockRotateLeft} />
+                <strong>No hay registros</strong>
+                <span>{hayFiltros ? "Ningún movimiento coincide con los filtros elegidos." : "Todavía no hay ajustes ni transferencias."}</span>
               </div>
             </div>
+          )}
+        </div>
+      </div>
+    </ModalShell>
+
+    {revertTarget && (
+      <ModalShell
+        open
+        role="alertdialog"
+        titleId="fc-aj-revert-title"
+        title={esTransferRevert ? `Revertir transferencia #${revertTarget.id_transferencia}` : `Revertir ajuste #${revertTarget.id_ajuste}`}
+        icon={faRotateLeft}
+        onClose={cerrarReversion}
+        closeDisabled={reverting}
+        size="sm"
+        overlayClassName="fc-md-overlay--top"
+        className="fc-hx-revert"
+        footer={(
+          <>
+            <button type="button" className="mit-btn mit-btn--ghost" onClick={cerrarReversion} disabled={reverting}>Cancelar</button>
+            <button type="button" className="mit-btn mit-btn--solid" onClick={confirmarReversion} disabled={reverting}>
+              <FontAwesomeIcon icon={faRotateLeft} aria-hidden="true" />
+              {reverting ? "Revirtiendo…" : "Confirmar reversión"}
+            </button>
+          </>
+        )}
+      >
+        {esTransferRevert ? (
+          <>
+            <MetaList items={[
+              { label: "Devuelve", value: `${revertTarget.medio_destino_nombre} → ${revertTarget.medio_origen_nombre}`, testId: "fc-tr-revert-route" },
+            ]} />
+            <div className="fc-md-stats">
+              <Stat icon={faCoins} highlight label="Transferencia compensatoria" value={moneyARS(revertTarget.importe)} tone="info" testId="fc-tr-revert-importe" />
+            </div>
+          </>
+        ) : (
+          <>
+            <MetaList items={[{ label: "Medio de pago", value: revertTarget.medio_nombre }]} />
+            <div className="fc-md-stats">
+              <Stat icon={faCoins} highlight label="Ajuste compensatorio" value={moneyARSSigned(-revertTarget.diferencia)}
+                tone={toneOf(-revertTarget.diferencia) === "neg" ? "neg" : "ok"} tag={toneOf(-revertTarget.diferencia) === "neg" ? "Resta" : "Suma"} />
+            </div>
+          </>
+        )}
+        <div>
+          <div className="fl-field fc-md-fl">
+            <textarea id="fc-aj-revert-motivo" className="fl-input" placeholder=" " rows={3} maxLength={500}
+              value={revertMotivo} onChange={(e) => { setRevertMotivo(e.target.value.toUpperCase()); setRevertError(""); }}
+              disabled={reverting} aria-invalid={Boolean(revertError)} aria-describedby="fc-aj-revert-error" autoFocus />
+            <label className="fl-label" htmlFor="fc-aj-revert-motivo">Motivo de la reversión</label>
           </div>
-  , document.body)}
-</>);
+          <div className="fc-hx-fieldBottom">
+            <FieldMsg id="fc-aj-revert-error" error={revertError} />
+            <span className="fc-md-note">{revertMotivo.length}/500</span>
+          </div>
+        </div>
+        <div className="fc-md-alert fc-md-alert--warning" role="note">
+          <FontAwesomeIcon icon={faTriangleExclamation} aria-hidden="true" />
+          <span>{esTransferRevert
+            ? "Se registra con fecha de hoy. La caja que devuelve el dinero debe tener saldo suficiente; la transferencia original se conserva."
+            : "Se registra con fecha de hoy. El ajuste original se conserva y ambos quedan en el historial."}</span>
+        </div>
+      </ModalShell>
+    )}
+  </>);
 }

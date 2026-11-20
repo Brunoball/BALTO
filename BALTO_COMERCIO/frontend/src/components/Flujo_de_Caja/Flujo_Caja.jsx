@@ -89,6 +89,11 @@ export default function Flujo_Caja() {
   const [showCierre, setShowCierre] = useState(false);
   const [historialCierres, setHistorialCierres] = useState({ open: false, id: null });
   const [estadoCierres, setEstadoCierres] = useState(null);
+  const pendientes = Number(estadoCierres?.diferencias_pendientes) || 0;
+  const tituloHistorial = pendientes > 0
+    ? `Historial de cierres · ${pendientes} ${pendientes === 1 ? "diferencia pendiente" : "diferencias pendientes"}`
+    : "Historial de cierres";
+
   const puedeCerrar = Boolean(data?.cierres_caja?.habilitado && data?.cierres_caja?.puede_gestionar);
   const refrescarEstadoCierres = useCallback(() => {
     if (!puedeCerrar) { setEstadoCierres(null); return; }
@@ -336,7 +341,7 @@ export default function Flujo_Caja() {
     return (
       <div
         key={`skel-${idx}`}
-        className="mov-gridTable mov-gridTable--row mov-row--skeleton"
+        className="mov-gridTable fc-md-row mov-row--skeleton"
         style={{ gridTemplateColumns: gridCols }}
         role="row"
         aria-hidden="true"
@@ -448,27 +453,17 @@ export default function Flujo_Caja() {
           <div className="mov-card__actions" style={{ display: "flex", gap: 10, alignItems: "center" }}>
             {puedeCerrar && (
               <div className="fc-aj-headActions fc-cc-headActions">
-                {estadoCierres?.ultimo_cierre && (
-                  <button
-                    type="button"
-                    className={`fc-cc-indicator ${estadoCierres.diferencias_pendientes ? "" : "fc-cc-indicator--ok"}`}
-                    onClick={() => abrirHistorialCierres(estadoCierres.diferencias_pendientes ? null : estadoCierres.ultimo_cierre.id_cierre)}
-                    title={`Último cierre: ${estadoCierres.ultimo_cierre.numero} del ${fmtDateES(estadoCierres.ultimo_cierre.fecha_operativa)}`}
-                    data-testid="fc-cc-indicador"
-                  >
-                    {estadoCierres.diferencias_pendientes
-                      ? `${estadoCierres.diferencias_pendientes} dif. pendiente${estadoCierres.diferencias_pendientes === 1 ? "" : "s"}`
-                      : `Último cierre ${fmtDateES(estadoCierres.ultimo_cierre.fecha_operativa)}`}
-                  </button>
-                )}
                 <button
                   type="button"
-                  className="mov-btn mov-btn--ghost fc-aj-headBtn fc-aj-headBtn--icon"
+                  className="mov-btn mov-btn--ghost fc-aj-headBtn fc-aj-headBtn--icon fc-cc-historyBtn"
                   onClick={() => abrirHistorialCierres(null)}
-                  title="Historial de cierres"
-                  aria-label="Historial de cierres"
+                  title={tituloHistorial}
+                  aria-label={tituloHistorial}
                 >
                   <FontAwesomeIcon icon={faListCheck} />
+                  {pendientes > 0 && (
+                    <span className="fc-cc-count" aria-hidden="true">{pendientes > 99 ? "99+" : pendientes}</span>
+                  )}
                   <span className="fc-aj-headBtn__text">Historial de cierres</span>
                 </button>
                 <button
@@ -608,7 +603,7 @@ export default function Flujo_Caja() {
 
         {/* ===== HEADER TABLA (4 cols) ===== */}
         <div
-          className="mov-gridTable mov-gridTable--head"
+          className="mov-gridTable fc-md-tableHead"
           style={{ gridTemplateColumns: gridCols }}
           role="row"
         >
@@ -635,7 +630,7 @@ export default function Flujo_Caja() {
                   return (
                     <div
                       key={r.fecha}
-                      className={`mov-gridTable mov-gridTable--row fc-dayRow ${isSelected ? "fc-dayRow--selected" : ""}`}
+                      className={`mov-gridTable fc-md-row fc-dayRow ${isSelected ? "fc-dayRow--selected" : ""}`}
                       style={{ gridTemplateColumns: gridCols }}
                       role="row"
                       tabIndex={0}

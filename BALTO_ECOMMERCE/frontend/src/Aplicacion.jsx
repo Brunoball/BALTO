@@ -9,6 +9,7 @@ import Encabezado from './componentes/estructura/Encabezado';
 import PiePagina from './componentes/estructura/PiePagina';
 import PanelCarrito from './componentes/carrito/PanelCarrito';
 import SubirAlInicio from './componentes/global/SubirAlInicio';
+import TransicionPagina from './componentes/global/TransicionPagina';
 import { EstadoError, EstadoCargando } from './componentes/global/Estados';
 import PaginaInicio from './componentes/inicio/PaginaInicio';
 import PaginaCatalogo from './componentes/catalogo/PaginaCatalogo';
@@ -48,7 +49,7 @@ function Storefront() {
   if (error || !config) return <div className="app-root loading-root"><EstadoError error={error} title="La tienda no está disponible" retry={reintentar}/></div>;
   // La sesión del comprador se monta DESPUÉS de cargar la tienda: necesita saber si las cuentas
   // están habilitadas y el Client ID público de Google de ESTA tienda.
-  return <CuentaProvider cuentas={config.cuentas}><div className="app-root" style={style}><SubirAlInicio/><Encabezado config={config}/><div className="site-content"><Suspense fallback={<main className="shell standard-page"><EstadoCargando compact message="Cargando…"/></main>}><Routes>
+  return <CuentaProvider cuentas={config.cuentas}><div className="app-root" style={style}><SubirAlInicio/><Encabezado config={config}/><div className="site-content"><Suspense fallback={<main className="shell standard-page"><EstadoCargando compact message="Cargando…"/></main>}><TransicionPagina><Routes>
     <Route path="/" element={<PaginaInicio config={config}/>}/>
     <Route path="/catalogo" element={<PaginaCatalogo config={config}/>}/>
     <Route path="/producto/:slug" element={<PaginaProducto config={config}/>}/>
@@ -63,7 +64,7 @@ function Storefront() {
     <Route path="/mi-cuenta/pedidos" element={<RequiereSesion><PaginaPedidos/></RequiereSesion>}/>
     <Route path="/mi-cuenta/pedidos/:numero" element={<RequiereSesion><PaginaDetallePedido/></RequiereSesion>}/>
     <Route path="*" element={<PaginaNoEncontrada/>}/>
-  </Routes></Suspense></div><PiePagina config={config}/><PanelCarrito config={config}/></div></CuentaProvider>;
+  </Routes></TransicionPagina></Suspense></div><PiePagina config={config}/><PanelCarrito config={config}/></div></CuentaProvider>;
 }
 export default function Aplicacion() {
   return <BrowserRouter basename={baltoConfig.routerBasename}><CarritoProvider><Storefront/></CarritoProvider></BrowserRouter>;

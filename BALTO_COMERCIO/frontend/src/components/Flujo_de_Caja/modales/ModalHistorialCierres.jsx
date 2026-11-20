@@ -3,14 +3,12 @@
 // Desde el detalle se concilian diferencias y se aplican ajustes posteriores.
 // Un cierre confirmado no se edita ni se elimina.
 
-import React, { useCallback, useEffect, useState } from "react";
-import { createPortal } from "react-dom";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faXmark, faClockRotateLeft, faTriangleExclamation, faChevronRight, faFilter } from "@fortawesome/free-solid-svg-icons";
+import {
+  faClockRotateLeft, faTriangleExclamation, faChevronRight, faArrowLeft, faReceipt, faFilterCircleXmark,
+} from "@fortawesome/free-solid-svg-icons";
 
-import "../../Global/Global_css/Global_Modals.css";
-import "../../Global/Global_css/GlobalsModalsV2.css";
-import "./ajustes_saldo.css";
 import "./cierres_caja.css";
 
 import { listarCierres } from "../api/flujoCajaCierresApi";
@@ -18,6 +16,7 @@ import { obtenerMediosAjuste } from "../api/flujoCajaAjustesApi";
 import { fmtDateES, moneyARS } from "../utils/flujoCajaUtils";
 import { ESTADOS_CIERRE } from "../utils/cierresUtils";
 import DetalleCierreCaja from "./DetalleCierreCaja.jsx";
+import { Badge, ModalShell } from "./FcModalParts.jsx";
 
 const FILTROS_INICIALES = { fechaDesde: "", fechaHasta: "", idMedioPago: "", estado: "" };
 
@@ -53,122 +52,169 @@ export default function ModalHistorialCierres({ open, onClose, initialCierreId =
     obtenerMediosAjuste().then((j) => setMedios(j.medios || [])).catch(() => setMedios([]));
   }, [open, initialCierreId, cargar]);
 
-  useEffect(() => {
-    if (!open) return undefined;
-    const onKey = (e) => {
-      if (e.key !== "Escape" || childBusy) return;
-      if (idSel) setIdSel(null); else onClose?.();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, idSel, childBusy, onClose]);
-
   const actualizarFiltro = (k, v) => {
     const next = { ...filtros, [k]: v };
+    if (next.fechaDesde && next.fechaHasta && next.fechaDesde > next.fechaHasta) {
+      [next.fechaDesde, next.fechaHasta] = [next.fechaHasta, next.fechaDesde];
+    }
     setFiltros(next);
     cargar(next);
   };
+  const hayFiltros = Object.values(filtros).some(Boolean);
+  const limpiarFiltros = () => { setFiltros(FILTROS_INICIALES); cargar(FILTROS_INICIALES); };
 
   const handleChanged = useCallback(() => {
     cargar(filtros);
     onChanged?.();
   }, [cargar, filtros, onChanged]);
 
+  const volverAlHistorial = useCallback(() => setIdSel(null), []);
+  const pendienteTotal = useMemo(() => rows.reduce((s, r) => s + Number(r.importe_pendiente || 0), 0), [rows]);
+
   if (!open) return null;
 
-  return createPortal(
-    <div className="mi-mini__overlay fc-aj-overlay" role="presentation">
-      <div className="mi-mini__modal fc-aj-modal fc-aj-modal--wide fc-cc-modal" role="dialog" aria-modal="true" aria-labelledby="fc-hc-title"
-        onMouseDown={(e) => e.stopPropagation()}>
-        <div className="mi-mini__head">
-          <h4 id="fc-hc-title" className="mi-mini__title fc-aj-title">
-            <FontAwesomeIcon icon={faClockRotateLeft} />
-            <span>{idSel ? "Detalle del cierre" : "Historial de cierres"}</span>
-          </h4>
-          <button type="button" className="mi-mini__close" onClick={() => !childBusy && onClose?.()} disabled={childBusy} aria-label="Cerrar">
-            <FontAwesomeIcon icon={faXmark} />
-          </button>
-        </div>
+  const enDetalle = Boolean(idSel);
+  const footer = enDetalle ? (
+    <>
+      <div className="fc-md-footer__start">
+        <button type="button" className="mit-btn mit-btn--ghost" onClick={volverAlHistorial} disabled={childBusy}>
+          <FontAwesomeIcon icon={faArrowLeft} /> Volver al historial
+        </button>
+      </div>
+      <button type="button" className="mit-btn mit-btn--ghost" onClick={() => onClose?.()} disabled={childBusy}>Cerrar</button>
+    </>
+  ) : (
+    <>
+      <div className="fc-md-footer__start fc-md-note" role="status">
+        <span>{loading ? "Cargando…" : `${rows.length} cierre${rows.length === 1 ? "" : "s"}`}</span>
+        {!loading && pendienteTotal > 0.004 && (
+          <span>· Pendiente total <b className="fc-md-num fc-md-num--warn">{moneyARS(pendienteTotal)}</b></span>
+        )}
+      </div>
+      <button type="button" className="mit-btn mit-btn--ghost" onClick={() => onClose?.()}>Cerrar</button>
+    </>
+  );
 
-        <div className="mi-mini__body fc-aj-body fc-cc-body">
-          {idSel ? (
-            <DetalleCierreCaja
-              idCierre={idSel}
-              onBack={() => setIdSel(null)}
-              onChanged={handleChanged}
-              onBusyChange={setChildBusy}
-              showToast={showToast}
-            />
-          ) : (
-            <>
-              <div className="fc-cc-filters" role="search">
-                <FontAwesomeIcon icon={faFilter} className="fc-cc-filters__icon" aria-hidden="true" />
-                <div className="fl-field">
-                  <input id="fc-hc-desde" type="date" className="fl-input" value={filtros.fechaDesde} onChange={(e) => actualizarFiltro("fechaDesde", e.target.value)} />
-                  <label className="fl-label fc-aj-floatLabel" htmlFor="fc-hc-desde">Desde</label>
-                </div>
-                <div className="fl-field">
-                  <input id="fc-hc-hasta" type="date" className="fl-input" value={filtros.fechaHasta} onChange={(e) => actualizarFiltro("fechaHasta", e.target.value)} />
-                  <label className="fl-label fc-aj-floatLabel" htmlFor="fc-hc-hasta">Hasta</label>
-                </div>
-                <div className="fl-field">
-                  <select id="fc-hc-medio" className="fl-select fc-aj-select" value={filtros.idMedioPago} onChange={(e) => actualizarFiltro("idMedioPago", e.target.value)}>
-                    <option value="">Todos</option>
-                    {medios.map((m) => <option key={m.id_medio_pago} value={m.id_medio_pago}>{m.nombre}</option>)}
-                  </select>
-                  <label className="fl-label fc-aj-floatLabel" htmlFor="fc-hc-medio">Medio de pago</label>
-                </div>
-                <div className="fl-field">
-                  <select id="fc-hc-estado" className="fl-select fc-aj-select" value={filtros.estado} onChange={(e) => actualizarFiltro("estado", e.target.value)}>
-                    <option value="">Todos</option>
-                    <option value="CON_PENDIENTES">Con diferencias pendientes</option>
-                    <option value="PENDIENTE">Pendiente</option>
-                    <option value="PARCIALMENTE_CONCILIADO">Parcialmente conciliado</option>
-                    <option value="CONCILIADO">Conciliado</option>
-                    <option value="SIN_DIFERENCIAS">Sin diferencias</option>
-                  </select>
-                  <label className="fl-label fc-aj-floatLabel" htmlFor="fc-hc-estado">Estado</label>
-                </div>
+  return (
+    <ModalShell
+      open
+      titleId="fc-hc-title"
+      title={enDetalle ? "Detalle del cierre" : "Historial de cierres"}
+      icon={enDetalle ? faReceipt : faClockRotateLeft}
+      onClose={onClose}
+      onEscape={enDetalle ? volverAlHistorial : onClose}
+      closeDisabled={childBusy}
+      size="xl"
+      className="fc-md-modal--fixed fc-cc-modal fc-hc-modal"
+      bodyClassName={enDetalle ? "" : "fc-md-body--table"}
+      footer={footer}
+    >
+      {enDetalle ? (
+        <DetalleCierreCaja
+          idCierre={idSel}
+          onChanged={handleChanged}
+          onBusyChange={setChildBusy}
+          showToast={showToast}
+        />
+      ) : (
+        <>
+          <div className="fc-md-toolbar" role="search" aria-label="Filtros del historial de cierres">
+            <div className="fl-field fc-md-fl">
+              <input id="fc-hc-desde" type="date" className="fl-input" placeholder=" " value={filtros.fechaDesde} onChange={(e) => actualizarFiltro("fechaDesde", e.target.value)} />
+              <label className="fl-label" htmlFor="fc-hc-desde">Desde</label>
+            </div>
+            <div className="fl-field fc-md-fl">
+              <input id="fc-hc-hasta" type="date" className="fl-input" placeholder=" " value={filtros.fechaHasta} onChange={(e) => actualizarFiltro("fechaHasta", e.target.value)} />
+              <label className="fl-label" htmlFor="fc-hc-hasta">Hasta</label>
+            </div>
+            <div className="fl-field fc-md-fl fc-md-fl--wide">
+              <select id="fc-hc-medio" className="fl-select" value={filtros.idMedioPago} onChange={(e) => actualizarFiltro("idMedioPago", e.target.value)}>
+                <option value="">Todos</option>
+                {medios.map((m) => <option key={m.id_medio_pago} value={m.id_medio_pago}>{m.nombre}</option>)}
+              </select>
+              <label className="fl-label" htmlFor="fc-hc-medio">Medio de pago</label>
+            </div>
+            <div className="fl-field fc-md-fl fc-md-fl--wide">
+              <select id="fc-hc-estado" className="fl-select" value={filtros.estado} onChange={(e) => actualizarFiltro("estado", e.target.value)}>
+                <option value="">Todos</option>
+                <option value="CON_PENDIENTES">Con diferencias pendientes</option>
+                <option value="PENDIENTE">Pendiente</option>
+                <option value="PARCIALMENTE_CONCILIADO">Parcialmente conciliado</option>
+                <option value="CONCILIADO">Conciliado</option>
+                <option value="SIN_DIFERENCIAS">Sin diferencias</option>
+              </select>
+              <label className="fl-label" htmlFor="fc-hc-estado">Estado</label>
+            </div>
+            {hayFiltros && (
+              <div className="fc-md-toolbar__end">
+                <button type="button" className="mit-btn mit-btn--ghost fc-md-clear" onClick={limpiarFiltros}>
+                  <FontAwesomeIcon icon={faFilterCircleXmark} /> Limpiar
+                </button>
               </div>
+            )}
+          </div>
 
-              {error && (
-                <div className="fc-aj-alert fc-aj-alert--error" role="alert">
-                  <FontAwesomeIcon icon={faTriangleExclamation} /><span>{error}</span>
+          {error && (
+            <div className="fc-md-alert fc-md-alert--error" role="alert">
+              <FontAwesomeIcon icon={faTriangleExclamation} /><span>{error}</span>
+            </div>
+          )}
+
+          <div className="fc-md-table fc-md-table--cards fc-hc-table" role="table" aria-label="Cierres de caja" aria-busy={loading}>
+            <div className="mov-gridTable fc-md-tableHead fc-md-tr" role="row">
+              <div className="mov-gridCell--head" role="columnheader">Fecha</div>
+              <div className="mov-gridCell--head" role="columnheader">Cierre</div>
+              <div className="mov-gridCell--head" role="columnheader">Responsable</div>
+              <div className="mov-gridCell--head is-right" role="columnheader">Pendiente</div>
+              <div className="mov-gridCell--head" role="columnheader">Estado</div>
+              <div className="mov-gridCell--head is-center" role="columnheader">Detalle</div>
+            </div>
+            <div className="fc-md-tbody" role="rowgroup">
+              {loading && !rows.length && <div className="fc-md-empty" role="row"><span role="cell">Cargando historial…</span></div>}
+              {!loading && !rows.length && !error && (
+                <div className="fc-md-empty" role="row">
+                  <div role="cell" className="fc-md-empty__cell">
+                    <FontAwesomeIcon icon={faClockRotateLeft} />
+                    <strong>No hay cierres</strong>
+                    <span>{hayFiltros ? "Ningún cierre coincide con los filtros elegidos." : "Todavía no se registró ningún cierre de caja."}</span>
+                  </div>
                 </div>
               )}
-
-              <p className="fc-cc-history-help">Elegí un cierre para ver las cajas controladas y resolver las diferencias que queden pendientes.</p>
-              <div className="fc-cc-table fc-cc-table--hist" role="table" aria-label="Cierres de caja" aria-busy={loading}>
-                <div className="fc-cc-tr fc-cc-tr--head fc-cc-tr--hist-simple" role="row">
-                  <div role="columnheader">Cierre y fecha</div>
-                  <div role="columnheader">Responsable</div>
-                  <div role="columnheader" className="is-num">Por resolver</div>
-                  <div role="columnheader">Estado</div>
-                  <div role="columnheader" aria-label="Ver detalle" />
-                </div>
-                {loading && !rows.length && <div className="fc-cc-empty">Cargando…</div>}
-                {!loading && !rows.length && !error && <div className="fc-cc-empty">No hay cierres para los filtros elegidos.</div>}
-                {rows.map((r) => {
-                  const est = ESTADOS_CIERRE[r.estado_conciliacion] || { label: r.estado_conciliacion, tone: "muted" };
-                  return (
-                    <div key={r.id_cierre} className="fc-cc-tr fc-cc-tr--hist-simple fc-cc-tr--click" role="row" tabIndex={0}
-                      data-cierre-id={r.id_cierre}
-                      onClick={() => setIdSel(r.id_cierre)}
-                      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setIdSel(r.id_cierre); } }}>
-                      <div role="cell" data-label="Cierre y fecha" className="fc-cc-history-name"><b>{r.numero}</b><span>{fmtDateES(r.fecha_operativa)}{r.es_historico ? " · Histórico" : ""}</span></div>
-                      <div role="cell" data-label="Responsable">{r.usuario_nombre || "—"}</div>
-                      <div role="cell" data-label="Por resolver" className="is-num"><strong>{moneyARS(r.importe_pendiente)}</strong>{r.diferencias_pendientes ? <small> · {r.diferencias_pendientes} {r.diferencias_pendientes === 1 ? "diferencia" : "diferencias"}</small> : null}</div>
-                      <div role="cell" data-label="Estado"><span className={`fc-cc-badge fc-cc-badge--${est.tone}`}>{est.label}</span></div>
-                      <div role="cell" className="fc-cc-rowAction"><FontAwesomeIcon icon={faChevronRight} aria-label="Ver detalle" /></div>
+              {rows.map((r) => {
+                const est = ESTADOS_CIERRE[r.estado_conciliacion] || { label: r.estado_conciliacion, tone: "muted" };
+                const pend = Number(r.importe_pendiente || 0);
+                const abrir = () => setIdSel(r.id_cierre);
+                return (
+                  <div key={r.id_cierre} className="mov-gridTable fc-md-row fc-md-tr fc-md-tr--click" role="row" tabIndex={0}
+                    data-cierre-id={r.id_cierre}
+                    aria-label={`Ver cierre ${r.numero} del ${fmtDateES(r.fecha_operativa)}`}
+                    onClick={abrir}
+                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); abrir(); } }}>
+                    <div className="mov-gridCell fc-md-cell--stack" role="cell" data-label="Fecha">
+                      <span className="fc-md-num">{fmtDateES(r.fecha_operativa)}</span>
+                      {r.es_historico ? <small>Histórico</small> : null}
                     </div>
-                  );
-                })}
-              </div>
-            </>
-          )}
-        </div>
-      </div>
-    </div>,
-    document.body
+                    <div className="mov-gridCell" role="cell" data-label="Cierre"><b className="fc-md-ellipsis">{r.numero}</b></div>
+                    <div className="mov-gridCell" role="cell" data-label="Responsable"><span className="fc-md-ellipsis">{r.usuario_nombre || "—"}</span></div>
+                    <div className="mov-gridCell fc-md-cell--stack is-right" role="cell" data-label="Pendiente">
+                      {pend > 0.004 ? (
+                        <>
+                          <span className="fc-md-num fc-md-num--warn fc-md-num--strong">{moneyARS(pend)}</span>
+                          {r.diferencias_pendientes ? <small>{r.diferencias_pendientes} {r.diferencias_pendientes === 1 ? "diferencia" : "diferencias"}</small> : null}
+                        </>
+                      ) : <span className="fc-md-num fc-md-num--zero">{moneyARS(0)}</span>}
+                    </div>
+                    <div className="mov-gridCell" role="cell" data-label="Estado"><Badge tone={est.tone}>{est.label}</Badge></div>
+                    <div className="mov-gridCell is-center fc-md-cell--actions" role="cell">
+                      <span className="mov-iconBtn" aria-hidden="true"><FontAwesomeIcon icon={faChevronRight} /></span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </>
+      )}
+    </ModalShell>
   );
 }
