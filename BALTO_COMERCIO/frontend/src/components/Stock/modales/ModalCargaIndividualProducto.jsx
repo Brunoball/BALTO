@@ -4,7 +4,7 @@ import ModalVerComprobante from "../../Global/Ver_Comprobantes/ModalVerComproban
 import StockBarcodePanel from "./StockBarcodePanel";
 import StockUnitField from "./StockUnitField";
 import VencimientosAltaFields, { prepararVencimientosAlta, validarVencimientosAlta } from "../vencimientos/VencimientosAltaFields";
-import PricingCoefficientPanel from "./PricingCoefficientPanel";
+import ProductPricingPanel from "./ProductPricingPanel";
 import "./ModalCargaIndividualProducto.css";
 import { isTopStockModal } from "./modalStackUtils";
 import { canBaltoUseBarcode } from "../../../utils/demoMode";
@@ -46,7 +46,7 @@ import {
   recalculatePricingGroup,
   toUpperCaseValue,
 } from "../utils/stockFormUtils";
-import { normalizeTypedDecimal } from "../utils/moneyInput";
+import { profitabilityToApi } from "../utils/grossProfitability";
 
 /* ── Utilidades ── */
 function normalizeIdValue(value) {
@@ -160,8 +160,6 @@ function inferPriceInputKind(name = "") {
   if (
     n.includes("precio") ||
     n.includes("costo") ||
-    n.includes("margen_venta_valor") ||
-    n.includes("margen_promo_valor") ||
     n.includes("margen_valor") ||
     n.includes("margen_val") ||
     n.includes("tipo_val") ||
@@ -248,21 +246,43 @@ function hydratePricingGroupValues({ cost, price, marginPct, marginValue }) {
   });
 }
 
+/**
+ * Tipos de precio ADICIONALES: conservan su comportamiento propio (precio y
+ * margen editables). Si cambia el costo, se recalcula el margen de cada uno
+ * a partir de su precio vigente (o del margen cargado si todavía no tiene precio).
+ */
+function recalcularPreciosAdicionalesConCosto(cost, extras = [], withCents = false) {
+  return (extras || []).map((item) => {
+    const resultRaw = recalculatePricingGroup({
+      cost,
+      price: item.precio,
+      marginPct: item.margen_porcentaje,
+      marginValue: item.margen_valor,
+      source: item.precio
+        ? "price"
+        : item.margen_porcentaje
+          ? "marginPct"
+          : item.margen_valor
+            ? "marginValue"
+            : null,
+    });
+    const result = withCents ? formatPricingResultEnter(resultRaw) : resultRaw;
+
+    return {
+      ...item,
+      precio: result.price,
+      margen_porcentaje: result.marginPct,
+      margen_valor: result.marginValue,
+    };
+  });
+}
+
+/**
+ * Precios principales: el costo y los precios vigentes son la fuente de verdad.
+ * Sólo se normaliza su formato; la rentabilidad se calcula en ProductPricingPanel
+ * y nunca se deriva un precio a partir de un margen.
+ */
 function hydratePricingFormValues(sourceForm) {
-  const venta = hydratePricingGroupValues({
-    cost: sourceForm.precio_costo,
-    price: sourceForm.precio,
-    marginPct: sourceForm.margen_venta_porcentaje,
-    marginValue: sourceForm.margen_venta_valor,
-  });
-
-  const promo = hydratePricingGroupValues({
-    cost: sourceForm.precio_costo,
-    price: sourceForm.precio_promo,
-    marginPct: sourceForm.margen_promo_porcentaje,
-    marginValue: sourceForm.margen_promo_valor,
-  });
-
   const extras = (sourceForm.tipos_precio_extra || []).map((item) => {
     const result = hydratePricingGroupValues({
       cost: sourceForm.precio_costo,
@@ -282,12 +302,8 @@ function hydratePricingFormValues(sourceForm) {
   return {
     ...sourceForm,
     precio_costo: formatMoneyBlur(sourceForm.precio_costo),
-    precio: venta.price,
-    margen_venta_porcentaje: venta.marginPct,
-    margen_venta_valor: venta.marginValue,
-    precio_promo: promo.price,
-    margen_promo_porcentaje: promo.marginPct,
-    margen_promo_valor: promo.marginValue,
+    precio: formatMoneyBlur(sourceForm.precio),
+    precio_promo: formatMoneyBlur(sourceForm.precio_promo),
     tipos_precio_extra: extras,
   };
 }
@@ -296,53 +312,11 @@ function recalculatePricingFormLive(prev, fieldName, rawValue) {
   const value = normalizeMoneyInput(rawValue);
   const next = { ...prev, [fieldName]: value };
 
-  if (fieldName === "precio_costo") return hydratePricingFormValues(next);
-
-  if (["precio", "margen_venta_porcentaje", "margen_venta_valor"].includes(fieldName)) {
-    const source =
-      fieldName === "precio"
-        ? "price"
-        : fieldName === "margen_venta_porcentaje"
-          ? "marginPct"
-          : "marginValue";
-
-    const result = recalculatePricingGroup({
-      cost: next.precio_costo,
-      price: next.precio,
-      marginPct: next.margen_venta_porcentaje,
-      marginValue: next.margen_venta_valor,
-      source,
-    });
-
+  // Cambiar el costo no modifica el precio de venta ni el promocional.
+  if (fieldName === "precio_costo") {
     return {
       ...next,
-      precio: result.price,
-      margen_venta_porcentaje: result.marginPct,
-      margen_venta_valor: result.marginValue,
-    };
-  }
-
-  if (["precio_promo", "margen_promo_porcentaje", "margen_promo_valor"].includes(fieldName)) {
-    const source =
-      fieldName === "precio_promo"
-        ? "price"
-        : fieldName === "margen_promo_porcentaje"
-          ? "marginPct"
-          : "marginValue";
-
-    const result = recalculatePricingGroup({
-      cost: next.precio_costo,
-      price: next.precio_promo,
-      marginPct: next.margen_promo_porcentaje,
-      marginValue: next.margen_promo_valor,
-      source,
-    });
-
-    return {
-      ...next,
-      precio_promo: result.price,
-      margen_promo_porcentaje: result.marginPct,
-      margen_promo_valor: result.marginValue,
+      tipos_precio_extra: recalcularPreciosAdicionalesConCosto(value, next.tipos_precio_extra, false),
     };
   }
 
@@ -404,6 +378,8 @@ function FloatingField({ label, icon, error, children, style }) {
   );
 }
 
+const NON_NEGATIVE_PRICE_FIELDS = new Set(["precio_costo", "precio", "precio_promo"]);
+
 function PriceInput({
   name,
   value,
@@ -433,7 +409,11 @@ function PriceInput({
   }, [formattedValue]);
 
   const handleChange = (e) => {
-    const cleanValue = cleanDecoratedNumber(e.currentTarget.value);
+    // Costo, venta y promoción no admiten importes negativos: el signo no se
+    // muestra ni siquiera mientras se escribe.
+    const cleanValue = NON_NEGATIVE_PRICE_FIELDS.has(name)
+      ? cleanDecoratedNumber(e.currentTarget.value).replace(/-/g, "")
+      : cleanDecoratedNumber(e.currentTarget.value);
 
     // Normalizamos en el propio DOM sin provocar un rerender del input.
     // El estado padre sí se actualiza y recalcula el resto de los precios.
@@ -490,19 +470,6 @@ function PriceInput({
       disabled={disabled}
       inputMode="decimal"
     />
-  );
-}
-
-function PriceGroupSection({ title, tone = "venta", children }) {
-  return (
-    <div className={`cmi-mainPricingGroup cmi-mainPricingGroup--${tone}`}>
-      <div className="cmi-mainPricingGroup__head">
-        <span className="cmi-mainPricingGroup__dot" aria-hidden="true" />
-        <span>{title}</span>
-      </div>
-
-      {children}
-    </div>
   );
 }
 
@@ -790,11 +757,7 @@ function buildEmptyForm() {
     sku: "",
     precio_costo: "",
     precio: "",
-    margen_venta_porcentaje: "",
-    margen_venta_valor: "",
     precio_promo: "",
-    margen_promo_porcentaje: "",
-    margen_promo_valor: "",
     stock: "",
     id_stock_unidad: "",
     descripcion: "",
@@ -1059,15 +1022,7 @@ export default function ModalCargaIndividualProducto({
     const { name, value } = e.target;
 
     if (
-      [
-        "precio_costo",
-        "precio",
-        "margen_venta_porcentaje",
-        "margen_venta_valor",
-        "precio_promo",
-        "margen_promo_porcentaje",
-        "margen_promo_valor",
-      ].includes(name)
+      ["precio_costo", "precio", "precio_promo"].includes(name)
     ) {
       setForm((p) => recalculatePricingFormLive(p, name, value));
     } else if (name === "stock") {
@@ -1098,154 +1053,29 @@ export default function ModalCargaIndividualProducto({
   };
 
   const handleCostoChangeLive = (rawValue) => {
-    const value = normalizeMoneyInput(rawValue);
-
-    recalcularTodoConCosto(value, false);
+    actualizarCosto(rawValue, false);
     setErrores((p) => ({ ...p, precio_costo: "" }));
   };
 
-  const handlePricingBlur = (source, groupName, withCents = true, rawValueInput = undefined) => {
-    // Mismo criterio que la escritura en vivo (punto del teclado = coma decimal).
-    const rawValue = rawValueInput === undefined
-      ? undefined
-      : normalizeTypedDecimal(rawValueInput, { allowNegative: source !== "price" });
-    const prefix =
-      groupName === "venta"
-        ? {
-            price: "precio",
-            marginPct: "margen_venta_porcentaje",
-            marginVal: "margen_venta_valor",
-          }
-        : {
-            price: "precio_promo",
-            marginPct: "margen_promo_porcentaje",
-            marginVal: "margen_promo_valor",
-          };
-
-    // Recalcular desde el estado más reciente. Un blur puede ejecutarse
-    // inmediatamente después del onChange; usar `form` capturado por el render
-    // anterior podía restaurar el precio/margen viejo (por ejemplo 50% -> 20%).
-    setForm((prev) => {
-      const resultRaw = recalculatePricingGroup({
-        cost: prev.precio_costo,
-        price: source === "price" && rawValue !== undefined ? rawValue : prev[prefix.price],
-        marginPct:
-          source === "marginPct" && rawValue !== undefined
-            ? rawValue
-            : prev[prefix.marginPct],
-        marginValue:
-          source === "marginValue" && rawValue !== undefined
-            ? rawValue
-            : prev[prefix.marginVal],
-        source,
-      });
-
-      const result = withCents ? formatPricingResultEnter(resultRaw) : resultRaw;
-
-      return {
-        ...prev,
-        [prefix.price]: result.price,
-        [prefix.marginPct]: result.marginPct,
-        [prefix.marginVal]: result.marginValue,
-      };
-    });
+  // Blur / Enter de Precio de venta y Precio promocional: sólo da formato al
+  // importe escrito (punto del teclado = coma decimal). No usa márgenes.
+  // Un promocional vacío queda vacío: el guardado lo interpreta como "sin promoción".
+  const handleMainPriceBlur = (fieldName, rawValueInput) => {
+    const value = normalizeMoneyInput(rawValueInput ?? "");
+    setForm((prev) => ({ ...prev, [fieldName]: formatMoneyEnter(value) }));
   };
 
-  const aplicarPrecioSugerido = (precioSugerido) => {
-    setForm((prev) => {
-      const resultRaw = recalculatePricingGroup({
-        cost: prev.precio_costo,
-        price: precioSugerido,
-        marginPct: prev.margen_venta_porcentaje,
-        marginValue: prev.margen_venta_valor,
-        source: "price",
-      });
-      const result = formatPricingResultEnter(resultRaw);
-      return {
-        ...prev,
-        precio: result.price,
-        margen_venta_porcentaje: result.marginPct,
-        margen_venta_valor: result.marginValue,
-      };
-    });
-    setErrores((prev) => ({ ...prev, precio: "" }));
-  };
-
-  const recalcularTodoConCosto = (nuevoCostoRaw, withCents = true) => {
-    // El blur/Enter recibe el valor crudo del input ("1250.5" con el punto del
-    // teclado numérico o "9.870,50" ya formateado). Se normaliza con el mismo
-    // criterio que la escritura en vivo: antes formatMoneyEnter() quitaba el
-    // punto y "1250.5" se guardaba como 12505.
+  // El costo se edita manualmente. Cambiarlo NO modifica el precio de venta ni
+  // el promocional; la rentabilidad se recalcula sola en ProductPricingPanel.
+  // El blur/Enter recibe el valor crudo ("1250.5" con el punto del teclado
+  // numérico o "9.870,50" ya formateado) y se normaliza igual que al escribir.
+  const actualizarCosto = (nuevoCostoRaw, withCents = true) => {
     const nuevoCosto = normalizeMoneyInput(nuevoCostoRaw);
-    setForm((p) => {
-      const ventaRaw = recalculatePricingGroup({
-        cost: nuevoCosto,
-        price: p.precio,
-        marginPct: p.margen_venta_porcentaje,
-        marginValue: p.margen_venta_valor,
-        source: p.precio
-          ? "price"
-          : p.margen_venta_porcentaje
-            ? "marginPct"
-            : p.margen_venta_valor
-              ? "marginValue"
-              : null,
-      });
-
-      const promoRaw = recalculatePricingGroup({
-        cost: nuevoCosto,
-        price: p.precio_promo,
-        marginPct: p.margen_promo_porcentaje,
-        marginValue: p.margen_promo_valor,
-        source: p.precio_promo
-          ? "price"
-          : p.margen_promo_porcentaje
-            ? "marginPct"
-            : p.margen_promo_valor
-              ? "marginValue"
-              : null,
-      });
-
-      const venta = withCents ? formatPricingResultEnter(ventaRaw) : ventaRaw;
-      const promo = withCents ? formatPricingResultEnter(promoRaw) : promoRaw;
-
-      const extras = (p.tipos_precio_extra || []).map((item) => {
-        const resultRaw = recalculatePricingGroup({
-          cost: nuevoCosto,
-          price: item.precio,
-          marginPct: item.margen_porcentaje,
-          marginValue: item.margen_valor,
-          source: item.precio
-            ? "price"
-            : item.margen_porcentaje
-              ? "marginPct"
-              : item.margen_valor
-                ? "marginValue"
-                : null,
-        });
-
-        const result = withCents ? formatPricingResultEnter(resultRaw) : resultRaw;
-
-        return {
-          ...item,
-          precio: result.price,
-          margen_porcentaje: result.marginPct,
-          margen_valor: result.marginValue,
-        };
-      });
-
-      return {
-        ...p,
-        precio_costo: withCents ? formatMoneyEnter(nuevoCosto) : formatMoneyBlur(nuevoCosto),
-        precio: venta.price,
-        margen_venta_porcentaje: venta.marginPct,
-        margen_venta_valor: venta.marginValue,
-        precio_promo: promo.price,
-        margen_promo_porcentaje: promo.marginPct,
-        margen_promo_valor: promo.marginValue,
-        tipos_precio_extra: extras,
-      };
-    });
+    setForm((p) => ({
+      ...p,
+      precio_costo: withCents ? formatMoneyEnter(nuevoCosto) : formatMoneyBlur(nuevoCosto),
+      tipos_precio_extra: recalcularPreciosAdicionalesConCosto(nuevoCosto, p.tipos_precio_extra, withCents),
+    }));
   };
 
   const handleExtraPriceChange = (idx, field, value) => {
@@ -1716,11 +1546,15 @@ export default function ModalCargaIndividualProducto({
 
       fd.append("precio_costo", usaVariantes ? "" : moneyToApi(formNormalizado.precio_costo));
       fd.append("precio", usaVariantes ? "" : moneyToApi(formNormalizado.precio));
-      fd.append("margen_venta_porcentaje", usaVariantes ? "" : moneyToApi(formNormalizado.margen_venta_porcentaje));
-      fd.append("margen_venta_valor", usaVariantes ? "" : moneyToApi(formNormalizado.margen_venta_valor));
       fd.append("precio_promo", usaVariantes ? "" : moneyToApi(formNormalizado.precio_promo));
-      fd.append("margen_promo_porcentaje", usaVariantes ? "" : moneyToApi(formNormalizado.margen_promo_porcentaje));
-      fd.append("margen_promo_valor", usaVariantes ? "" : moneyToApi(formNormalizado.margen_promo_valor));
+      // Márgenes derivados del costo y de los precios vigentes (informativos:
+      // el backend los vuelve a calcular y no confía en estos valores).
+      const margenVenta = profitabilityToApi(formNormalizado.precio_costo, formNormalizado.precio);
+      const margenPromo = profitabilityToApi(formNormalizado.precio_costo, formNormalizado.precio_promo);
+      fd.append("margen_venta_porcentaje", usaVariantes ? "" : margenVenta.margen_porcentaje);
+      fd.append("margen_venta_valor", usaVariantes ? "" : margenVenta.margen_valor);
+      fd.append("margen_promo_porcentaje", usaVariantes ? "" : margenPromo.margen_porcentaje);
+      fd.append("margen_promo_valor", usaVariantes ? "" : margenPromo.margen_valor);
       fd.append(
         "stock",
         formNormalizado.tiene_variantes ? "0" : formNormalizado.stock !== "" ? String(formNormalizado.stock) : ""
@@ -2153,133 +1987,57 @@ export default function ModalCargaIndividualProducto({
           </section>
 
           <div className={`cmi-priceBlock cmi-v2-priceOnly cmi-priceBlock--mainPricing ${productoConVariantes ? "cmi-priceBlock--disabledByVariants" : ""}`}>
-            <div className="cmi-mainPricing__head">
-              <div className="cmi-mainPricing__heading">
-                <span className="cmi-mainPricing__icon" aria-hidden="true">
-                  <FontAwesomeIcon icon={faMoneyBillTrendUp} />
-                </span>
-                <div>
-                  <div className="cmi-priceBlock__title">Precios principales</div>
-                  <p className="cmi-priceBlock__subtitle">
-                    {productoConVariantes
-                      ? "Este producto usa variantes: el precio general queda bloqueado para no pisar los precios de Tienda Nube. Cargá precio y stock en cada variante; el SKU es opcional."
-                      : "Definí el costo y BALTO calcula el precio sugerido. También podés escribir el precio final o el margen y el resto se actualiza automáticamente."}
-                  </p>
-                </div>
-              </div>
-              {!productoConVariantes ? <span className="cmi-mainPricing__badge">Cálculo automático</span> : null}
-            </div>
-            <div className="cmi-mainPricing__basePanel">
-              <PricingCoefficientPanel
-                cost={form.precio_costo}
-                disabled={preciosProductoBloqueados}
-                onApplySuggestedPrice={aplicarPrecioSugerido}
-                costField={(
-                  <FloatingField label="Precio de costo" error={errores.precio_costo}>
-                    <PriceInput
-                      name="precio_costo"
-                      value={form.precio_costo}
-                      onChange={(e) => handleCostoChangeLive(e.target.value)}
-                      onBlur={(e) => recalcularTodoConCosto(e.target.value, true)}
-                      onEnter={(e) =>
-                        handlePriceEnter(e, () => recalcularTodoConCosto(e.currentTarget.value, true))
-                      }
-                      placeholder="0,00"
-                      disabled={preciosProductoBloqueados}
-                    />
-                  </FloatingField>
-                )}
-                costHint="Es la base para calcular márgenes y sugerencias de venta."
-              />
-            </div>
-
-            <div className="cmi-mainPricing__groups">
-              <PriceGroupSection title="Precio de venta" tone="venta">
-                <div className="fl-row">
-                <FloatingField label="Precio de venta *" error={errores.precio}>
+            <ProductPricingPanel
+              usesVariants={productoConVariantes}
+              cost={form.precio_costo}
+              price={form.precio}
+              promo={form.precio_promo}
+              costField={(
+                <FloatingField label="Precio de costo ($)" error={errores.precio_costo}>
+                  <PriceInput
+                    name="precio_costo"
+                    value={form.precio_costo}
+                    onChange={(e) => handleCostoChangeLive(e.target.value)}
+                    onBlur={(e) => actualizarCosto(e.target.value, true)}
+                    onEnter={(e) =>
+                      handlePriceEnter(e, () => actualizarCosto(e.currentTarget.value, true))
+                    }
+                    placeholder="0,00"
+                    disabled={preciosProductoBloqueados}
+                  />
+                </FloatingField>
+              )}
+              priceField={(
+                <FloatingField label="Precio de venta ($) *" error={errores.precio}>
                   <PriceInput
                     name="precio"
                     value={form.precio}
                     onChange={handleChange}
-                    onBlur={(e) => handlePricingBlur("price", "venta", true, e.target.value)}
+                    onBlur={(e) => handleMainPriceBlur("precio", e.target.value)}
                     onEnter={(e) =>
-                      handlePriceEnter(e, () => handlePricingBlur("price", "venta", true, e.currentTarget.value))
+                      handlePriceEnter(e, () => handleMainPriceBlur("precio", e.currentTarget.value))
                     }
+                    placeholder="0,00"
                     disabled={preciosProductoBloqueados}
                   />
                 </FloatingField>
-
-                <FloatingField label="Margen s/precio %">
-                  <PriceInput
-                    name="margen_venta_porcentaje"
-                    value={form.margen_venta_porcentaje}
-                    onChange={handleChange}
-                    onBlur={(e) => handlePricingBlur("marginPct", "venta", true, e.target.value)}
-                    onEnter={(e) =>
-                      handlePriceEnter(e, () => handlePricingBlur("marginPct", "venta", true, e.currentTarget.value))
-                    }
-                    disabled={preciosProductoBloqueados || !hasCosto}
-                  />
-                </FloatingField>
-
-                <FloatingField label="Margen $">
-                  <PriceInput
-                    name="margen_venta_valor"
-                    value={form.margen_venta_valor}
-                    onChange={handleChange}
-                    onBlur={(e) => handlePricingBlur("marginValue", "venta", true, e.target.value)}
-                    onEnter={(e) =>
-                      handlePriceEnter(e, () => handlePricingBlur("marginValue", "venta", true, e.currentTarget.value))
-                    }
-                    disabled={preciosProductoBloqueados || !hasCosto}
-                  />
-                </FloatingField>
-                </div>
-              </PriceGroupSection>
-
-              <PriceGroupSection title="Precio promocional" tone="promo">
-                <div className="fl-row">
-                <FloatingField label="Precio promocional" error={errores.precio_promo}>
+              )}
+              promoField={(
+                <FloatingField label="Precio promocional ($)" error={errores.precio_promo}>
                   <PriceInput
                     name="precio_promo"
                     value={form.precio_promo}
                     onChange={handleChange}
-                    onBlur={(e) => handlePricingBlur("price", "promo", true, e.target.value)}
+                    onBlur={(e) => handleMainPriceBlur("precio_promo", e.target.value)}
                     onEnter={(e) =>
-                      handlePriceEnter(e, () => handlePricingBlur("price", "promo", true, e.currentTarget.value))
+                      handlePriceEnter(e, () => handleMainPriceBlur("precio_promo", e.currentTarget.value))
                     }
+                    placeholder="Opcional"
                     disabled={preciosProductoBloqueados}
                   />
                 </FloatingField>
-
-                <FloatingField label="Margen s/precio %">
-                  <PriceInput
-                    name="margen_promo_porcentaje"
-                    value={form.margen_promo_porcentaje}
-                    onChange={handleChange}
-                    onBlur={(e) => handlePricingBlur("marginPct", "promo", true, e.target.value)}
-                    onEnter={(e) =>
-                      handlePriceEnter(e, () => handlePricingBlur("marginPct", "promo", true, e.currentTarget.value))
-                    }
-                    disabled={preciosProductoBloqueados || !hasCosto}
-                  />
-                </FloatingField>
-
-                <FloatingField label="Margen $">
-                  <PriceInput
-                    name="margen_promo_valor"
-                    value={form.margen_promo_valor}
-                    onChange={handleChange}
-                    onBlur={(e) => handlePricingBlur("marginValue", "promo", true, e.target.value)}
-                    onEnter={(e) =>
-                      handlePriceEnter(e, () => handlePricingBlur("marginValue", "promo", true, e.currentTarget.value))
-                    }
-                    disabled={preciosProductoBloqueados || !hasCosto}
-                  />
-                </FloatingField>
-                </div>
-              </PriceGroupSection>
-            </div>
+              )}
+            />
           </div>
 
           <div className={`cmi-priceBlock cmi-v2-priceOnly ${productoConVariantes ? "cmi-priceBlock--typesForVariants" : ""}`}>

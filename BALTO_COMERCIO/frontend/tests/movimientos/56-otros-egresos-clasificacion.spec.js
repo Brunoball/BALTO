@@ -1,10 +1,12 @@
 import fs from 'node:fs/promises';
 import { test, expect } from '../support/test.js';
-import { uniqueName, todayISO } from '../support/data.js';
+import { uniqueName, uniqueSku, todayISO } from '../support/data.js';
 import { authenticatedApi, expectApiSuccess } from '../support/api.js';
 import { requireMutations, waitDialog, waitForBusyToFinish, searchRow, fillPayment, clickSaveAndWait } from '../support/ui.js';
 import { addDaysISO, historicalOperationDays } from '../support/historical-dates.js';
-import { createCatalogDescription } from '../support/flows.js';
+import { createCatalogDescription, deleteUnusedStockProduct } from '../support/flows.js';
+import { createStockProductFixture } from '../support/stock-fixtures.js';
+import { getStockProductBySku } from '../support/stock-units.js';
 import {
   cashFlowDay,
   deleteMovement,
@@ -20,7 +22,7 @@ import { openExportDialog, downloadFromExportDialog } from '../support/export.js
 //
 // Clasificación OTROS EGRESOS de punta a punta: catálogo, alta, edición,
 // persistencia, Análisis Financiero (una sola categoría), Disponibilidad,
-// Flujo de Caja, coeficiente ponderado, UI escritorio/móvil y exportación.
+// Flujo de Caja, egresos sin impacto en precios, UI escritorio/móvil y exportación.
 //
 // - Los IDs se leen SIEMPRE del catálogo (no se asume 1/2/3/4).
 // - Las mutaciones usan requireMutations (tenant E2E, e2e_run=RUN_PREFIX) y se
@@ -115,20 +117,13 @@ function expectDeltaCategorias(antes, despues, esperado, mensaje) {
   }
 }
 
-async function coeficiente(page, periodo) {
-  const body = expectApiSuccess(await authenticatedApi(page, 'stock_coeficiente_ponderado', {
-    query: { periodo, _: Date.now() },
-  }), 'No se pudo calcular el coeficiente ponderado');
-  const c = body?.data || body || {};
-  return { gastos_fijos: Number(c.gastos_fijos || 0), gastos_variables: Number(c.gastos_variables || 0), coeficiente: c.coeficiente_ponderado };
-}
-
-async function revisionPendiente(page) {
-  const body = expectApiSuccess(await authenticatedApi(page, 'stock_precios_revision_pendiente', {
-    query: { _: Date.now() },
-  }), 'No se pudo consultar la revisión de precios');
-  const r = body?.revision || body?.data?.revision || null;
-  return r ? { id: Number(r.id_revision || 0), cambios: Number(r.cantidad_cambios || 0) } : null;
+/** Precios vigentes del producto como firma comparable ("tipo:monto|..."). */
+async function firmaPrecios(page, idProducto) {
+  const body = expectApiSuccess(await authenticatedApi(page, 'stock_precios_obtener', {
+    query: { id_stock_producto: idProducto, _: Date.now() },
+  }), 'No se pudieron consultar los precios del producto');
+  return (body?.precios || body?.data?.precios || [])
+    .map((p) => `${p.id_tipo_precio_stock}:${Number(p.monto || 0).toFixed(2)}`).sort().join('|');
 }
 
 const selectorClasificacion = (dialog) => dialog.getByTestId('oe-clasificacion-select');
@@ -257,42 +252,47 @@ test.describe('@otros-egresos @clasificacion @regression OTROS EGRESOS de punta 
     expect((await cashFlowDay(page, dia)).egresos - flujoAntes.egresos).toBeCloseTo(0, 2);
   });
 
-  test('15 — el coeficiente ponderado no incorpora OTROS EGRESOS y reclasificar sólo afecta lo que corresponde', async ({ page }) => {
+  test('15 — los egresos no modifican precios y reclasificar sólo cambia la categoría contable', async ({ page }) => {
+    // El coeficiente ponderado fue retirado (26/11/2026): crear, reclasificar o
+    // eliminar un egreso no genera revisiones ni toca precios de productos. Las
+    // clasificaciones siguen alimentando Análisis Financiero.
     test.setTimeout(3 * 60_000);
     await requireMutations(test, page);
     const { ids, lists } = await catalogoClasificaciones(page);
     const medio = medioPago(lists);
     const hoy = todayISO();
-    const periodo = hoy.slice(0, 7);
     const total = 149;
-    const nombre = uniqueName('OE-COEF');
-    const antes = await coeficiente(page, periodo);
-    const revisionAntes = await revisionPendiente(page);
+    const nombre = uniqueName('OE-PRECIOS');
+    const sku = uniqueSku('OEPRECIO');
+    const producto = uniqueName('OE-PRECIOS-PROD', 70).toUpperCase();
+    await createStockProductFixture(page, { name: producto, sku, stock: 0, cost: 100, price: 190 });
+    const idProducto = Number((await getStockProductBySku(page, sku)).id_stock_producto);
+    const preciosAntes = await firmaPrecios(page, idProducto);
+    const afAntes = await af(page, hoy, hoy);
     let id = 0;
     try {
       id = await crearEgreso(page, { fecha: hoy, nombre, total, idMedio: medio.id, idClasificacion: ids['OTROS EGRESOS'] });
-      let c = await coeficiente(page, periodo);
-      expect(c.gastos_fijos - antes.gastos_fijos, 'OTROS EGRESOS no suma a gastos fijos').toBeCloseTo(0, 2);
-      expect(c.gastos_variables - antes.gastos_variables, 'OTROS EGRESOS no suma a gastos variables').toBeCloseTo(0, 2);
-      expect(c.coeficiente).toEqual(antes.coeficiente);
-      expect(await revisionPendiente(page), 'Un OTROS EGRESOS no dispara revisión de precios').toEqual(revisionAntes);
+      expectDeltaCategorias(afAntes, await af(page, hoy, hoy), { otros_egresos: total }, 'OTROS EGRESOS');
+      expect(await firmaPrecios(page, idProducto), 'OTROS EGRESOS no modifica precios').toBe(preciosAntes);
 
       await editarEgreso(page, id, { fecha: hoy, nombre, total, idMedio: medio.id, idClasificacion: ids['COSTO FIJO'] });
-      c = await coeficiente(page, periodo);
-      expect(c.gastos_fijos - antes.gastos_fijos, 'COSTO FIJO mantiene su comportamiento').toBeCloseTo(total, 2);
-      expect(c.gastos_variables - antes.gastos_variables).toBeCloseTo(0, 2);
+      expectDeltaCategorias(afAntes, await af(page, hoy, hoy), { costo_fijo: total }, 'COSTO FIJO');
+      expect(await firmaPrecios(page, idProducto), 'COSTO FIJO no modifica precios').toBe(preciosAntes);
 
       await editarEgreso(page, id, { fecha: hoy, nombre, total, idMedio: medio.id, idClasificacion: ids['COSTO VARIABLE'] });
-      c = await coeficiente(page, periodo);
-      expect(c.gastos_fijos - antes.gastos_fijos).toBeCloseTo(0, 2);
-      expect(c.gastos_variables - antes.gastos_variables, 'COSTO VARIABLE mantiene su comportamiento').toBeCloseTo(total, 2);
+      expectDeltaCategorias(afAntes, await af(page, hoy, hoy), { costo_variable: total }, 'COSTO VARIABLE');
+      expect(await firmaPrecios(page, idProducto), 'COSTO VARIABLE no modifica precios').toBe(preciosAntes);
 
       await editarEgreso(page, id, { fecha: hoy, nombre, total, idMedio: medio.id, idClasificacion: ids['OTROS EGRESOS'] });
-      c = await coeficiente(page, periodo);
-      expect(c.gastos_fijos - antes.gastos_fijos).toBeCloseTo(0, 2);
-      expect(c.gastos_variables - antes.gastos_variables).toBeCloseTo(0, 2);
+      expectDeltaCategorias(afAntes, await af(page, hoy, hoy), { otros_egresos: total }, 'Vuelta a OTROS EGRESOS');
+      expect((await leerEgreso(page, id)).idClasificacion).toBe(ids['OTROS EGRESOS']);
+
+      const retirada = await authenticatedApi(page, 'stock_precios_revision_pendiente', { query: { _: Date.now() } });
+      expect(retirada.status, 'La revisión automática de precios fue retirada').toBeGreaterThanOrEqual(400);
     } finally {
       await deleteMovement(page, 'otros_egresos_eliminar', id);
+      expect(await firmaPrecios(page, idProducto), 'Eliminar el egreso no modifica precios').toBe(preciosAntes);
+      await deleteUnusedStockProduct(page, producto).catch(() => null);
     }
   });
 

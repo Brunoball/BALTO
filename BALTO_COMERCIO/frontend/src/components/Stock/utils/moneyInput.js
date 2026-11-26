@@ -2,8 +2,8 @@
    Entrada de importes de Stock (costo, precios y márgenes).
 
    Módulo puro, sin imports: lo usan el alta individual, la edición,
-   la carga masiva y el panel del coeficiente ponderado, y se puede
-   probar con `node` (tests/unit/stock-money-input.unit.mjs).
+   la carga masiva y el cálculo de rentabilidad (grossProfitability.js),
+   y se puede probar con `node` (tests/unit/stock-money-input.unit.mjs).
 
    Formato de entrada aceptado (es-AR):
    - coma decimal: "9870,50";

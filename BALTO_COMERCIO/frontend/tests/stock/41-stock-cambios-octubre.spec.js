@@ -109,13 +109,6 @@ test('@stock @search @notificaciones-ui una alerta tardía no interrumpe la escr
   const ruta = '**/api.php?*';
   await page.route(ruta, async (route) => {
     const action = new URL(route.request().url()).searchParams.get('action');
-    if (action === 'stock_precios_revision_pendiente') {
-      await route.fulfill({
-        status: 200, contentType: 'application/json',
-        body: JSON.stringify({ exito: true, revision: null }),
-      });
-      return;
-    }
     if (action === 'stock_vencimientos_alertas') {
       confirmarSolicitud();
       await alertasPendientes;

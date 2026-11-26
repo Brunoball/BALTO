@@ -1,4 +1,4 @@
-// Pruebas unitarias de la entrada de importes de Stock (alta, edición y panel del coeficiente).
+// Pruebas unitarias de la entrada de importes de Stock (alta, edición y panel de rentabilidad).
 // Ejecutar:  node tests/unit/stock-money-input.unit.mjs
 // moneyInput.js no importa nada: se copia a un .mjs temporal y se importa.
 //
@@ -53,10 +53,12 @@ t('parseMoneyInput: interfaz y API con el mismo criterio', () => {
   for (const [entrada, esperado] of casos) assert.equal(u.parseMoneyInput(entrada), esperado, String(entrada));
   for (const vacio of ['', null, undefined, ',', '-', 'abc']) assert.equal(u.parseMoneyInput(vacio), null, String(vacio));
 });
-t('precio sugerido del video: costo 5162,50 × coeficiente 3,078261 = 15.891,51', () => {
-  const coef = 1 + (388426.2 + 105260) / 249555.85 + 10 / 100;
+t('importe del video escrito por partes: 5162,50 se interpreta como 5162.5 (sin coeficiente)', () => {
+  // El coeficiente ponderado fue retirado. Se conserva la verificación de que
+  // el costo escrito por partes llega entero al cálculo de rentabilidad.
   const costo = u.parseMoneyInput(u.normalizeMoneyInput('5162,50'));
-  assert.equal(Number((costo * coef).toFixed(2)), 15891.51);
+  assert.equal(costo, 5162.5);
+  assert.equal(u.parseMoneyInput(u.normalizeMoneyInput('9870,')), 9870);
 });
 
 console.log(`\n${ok} pruebas OK`);

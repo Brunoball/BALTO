@@ -61,12 +61,9 @@ function formatSignedMoney(value) {
 
 function formatAdjustmentType(tipo, value) {
   const normalized = String(tipo || "").trim().toLowerCase();
-  if (normalized === "coeficiente") {
-    const coefficient = Number(value);
-    return Number.isFinite(coefficient)
-      ? `Coeficiente ponderado ${coefficient.toLocaleString("es-AR", { minimumFractionDigits: 4, maximumFractionDigits: 4 })}`
-      : "Coeficiente ponderado";
-  }
+  // Registros históricos del coeficiente ponderado (funcionalidad retirada):
+  // se conservan para auditoría con una etiqueta neutra; no se crean nuevos.
+  if (normalized === "coeficiente") return "Ajuste histórico de precios";
   if (normalized === "compra_costo") return "Costo actualizado por compra";
   if (normalized === "porcentaje") return `Porcentaje ${value ?? ""}%`.trim();
   if (normalized === "valor") return `Importe ${formatSignedMoney(value)}`;

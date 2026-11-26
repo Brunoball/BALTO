@@ -9,7 +9,7 @@ import { getStockProductBySku, getDefaultStockUnit } from '../support/stock-unit
  * BALTO Comercio · Compras → PRECIO DE COSTO (política "última compra cronológica").
  *
  * Adaptación del test 60 de BALTO Servicios a productos y variantes de Comercio.
- * Regla vigente de Comercio (StockPriceReviewService::sincronizarCostosUltimaCompra):
+ * Regla vigente de Comercio (StockPurchaseCostService::sincronizarCostosUltimaCompra):
  * el PRECIO DE COSTO de cada producto/variante es el precio unitario de su compra
  * más reciente por fecha comercial. Mejora incorporada: el costo sólo se reescribe
  * cuando la operación cambia CUÁL es la última compra o SU precio; así un costo

@@ -34,3 +34,52 @@ export async function fillStockPrices(dialog, { cost, price }) {
     await input.blur();
   }
 }
+
+// Recuadro "Rentabilidad bruta del producto" de la pestaña Precios (sólo lectura).
+// Devuelve los textos tal cual se muestran: "$ 6.627,27", "47,34%", "—".
+export function stockProfitability(dialog) {
+  const box = dialog.getByTestId('stock-rentabilidad');
+  return {
+    box,
+    profit: dialog.getByTestId('stock-rentabilidad-ganancia'),
+    margin: dialog.getByTestId('stock-rentabilidad-margen'),
+    markup: dialog.getByTestId('stock-rentabilidad-recargo'),
+    warning: dialog.getByTestId('stock-rentabilidad-alerta'),
+    loss: dialog.getByTestId('stock-rentabilidad-perdida'),
+    promoBox: dialog.getByTestId('stock-rentabilidad-promo'),
+    promoProfit: dialog.getByTestId('stock-rentabilidad-promo-ganancia'),
+    promoMargin: dialog.getByTestId('stock-rentabilidad-promo-margen'),
+    promoWarning: dialog.getByTestId('stock-rentabilidad-promo-alerta'),
+  };
+}
+
+export async function expectStockProfitability(dialog, { profit, margin, markup }) {
+  const r = stockProfitability(dialog);
+  if (profit !== undefined) await expect(r.profit).toHaveText(profit);
+  if (margin !== undefined) await expect(r.margin).toHaveText(margin);
+  if (markup !== undefined) await expect(r.markup).toHaveText(markup);
+}
+
+/** Acciones retiradas junto con el coeficiente ponderado (2026-11-26). */
+export const RETIRED_PRICE_ACTIONS = [
+  'stock_coeficiente_ponderado',
+  'stock_precios_configuracion_obtener',
+  'stock_precios_configuracion_guardar',
+  'stock_precios_revision_pendiente',
+  'stock_precios_revision_aplicar',
+  'stock_precios_revision_rechazar',
+];
+
+/** Registra las peticiones del navegador a acciones retiradas (deben quedar en 0). */
+export function trackRetiredPriceRequests(page) {
+  const hits = [];
+  page.on('request', (request) => {
+    try {
+      const action = new URL(request.url()).searchParams.get('action') || '';
+      if (RETIRED_PRICE_ACTIONS.includes(action)) hits.push(action);
+    } catch {
+      // URL no parseable (data:, blob:): no es una llamada a la API.
+    }
+  });
+  return hits;
+}

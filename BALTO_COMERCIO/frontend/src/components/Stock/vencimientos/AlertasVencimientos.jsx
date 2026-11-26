@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { createPortal } from "react-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faBell, faTriangleExclamation, faXmark, faArrowRight, faMoneyBillTrendUp, faCalendarXmark, faClock, faCircleCheck } from "@fortawesome/free-solid-svg-icons";
-import { listarAlertasVencimientoStock, obtenerRevisionPreciosPendienteStock, revisionPreciosAplicable } from "../api/stockApi";
+import { faBell, faTriangleExclamation, faXmark, faArrowRight, faCalendarXmark, faClock, faCircleCheck } from "@fortawesome/free-solid-svg-icons";
+import { listarAlertasVencimientoStock } from "../api/stockApi";
 import { isTopStockModal } from "../modales/modalStackUtils";
 import { acquireBodyScrollLock } from "../../../utils/bodyScrollLock";
 import "./alertasVencimientos.css";
@@ -17,7 +17,6 @@ const mostrarFecha = (raw) => {
   return /^\d{4}-\d\d-\d\d$/.test(date) ? `${date.slice(8)}/${date.slice(5,7)}/${date.slice(0,4)}` : date;
 };
 const cantidad = (n) => Number(n || 0).toLocaleString("es-AR", {maximumFractionDigits:3});
-const coeficiente = (n) => Number(n || 0).toLocaleString("es-AR", {minimumFractionDigits:4,maximumFractionDigits:4});
 // La carga de alertas es asíncrona: no abrir un modal encima de alguien que
 // ya está escribiendo. La campana conserva las alertas y la apertura automática
 // se puede intentar en la siguiente actualización, cuando no esté editando.
@@ -41,9 +40,7 @@ function sessionScope() {
 
 export default function AlertasVencimientos() {
   const navigate = useNavigate();
-  const location = useLocation();
   const [alertas, setAlertas] = useState([]);
-  const [revision, setRevision] = useState(null);
   const [abierto, setAbierto] = useState(false);
   const [errores, setErrores] = useState({});
   const [consultado, setConsultado] = useState(false);
@@ -52,42 +49,33 @@ export default function AlertasVencimientos() {
   const closeRef = useRef(null);
 
   const refresh = useCallback(async () => {
-    const [venc, precios] = await Promise.allSettled([
-      listarAlertasVencimientoStock(7), obtenerRevisionPreciosPendienteStock({ _: Date.now() }),
-    ]);
     const nuevosErrores = {};
     let rows = [];
-    let nuevaRevision = null;
-    if (venc.status === "fulfilled") {
-      rows = Array.isArray(venc.value?.alertas) ? venc.value.alertas : [];
+    let consultaOk = false;
+    try {
+      const venc = await listarAlertasVencimientoStock(7);
+      rows = Array.isArray(venc?.alertas) ? venc.alertas : [];
       setAlertas(rows);
-    } else nuevosErrores.vencimientos = "No se pudieron consultar los vencimientos.";
-    if (precios.status === "fulfilled") {
-      const respuesta = precios.value;
-      const recibida = respuesta?.revision ?? respuesta?.data?.revision ?? null;
-      // Coeficiente nulo (0,0000 → 0,0000): no se puede aplicar, no se notifica.
-      nuevaRevision = revisionPreciosAplicable(recibida) ? recibida : null;
-      setRevision(nuevaRevision);
-    } else nuevosErrores.precios = "No se pudo consultar la revisión de precios.";
+      consultaOk = true;
+    } catch {
+      nuevosErrores.vencimientos = "No se pudieron consultar los vencimientos.";
+    }
     setErrores(nuevosErrores);
     setConsultado(true);
 
-    // Mostrar una sola apertura por día para vencimientos, y por ID de revisión
-    // para precios. Al retirar parcialmente stock no debe reaparecer encima del
-    // usuario con cada cambio de cantidad; la campanita sí se actualiza.
-    if (!rows.length && !nuevaRevision) return;
+    // Mostrar una sola apertura por día para vencimientos. Al retirar
+    // parcialmente stock no debe reaparecer encima del usuario con cada cambio
+    // de cantidad; la campanita sí se actualiza.
+    if (!rows.length) return;
     const base = `balto:notificaciones:${sessionScope()}`;
     const vencKey = `${base}:vencimientos:${fechaLocal()}`;
-    const revKey = nuevaRevision?.id_revision ? `${base}:revision:${nuevaRevision.id_revision}` : null;
     try {
-      const verVenc = rows.length > 0 && venc.status === "fulfilled" && !sessionStorage.getItem(vencKey);
-      const verRev = revKey && precios.status === "fulfilled" && !sessionStorage.getItem(revKey);
+      const verVenc = consultaOk && !sessionStorage.getItem(vencKey);
       // El backend puede responder después de que la persona empiece a buscar,
       // cargar un formulario o editar stock. No interrumpir ni robar pulsaciones.
       // No marcamos la notificación como vista al posponerla.
-      if ((verVenc || verRev) && !usuarioEstaEscribiendo()) {
-        if (verVenc) sessionStorage.setItem(vencKey, "1");
-        if (verRev) sessionStorage.setItem(revKey, "1");
+      if (verVenc && !usuarioEstaEscribiendo()) {
+        sessionStorage.setItem(vencKey, "1");
         setAbierto(true);
       }
     } catch { /* La campanita sigue disponible aun sin sessionStorage. */ }
@@ -144,23 +132,17 @@ export default function AlertasVencimientos() {
     };
   }, [abierto]);
 
-  const total = alertas.length + (revision ? 1 : 0);
+  const total = alertas.length;
   const vencidos = useMemo(() => alertas.filter(v => Number(v.dias_restantes) < 0).length, [alertas]);
   const verPartida = (partida) => {
     setAbierto(false);
     navigate("/panel/stock", {state:{baltoStockDestino:{productoId:Number(partida.id_stock_producto),varianteId:Number(partida.id_stock_variante || 0),tab:"vencimientos",ts:Date.now()}}});
   };
-  const verPrecios = () => {
-    setAbierto(false);
-    // El aviso de reajuste de Stock conserva sus botones de Aplicar/No aplicar.
-    if (location.pathname !== "/panel/stock") navigate("/panel/stock");
-  };
-
   return <>
     <button type="button" className={`pp-themeBtn sv-bell ${total ? "sv-bell--active" : ""}`}
       aria-label={`Notificaciones de Stock${total ? `: ${total}` : ""}`}
       aria-haspopup="dialog" aria-expanded={abierto}
-      title="Notificaciones: vencimientos y revisiones de precios"
+      title="Notificaciones: vencimientos de productos"
       onClick={() => { setAbierto(true); refresh(); }}>
       <FontAwesomeIcon icon={faBell} />{total > 0 && <span className="sv-bell-count">{total > 99 ? "99+" : total}</span>}
     </button>
@@ -172,7 +154,7 @@ export default function AlertasVencimientos() {
             <div className="mi-modal__head-icon" aria-hidden="true"><FontAwesomeIcon icon={faBell}/></div>
             <div className="mi-modal__head-left">
               <h2 id="sv-alert-title" className="mi-modal__title">Notificaciones de Stock</h2>
-              <p id="sv-alert-subtitle" className="mi-modal__subtitle">Vencimientos y revisiones de precios pendientes.</p>
+              <p id="sv-alert-subtitle" className="mi-modal__subtitle">Productos vencidos y próximos a vencer.</p>
             </div>
             <button ref={closeRef} type="button" className="mi-modal__close" aria-label="Cerrar notificaciones" onClick={() => setAbierto(false)}><FontAwesomeIcon icon={faXmark}/></button>
           </header>
@@ -186,38 +168,10 @@ export default function AlertasVencimientos() {
                 <span className="sv-alert-stat__icon" aria-hidden="true"><FontAwesomeIcon icon={faClock}/></span>
                 <div className="sv-alert-stat__body"><span className="sv-alert-stat__label">Próximos a vencer</span><strong className="sv-alert-stat__value">{alertas.length - vencidos}</strong></div>
               </div>
-              <div className="sv-alert-stat sv-alert-stat--pricing">
-                <span className="sv-alert-stat__icon" aria-hidden="true"><FontAwesomeIcon icon={faMoneyBillTrendUp}/></span>
-                <div className="sv-alert-stat__body"><span className="sv-alert-stat__label">Revisión de precios</span><strong className="sv-alert-stat__value">{revision ? 1 : 0}</strong></div>
-              </div>
             </div>
             <div className="sv-alert-list">
               {!consultado && <div className="sv-alert-empty" role="status">Consultando notificaciones…</div>}
               {Object.values(errores).map((mensaje) => <div key={mensaje} className="sv-alert-error" role="alert"><FontAwesomeIcon icon={faTriangleExclamation}/>{mensaje}</div>)}
-              {revision && <article className="sv-alert-entry sv-alert-entry--pricing">
-                <div className="sv-alert-pricing__identity">
-                  <span className="sv-alert-pricing__icon" aria-hidden="true"><FontAwesomeIcon icon={faMoneyBillTrendUp}/></span>
-                  <div className="sv-alert-pricing__heading">
-                    <strong>Revisión de precios pendiente</strong>
-                    <span>Cambió el coeficiente ponderado</span>
-                  </div>
-                </div>
-                <span className="sv-alert-days sv-alert-days--pricing">Revisar</span>
-                <div className="sv-alert-pricing__comparison" aria-label={`Coeficiente anterior: ${coeficiente(revision.coeficiente_base)}. Coeficiente actual: ${coeficiente(revision.coeficiente_actual)}`}>
-                  <div className="sv-alert-pricing__coefficient">
-                    <span>Coeficiente anterior</span>
-                    <strong>{coeficiente(revision.coeficiente_base)}</strong>
-                  </div>
-                  <span className="sv-alert-pricing__arrow" aria-hidden="true"><FontAwesomeIcon icon={faArrowRight}/></span>
-                  <div className="sv-alert-pricing__coefficient sv-alert-pricing__coefficient--current">
-                    <span>Coeficiente actual</span>
-                    <strong>{coeficiente(revision.coeficiente_actual)}</strong>
-                  </div>
-                </div>
-                <button type="button" className="mit-btn sv-alert-go" onClick={verPrecios}>
-                  Ir a Stock y revisar precios <FontAwesomeIcon icon={faArrowRight} aria-hidden="true"/>
-                </button>
-              </article>}
               {alertas.map((v) => {
                 const days = Number(v.dias_restantes);
                 const productoConVariante = `${v.producto_nombre}${v.variante_nombre ? `, ${v.variante_nombre}` : ""}`;

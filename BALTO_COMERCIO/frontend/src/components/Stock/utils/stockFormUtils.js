@@ -7,7 +7,7 @@ export {
   parseJsonOrThrow,
 } from "../api/stockApi";
 
-// Normalización compartida con la edición y el panel del coeficiente: conserva
+// Normalización compartida con la edición y el panel de rentabilidad: conserva
 // la escritura parcial ("9870,") y reconoce importes ya formateados ("9.870,50").
 export { normalizeMoneyInput } from "./moneyInput";
 

@@ -28,8 +28,8 @@ import {
  * Ambos tipos usan la MISMA lista de productos del stock. La única diferencia:
  * - MUEVE STOCK: funcionamiento normal (la compra suma, la venta resta).
  * - NO MUEVE STOCK: el renglón registra producto, cantidad, precio e IVA, pero
- *   no suma ni resta existencias, no define el costo de última compra, no suma
- *   al coeficiente y una nota de crédito sobre él no devuelve stock.
+ *   no suma ni resta existencias, no define el costo de última compra y una
+ *   nota de crédito sobre él no devuelve stock.
  *
  * Contrato de payload por ítem: `tipo_movimiento_stock` (MUEVE_STOCK |
  * NO_MUEVE_STOCK) y `mueve_stock` (1 | 0). Sin esos campos el backend conserva
