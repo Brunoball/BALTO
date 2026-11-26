@@ -935,3 +935,29 @@ html[data-theme="oscuro"] .ap-negative {
     min-width: 640px;
   }
 }
+
+/* Aviso: variantes que heredan el precio base de un producto seleccionado. */
+.ap-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(59, 130, 246, 0.08);
+  border: 1px solid rgba(59, 130, 246, 0.22);
+  color: #1d4ed8;
+  font-size: 12.5px;
+  font-weight: 650;
+  line-height: 1.4;
+}
+
+.ap-notice svg {
+  margin-top: 2px;
+  flex: 0 0 auto;
+}
+
+html[data-theme="oscuro"] .ap-notice {
+  background: rgba(59, 130, 246, 0.14);
+  border-color: rgba(96, 165, 250, 0.35);
+  color: #bfdbfe;
+}
