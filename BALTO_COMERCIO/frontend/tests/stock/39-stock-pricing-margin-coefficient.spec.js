@@ -34,6 +34,14 @@ test('@stock @pricing @critical margen real y coeficiente ponderado usan la fór
   const coefficient = coefficientBody?.data || coefficientBody || {};
 
   expect(coefficient.periodo).toMatch(/^\d{4}-\d{2}$/);
+  // Sin período explícito el backend usa el último mes calendario COMPLETO, y el
+  // panel de Stock muestra ese mismo mes (antes mostraba el mes en curso).
+  const hoy = new Date();
+  const ultimoMesCompleto = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1);
+  expect(coefficient.periodo).toBe(
+    `${ultimoMesCompleto.getFullYear()}-${String(ultimoMesCompleto.getMonth() + 1).padStart(2, '0')}`,
+  );
+  expect(coefficient.mes_en_curso).toBe(false);
   expect(Number(coefficient.utilidad_deseada_pct)).toBeCloseTo(Number(config.utilidad_deseada_pct), 4);
   expect(Number(coefficient.compras_mercaderia)).toBeGreaterThanOrEqual(0);
   expect(Number(coefficient.gastos_fijos)).toBeGreaterThanOrEqual(0);
@@ -85,6 +93,7 @@ test('@stock @pricing @critical margen real y coeficiente ponderado usan la fór
   const dialog = await waitDialog(page, 'Productos');
   await openStockEditorTab(dialog, 'prices');
   await expect(dialog.getByTestId('stock-coeficiente-ponderado')).toBeVisible();
+  await expect(dialog.getByTestId('stock-coeficiente-mes')).toHaveValue(coefficient.periodo);
 
   const cost = dialog.locator('input[name="precio_costo"]');
   const price = dialog.locator('input[name="precio"]');

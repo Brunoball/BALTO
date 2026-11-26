@@ -48,7 +48,7 @@ function isOtherIncomeCreditOperation(request, operation) {
  * reintento del gate. Si la autenticación no vuelve, la prueba debe fallar;
  * jamás se ignora el error ni se simula una sesión válida.
  */
-async function openStockPanelWithSessionRecovery(page) {
+export async function openStockPanelWithSessionRecovery(page) {
   await page.goto('/panel/stock', { waitUntil: 'domcontentloaded' });
   await waitForBusyToFinish(page);
 

@@ -30,6 +30,7 @@ import {
   tipoMovimientoDesdeItem,
 } from "../../_shared/tipoMovimientoStock.js";
 import { useRefrescarListasAlAbrir } from "../../_shared/refrescoListas.js";
+import { pickDetallesCompras } from "../../_shared/listasCompras.js";
 
 const NULL_OPTION = "";
 const ADD_OPTION = "__ADD__";
@@ -1440,7 +1441,23 @@ export default function ModalEditarCompra({
     ...SAFE_LISTS, ...normalizeIncomingLists(lists),
   }));
   useEffect(() => {
-    setLocalLists({ ...SAFE_LISTS, ...normalizeIncomingLists(lists) });
+    // Una recarga del contexto global (por ejemplo la que dispara este mismo
+    // modal al abrirse) no debe reemplazar la lista completa de compras por la
+    // lista vendible: si la actualización no trae productos para compras, se
+    // conserva la que ya estaba cargada.
+    setLocalLists((prev) => {
+      const incoming = normalizeIncomingLists(lists);
+      const traeCompras = (pickDetallesCompras(lists) || []).length > 0;
+      return {
+        ...SAFE_LISTS,
+        ...incoming,
+        detalles: traeCompras
+          ? incoming.detalles
+          : Array.isArray(prev?.detalles) && prev.detalles.length
+            ? prev.detalles
+            : incoming.detalles,
+      };
+    });
   }, [lists]);
 
   useEffect(() => {

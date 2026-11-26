@@ -1,6 +1,7 @@
 // src/context/ListasContext.jsx
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import BASE_URL from "../config/config";
+import { pickDetallesCompras } from "../components/Mov_Subsection/_shared/listasCompras";
 
 const LISTS_TTL_MS = 0;
 const CACHE_PREFIX = "balto_lists_cache_v1";
@@ -62,6 +63,8 @@ const emptyLists = {
   clientes: [],
   cuentas_corrientes: [],
   detalles: [],
+  // Lista completa para Compras (incluye stock 0 / negativo / sin existencias).
+  detalles_compras: [],
   detalles_ingresos: [],
   medios_pago: [],
   proveedores: [],
@@ -82,7 +85,11 @@ function normalizeLists(raw) {
     clasificaciones: getArr("clasificaciones"),
     clientes: getArr("clientes"),
     cuentas_corrientes: getArr("cuentas_corrientes"),
+    // `detalles` sigue siendo la lista vendible (Ventas/Presupuestos).
     detalles: getArr("detalles"),
+    // El backend ya envía la lista completa de compras; antes se descartaba acá
+    // y, al refrescarse el contexto, Compras terminaba usando la lista vendible.
+    detalles_compras: pickDetallesCompras(raw) || [],
     detalles_ingresos: getArr("detalles_ingresos"),
     medios_pago: getArr("medios_pago"),
     proveedores: getArr("proveedores"),

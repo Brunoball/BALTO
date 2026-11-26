@@ -46,6 +46,7 @@ import {
   recalculatePricingGroup,
   toUpperCaseValue,
 } from "../utils/stockFormUtils";
+import { normalizeTypedDecimal } from "../utils/moneyInput";
 
 /* ── Utilidades ── */
 function normalizeIdValue(value) {
@@ -1103,7 +1104,11 @@ export default function ModalCargaIndividualProducto({
     setErrores((p) => ({ ...p, precio_costo: "" }));
   };
 
-  const handlePricingBlur = (source, groupName, withCents = true, rawValue = undefined) => {
+  const handlePricingBlur = (source, groupName, withCents = true, rawValueInput = undefined) => {
+    // Mismo criterio que la escritura en vivo (punto del teclado = coma decimal).
+    const rawValue = rawValueInput === undefined
+      ? undefined
+      : normalizeTypedDecimal(rawValueInput, { allowNegative: source !== "price" });
     const prefix =
       groupName === "venta"
         ? {
@@ -1166,7 +1171,12 @@ export default function ModalCargaIndividualProducto({
     setErrores((prev) => ({ ...prev, precio: "" }));
   };
 
-  const recalcularTodoConCosto = (nuevoCosto, withCents = true) => {
+  const recalcularTodoConCosto = (nuevoCostoRaw, withCents = true) => {
+    // El blur/Enter recibe el valor crudo del input ("1250.5" con el punto del
+    // teclado numérico o "9.870,50" ya formateado). Se normaliza con el mismo
+    // criterio que la escritura en vivo: antes formatMoneyEnter() quitaba el
+    // punto y "1250.5" se guardaba como 12505.
+    const nuevoCosto = normalizeMoneyInput(nuevoCostoRaw);
     setForm((p) => {
       const ventaRaw = recalculatePricingGroup({
         cost: nuevoCosto,

@@ -7,21 +7,9 @@ export {
   parseJsonOrThrow,
 } from "../api/stockApi";
 
-export function normalizeMoneyInput(raw = "") {
-  let value = String(raw).replace(/\./g, ",").replace(/[^\d,]/g, "");
-  const firstComma = value.indexOf(",");
-  if (firstComma !== -1) {
-    value =
-      value.slice(0, firstComma + 1) +
-      value.slice(firstComma + 1).replace(/,/g, "");
-  }
-  const parts = value.split(",");
-  if (parts.length > 1) {
-    parts[1] = parts[1].slice(0, 2);
-    value = `${parts[0]},${parts[1]}`;
-  }
-  return value;
-}
+// Normalización compartida con la edición y el panel del coeficiente: conserva
+// la escritura parcial ("9870,") y reconoce importes ya formateados ("9.870,50").
+export { normalizeMoneyInput } from "./moneyInput";
 
 function parseDecimal(raw) {
   if (raw === null || raw === undefined || raw === "") return null;

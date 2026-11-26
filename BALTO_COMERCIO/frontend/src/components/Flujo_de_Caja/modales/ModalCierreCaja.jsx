@@ -69,7 +69,8 @@ export default function ModalCierreCaja({ open, onClose, onSaved, onOpenCierre, 
           const p = conservar ? prev[m.id_medio_pago] : null;
           next[m.id_medio_pago] = {
             texto: p?.texto ?? "",
-            aplicar: p?.aplicar ?? Boolean(m.admite_ajuste_al_confirmar),
+            // La capacidad de ajustar no equivale a una autorización del usuario.
+            aplicar: p?.aplicar ?? false,
             obs: p?.obs ?? "",
           };
         });

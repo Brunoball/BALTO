@@ -28,7 +28,8 @@
         "movimientos/61-compras-costo-ultima-compra.spec.js",
         "movimientos/26-barcode-movements.spec.js",
         "dashboard/40-dashboard-stock-valorizado-fraccional.spec.js",
-        "tiendanube/42-stock-tiendanube-historial-contrato.spec.js"
+        "tiendanube/42-stock-tiendanube-historial-contrato.spec.js",
+        "movimientos/67-compras-productos-sin-stock.spec.js"
       ],
       "excluir": []
     },

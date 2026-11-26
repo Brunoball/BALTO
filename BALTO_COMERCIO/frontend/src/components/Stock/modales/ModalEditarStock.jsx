@@ -46,6 +46,7 @@ import {
   withSessionKey,
 } from "../api/stockApi";
 import { normalizeStockInput, stockToApi, stockToInput } from "../utils/stockFormUtils";
+import { normalizeMoneyInput, normalizeTypedDecimal } from "../utils/moneyInput";
 
 function getProductoImageUrlByArchivoId(archivoId) {
   const id = Number(archivoId || 0);
@@ -140,18 +141,20 @@ function formatNumberForApi(value) {
   return Number(num.toFixed(2));
 }
 
-function normalizeMoneyInput(raw = "") {
-  let value = String(raw).replace(/\./g, ",").replace(/[^\d,]/g, "");
-  const firstComma = value.indexOf(",");
-  if (firstComma !== -1) {
-    value = value.slice(0, firstComma + 1) + value.slice(firstComma + 1).replace(/,/g, "");
-  }
-  const parts = value.split(",");
-  if (parts.length > 1) {
-    parts[1] = parts[1].slice(0, 2);
-    value = `${parts[0]},${parts[1]}`;
-  }
-  return value;
+// normalizeMoneyInput / normalizeTypedDecimal vienen de ../utils/moneyInput:
+// el alta y la edición deben interpretar comas, puntos y centavos igual.
+
+/**
+ * Los inputs de precios de la edición son controlados. Mientras el usuario
+ * escribe, el campo que está editando debe conservar exactamente lo tipeado
+ * ("5162," o "5162,50"); reformatearlo con parseFloat borraba la coma y los
+ * ceros finales y hacía imposible cargar centavos (reclamo del cliente).
+ * Los márgenes admiten signo negativo (precio menor al costo).
+ */
+function typedPricingValue(fieldName, rawValue) {
+  return normalizeTypedDecimal(rawValue, {
+    allowNegative: String(fieldName || "").startsWith("margen"),
+  });
 }
 
 function formatPriceDisplay(value) {
@@ -351,10 +354,11 @@ function hydratePricingFormValues(sourceForm) {
 }
 
 function recalculatePricingFormLive(prev, fieldName, rawValue) {
-  const next = { ...prev, [fieldName]: rawValue };
+  const typed = typedPricingValue(fieldName, rawValue);
+  const next = { ...prev, [fieldName]: typed };
 
   if (fieldName === "precio_costo") {
-    return hydratePricingFormValues(next);
+    return { ...hydratePricingFormValues(next), precio_costo: typed };
   }
 
   if (
@@ -382,6 +386,8 @@ function recalculatePricingFormLive(prev, fieldName, rawValue) {
       precio: result.price,
       margen_venta_porcentaje: result.marginPct,
       margen_venta_valor: result.marginValue,
+      // El campo que se está escribiendo no se reformatea hasta el blur.
+      [fieldName]: typed,
     };
   }
 
@@ -410,6 +416,7 @@ function recalculatePricingFormLive(prev, fieldName, rawValue) {
       precio_promo: result.price,
       margen_promo_porcentaje: result.marginPct,
       margen_promo_valor: result.marginValue,
+      [fieldName]: typed,
     };
   }
 
@@ -1595,7 +1602,9 @@ export default function ModalEditarProducto({
   };
 
   const handleCostoChangeLive = (rawValue) => {
-    recalcularTodoConCosto(rawValue, false);
+    // Igual que el alta: se normaliza la escritura (punto del teclado numérico
+    // -> coma) y se conserva la coma/centavos mientras se escribe.
+    recalcularTodoConCosto(normalizeMoneyInput(rawValue), false);
 
     setErrores((prev) => ({
       ...prev,
@@ -1721,7 +1730,7 @@ export default function ModalEditarProducto({
         ...prev,
         precio_costo: withCents
           ? formatNumberWithCents(nuevoCosto)
-          : formatNumberForDisplay(nuevoCosto),
+          : normalizeMoneyInput(nuevoCosto),
         precio: venta.price,
         margen_venta_porcentaje: venta.marginPct,
         margen_venta_valor: venta.marginValue,
@@ -1733,7 +1742,10 @@ export default function ModalEditarProducto({
     });
   };
 
-  const handleExtraPriceChange = (idx, field, value) => {
+  const handleExtraPriceChange = (idx, field, rawValue) => {
+    const value = ["precio", "margen_porcentaje", "margen_valor"].includes(field)
+      ? typedPricingValue(field, rawValue)
+      : rawValue;
     setForm((prev) => {
       const next = {
         ...prev,
@@ -1771,6 +1783,8 @@ export default function ModalEditarProducto({
             precio: result.price,
             margen_porcentaje: result.marginPct,
             margen_valor: result.marginValue,
+            // Conservar la escritura parcial del campo editado hasta el blur.
+            [field]: value,
           };
         }),
       };

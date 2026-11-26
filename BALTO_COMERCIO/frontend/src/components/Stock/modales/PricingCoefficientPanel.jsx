@@ -6,22 +6,31 @@ import {
   obtenerCoeficientePonderadoStock,
   obtenerConfiguracionPreciosStock,
 } from "../api/stockApi";
+import { parseMoneyInput } from "../utils/moneyInput";
 import "./PricingCoefficientPanel.css";
 
-function currentMonth() {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+function monthKey(date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
 }
 
-function parseDecimal(value) {
-  if (value === null || value === undefined || value === "") return null;
-  const raw = String(value).trim().replace(/\s+/g, "");
-  const normalized = raw.includes(",")
-    ? raw.replace(/\./g, "").replace(",", ".")
-    : raw;
-  const number = Number(normalized.replace(/[^\d.-]/g, ""));
-  return Number.isFinite(number) ? number : null;
+function currentMonth() {
+  return monthKey(new Date());
 }
+
+/**
+ * Mes base predeterminado: el último mes calendario COMPLETO, el mismo criterio
+ * que CoeficientePonderadoService::resolverPeriodo(). Con el mes en curso las
+ * compras todavía son parciales mientras los gastos fijos suelen estar cargados
+ * completos, y el coeficiente (y el precio sugerido) quedaba inflado.
+ * Sólo se usa hasta que responde el backend, que informa el período real.
+ */
+function lastCompleteMonth() {
+  const now = new Date();
+  return monthKey(new Date(now.getFullYear(), now.getMonth() - 1, 1));
+}
+
+// Misma interpretación de comas, puntos y centavos que los formularios de Stock.
+const parseDecimal = parseMoneyInput;
 
 function formatMoney(value) {
   if (value === null || value === undefined || value === "") return "—";
@@ -62,7 +71,9 @@ export default function PricingCoefficientPanel({
   costField = null,
   costHint = "",
 }) {
-  const [periodo, setPeriodo] = useState(currentMonth);
+  // "" = mes base predeterminado del backend (último mes completo). Sólo se
+  // envía `periodo` cuando el usuario elige un mes explícitamente.
+  const [periodoManual, setPeriodoManual] = useState("");
   const [utilidadPct, setUtilidadPct] = useState("");
   const [configReady, setConfigReady] = useState(false);
   const [configError, setConfigError] = useState("");
@@ -73,9 +84,13 @@ export default function PricingCoefficientPanel({
   const lastSavedUtility = useRef(null);
   const monthInputRef = useRef(null);
 
+  const periodo = periodoManual || result?.periodo || lastCompleteMonth();
+  const mesActual = currentMonth();
+  const periodoEnCurso = periodo === mesActual;
+
   const openMonthPicker = () => {
     const input = monthInputRef.current;
-    if (!input || disabled || loading || !configReady) return;
+    if (!input || disabled || !configReady) return;
 
     try {
       if (typeof input.showPicker === "function") {
@@ -116,40 +131,47 @@ export default function PricingCoefficientPanel({
     return () => { active = false; };
   }, []);
 
-  useEffect(() => {
-    if (!configReady || utilidadNumber === null || utilidadNumber < 0) return undefined;
+  // La utilidad deseada es una configuración de TODO el tenant (también la usa
+  // la revisión de precios). Antes se guardaba 700 ms después de cada tecla, así
+  // que un valor intermedio ("1" mientras se escribía "15") podía quedar
+  // persistido. Ahora se guarda sólo al confirmar (blur o Enter) un valor válido
+  // y distinto del guardado; el precio sugerido se sigue recalculando en vivo.
+  const persistirUtilidad = async () => {
+    if (!configReady || disabled || utilidadNumber === null || utilidadNumber < 0) return;
     if (lastSavedUtility.current !== null && Math.abs(lastSavedUtility.current - utilidadNumber) < 0.0001) {
-      return undefined;
+      return;
     }
-
-    const timer = window.setTimeout(async () => {
-      try {
-        const response = await guardarConfiguracionPreciosStock({ utilidad_deseada_pct: utilidadNumber });
-        const config = response?.configuracion || response?.data?.configuracion || null;
-        const saved = parseDecimal(config?.utilidad_deseada_pct);
-        lastSavedUtility.current = saved !== null ? saved : utilidadNumber;
-        setConfigError("");
-      } catch (err) {
-        setConfigError(err?.message || "No se pudo guardar la utilidad deseada.");
-      }
-    }, 700);
-
-    return () => window.clearTimeout(timer);
-  }, [configReady, utilidadNumber]);
+    const valor = utilidadNumber;
+    try {
+      const response = await guardarConfiguracionPreciosStock({ utilidad_deseada_pct: valor });
+      const config = response?.configuracion || response?.data?.configuracion || null;
+      const saved = parseDecimal(config?.utilidad_deseada_pct);
+      lastSavedUtility.current = saved !== null ? saved : valor;
+      setConfigError("");
+    } catch (err) {
+      setConfigError(err?.message || "No se pudo guardar la utilidad deseada.");
+    }
+  };
 
   useEffect(() => {
-    if (!configReady || !periodo || utilidadNumber === null || utilidadNumber < 0) {
+    // Cada cambio invalida cualquier respuesta anterior todavía en vuelo, incluso
+    // si el nuevo estado no dispara un cálculo (por ejemplo utilidad vacía).
+    const seq = ++requestSeq.current;
+
+    if (!configReady || utilidadNumber === null || utilidadNumber < 0) {
       setResult(null);
+      setLoading(false);
       return undefined;
     }
 
-    const seq = ++requestSeq.current;
+    // Desde este instante el resultado anterior ya no corresponde a los datos
+    // ingresados: no se ofrece "Aplicar" con un coeficiente viejo.
+    setLoading(true);
     const timer = window.setTimeout(async () => {
-      setLoading(true);
       setError("");
       try {
         const response = await obtenerCoeficientePonderadoStock({
-          periodo,
+          ...(periodoManual ? { periodo: periodoManual } : {}),
           utilidad_pct: utilidadNumber,
           _: Date.now(),
         });
@@ -165,12 +187,13 @@ export default function PricingCoefficientPanel({
     }, 250);
 
     return () => window.clearTimeout(timer);
-  }, [configReady, periodo, utilidadNumber]);
+  }, [configReady, periodoManual, utilidadNumber]);
 
   const suggestedPrice = useMemo(() => {
     const costNumber = parseDecimal(cost);
     const coefficient = Number(result?.coeficiente_ponderado);
     if (
+      loading ||
       !result?.disponible ||
       costNumber === null ||
       costNumber < 0 ||
@@ -180,7 +203,7 @@ export default function PricingCoefficientPanel({
       return null;
     }
     return Number((costNumber * coefficient).toFixed(2));
-  }, [cost, result]);
+  }, [cost, result, loading]);
 
   const applySuggested = () => {
     if (disabled || suggestedPrice === null || typeof onApplySuggestedPrice !== "function") return;
@@ -243,9 +266,21 @@ export default function PricingCoefficientPanel({
             ref={monthInputRef}
             type="month"
             value={periodo}
-            onChange={(e) => setPeriodo(e.target.value)}
+            max={mesActual}
+            onChange={(e) => {
+              const value = String(e.target.value || "");
+              // Vaciar el selector vuelve al mes base predeterminado.
+              if (!value) {
+                setPeriodoManual("");
+                return;
+              }
+              // No se calcula sobre meses futuros: no tienen compras.
+              setPeriodoManual(value > mesActual ? mesActual : value);
+            }}
             onClick={openMonthPicker}
-            disabled={disabled || loading || !configReady}
+            disabled={disabled || !configReady}
+            aria-label="Mes base del coeficiente"
+            data-testid="stock-coeficiente-mes"
           />
           <span className="stock-coef__fieldLabel">Mes base</span>
         </label>
@@ -256,7 +291,17 @@ export default function PricingCoefficientPanel({
             inputMode="decimal"
             value={utilidadPct}
             onChange={(e) => setUtilidadPct(e.target.value.replace(/[^\d,.]/g, ""))}
-            disabled={disabled || loading || !configReady}
+            onBlur={persistirUtilidad}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                persistirUtilidad();
+              }
+            }}
+            // No se deshabilita durante el cálculo: deshabilitar un input con foco
+            // lo desenfoca y se perdían las teclas siguientes al escribir.
+            disabled={disabled || !configReady}
+            data-testid="stock-coeficiente-utilidad"
             aria-label="Utilidad deseada sobre costo"
             placeholder=" "
           />
@@ -267,7 +312,12 @@ export default function PricingCoefficientPanel({
       {configError ? <div className="stock-coef__warning">{configError}</div> : null}
       {error ? <div className="stock-coef__warning">{error}</div> : null}
       {!error && result?.advertencia ? (
-        <div className="stock-coef__warning">{result.advertencia}</div>
+        <div className="stock-coef__warning" data-testid="stock-coeficiente-advertencia">{result.advertencia}</div>
+      ) : null}
+      {!error && !result?.advertencia && periodoEnCurso && result?.disponible ? (
+        <div className="stock-coef__warning" data-testid="stock-coeficiente-advertencia">
+          El mes base todavía está en curso: compras y gastos son parciales y el precio sugerido puede quedar distorsionado.
+        </div>
       ) : null}
 
       <div className="stock-coef__metrics">

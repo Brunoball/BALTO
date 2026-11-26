@@ -214,7 +214,8 @@ test.describe('@flujo @cierre-caja interfaz (mocks, sin escrituras)', () => {
     await expect(page.getByRole('button', { name: 'Historial de ajustes de saldo' })).toBeVisible();
     await expect(page.getByRole('button', { name: /Exportar/ })).toBeVisible();
     const dlg = await abrirCierre(page);
-    await expect(dlg.getByText('Fecha y hora de realización')).toBeVisible();
+    await expect(dlg.getByText('Realizado', { exact: true })).toBeVisible();
+    await expect(dlg.getByTestId('fc-cc-ahora')).toHaveText(`${todayISO().split('-').reverse().join('/')} 18:30`);
     await expect(page.getByTestId('fc-cc-responsable')).toHaveText('ADMIN');
   });
 
@@ -228,7 +229,11 @@ test.describe('@flujo @cierre-caja interfaz (mocks, sin escrituras)', () => {
     await expect(page.getByTestId('fc-cc-esperado-1')).toContainText('100.000,00');
     await expect(page.getByTestId('fc-cc-estado-7')).toHaveText('Sin verificar');
     await expect(page.getByTestId('fc-cc-progreso')).toContainText('0 de 5 verificadas');
-    await expect(page.getByText('Controlá el dinero real de cada caja')).toBeVisible();
+    const cajas = dlg.getByRole('table', { name: 'Cajas a controlar' });
+    await expect(cajas).toBeVisible();
+    await expect(cajas.getByRole('columnheader', { name: 'Saldo esperado' })).toBeVisible();
+    await expect(cajas.getByRole('columnheader', { name: 'Saldo verificado' })).toBeVisible();
+    await expect(cajas.getByRole('columnheader', { name: 'Diferencia' })).toBeVisible();
     await expect(page.getByTestId('fc-cc-neto')).toHaveText('—');
     await page.getByTestId('fc-cc-input-7').fill('0');
     await expect(page.getByTestId('fc-cc-progreso')).toContainText('1 de 5 verificadas');
@@ -246,12 +251,16 @@ test.describe('@flujo @cierre-caja interfaz (mocks, sin escrituras)', () => {
     await expect(page.getByTestId('fc-cc-estado-2')).toHaveText('Faltante');
     await expect(page.getByTestId('fc-cc-sobrantes')).toContainText('10.000');
     await expect(page.getByTestId('fc-cc-faltantes')).toContainText('10.000');
-    await expect(page.getByText('Las diferencias se compensan en el total, pero se registran por separado')).toBeVisible();
+    await expect(page.getByText('Las diferencias se compensan en el total, pero se registran por separado en cada caja.')).toBeVisible();
     // La diferencia no autoriza un asiento: el administrador debe pedirlo.
     await expect(page.getByTestId('fc-cc-aplicar-1')).not.toBeChecked();
     await expect(page.getByTestId('fc-cc-aplicar-2')).toHaveCount(0);
     await page.getByTestId('fc-cc-revisar').click();
-    await expect(page.getByText('No se aplicará ningún ajuste de saldo.')).toBeVisible();
+    // El diseño actual sólo muestra la sección de ajustes si hay alguno autorizado.
+    await expect(page.getByTestId('fc-cc-resumen')).toBeVisible();
+    await expect(page.getByTestId('fc-cc-ajustes')).toHaveCount(0);
+    await expect(page.getByTestId('fc-cc-pendientes')).toContainText('EFECTIVO');
+    expect(st.calls.confirmar).toHaveLength(0);
     await page.getByRole('button', { name: 'Volver' }).click();
     await page.getByTestId('fc-cc-aplicar-1').check();
     await page.getByTestId('fc-cc-revisar').click();
@@ -260,6 +269,7 @@ test.describe('@flujo @cierre-caja interfaz (mocks, sin escrituras)', () => {
     await expect(page.getByTestId('fc-cc-pendientes')).toContainText('MERCADO PAGO');
     await page.getByTestId('fc-cc-confirmar').click();
     await expect(page.getByTestId('fc-cc-done')).toBeVisible();
+    expect(st.calls.confirmar).toHaveLength(1);
     const enviado = st.calls.confirmar[0];
     expect(enviado.medios.find((m) => m.id_medio_pago === 1).aplicar_ajuste).toBe(true);
     expect(enviado.medios.find((m) => m.id_medio_pago === 2).aplicar_ajuste).toBe(false);
@@ -273,7 +283,11 @@ test.describe('@flujo @cierre-caja interfaz (mocks, sin escrituras)', () => {
     await expect(page.getByTestId('fc-cc-estado-1')).toHaveText('Faltante');
     await expect(page.getByTestId('fc-cc-aplicar-1')).not.toBeChecked();
     await page.getByTestId('fc-cc-revisar').click();
-    await expect(page.getByText('No se aplicará ningún ajuste de saldo.')).toBeVisible();
+    // El diseño actual sólo muestra la sección de ajustes si hay alguno autorizado.
+    await expect(page.getByTestId('fc-cc-resumen')).toBeVisible();
+    await expect(page.getByTestId('fc-cc-ajustes')).toHaveCount(0);
+    await expect(page.getByTestId('fc-cc-pendientes')).toContainText('EFECTIVO');
+    expect(st.calls.confirmar).toHaveLength(0);
     await page.getByTestId('fc-cc-confirmar').click();
     await expect(page.getByTestId('fc-cc-done')).toBeVisible();
     expect(st.calls.confirmar).toHaveLength(1);
@@ -304,7 +318,7 @@ test.describe('@flujo @cierre-caja interfaz (mocks, sin escrituras)', () => {
   });
 
   test('19, 38-43 · cierre existente, historial, detalle, conciliación parcial y comprobante', async ({ page }) => {
-    await mockCierres(page);
+    const st = await mockCierres(page);
     await abrirCierre(page);
     await completar(page, { 1: '115000', 2: '350000', 4: '200000', 8: '50000', 7: '0' });
     // El ajuste ya no viene marcado: habilitarlo de manera explicita para
@@ -328,7 +342,20 @@ test.describe('@flujo @cierre-caja interfaz (mocks, sin escrituras)', () => {
     await expect(page.getByTestId('fc-cn-importe')).toHaveValue(/^10\.000/);
     await page.getByTestId('fc-cn-revisar').click();
     await expect(page.getByTestId('fc-cn-compensacion')).toContainText('10.000');
-    await page.getByTestId('fc-cn-confirmar').click();
+    await expect(cn.getByTestId('fc-cn-preview')).toBeVisible();
+    await expect(cn.getByTestId('fc-cn-compensacion')).toHaveText(/^−\s*\$\s*10\.000,00$/);
+    expect(st.calls.conciliar).toHaveLength(0);
+    await cn.getByTestId('fc-cn-confirmar').click();
+    const resultado = cn.getByTestId('fc-cn-done');
+    await expect(resultado).toBeVisible();
+    await expect(resultado.getByText('Conciliación registrada', { exact: true })).toBeVisible();
+    await expect(resultado.getByText('Pendiente restante', { exact: true }).locator('..').locator('.fc-md-stat__value')).toContainText('5.000,00');
+    expect(st.calls.conciliar).toHaveLength(1);
+    expect(st.calls.conciliar[0]).toMatchObject({
+      tipo_resolucion: 'MOVIMIENTO_REGISTRADO', importe: '10000.00',
+      pendiente_esperado: '15000.00', ids_movimiento_medio_pago: [9001],
+    });
+    await cn.getByRole('button', { name: 'Listo', exact: true }).click();
     await expect(cn).toBeHidden();
     await expect(ef).toContainText('Parcialmente conciliada');
     await expect(ef.getByTestId('fc-cc-pendiente')).toContainText('5.000');
@@ -338,8 +365,12 @@ test.describe('@flujo @cierre-caja interfaz (mocks, sin escrituras)', () => {
     expect((await pdf).suggestedFilename()).toMatch(/^cierre_caja_CC-000001_/);
     await page.getByRole('button', { name: /Volver al historial/ }).click();
     await expect(page.locator('[data-cierre-id]')).toHaveCount(1);
+    const tablaHistorial = page.getByRole('table', { name: 'Cierres de caja' });
     await page.locator('#fc-hc-desde').fill('2000-01-01');
+    await expect(tablaHistorial).toHaveAttribute('aria-busy', 'false');
+    await expect(page.locator('[data-cierre-id]')).toHaveCount(1);
     await page.locator('#fc-hc-hasta').fill('2000-01-02');
+    await expect(tablaHistorial).toHaveAttribute('aria-busy', 'false');
     await expect(page.locator('[data-cierre-id]')).toHaveCount(0);
     await page.keyboard.press('Escape');
     await page.getByRole('button', { name: 'Cerrar caja' }).click();
@@ -354,30 +385,50 @@ test.describe('@flujo @cierre-caja interfaz (mocks, sin escrituras)', () => {
     await page.getByTestId('fc-cc-revisar').click();
     await page.getByTestId('fc-cc-confirmar').click();
     await page.getByRole('button', { name: 'Ver detalle' }).click();
-    await expect(page.getByText('Cajas revisadas')).toBeVisible();
-    await expect(page.getByText('Ver información completa y trazabilidad')).toBeVisible();
+    // La información completa ahora está dentro de un details cerrado.
+    const resumenTrazabilidad = page.locator('summary').filter({ hasText: 'Ver información completa y trazabilidad' });
+    await expect(resumenTrazabilidad).toBeVisible();
+    await resumenTrazabilidad.click();
+    const info = resumenTrazabilidad.locator('..');
+    await expect(info).toHaveAttribute('open', '');
+    await expect(info.getByText('Cajas revisadas', { exact: true })).toBeVisible();
+    await expect(info.getByText('Cajas revisadas', { exact: true }).locator('..').locator('dd')).toHaveText(String(MEDIOS.length));
     const banco = page.getByTestId('fc-cc-detalle-4');
     await expect(banco).toContainText('231.910,04');
     await expect(banco).toContainText('Resolver diferencia');
     await banco.getByRole('button', { name: 'Resolver diferencia' }).click();
     const dlg = page.getByRole('dialog', { name: /Resolver diferencia/ });
     await expect(dlg).toBeVisible();
-    await expect(dlg.getByRole('button', { name: /Conciliar diferencia/ })).toHaveAttribute('aria-pressed', 'true');
-    await expect(dlg.getByRole('button', { name: /Aplicar ajuste autorizado/ })).toBeEnabled();
-    await expect(dlg.getByText('Operaciones seleccionadas')).toBeVisible();
-    await dlg.getByRole('button', { name: /Aplicar ajuste autorizado/ }).click();
+    await expect(dlg.getByRole('button', { name: /Conciliar movimiento/ })).toHaveAttribute('aria-pressed', 'true');
+    await expect(dlg.getByRole('button', { name: /Aplicar ajuste/ })).toBeEnabled();
+    await expect(dlg.getByText('Movimientos seleccionados', { exact: true })).toBeVisible();
+    await dlg.getByRole('button', { name: /Aplicar ajuste/ }).click();
     await expect(dlg.getByTestId('fc-caj-panel')).toBeVisible();
     await expect(dlg.getByText(/La diferencia seguirá pendiente/)).toBeVisible();
     await dlg.locator('#fc-caj-ver').fill('431910,04');
     await dlg.locator('#fc-caj-obs').fill('Corrección autorizada por arqueo bancario');
+    await dlg.getByTestId('fc-caj-revisar').click();
+    await expect(dlg.getByTestId('fc-caj-confirm')).toBeVisible();
+    await expect(dlg.getByTestId('fc-caj-resultante')).toContainText('431.910,04');
+    expect(st.calls.ajustar).toHaveLength(0);
     await dlg.getByTestId('fc-caj-aplicar').click();
-    await expect(dlg).toBeHidden();
+    const resultado = dlg.getByTestId('fc-caj-done');
+    await expect(resultado).toBeVisible();
+    await expect(resultado.getByText('Ajuste aplicado', { exact: true })).toBeVisible();
     expect(st.calls.ajustar).toHaveLength(1);
+    expect(st.calls.ajustar[0]).toMatchObject({
+      saldo_actual_esperado: '200000.00', saldo_verificado_actual: '431910.04',
+      observaciones: 'Corrección autorizada por arqueo bancario',
+    });
+    expect(st.calls.conciliar).toHaveLength(0);
+    await dlg.getByRole('button', { name: 'Listo', exact: true }).click();
+    await expect(dlg).toBeHidden();
     await expect(banco).toContainText('Se registró un ajuste de saldo');
     await expect(banco.getByTestId('fc-cc-pendiente')).toContainText('231.910,04');
+    await expect(banco.getByTestId('fc-cc-dif-original')).toContainText('231.910,04');
     await banco.getByRole('button', { name: 'Resolver diferencia' }).click();
     const nuevamente = page.getByRole('dialog', { name: /Resolver diferencia/ });
-    await expect(nuevamente.getByRole('button', { name: /Aplicar ajuste autorizado/ })).toBeDisabled();
+    await expect(nuevamente.getByRole('button', { name: /Aplicar ajuste/ })).toBeDisabled();
     await expect(nuevamente.getByText(/No se puede aplicar otro ajuste provisional/)).toBeVisible();
   });
 

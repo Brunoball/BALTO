@@ -27,6 +27,7 @@ import ModalClienteFiscalArca from "../../../Global/Modales/ModalClienteFiscalAr
 import TipoMovimientoStockSelect from "../../_shared/TipoMovimientoStockSelect.jsx";
 import { TIPO_MOV_MUEVE_STOCK, payloadTipoMovimientoStock } from "../../_shared/tipoMovimientoStock.js";
 import { useRefrescarListasAlAbrir } from "../../_shared/refrescoListas.js";
+import { conservarDetallesCompras } from "../../_shared/listasCompras.js";
 
 const NULL_OPTION = "";
 const NOMBRE_COMPROBANTE_GENERICO = "Comprobante adjunto";
@@ -1019,7 +1020,22 @@ export default function ModalNuevaCompra({ open, lists, onClose, onToast, onSave
   }, [open]);
 
   const [localLists, setLocalLists] = useState(() => ({ ...SAFE_LISTS, ...normalizeLists(lists) }));
-  useEffect(() => setLocalLists({ ...SAFE_LISTS, ...normalizeLists(lists) }), [lists]);
+  // Al abrir, useRefrescarListasAlAbrir() recarga el contexto global. Esa
+  // actualización llegaba DESPUÉS del refresco puntual de compras y reemplazaba
+  // todo el estado: si el contexto no traía la lista de compras, el selector
+  // quedaba con la lista vendible (sólo productos con stock). Se actualizan
+  // proveedores/medios/etc., pero la lista completa de compras se conserva.
+  useEffect(() => {
+    setLocalLists((prev) => {
+      const incoming = normalizeLists(lists);
+      return {
+        ...SAFE_LISTS,
+        ...prev,
+        ...incoming,
+        detalles_compras: conservarDetallesCompras(prev?.detalles_compras, incoming.detalles_compras),
+      };
+    });
+  }, [lists]);
 
   useEffect(() => {
     if (!open) return undefined;
