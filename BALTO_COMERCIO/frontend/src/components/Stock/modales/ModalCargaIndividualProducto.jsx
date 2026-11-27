@@ -1998,6 +1998,7 @@ export default function ModalCargaIndividualProducto({
 
           <div className={`cmi-priceBlock cmi-v2-priceOnly cmi-priceBlock--mainPricing ${productoConVariantes ? "cmi-priceBlock--disabledByVariants" : ""}`}>
             <ProductPricingPanel
+              onToast={mostrarToast}
               usesVariants={productoConVariantes}
               onPriceChange={handlePriceFromProfitability}
               editDisabled={preciosProductoBloqueados}

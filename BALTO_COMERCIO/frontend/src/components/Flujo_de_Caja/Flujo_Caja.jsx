@@ -601,9 +601,9 @@ export default function Flujo_Caja() {
           )}
         </div>
 
-        {/* ===== HEADER TABLA (4 cols) ===== */}
+        {/* ===== HEADER TABLA (5 cols) ===== */}
         <div
-          className="mov-gridTable fc-md-tableHead"
+          className="mov-gridTable mov-gridTable--head"
           style={{ gridTemplateColumns: gridCols }}
           role="row"
         >
@@ -630,7 +630,7 @@ export default function Flujo_Caja() {
                   return (
                     <div
                       key={r.fecha}
-                      className={`mov-gridTable fc-md-row fc-dayRow ${isSelected ? "fc-dayRow--selected" : ""}`}
+                      className={`mov-gridTable mov-gridTable--row fc-md-row fc-dayRow ${isSelected ? "fc-dayRow--selected" : ""}`}
                       style={{ gridTemplateColumns: gridCols }}
                       role="row"
                       tabIndex={0}

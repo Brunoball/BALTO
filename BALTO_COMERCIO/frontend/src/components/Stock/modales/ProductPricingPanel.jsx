@@ -1,4 +1,4 @@
-import React, { useId, useLayoutEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faMoneyBillTrendUp, faTriangleExclamation, faArrowTrendDown } from "@fortawesome/free-solid-svg-icons";
 import {
@@ -154,6 +154,7 @@ function Indicator({
         highlight ? "ppp-kpi--main" : "ppp-kpi--secondary",
         negative ? "ppp-kpi--negative" : "",
         editable ? "ppp-kpi--editable" : "",
+        display !== "" && display != null ? "ppp-kpi--filled" : "",
         error ? "ppp-kpi--error" : "",
       ].filter(Boolean).join(" ")}
       title={editable ? `${hint} Podés editarlo y el precio se recalcula.` : hint}
@@ -205,6 +206,7 @@ export default function ProductPricingPanel({
   usesVariants = false,
   onPriceChange,
   editDisabled = false,
+  onToast,
 }) {
   const venta = useMemo(() => calculateGrossProfitability(cost, price), [cost, price]);
   const promoValida = parsePriceAmount(promo) !== null;
@@ -216,6 +218,27 @@ export default function ProductPricingPanel({
   const sinCosto = venta.cost === null;
   const ventaNegativa = venta.profit !== null && venta.profit < 0;
   const promoNegativa = !!promocion && promocion.profit !== null && promocion.profit < 0;
+
+  // Avisar una sola vez por episodio de promoción bajo costo, evitando
+  // notificaciones por valores transitorios mientras se escribe.
+  const promoAvisada = useRef(false);
+  const toastRef = useRef(onToast);
+  useLayoutEffect(() => { toastRef.current = onToast; }, [onToast]);
+  const promoBajoCosto = !usesVariants && !!promocion?.belowCost;
+  useEffect(() => {
+    if (!promoBajoCosto) {
+      promoAvisada.current = false;
+      return;
+    }
+    if (promoAvisada.current) return;
+    const timer = setTimeout(() => {
+      if (toastRef.current) {
+        toastRef.current(AVISO_PROMO_BAJO_COSTO, "advertencia", 5000);
+        promoAvisada.current = true;
+      }
+    }, 700);
+    return () => clearTimeout(timer);
+  }, [promoBajoCosto, promo, cost]);
 
   // Editable: hay callback, el modal no bloquea precios y hay costo cargado.
   // Los porcentajes además necesitan costo > 0 (con costo 0 no definen un precio).
@@ -331,9 +354,6 @@ export default function ProductPricingPanel({
           </div>
         ) : null}
       </div>
-      {!usesVariants && promocion?.belowCost ? (
-        <LossWarning text={AVISO_PROMO_BAJO_COSTO} testId="stock-rentabilidad-promo-alerta" />
-      ) : null}
     </div>
   );
 }

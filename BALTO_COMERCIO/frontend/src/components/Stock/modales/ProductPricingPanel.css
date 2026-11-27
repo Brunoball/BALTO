@@ -324,3 +324,129 @@ html[data-theme="oscuro"] .ppp-badge--loss {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Campos de precios e indicadores: altura y superficie de edición uniformes. */
+.cmi-priceBlock--mainPricing .ppp .cmi-input {
+  box-sizing: border-box;
+  min-height: 52px;
+  font-size: 15px;
+  font-weight: 500;
+}
+.ppp .ppp-kpi {
+  gap: 6px;
+}
+.ppp .ppp-kpi--secondary {
+  flex-direction: column;
+  align-items: stretch;
+}
+.ppp .ppp-kpi__label {
+  font-size: 12px;
+}
+.ppp .ppp-kpi__input,
+.ppp .ppp-kpi--secondary .ppp-kpi__input,
+.ppp .ppp-promo__result .ppp-kpi--secondary .ppp-kpi__input {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 42px;
+  margin: 0;
+  padding: 9px 10px;
+  font-size: 15px;
+  font-weight: 500;
+  text-align: left;
+  border-radius: 8px;
+}
+.ppp .ppp-kpi--editable .ppp-kpi__input {
+  border: 1px solid color-mix(in srgb, var(--ppp-accent, #0055bb) 28%, var(--nv-border, #d6dee8));
+  background: var(--nv-bg, #fff);
+}
+.ppp .ppp-kpi--editable .ppp-kpi__input:focus {
+  border-color: var(--ppp-accent, #0055bb);
+}
+html[data-theme="oscuro"] .ppp .ppp-kpi--editable .ppp-kpi__input {
+  background: #0b2030;
+  border-color: rgba(148, 163, 184, .30);
+}
+html[data-theme="oscuro"] .ppp .ppp-kpi--editable .ppp-kpi__input:focus {
+  border-color: #81b5ff;
+}
+.ppp .ppp-kpi--error .ppp-kpi__input,
+html[data-theme="oscuro"] .ppp .ppp-kpi--error .ppp-kpi__input {
+  border-color: #dc2626;
+}
+@media (max-width: 640px) {
+  .ppp .ppp-kpi__input { font-size: 16px; }
+}
+
+
+/* Floating labels: mismo comportamiento para todos los indicadores. */
+.ppp .ppp-kpi {
+  position: relative;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  gap: 4px;
+  --ppp-field-bg: var(--nv-bg, #fff);
+}
+.ppp .ppp-kpi .ppp-kpi__label {
+  position: absolute;
+  left: 12px;
+  top: 26px;
+  transform: translateY(-50%);
+  z-index: 1;
+  padding: 0 5px;
+  background: transparent;
+  font-size: 13px;
+  line-height: 1.2;
+  max-width: calc(100% - 24px);
+  box-sizing: border-box;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: text;
+  transition: top 160ms ease, font-size 160ms ease, color 160ms ease, background-color 160ms ease;
+}
+.ppp .ppp-kpi--filled .ppp-kpi__label,
+.ppp .ppp-kpi:focus-within .ppp-kpi__label {
+  top: 0;
+  font-size: 11px;
+  background: var(--ppp-field-bg);
+}
+.ppp .ppp-kpi:focus-within .ppp-kpi__label {
+  color: var(--ppp-accent, #0055bb);
+}
+.ppp .ppp-kpi .ppp-kpi__input,
+.ppp .ppp-promo__result .ppp-kpi--secondary .ppp-kpi__input {
+  box-sizing: border-box;
+  height: 52px;
+  min-height: 52px;
+  width: 100%;
+  margin: 0;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid var(--nv-border-md, #c4d0df);
+  background: var(--ppp-field-bg);
+  text-align: left;
+  font-size: 15px;
+  font-weight: 500;
+}
+.ppp .ppp-kpi--editable .ppp-kpi__input:focus {
+  border-color: var(--ppp-accent, #0055bb);
+  background: var(--ppp-field-bg);
+}
+.ppp .ppp-kpi--error .ppp-kpi__input,
+.ppp .ppp-kpi--error .ppp-kpi__input:focus { border-color: #dc2626; }
+.ppp .ppp-profit { gap: 14px; }
+.ppp .ppp-profit__main { gap: 12px; }
+.ppp .ppp-promo { align-items: start; }
+.ppp .ppp-promo__result { padding: 12px 10px; align-items: start; }
+.ppp .ppp-promo__result .ppp-kpi--secondary { align-items: stretch; }
+@media (min-width: 641px) {
+  .ppp .ppp-promo__field:has(+ .ppp-promo__result) { padding-top: 13px; }
+}
+html[data-theme="oscuro"] .ppp .ppp-kpi { --ppp-field-bg: #0b2030; }
+html[data-theme="oscuro"] .ppp .ppp-kpi .ppp-kpi__input { background: var(--ppp-field-bg); border-color: rgba(148, 163, 184, .30); }
+html[data-theme="oscuro"] .ppp .ppp-kpi--editable .ppp-kpi__input:focus { border-color: #81b5ff; }
+html[data-theme="oscuro"] .ppp .ppp-kpi--error .ppp-kpi__input { border-color: #dc2626; }
+@media (max-width: 640px) { .ppp .ppp-kpi .ppp-kpi__input { font-size: 16px; } }
+@media (max-width: 380px) { .ppp .ppp-promo__result { gap: 16px; } }
+@media (prefers-reduced-motion: reduce) { .ppp .ppp-kpi__label { transition: none; } }
