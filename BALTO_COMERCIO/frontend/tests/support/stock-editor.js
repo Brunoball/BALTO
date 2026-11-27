@@ -35,8 +35,10 @@ export async function fillStockPrices(dialog, { cost, price }) {
   }
 }
 
-// Recuadro "Rentabilidad bruta del producto" de la pestaña Precios (sólo lectura).
-// Devuelve los textos tal cual se muestran: "$ 6.627,27", "47,34%", "—".
+// Recuadro "Rentabilidad bruta del producto" de la pestaña Precios.
+// Desde el 27/11/2026 ganancia, margen y recargo (y ganancia/margen de la promo)
+// son INPUTS editables: fuera de foco su valor es el texto formateado
+// ("$ 6.627,27", "47,34%", "—"), por eso se leen con toHaveValue / inputValue.
 export function stockProfitability(dialog) {
   const box = dialog.getByTestId('stock-rentabilidad');
   return {
@@ -55,9 +57,22 @@ export function stockProfitability(dialog) {
 
 export async function expectStockProfitability(dialog, { profit, margin, markup }) {
   const r = stockProfitability(dialog);
-  if (profit !== undefined) await expect(r.profit).toHaveText(profit);
-  if (margin !== undefined) await expect(r.margin).toHaveText(margin);
-  if (markup !== undefined) await expect(r.markup).toHaveText(markup);
+  if (profit !== undefined) await expect(r.profit).toHaveValue(profit);
+  if (margin !== undefined) await expect(r.margin).toHaveValue(margin);
+  if (markup !== undefined) await expect(r.markup).toHaveValue(markup);
+}
+
+/**
+ * Edita un indicador de rentabilidad como lo haría el comerciante: foco,
+ * borra, escribe tecla por tecla y confirma con Enter (o deja el foco si
+ * `confirm` es false). El precio del bloque se recalcula en vivo.
+ */
+export async function editStockProfitability(indicator, text, { confirm = 'Enter' } = {}) {
+  await expect(indicator).toBeEditable();
+  await indicator.click();
+  await indicator.fill('');
+  await indicator.pressSequentially(String(text));
+  if (confirm) await indicator.press(confirm);
 }
 
 /** Acciones retiradas junto con el coeficiente ponderado (2026-11-26). */

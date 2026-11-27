@@ -7,7 +7,7 @@ import StockBarcodePanel from "./StockBarcodePanel";
 import VencimientosPanel from "../vencimientos/VencimientosPanel";
 import StockUnitField from "./StockUnitField";
 import ProductPricingPanel from "./ProductPricingPanel";
-import { isTopStockModal } from "./modalStackUtils";
+import { isProfitabilityEditTarget, isTopStockModal } from "./modalStackUtils";
 import { canBaltoUseBarcode } from "../../../utils/demoMode";
 import {
   faBoxOpen,
@@ -343,8 +343,9 @@ function recalcularPreciosAdicionalesConCosto(cost, extras = [], withCents = fal
 /**
  * Precios principales: el costo y los precios vigentes son la fuente de verdad.
  * No se leen márgenes guardados (podían quedar desactualizados si el costo
- * cambió por una compra) y nunca se deriva un precio a partir de un margen.
- * La rentabilidad se calcula en ProductPricingPanel al abrir y al escribir.
+ * cambió por una compra). La rentabilidad se calcula en ProductPricingPanel al
+ * abrir y al escribir; si el comerciante edita ahí la ganancia, el margen o el
+ * recargo, el panel devuelve el nuevo precio (handlePriceFromProfitability).
  */
 function hydratePricingFormValues(sourceForm) {
   const extras = (sourceForm.tipos_precio_extra || []).map((item) => {
@@ -1409,8 +1410,11 @@ export default function ModalEditarProducto({
 
   useEffect(() => {
     const h = (e) => {
+      // Escape dentro de un indicador de rentabilidad editable sólo descarta lo
+      // escrito ahí (lo resuelve ProductPricingPanel); no cierra el modal.
       if (
         e.key === "Escape" &&
+        !isProfitabilityEditTarget(e) &&
         isTopStockModal(overlayRef.current) &&
         !document.querySelector(".sv-retire-dialog") &&
         !guardando &&
@@ -1577,6 +1581,15 @@ export default function ModalEditarProducto({
       precio_costo: withCents ? formatNumberWithCents(nuevoCosto) : nuevoCosto,
       tipos_precio_extra: recalcularPreciosAdicionalesConCosto(nuevoCosto, prev.tipos_precio_extra, withCents),
     }));
+  };
+
+  // Ganancia / margen / recargo editados en ProductPricingPanel: el panel ya
+  // calculó el importe (centavos, formato "21250,00") y sólo se asigna al precio
+  // de ese bloque. El costo y los tipos de precio adicionales no cambian.
+  const handlePriceFromProfitability = (fieldName, value) => {
+    if (!["precio", "precio_promo"].includes(fieldName)) return;
+    setForm((prev) => ({ ...prev, [fieldName]: value }));
+    setErrores((prev) => ({ ...prev, [fieldName]: "" }));
   };
 
   const handleExtraPriceChange = (idx, field, rawValue) => {
@@ -2782,6 +2795,8 @@ export default function ModalEditarProducto({
                 <div className={`cmi-priceBlock cmi-v2-priceOnly cmi-priceBlock--mainPricing ${productoConVariantes ? "cmi-priceBlock--disabledByVariants" : ""}`}>
                   <ProductPricingPanel
                     usesVariants={productoConVariantes}
+                    onPriceChange={handlePriceFromProfitability}
+                    editDisabled={preciosProductoBloqueados}
                     cost={form.precio_costo}
                     price={form.precio}
                     promo={form.precio_promo}

@@ -8,7 +8,7 @@ import ModalCargaIndividualProducto from "./ModalCargaIndividualProducto";
 import { useListas } from "../../../context/ListasContext";
 import Toast from "../../Global/Toast.jsx";
 import { isBaltoDemoMode } from "../../../utils/demoMode";
-import { isTopStockModal } from "./modalStackUtils";
+import { isProfitabilityEditTarget, isTopStockModal } from "./modalStackUtils";
 import {
   clasificarTextoStock,
   crearCategoriaStock,
@@ -1339,6 +1339,8 @@ export default function ModalCargaMasiva({
     const h = (e) => {
       if (e.key !== "Escape") return;
       if (!isTopStockModal(overlayRef.current)) return;
+      // Escape en ganancia/margen/recargo del alta: lo resuelve ProductPricingPanel.
+      if (isProfitabilityEditTarget(e)) return;
       if (!isLoading && !previewOpen && !modalConfirmOpen) {
         e.preventDefault();
         e.stopPropagation();

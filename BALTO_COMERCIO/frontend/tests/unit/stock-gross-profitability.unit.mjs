@@ -6,7 +6,9 @@
 //
 // Contrato (retiro del coeficiente ponderado, 26/11/2026):
 //   Ganancia = PV − PC | Margen = (PV − PC) / PV | Recargo = (PV − PC) / PC
-//   Costo y precio -> rentabilidad. Nunca rentabilidad -> precio.
+//   Costo y precio -> rentabilidad. Desde el 27/11/2026 la ganancia, el margen
+//   y el recargo también se editan a mano y recalculan SÓLO el precio:
+//   PV = PC + G | PV = PC / (1 − M/100) | PV = PC × (1 + R/100)
 import assert from 'node:assert/strict';
 import { readFileSync, writeFileSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -139,6 +141,65 @@ t('función pura: no depende de gastos, coeficientes ni utilidad deseada', () =>
   for (const palabra of ['coeficiente', 'utilidad', 'gasto', 'fetch(', 'stockapi']) {
     assert.ok(!code.includes(palabra), palabra);
   }
+});
+
+t('edición inversa: margen, recargo y ganancia -> precio de venta (caso de la captura)', () => {
+  // Costo 8.500: margen 60% -> 21.250; recargo 152,25% -> 21.441,25; ganancia 12.941,32 -> 21.441,32.
+  assert.deepEqual(g.priceFromProfitability('marginPct', '8500,00', '60'), { price: 21250, error: null });
+  assert.deepEqual(g.priceFromProfitability('markupPct', '8500,00', '152,25'), { price: 21441.25, error: null });
+  assert.deepEqual(g.priceFromProfitability('profit', '8500,00', '12941,32'), { price: 21441.32, error: null });
+  // Punto del teclado numérico como decimal y símbolos pegados.
+  assert.equal(g.priceFromProfitability('marginPct', '8500', '60.5').price, 21518.99);
+  assert.equal(g.priceFromProfitability('markupPct', '8500', '50 %').price, 12750);
+  assert.equal(g.priceFromProfitability('profit', '8.500,00', '$ 1.000,50').price, 9500.5);
+});
+
+t('edición inversa: ida y vuelta consistente a centavos', () => {
+  // El margen/recargo recalculado con el precio redondeado muestra lo que se escribió.
+  for (const [cost, pct, texto] of [['7372,73', '47,34', '47,34%'], ['10000', '33', '33,00%'], ['1250,5', '12,5', '12,50%'], ['8500', '60', '60,00%']]) {
+    const { price } = g.priceFromProfitability('marginPct', cost, pct);
+    assert.equal(g.formatProfitPercent(g.calculateGrossProfitability(cost, price).marginPct), texto, `margen ${cost}/${pct}`);
+    const rec = g.priceFromProfitability('markupPct', cost, pct);
+    assert.equal(g.formatProfitPercent(g.calculateGrossProfitability(cost, rec.price).markupPct), texto, `recargo ${cost}/${pct}`);
+  }
+  assert.equal(g.priceFromProfitability('markupPct', '7372,73', '89,89').price, 14000.08);
+  // Margen 0 / recargo 0 / ganancia 0 -> precio = costo.
+  for (const kind of ['marginPct', 'markupPct', 'profit']) {
+    assert.equal(g.priceFromProfitability(kind, '8500', '0').price, 8500, kind);
+  }
+});
+
+t('edición inversa: límites y errores, nunca NaN ni Infinity', () => {
+  const E = g.PROFIT_EDIT_ERRORS;
+  assert.deepEqual(g.priceFromProfitability('marginPct', '8500', '100'), { price: null, error: E.margenMaximo });
+  assert.deepEqual(g.priceFromProfitability('marginPct', '8500', '150'), { price: null, error: E.margenMaximo });
+  assert.equal(g.priceFromProfitability('marginPct', '8500', '99,99').price, 85000000);
+  assert.deepEqual(g.priceFromProfitability('marginPct', '', '60'), { price: null, error: E.sinCosto });
+  assert.deepEqual(g.priceFromProfitability('markupPct', '0', '60'), { price: null, error: E.sinCosto });
+  assert.deepEqual(g.priceFromProfitability('marginPct', '0', '60'), { price: null, error: E.sinCosto });
+  // La ganancia sí admite costo 0 (PV = G), pero no costo vacío.
+  assert.equal(g.priceFromProfitability('profit', '0', '500').price, 500);
+  assert.deepEqual(g.priceFromProfitability('profit', '', '500'), { price: null, error: E.sinCosto });
+  assert.deepEqual(g.priceFromProfitability('profit', '8500', ''), { price: null, error: E.invalido });
+  assert.deepEqual(g.priceFromProfitability('profit', '8500', '-5'), { price: null, error: E.invalido });
+  assert.deepEqual(g.priceFromProfitability('nada', '8500', '5'), { price: null, error: E.invalido });
+  // Tope DECIMAL(12,2) del backend.
+  assert.deepEqual(g.priceFromProfitability('markupPct', '9999999999', '50'), { price: null, error: E.maximo });
+  assert.equal(g.priceFromProfitability('profit', '9999999998,99', '1').price, 9999999999.99);
+});
+
+t('formatos de edición: input de precio e indicador plano', () => {
+  assert.equal(g.formatPriceForInput(21250), '21250,00');
+  assert.equal(g.formatPriceForInput(21441.32), '21441,32');
+  assert.equal(g.formatPriceForInput(null), '');
+  assert.equal(g.formatPriceForInput(NaN), '');
+  assert.equal(g.formatIndicatorForEdit(60.3612), '60,36');
+  assert.equal(g.formatIndicatorForEdit(152.2508), '152,25');
+  assert.equal(g.formatIndicatorForEdit(12941.32), '12941,32');
+  assert.equal(g.formatIndicatorForEdit(-0.001), '0,00');
+  assert.equal(g.formatIndicatorForEdit(null), '');
+  // Lo que se muestra al editar vuelve a leerse igual.
+  assert.equal(m.parseMoneyInput(g.formatIndicatorForEdit(12941.32)), 12941.32);
 });
 
 console.log(`\n${ok} pruebas OK`);

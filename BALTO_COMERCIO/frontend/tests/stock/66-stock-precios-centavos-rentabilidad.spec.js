@@ -24,7 +24,7 @@ import {
  *
  * El coeficiente ponderado y el precio sugerido fueron retirados (26/11/2026):
  * ahora se verifica que comas, puntos y centavos lleguen intactos al recuadro de
- * RENTABILIDAD BRUTA (sólo lectura) y a lo persistido.
+ * RENTABILIDAD BRUTA y a lo persistido.
  *
  * - "@ui": interfaz del alta sin escrituras (se cancela el diálogo).
  * - "@mutations": integración REAL con el backend en el tenant E2E
@@ -82,7 +82,7 @@ test.describe('@stock @pricing @ui precios: comas, centavos y rentabilidad en la
 
     await cost.click();
     await cost.pressSequentially('9870,50');
-    await expect.poll(async () => moneyText(await r.profit.innerText())).toBeCloseTo(20000 - 9870.5, 2);
+    await expect.poll(async () => moneyText(await r.profit.inputValue())).toBeCloseTo(20000 - 9870.5, 2);
     await price.click();
     await expect(cost).toHaveValue(/9\.870,50/);
 
@@ -91,7 +91,7 @@ test.describe('@stock @pricing @ui precios: comas, centavos y rentabilidad en la
     await cost.press('End');
     await cost.press('Backspace');
     await cost.pressSequentially('9');
-    await expect.poll(async () => moneyText(await r.profit.innerText())).toBeCloseTo(20000 - 9870.59, 2);
+    await expect.poll(async () => moneyText(await r.profit.inputValue())).toBeCloseTo(20000 - 9870.59, 2);
     await price.click();
     await expect(cost).toHaveValue(/9\.870,59/);
 
@@ -100,8 +100,8 @@ test.describe('@stock @pricing @ui precios: comas, centavos y rentabilidad en la
     await cost.pressSequentially('1250.5');
     await price.click();
     await expect(cost).toHaveValue(/1\.250,50/);
-    await expect.poll(async () => moneyText(await r.profit.innerText())).toBeCloseTo(20000 - 1250.5, 2);
-    await expect.poll(async () => moneyText(await r.margin.innerText()))
+    await expect.poll(async () => moneyText(await r.profit.inputValue())).toBeCloseTo(20000 - 1250.5, 2);
+    await expect.poll(async () => moneyText(await r.margin.inputValue()))
       .toBeCloseTo(Number((((20000 - 1250.5) / 20000) * 100).toFixed(2)), 2);
 
     // Un precio de venta cargado a mano no se pisa al cambiar el costo.
@@ -110,18 +110,18 @@ test.describe('@stock @pricing @ui precios: comas, centavos y rentabilidad en la
     await cost.fill('1300');
     await cost.blur();
     await expect(price).toHaveValue(/3\.000,00/);
-    await expect(r.margin).toHaveText('56,67%');
-    await expect(r.markup).toHaveText('130,77%');
+    await expect(r.margin).toHaveValue('56,67%');
+    await expect(r.markup).toHaveValue('130,77%');
 
     // Escritura parcial: "5162," muestra 5162 y no se pierde la coma.
     await cost.click();
     await cost.fill('');
     await cost.pressSequentially('5162,');
     await expect(cost).toHaveValue('5162,');
-    await expect(r.profit).toHaveText('-$ 2.162,00');
+    await expect(r.profit).toHaveValue('-$ 2.162,00');
     await cost.pressSequentially('50');
     await expect(cost).toHaveValue('5162,50');
-    await expect(r.profit).toHaveText('-$ 2.162,50');
+    await expect(r.profit).toHaveValue('-$ 2.162,50');
 
     await cerrarDialogo(dialog);
   });
@@ -171,8 +171,8 @@ test.describe('@stock @pricing @mutations @critical edición: centavos del costo
 
       await price.click();
       await expect(cost).toHaveValue('5162,50');
+      // Escribir el costo no dispara la edición inversa: el precio sigue siendo el cargado.
       await expect(price).toHaveValue(/^10300(,00)?$/);
-      await expect(stockProfitability(dialog).box.locator('input')).toHaveCount(0);
 
       const guardado = page.waitForResponse((response) =>
         response.request().method() === 'POST'

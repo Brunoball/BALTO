@@ -1,7 +1,8 @@
 /* =========================================================
    PRECIOS PRINCIPALES · RENTABILIDAD BRUTA (alta y edición)
-   Sólo informa la rentabilidad (no sugiere precios). Compacto,
-   tema claro/oscuro y responsive. Los inputs conservan los
+   Informa la rentabilidad y permite editar ganancia, margen y
+   recargo (recalculan el precio). Compacto, tema claro/oscuro
+   y responsive. Los inputs conservan los
    estilos .cmi-floatingField / .cmi-input de cada modal.
    ========================================================= */
 .ppp {
@@ -24,7 +25,7 @@
   width: 100%;
 }
 
-/* ---------- Recuadro de rentabilidad (sólo lectura) ---------- */
+/* ---------- Recuadro de rentabilidad ---------- */
 .ppp-profit {
   --ppp-accent: var(--nv-action, #0055bb);
   --ppp-loss: #c2410c;
@@ -131,6 +132,76 @@
   color: #c2410c;
 }
 
+/* ---------- Indicadores editables (inputs con aspecto de valor) ---------- */
+.ppp-kpi__input {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 1px 4px;
+  margin-left: -4px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  font-family: inherit;
+  line-height: 1.25;
+  outline: none;
+  box-shadow: none;
+  appearance: none;
+}
+
+.ppp-kpi__input[readonly] {
+  cursor: default;
+}
+
+.ppp-kpi--secondary .ppp-kpi__input {
+  width: 12ch;
+  margin-left: 0;
+  margin-right: -4px;
+  text-align: right;
+}
+
+.ppp-promo__result .ppp-kpi--secondary .ppp-kpi__input {
+  width: 100%;
+  margin-left: -4px;
+  margin-right: 0;
+  text-align: left;
+}
+
+.ppp-kpi--editable .ppp-kpi__input {
+  cursor: text;
+  border-bottom: 1px dashed color-mix(in srgb, var(--ppp-accent, #0055bb) 45%, transparent);
+}
+
+.ppp-kpi--editable .ppp-kpi__input:hover {
+  border-color: color-mix(in srgb, var(--ppp-accent, #0055bb) 35%, transparent);
+  background: color-mix(in srgb, var(--ppp-accent, #0055bb) 4%, transparent);
+}
+
+.ppp-kpi--editable .ppp-kpi__input:focus {
+  border: 1px solid var(--ppp-accent, #0055bb);
+  background: var(--nv-bg, #ffffff);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ppp-accent, #0055bb) 18%, transparent);
+}
+
+.ppp-kpi--error .ppp-kpi__input,
+.ppp-kpi--error .ppp-kpi__input:focus {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15);
+}
+
+.ppp-kpi--secondary.ppp-kpi--error {
+  flex-wrap: wrap;
+}
+
+.ppp-kpi__error {
+  flex-basis: 100%;
+  color: #b91c1c;
+  font-size: 10.5px;
+  font-weight: 500;
+  line-height: 1.3;
+}
+
 /* ---------- Advertencias (texto + ícono: no sólo color) ---------- */
 .ppp-warning {
   display: flex;
@@ -207,6 +278,14 @@ html[data-theme="oscuro"] .ppp-profit__hint {
 html[data-theme="oscuro"] .ppp-kpi--main {
   border-color: rgba(148, 163, 184, 0.18);
   background: rgba(15, 23, 42, 0.55);
+}
+
+html[data-theme="oscuro"] .ppp-kpi--editable .ppp-kpi__input:focus {
+  background: rgba(15, 23, 42, 0.85);
+}
+
+html[data-theme="oscuro"] .ppp-kpi__error {
+  color: #fca5a5;
 }
 
 html[data-theme="oscuro"] .ppp-promo__result {

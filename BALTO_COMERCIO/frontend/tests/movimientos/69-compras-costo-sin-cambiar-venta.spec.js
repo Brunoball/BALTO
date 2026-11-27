@@ -126,8 +126,8 @@ test.describe('@compras @costos @pricing @mutations @critical compra con nuevo c
       await openStockEditorTab(dialog, 'prices');
       await expectStockProfitability(dialog, { profit: '$ 4.000,00', margin: '28,57%', markup: '40,00%' });
       const r = stockProfitability(dialog);
-      await expect(r.promoProfit).toHaveText('$ 2.000,00');
-      await expect(r.promoMargin).toHaveText('16,67%');
+      await expect(r.promoProfit).toHaveValue('$ 2.000,00');
+      await expect(r.promoMargin).toHaveValue('16,67%');
       await dialog.getByRole('button', { name: /Cancelar/i }).last().click();
       await expect(dialog).toBeHidden();
 

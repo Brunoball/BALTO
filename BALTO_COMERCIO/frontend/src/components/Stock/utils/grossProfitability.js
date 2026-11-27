@@ -5,14 +5,17 @@
    y la edición de productos (ProductPricingPanel) y se prueba con `node`
    (tests/unit/stock-gross-profitability.unit.mjs).
 
-   Regla unidireccional: COSTO y PRECIO -> rentabilidad. Nunca al revés.
+   COSTO y PRECIO -> rentabilidad. Además, el comerciante puede editar a mano
+   la ganancia, el margen o el recargo y se recalcula SÓLO el precio de ese
+   bloque (venta o promoción). El costo nunca se modifica desde un indicador.
    No intervienen gastos operativos, coeficientes ni utilidades deseadas.
 
-     Ganancia bruta            = PV − PC
-     Margen bruto s/venta (%)  = (PV − PC) / PV × 100
-     Recargo s/costo (%)       = (PV − PC) / PC × 100
+     Ganancia bruta            = PV − PC          ->  PV = PC + G
+     Margen bruto s/venta (%)  = (PV − PC) / PV   ->  PV = PC / (1 − M/100)
+     Recargo s/costo (%)       = (PV − PC) / PC   ->  PV = PC × (1 + R/100)
 
    Los cálculos usan los importes completos; sólo se redondea al presentar.
+   El precio derivado de un indicador se redondea a centavos.
    ================================================================ */
 
 import { parseMoneyInput } from "./moneyInput";
@@ -110,4 +113,64 @@ export function profitabilityToApi(cost, price) {
     margen_porcentaje: result.marginPct === null ? "" : result.marginPct.toFixed(2),
     margen_valor: result.profit === null ? "" : result.profit.toFixed(2),
   };
+}
+
+/* ── Edición inversa: indicador -> precio ───────────────────────────── */
+
+/** Máximo de DECIMAL(12,2), igual que la validación del backend. */
+export const MAX_PRICE_AMOUNT = 9999999999.99;
+
+export const PROFIT_EDIT_ERRORS = {
+  sinCosto: "Cargá el precio de costo para calcular el precio.",
+  margenMaximo: "El margen sobre venta tiene que ser menor a 100%.",
+  maximo: "El precio resultante supera el máximo permitido.",
+  invalido: "Ingresá un número válido.",
+};
+
+function roundCents(value) {
+  return Math.round((value + Math.sign(value) * Number.EPSILON) * 100) / 100;
+}
+
+/**
+ * Precio que corresponde a un indicador editado a mano.
+ * @param {"profit"|"marginPct"|"markupPct"} kind
+ * @returns {{ price: number|null, error: string|null }}
+ *   price redondeado a centavos, o null con el motivo en `error`.
+ */
+export function priceFromProfitability(kind, cost, rawValue) {
+  const c = parsePriceAmount(cost);
+  const v = parseMoneyInput(rawValue);
+  if (v === null || !Number.isFinite(v) || v < 0) return { price: null, error: PROFIT_EDIT_ERRORS.invalido };
+  // La ganancia admite costo cero (PV = G); los porcentajes necesitan costo > 0.
+  if (c === null || (kind !== "profit" && c <= 0)) return { price: null, error: PROFIT_EDIT_ERRORS.sinCosto };
+
+  let price;
+  if (kind === "profit") {
+    price = c + v;
+  } else if (kind === "marginPct") {
+    if (v >= 100) return { price: null, error: PROFIT_EDIT_ERRORS.margenMaximo };
+    price = c / (1 - v / 100);
+  } else if (kind === "markupPct") {
+    price = c * (1 + v / 100);
+  } else {
+    return { price: null, error: PROFIT_EDIT_ERRORS.invalido };
+  }
+
+  if (!Number.isFinite(price)) return { price: null, error: PROFIT_EDIT_ERRORS.invalido };
+  const rounded = roundCents(price);
+  if (rounded > MAX_PRICE_AMOUNT) return { price: null, error: PROFIT_EDIT_ERRORS.maximo };
+  return { price: rounded, error: null };
+}
+
+/** 21250 -> "21250,00": formato de los inputs de precio de los modales. */
+export function formatPriceForInput(value) {
+  if (value === null || value === undefined || !Number.isFinite(Number(value))) return "";
+  return Number(value).toFixed(2).replace(".", ",");
+}
+
+/** Valor de un indicador para editarlo: 60.3612 -> "60,36" (sin miles ni símbolo). */
+export function formatIndicatorForEdit(value) {
+  if (value === null || value === undefined || !Number.isFinite(Number(value))) return "";
+  const rounded = roundCents(Number(value));
+  return (rounded === 0 ? 0 : rounded).toFixed(2).replace(".", ",");
 }

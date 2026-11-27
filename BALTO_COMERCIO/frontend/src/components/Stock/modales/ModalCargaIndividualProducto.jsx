@@ -279,8 +279,9 @@ function recalcularPreciosAdicionalesConCosto(cost, extras = [], withCents = fal
 
 /**
  * Precios principales: el costo y los precios vigentes son la fuente de verdad.
- * Sólo se normaliza su formato; la rentabilidad se calcula en ProductPricingPanel
- * y nunca se deriva un precio a partir de un margen.
+ * Sólo se normaliza su formato; la rentabilidad se calcula en ProductPricingPanel.
+ * Si el comerciante edita ahí la ganancia, el margen o el recargo, el panel
+ * devuelve el nuevo precio (handlePriceFromProfitability); no se leen márgenes guardados.
  */
 function hydratePricingFormValues(sourceForm) {
   const extras = (sourceForm.tipos_precio_extra || []).map((item) => {
@@ -1076,6 +1077,15 @@ export default function ModalCargaIndividualProducto({
       precio_costo: withCents ? formatMoneyEnter(nuevoCosto) : formatMoneyBlur(nuevoCosto),
       tipos_precio_extra: recalcularPreciosAdicionalesConCosto(nuevoCosto, p.tipos_precio_extra, withCents),
     }));
+  };
+
+  // Ganancia / margen / recargo editados en ProductPricingPanel: el panel ya
+  // calculó el importe (centavos, formato "21250,00") y sólo se asigna al precio
+  // de ese bloque. El costo y los tipos de precio adicionales no cambian.
+  const handlePriceFromProfitability = (fieldName, value) => {
+    if (!["precio", "precio_promo"].includes(fieldName)) return;
+    setForm((p) => ({ ...p, [fieldName]: value }));
+    setErrores((p) => ({ ...p, [fieldName]: "" }));
   };
 
   const handleExtraPriceChange = (idx, field, value) => {
@@ -1989,6 +1999,8 @@ export default function ModalCargaIndividualProducto({
           <div className={`cmi-priceBlock cmi-v2-priceOnly cmi-priceBlock--mainPricing ${productoConVariantes ? "cmi-priceBlock--disabledByVariants" : ""}`}>
             <ProductPricingPanel
               usesVariants={productoConVariantes}
+              onPriceChange={handlePriceFromProfitability}
+              editDisabled={preciosProductoBloqueados}
               cost={form.precio_costo}
               price={form.precio}
               promo={form.precio_promo}
